@@ -1,0 +1,36 @@
+{
+  "spore": {
+    "scale": 0.02
+  },
+  "link": {
+    "show": true,
+    "thickness": 0.3
+  },
+  "frame": {
+    "origin_scale": 0.05
+  },
+  "angel": {
+    "show_angels": true,
+    "show_pillars": false,
+    "show_links": true,
+    "pillar_width": 0.005,
+    "ghost_pillar_width": 0.0001,
+    "link_thickness": 0.2
+  },
+  "scene": {
+    "floor_scale": [20, 20, 1]
+  },
+  "spawn_area": {
+    "resolution": 64
+  },
+  "cost_surface": {
+    "point_size": 0.02,
+    "edge_thickness": 1,
+    "contour_thickness": 3,
+    "mesh_generation": {
+      "boundary_points": 64,
+      "interior_min_radius": 0.1,
+      "contour_resolution": 60
+    }
+  }
+} 

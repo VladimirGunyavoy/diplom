@@ -1,0 +1,38 @@
+{
+  "scene_setup": {
+    "init_position": [0.263, -1.451, 0.116],
+    "init_rotation_x": 42.750,
+    "init_rotation_y": -12.135
+  },
+  "pendulum": {
+    "dt": 0.1,
+    "damping": 0.3
+  },
+  "zoom_manager": {
+    "initial_zoom_a": 1.602
+  },
+  "spore": {
+    "scale": 0.02,
+    "goal_position": [3.14159, 0],
+    "initial_position": [0, 0, 2]
+  },
+  "spawn_area": {
+    "eccentricity": 0.998,
+    "resolution": 64
+  },
+  "cost_surface": {
+    "mesh_generation": {
+      "boundary_points": 64,
+      "interior_min_radius": 0.2
+    },
+    "alpha": 0.7,
+    "show_points": true,
+    "point_size": 0.02,
+    "show_edges": true,
+    "edge_thickness": 1,
+    "show_contours": true,
+    "contour_levels": 22,
+    "contour_thickness": 3,
+    "contour_resolution": 60
+  }
+} 

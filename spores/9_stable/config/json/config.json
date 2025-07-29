@@ -1,0 +1,27 @@
+{
+  "scene_setup": {
+    "init_position": [0.263, -1.451, 0.116],
+    "init_rotation_x": 42.750,
+    "init_rotation_y": -12.135
+  },
+  "pendulum": {
+    "dt": 0.1,
+    "damping": 0.3
+  },
+  "zoom_manager": {
+    "initial_zoom_a": 1.602
+  },
+  "spore": {
+    "goal_position": [3.14159, 0],
+    "initial_position": [0, 0, 2]
+  },
+  "spawn_area": {
+    "eccentricity": 0.5
+  },
+  "cost_surface": {
+    "show_points": true,
+    "show_edges": true,
+    "show_contours": true,
+    "contour_levels": 22
+  }
+} 
