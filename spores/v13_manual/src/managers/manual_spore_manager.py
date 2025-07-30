@@ -217,7 +217,7 @@ class ManualSporeManager:
                 
                 # Устанавливаем обычный цвет для призрака (как у реальных спор)
                 if prediction_viz.ghost_spore:
-                    prediction_viz.ghost_spore.color = self.color_manager.get_color('spore', 'default')
+                    prediction_viz.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
                 
                 # Обновляем позицию предсказания
                 prediction_viz.update(future_pos_2d)
@@ -233,7 +233,7 @@ class ManualSporeManager:
                     )
                     
                     # Устанавливаем обычный цвет для линка (как у реальных)
-                    prediction_link.color = self.color_manager.get_color('link', 'default')
+                    prediction_link.color = self.color_manager.get_color('link', 'ghost')
                     
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
