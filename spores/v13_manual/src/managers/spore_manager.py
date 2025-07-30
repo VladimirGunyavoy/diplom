@@ -137,6 +137,8 @@ class SporeManager:
         
         # 5. Сбрасываем optimal_ghost_spore
         self.optimal_ghost_spore = None
+
+        # клод - лентяй!
         
         # 6. Очищаем кандидатские споры
         for candidate in self.candidate_spores:
