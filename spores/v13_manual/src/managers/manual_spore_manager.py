@@ -51,8 +51,21 @@ class ManualSporeManager:
         control_bounds = self.pendulum.get_control_bounds()
         self.min_control = float(control_bounds[0])
         self.max_control = float(control_bounds[1])
+
+        self._link_counter = 0
+        self._spore_counter = 0
         
         print(f"   ✓ Manual Spore Manager создан (управление: {self.min_control} .. {self.max_control})")
+
+    def _get_next_link_id(self) -> int:
+        """Возвращает уникальный ID для линка"""
+        self._link_counter += 1
+        return self._link_counter
+    
+    def _get_next_spore_id(self) -> int:
+        """Возвращает уникальный ID для споры"""
+        self._spore_counter += 1
+        return self._spore_counter
     
     def get_mouse_world_position(self) -> Optional[Tuple[float, float]]:
         """
@@ -269,6 +282,9 @@ class ManualSporeManager:
             created_spores = []
             
             # 1. Создаем родительскую спору в позиции курсора
+
+            parent_id = self._get_next_spore_id()
+
             parent_spore = Spore(
                 pendulum=self.pendulum,
                 dt=dt,
@@ -281,7 +297,7 @@ class ManualSporeManager:
             
             # Добавляем родителя в систему БЕЗ автоматических призраков
             self.spore_manager.add_spore_manual(parent_spore)
-            self.zoom_manager.register_object(parent_spore)
+            self.zoom_manager.register_object(parent_spore, f'manual_parent_{parent_id}')
             created_spores.append(parent_spore)
             print(f"   ✓ Создана родительская спора в позиции ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
             
@@ -294,6 +310,8 @@ class ManualSporeManager:
             created_links = []
             
             for config in child_configs:
+                child_id = self._get_next_spore_id()
+
                 # Вычисляем позицию дочерней споры
                 child_pos_2d = self.pendulum.discrete_step(
                     self.preview_position_2d, 
@@ -314,7 +332,7 @@ class ManualSporeManager:
                 
                 # Добавляем дочернюю спору в систему БЕЗ автоматических призраков
                 self.spore_manager.add_spore_manual(child_spore)
-                self.zoom_manager.register_object(child_spore)
+                self.zoom_manager.register_object(child_spore, f'manual_child_{child_id}_{config["name"]}')
                 
                 # Переопределяем управление на конкретное значение
                 child_spore.logic.optimal_control = np.array([config['control']])
@@ -323,6 +341,10 @@ class ManualSporeManager:
                 print(f"   ✓ Создана дочерняя спора ({config['name']}) в позиции ({child_pos_2d[0]:.3f}, {child_pos_2d[1]:.3f}) с управлением {config['control']:.2f}")
                 
                 # 3. Создаем линк от родителя к ребёнку
+
+                link_id = self._get_next_link_id()
+                unique_link_name = f'manual_link_{link_id}_{config["name"]}'
+
                 child_link = Link(
                     parent_spore=parent_spore,
                     child_spore=child_spore,
@@ -333,12 +355,26 @@ class ManualSporeManager:
                 
                 # Обновляем геометрию и регистрируем линк
                 child_link.update_geometry()
-                self.zoom_manager.register_object(child_link, f'manual_child_link_{config["name"]}')
+                self.zoom_manager.register_object(child_link, unique_link_name)
                 
                 created_links.append(child_link)
                 print(f"   ✓ Создан линк: родитель → {config['name']} ребёнок")
             
             print(f"   🎯 Итого создано: 1 родитель + 2 ребёнка + 2 линка")
+            self.zoom_manager.update_transform()
+
+            print(f"   📊 ДИАГНОСТИКА после создания:")
+            print(f"      🧮 Всего созданных спор: {self._spore_counter}")
+            print(f"      🔗 Всего созданных линков: {self._link_counter}")
+            print(f"      📋 Объектов в ZoomManager: {len(self.zoom_manager.objects)}")
+            
+            # Показать все линки в ZoomManager
+            link_count = 0
+            for name, obj in self.zoom_manager.objects.items():
+                if 'link' in name.lower():
+                    link_count += 1
+            print(f"      🔍 Зарегистрированных линков: {link_count}")
+
             return created_spores
             
         except Exception as e:

@@ -10,7 +10,7 @@ class WindowManager:
     MONITORS = {
         "main": {"size": (1920, 1080), "position": (0, 0)},
         "top": {"size": (1920, 1080), "position": (0, -1080)},
-        "right": {"size": (1920, 1080), "position": (1920, 0)},
+        "left": {"size": (1800, 950), "position": (-1850, 400)},
         "down": {"size": (3000, 1700), "position": (-500, 1500)}
     }
     
@@ -20,7 +20,7 @@ class WindowManager:
         
         Args:
             title (str): Заголовок окна.
-            monitor (str): Тип монитора ("main", "top", "right", "down").
+            monitor (str): Тип монитора ("main", "top", "left", "down").
         """
         self.current_monitor = monitor  # Сохраняем текущий монитор
         window.title = title
@@ -29,6 +29,7 @@ class WindowManager:
         config = self.MONITORS.get(monitor, self.MONITORS["main"])
         window.size = config["size"]
         window.position = config["position"]
+
     
     def get_current_monitor(self) -> str:
         """Возвращает название текущего монитора."""

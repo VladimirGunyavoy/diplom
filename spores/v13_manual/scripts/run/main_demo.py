@@ -113,7 +113,7 @@ frame = Frame(
     origin_scale=config.get('frame', {}).get('origin_scale', 0.05)
 )
 scene_setup.frame = frame
-window_manager = WindowManager(monitor='down')
+window_manager = WindowManager(monitor='left')
 
 # ===== НАСТРОЙКА UI ПОЗИЦИЙ ДЛЯ ТЕКУЩЕГО МОНИТОРА =====
 from src.visual.ui_constants import UI_POSITIONS
