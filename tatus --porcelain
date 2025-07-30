@@ -1,0 +1,48 @@
+warning: in the working copy of 'spores/v11/scripts/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/config/json/sizes.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/scripts/run/main_demo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/core/spore.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/logic/ghost_processor.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/logic/pendulum.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/logic/spore_logic.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/managers/spawn_area_manager.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/managers/window_manager.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/utils/watcher.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'spores/v12/src/visual/ui_constants.py', LF will be replaced by CRLF the next time Git touches it
+M	spores/v12/config/json/sizes.json
+D	spores/v12/scripts/run/auto_edge_cases_test.py
+D	spores/v12/scripts/run/edge_cases_test.py
+D	spores/v12/scripts/run/evolution_completion_test.py
+D	spores/v12/scripts/run/evolution_diagnostic.py
+D	spores/v12/scripts/run/link_direction_test.py
+M	spores/v12/scripts/run/main_demo.py
+D	spores/v12/scripts/run/merge_test.py
+D	spores/v12/scripts/run/simple_test.py
+D	spores/v12/scripts/run/test_death_fix.py
+D	spores/v12/scripts/run/test_debug_flags.py
+D	spores/v12/scripts/run/test_mass_evolution.py
+D	spores/v12/scripts/run/test_trajectory_optimization.py
+D	spores/v12/scripts/run/test_visual_toggles.py
+D	spores/v12/scripts/run/trajectory_debug_test.py
+M	spores/v12/src/core/spore.py
+M	spores/v12/src/logic/ghost_processor.py
+M	spores/v12/src/logic/pendulum.py
+M	spores/v12/src/logic/spore_logic.py
+M	spores/v12/src/managers/spawn_area_manager.py
+M	spores/v12/src/managers/window_manager.py
+M	spores/v12/src/utils/watcher.py
+M	spores/v12/src/visual/prediction_visualizer.py
+M	spores/v12/src/visual/ui_constants.py
+D	spores/v12/tests/README.md
+D	spores/v12/tests/core/test_simulation_engine.py
+D	spores/v12/tests/logic/test_ghost_processor.py
+D	spores/v12/tests/logic/test_simulation_engine.py
+D	spores/v12/tests/logic/test_spawn_area.py
+D	spores/v12/tests/run/optimize_test.ipynb
+D	spores/v12/tests/run/test_angel_manager.py
+D	spores/v12/tests/test_cost_function.py
+D	spores/v12/tests/test_cost_visualizer.py
+D	spores/v12/tests/visual/models_compressed/arrow.bam
+D	spores/v12/tests/visual/test_ghost_visualizer.py
+D	spores/v12/tests/visual/test_spawn_area_visualizer.py
+D	spores/v12/tests/visual/test_visual_manager.py
