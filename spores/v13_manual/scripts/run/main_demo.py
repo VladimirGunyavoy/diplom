@@ -297,6 +297,8 @@ manual_spore_manager = ManualSporeManager(
     config=config
 )
 
+spore_manager._manual_spore_manager_ref = manual_spore_manager
+
 # ===== СОЗДАНИЕ INPUT MANAGER =====
 input_manager = InputManager(
     scene_setup=scene_setup,

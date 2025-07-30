@@ -45,6 +45,7 @@ class ManualSporeManager:
         # Предсказания min/max управления
         self.prediction_visualizers: List[PredictionVisualizer] = []
         self.prediction_links: List[Link] = []  # Линки от превью споры к призракам
+        self.created_links: List[Link] = []
         self.show_predictions = True
         
         # Получаем границы управления из маятника
@@ -173,8 +174,19 @@ class ManualSporeManager:
                 is_ghost=True  # Делаем спору-призрак
             )
             
-            # Делаем полупрозрачной
-            self.preview_spore.color = (*self.color_manager.get_color('spore', 'default')[:3], self.preview_alpha)
+            base_color = self.color_manager.get_color('spore', 'default')
+            
+            # Способ 1: Используем атрибуты r, g, b
+            try:
+                self.preview_spore.color = (base_color.r, base_color.g, base_color.b, self.preview_alpha)
+            except AttributeError:
+                # Способ 2: Если это Vec4 или tuple
+                try:
+                    self.preview_spore.color = (base_color[0], base_color[1], base_color[2], self.preview_alpha)
+                except (TypeError, IndexError):
+                    # Способ 3: Fallback на стандартный цвет
+                    self.preview_spore.color = (0.6, 0.4, 0.9, self.preview_alpha)  # Фиолетовый по умолчанию
+                    print(f"   ⚠️ Использован fallback цвет для preview spore")
             
             # Регистрируем в zoom manager
             self.zoom_manager.register_object(self.preview_spore, name='manual_preview')
@@ -358,6 +370,8 @@ class ManualSporeManager:
                 self.zoom_manager.register_object(child_link, unique_link_name)
                 
                 created_links.append(child_link)
+                self.created_links.append(child_link)
+
                 print(f"   ✓ Создан линк: родитель → {config['name']} ребёнок")
             
             print(f"   🎯 Итого создано: 1 родитель + 2 ребёнка + 2 линка")
@@ -394,3 +408,45 @@ class ManualSporeManager:
         """Очищает все ресурсы менеджера."""
         self._destroy_preview()
         print("   ✓ Manual Spore Manager уничтожен") 
+
+    def clear_all(self) -> None:
+        """Очищает все ресурсы созданные ManualSporeManager."""
+        print("🧹 ManualSporeManager: очистка всех ресурсов...")
+        
+        # 🆕 ДИАГНОСТИКА: Проверяем состояние до удаления
+        print(f"   📊 Линков для удаления: {len(self.created_links)}")
+        
+        # 1. Уничтожаем все созданные линки
+        for i, link in enumerate(self.created_links):
+            try:
+                # 🆕 ДИАГНОСТИКА: Проверяем состояние линка
+                print(f"   🔍 Линк {i+1}: enabled={getattr(link, 'enabled', 'N/A')}, visible={getattr(link, 'visible', 'N/A')}")
+                print(f"            parent={getattr(link, 'parent', 'N/A')}, model={getattr(link, 'model', 'N/A')}")
+                
+                # Пробуем разные способы удаления
+                link.enabled = False  # Отключаем
+                link.visible = False  # Скрываем
+                link.parent = None    # Отвязываем от родителя
+                
+                destroy(link)  # Уничтожаем
+                print(f"   ✅ Линк {i+1} обработан")
+                
+            except Exception as e:
+                print(f"   ❌ Ошибка с линком {i+1}: {e}")
+        
+        # 🆕 ДИАГНОСТИКА: Проверяем глобальное состояние Ursina
+        try:
+            from ursina import scene, camera
+            all_entities = [e for e in scene.entities if hasattr(e, 'model') and e.model]
+            arrow_entities = [e for e in all_entities if 'arrow' in str(e.model).lower()]
+            print(f"   📊 Всего entities в сцене: {len(scene.entities)}")
+            print(f"   🏹 Entities со стрелками: {len(arrow_entities)}")
+        except Exception as e:
+            print(f"   ⚠️ Ошибка диагностики сцены: {e}")
+        
+        self.created_links.clear()
+
+    def destroy(self) -> None:
+        """Очищает все ресурсы менеджера."""
+        self.clear_all()  # Используем новый метод
+        print("   ✓ Manual Spore Manager уничтожен")

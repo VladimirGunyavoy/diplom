@@ -149,11 +149,20 @@ class InputManager:
         # 4. Очистка объектов (v13_manual)
         if key == 'c' and self.spore_manager:
             print("🧹 Клавиша C: Полная очистка всех спор и объектов")
-            self.spore_manager.clear_all_manual()
+            
+            # 🆕 ДИАГНОСТИКА: Проверяем есть ли manual_spore_manager
             if self.manual_spore_manager:
-                # Также очищаем preview и predictions
-                self.manual_spore_manager._destroy_preview()
-                print("🧹 Manual preview также очищен")
+                print(f"   🔍 ManualSporeManager найден: {type(self.manual_spore_manager)}")
+                if hasattr(self.manual_spore_manager, 'clear_all'):
+                    print(f"   🔍 Метод clear_all найден")
+                    print(f"   📊 created_links до очистки: {len(self.manual_spore_manager.created_links)}")
+                    self.manual_spore_manager.clear_all()  
+                else:
+                    print(f"   ❌ Метод clear_all НЕ найден!")
+            else:
+                print(f"   ❌ ManualSporeManager НЕ найден!")
+            
+            self.spore_manager.clear_all_manual()
             
         # 5. Управление параметром
         if self.param_manager:
@@ -183,12 +192,12 @@ class InputManager:
             else:
                 always_print("⚠️ Angel Manager не найден")
         
-        # 8. Переключение поверхности стоимости
-        if key == 'c':
-            if self.cost_visualizer:
-                self.cost_visualizer.toggle()
-            else:
-                always_print("⚠️ Cost Visualizer не найден")
+        # # 8. Переключение поверхности стоимости
+        # if key == 'c':
+        #     if self.cost_visualizer:
+        #         self.cost_visualizer.toggle()
+        #     else:
+        #         always_print("⚠️ Cost Visualizer не найден")
 
     # def handle_input(self, key):
     #     """
