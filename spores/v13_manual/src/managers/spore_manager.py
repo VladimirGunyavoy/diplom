@@ -92,17 +92,19 @@ class SporeManager:
         if self.zoom_manager:
             # Получаем все ключи для удаления
             keys_to_remove = []
-            registered_objects = getattr(self.zoom_manager, 'registered_objects', {})
+            registered_objects = getattr(self.zoom_manager, 'objects', {}) 
+            
             for key in registered_objects:
-                if any(pattern in key.lower() for pattern in ['spore', 'link', 'ghost', 'predict', 'manual']):
+                name_list = ['spore', 'link', 'ghost', 'predict', 'manual', 'angel', 'pillar', 'parent', 'child']
+                if any(pattern in key.lower() for pattern in name_list):
                     keys_to_remove.append(key)
             
             for key in keys_to_remove:
                 try:
                     self.zoom_manager.unregister_object(key)
-                    print(f"   ✓ Удален {key}")
-                except:
-                    pass
+                    print(f"   ✓ Удален из ZoomManager: {key}")
+                except Exception as e:
+                    print(f"   ⚠️ Ошибка удаления {key}: {e}")
         
         # Стандартная очистка
         self.clear()
@@ -139,7 +141,7 @@ class SporeManager:
         
         # Проверяем смерть споры (если optimal_dt = 0), но не для целевых спор
         if not (hasattr(spore, 'is_goal') and spore.is_goal):
-            spore.check_death()
+            # spore.check_death()
             if not spore.is_alive():
                 debug_print(f"🪦 Спора {spore.id} объявлена мертвой (dt = {optimal_dt}) - цвет изменен на серый")
         
@@ -181,7 +183,7 @@ class SporeManager:
         
         # Проверяем смерть споры (если optimal_dt = 0), но не для целевых спор
         if not (hasattr(spore, 'is_goal') and spore.is_goal):
-            spore.check_death()
+            # spore.check_death()
             if not spore.is_alive():
                 debug_print(f"🪦 Спора {spore.id} объявлена мертвой (dt = {optimal_dt}) - цвет изменен на серый")
         
