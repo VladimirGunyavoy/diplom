@@ -84,7 +84,7 @@ class SporeManager:
             self.angel_manager.clear_all()
 
     def clear_all_manual(self) -> None:
-        """Полная очистка для v13_manual - удаляет все объекты включая manual preview."""
+        """Полная очистка для v13_manual - удаляет все объекты КРОМЕ целевой споры."""
         
         print("🧹 ПОЛНАЯ ОЧИСТКА v13_manual...")
         
@@ -95,7 +95,7 @@ class SporeManager:
             registered_objects = getattr(self.zoom_manager, 'objects', {}) 
             
             for key in registered_objects:
-                name_list = ['spore', 'link', 'ghost', 'predict', 'manual', 'angel', 'pillar', 'parent', 'child']
+                name_list = ['spore', 'link', 'ghost', 'predict', 'manual', 'angel', 'pillar']
                 if any(pattern in key.lower() for pattern in name_list):
                     keys_to_remove.append(key)
             
@@ -107,9 +107,60 @@ class SporeManager:
                     print(f"   ⚠️ Ошибка удаления {key}: {e}")
         
         # Стандартная очистка
-        self.clear()
+        spores_to_remove = []
+        for spore in self.objects:
+            if not (hasattr(spore, 'is_goal') and spore.is_goal):
+                spores_to_remove.append(spore)
         
-        print("🧹 Полная очистка завершена")
+        for spore in spores_to_remove:
+            self.objects.remove(spore)
+            destroy(spore)
+            print(f"   ✓ Удалена обычная спора: {getattr(spore, 'id', 'unknown')}")
+        
+        # 2. Удаляем все связи
+        for link in self.links:
+            destroy(link)
+        self.links = []
+        print(f"   ✓ Удалено связей: {len(self.links)}")
+        
+        # 3. Удаляем ghost_link
+        if self.ghost_link:
+            destroy(self.ghost_link)
+            self.ghost_link = None
+            print("   ✓ Удалена призрачная связь")
+        
+        # 4. Удаляем prediction visualizers
+        for visualizer in self.prediction_visualizers:
+            visualizer.destroy()
+        self.prediction_visualizers = []
+        print(f"   ✓ Удалено visualizers: {len(self.prediction_visualizers)}")
+        
+        # 5. Сбрасываем optimal_ghost_spore
+        self.optimal_ghost_spore = None
+        
+        # 6. Очищаем кандидатские споры
+        for candidate in self.candidate_spores:
+            # Удаляем из zoom_manager перед удалением объекта
+            if hasattr(candidate, 'id'):
+                try:
+                    self.zoom_manager.unregister_object(candidate.id)
+                except:
+                    pass
+            destroy(candidate)
+        self.candidate_spores = []
+        self.candidate_count = 0
+        print(f"   ✓ Удалено кандидатов: {len(self.candidate_spores)}")
+        
+        # 7. Очищаем angel_manager (если есть)
+        if self.angel_manager:
+            self.angel_manager.clear_ghosts()
+            print("   ✓ Очищены ангелы")
+        
+        # 8. Подсчитываем что осталось
+        remaining_spores = [s for s in self.objects if hasattr(s, 'is_goal') and s.is_goal]
+        print(f"   💚 Сохранено целевых спор: {len(remaining_spores)}")
+        
+        print("🧹 Полная очистка завершена (целевые споры сохранены)")
 
     def add_spore(self, spore: Spore) -> None:
         """Добавляет спору в список управления."""
