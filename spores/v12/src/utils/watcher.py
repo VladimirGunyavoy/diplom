@@ -152,20 +152,29 @@ def input_thread(runner):
             break
 
 def main():
+    # По умолчанию запускаем main_demo.py
     if len(sys.argv) < 2:
-        print("Использование: python watcher.py <имя_скрипта>")
-        print("\nДоступные скрипты:")
-        scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts', 'run')
-        scripts = [f for f in os.listdir(scripts_dir) if f.endswith('.py')]
-        for script in scripts:
-            print(f"- {script}")
-        sys.exit(1)
-
-    script_name = sys.argv[1]
+        script_name = "main_demo.py"
+        print(f"Запуск скрипта по умолчанию: {script_name}")
+    else:
+        script_name = sys.argv[1]
+        # Добавляем .py если не указано расширение
+        if not script_name.endswith('.py'):
+            script_name += '.py'
+        print(f"Запуск указанного скрипта: {script_name}")
+    
     runner = ScriptRunner()
     runner.current_script = script_name
     
     if not runner.run_script(script_name):
+        print("\nДоступные скрипты:")
+        scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'scripts', 'run')
+        try:
+            scripts = [f for f in os.listdir(scripts_dir) if f.endswith('.py')]
+            for script in scripts:
+                print(f"- {script}")
+        except FileNotFoundError:
+            print("Папка scripts/run не найдена")
         sys.exit(1)
     
     try:

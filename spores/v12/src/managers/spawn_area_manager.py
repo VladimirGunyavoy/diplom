@@ -17,11 +17,11 @@ class SpawnAreaManager:
     def __init__(self, 
                  spawn_area_logic: SpawnAreaLogic, 
                  spawn_area_visualizer: SpawnAreaVisualizer, 
-                 cost_visualizer: CostVisualizer):
+                 cost_visualizer: Optional[CostVisualizer] = None):
         
         self.logic: SpawnAreaLogic = spawn_area_logic
         self.visualizer: SpawnAreaVisualizer = spawn_area_visualizer
-        self.cost_visualizer: CostVisualizer = cost_visualizer
+        self.cost_visualizer: Optional[CostVisualizer] = cost_visualizer
         self.eccentricity_step: float = 1.05
 
     def _update_visuals(self) -> None:

@@ -135,15 +135,9 @@ class SporeLogic:
         Returns:
             Список будущих 2D состояний.
         """
-        # Создаем временную логику, чтобы не менять состояние текущей
-        temp_logic = SporeLogic(
-            pendulum=self.pendulum, 
-            dt=dt or self.dt, 
-            goal_position_2d=self.goal_position_2d, 
-            initial_position_2d=self.position_2d
-        )
-        
-        return [temp_logic.step(control=c, dt=dt or self.dt) for c in controls] 
+        # Оптимизация: используем pendulum напрямую без создания временного объекта
+        dt_value = dt or self.dt
+        return [self.pendulum.discrete_step(self.position_2d, control=c, dt=dt_value) for c in controls]
 
     def clone(self) -> 'SporeLogic':
         """Создает и возвращает глубокую копию объекта."""

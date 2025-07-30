@@ -10,7 +10,7 @@
     "origin_scale": 0.05
   },
   "angel": {
-    "show_angels": true,
+    "show_angels": false,
     "show_pillars": false,
     "show_links": true,
     "pillar_width": 0.005,

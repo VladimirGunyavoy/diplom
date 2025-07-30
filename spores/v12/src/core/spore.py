@@ -87,12 +87,19 @@ class Spore(SporeVisual):
     
     def calc_2d_pos(self) -> np.ndarray:
         """Обратная совместимость: возвращает 2D позицию из логики"""
-        return self.logic.position_2d.copy()
+        return self.logic.position_2d
     
     def calc_3d_pos(self, pos_2d: np.ndarray) -> np.ndarray:
         """Обратная совместимость: конвертирует 2D позицию в 3D"""
-        pos_2d = np.array(pos_2d, dtype=float)
-        return np.array([pos_2d[0], self.y_coordinate, pos_2d[1]])
+        # Оптимизация: избегаем лишних копий если pos_2d уже правильный тип
+        if not isinstance(pos_2d, np.ndarray):
+            pos_2d = np.array(pos_2d, dtype=float)
+        # Оптимизация: создаем массив напрямую без промежуточного списка
+        result = np.empty(3, dtype=float)
+        result[0] = pos_2d[0]
+        result[1] = self.y_coordinate
+        result[2] = pos_2d[1]
+        return result
     
     def evolve_3d(self, state: Optional[np.ndarray] = None, control: float = 0, dt: Optional[float] = None) -> np.ndarray:
         """
@@ -102,12 +109,16 @@ class Spore(SporeVisual):
             # Используем текущую позицию логики
             new_pos_2d = self.logic.evolve(control=control, dt=dt)
         else:
-            # Конвертируем state в 2D если нужно
+            # Конвертируем state в 2D если нужно - оптимизация
             if hasattr(state, '__len__') and len(state) >= 2:
                 if len(state) == 3:
-                    state_2d = np.array([state[0], state[2]])
+                    # Оптимизация: создаем массив эффективнее для 3D->2D
+                    state_2d = np.empty(2, dtype=float)
+                    state_2d[0] = state[0]
+                    state_2d[1] = state[2]
                 else:
-                    state_2d = np.array(state[:2])
+                    # Оптимизация: asarray быстрее чем array для срезов
+                    state_2d = np.asarray(state[:2], dtype=float)
             else:
                 state_2d = self.logic.position_2d
             
@@ -117,7 +128,12 @@ class Spore(SporeVisual):
                                    initial_position_2d=state_2d)
             new_pos_2d = temp_logic.evolve(control=control, dt=dt)
         
-        return np.array([new_pos_2d[0], self.y_coordinate, new_pos_2d[1]])
+        # Конвертируем обратно в 3D позицию - оптимизация
+        result = np.empty(3, dtype=float)
+        result[0] = new_pos_2d[0]
+        result[1] = self.y_coordinate
+        result[2] = new_pos_2d[1]
+        return result
     
     def evolve_2d(self, state: Optional[np.ndarray] = None, control: float = 0, dt: Optional[float] = None) -> np.ndarray:
         """
@@ -144,10 +160,11 @@ class Spore(SporeVisual):
         new_3d_position = self.evolve_3d(state=state, control=control, dt=dt)
         new_spore.real_position = new_3d_position
         
-        # Синхронизируем логику с новой позицией
-        new_spore.set_logic_position_2d(
-            np.array([new_3d_position[0], new_3d_position[2]])
-        )
+        # Синхронизируем логику с новой позицией - оптимизация
+        pos_2d = np.empty(2, dtype=float)
+        pos_2d[0] = new_3d_position[0]
+        pos_2d[1] = new_3d_position[2]
+        new_spore.set_logic_position_2d(pos_2d)
         
         return new_spore
     

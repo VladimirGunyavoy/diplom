@@ -109,13 +109,29 @@ frame = Frame(
     origin_scale=config.get('frame', {}).get('origin_scale', 0.05)
 )
 scene_setup.frame = frame
-window_manager = WindowManager(down_monitor=True)
+window_manager = WindowManager(monitor='down')
+
+# ===== НАСТРОЙКА UI ПОЗИЦИЙ ДЛЯ ТЕКУЩЕГО МОНИТОРА =====
+from src.visual.ui_constants import UI_POSITIONS
+UI_POSITIONS.set_monitor(window_manager.get_current_monitor())
+print(f"   ✓ UI позиции настроены для монитора: {window_manager.get_current_monitor()}")
 
 print("\n🌍 2. Сцена создана")
 
 # ===== СОЗДАНИЕ ZOOM MANAGER =====
 zoom_manager = ZoomManager(scene_setup, color_manager=color_manager)
-angel_manager = AngelManager(color_manager=color_manager, zoom_manager=zoom_manager, config=config)
+
+# ===== УСЛОВНОЕ СОЗДАНИЕ ANGEL MANAGER =====
+# Создаем только если cost_surface или angels включены в конфиге
+cost_enabled = config.get('cost_surface', {}).get('enabled', False)
+angels_enabled = config.get('angel', {}).get('show_angels', False)
+
+if cost_enabled or angels_enabled:
+    angel_manager = AngelManager(color_manager=color_manager, zoom_manager=zoom_manager, config=config)
+    print("   ✓ Angel Manager создан")
+else:
+    angel_manager = None
+    print("   ⏭️ Angel Manager пропущен (cost_surface и angels отключены)")
 
 print("   ✓ Zoom Manager создан")
 
@@ -209,23 +225,37 @@ spore_manager = SporeManager(
     spawn_area=spawn_area_logic
 )
 
-# --- Поверхность стоимости (Cost) ---
-# Создаем родительский Entity для всей поверхности стоимости
-cost_surface_parent = Scalable()
-
-# Создаем логику
-cost_logic = CostFunction(
-    goal_position_2d=np.array([goal.position[0], goal.position[2]]),
-)
-# Создаем визуализацию
-cost_surface = CostVisualizer(
-    cost_function=cost_logic,
-    spawn_area=spawn_area_logic, # <-- Передаем логический объект
-    parent_entity=cost_surface_parent, # <--- Указываем нового родителя
-    color_manager=color_manager,
-    config=config['cost_surface']
-)
-angel_manager.cost_function = cost_logic # <-- Передаем логический объект
+# --- УСЛОВНОЕ СОЗДАНИЕ ПОВЕРХНОСТИ СТОИМОСТИ (Cost) ---
+if cost_enabled:
+    # Создаем родительский Entity для всей поверхности стоимости
+    cost_surface_parent = Scalable()
+    
+    # Создаем логику - оптимизация создания массива
+    goal_pos_2d = np.empty(2, dtype=float)
+    goal_pos_2d[0] = goal.position[0]
+    goal_pos_2d[1] = goal.position[2]
+    cost_logic = CostFunction(
+        goal_position_2d=goal_pos_2d,
+    )
+    # Создаем визуализацию
+    cost_surface = CostVisualizer(
+        cost_function=cost_logic,
+        spawn_area=spawn_area_logic, # <-- Передаем логический объект
+        parent_entity=cost_surface_parent, # <--- Указываем нового родителя
+        color_manager=color_manager,
+        config=config['cost_surface']
+    )
+    
+    # Передаем логический объект в angel_manager если он существует
+    if angel_manager:
+        angel_manager.cost_function = cost_logic
+    
+    print("   ✓ Cost Surface создана")
+else:
+    cost_surface = None
+    cost_logic = None
+    cost_surface_parent = None
+    print("   ⏭️ Cost Surface пропущена (cost_surface.enabled = false)")
 
 # ===== НАСТРОЙКА UI ЧЕРЕЗ UI_SETUP С КОЛБЭКАМИ =====
 print("\n📊 3. Настройка полного UI через UI_setup с колбэками...")
@@ -237,7 +267,7 @@ ui_setup = UI_setup(color_manager=color_manager)
 spawn_area_manager = SpawnAreaManager(
     spawn_area_logic=spawn_area_logic,
     spawn_area_visualizer=spawn_area_visualizer,
-    cost_visualizer=cost_surface
+    cost_visualizer=cost_surface  # Может быть None
 )
 
 # ===== СОЗДАНИЕ INPUT MANAGER =====
@@ -292,8 +322,9 @@ spore_manager.add_spore(spore)
 zoom_manager.register_object(goal)
 zoom_manager.register_object(spore)
 zoom_manager.register_object(spawn_area_visualizer)
-# cost_surface больше не Scalable, регистрируем его общий родительский Entity
-zoom_manager.register_object(cost_surface_parent)
+# cost_surface больше не Scalable, регистрируем его общий родительский Entity (если существует)
+if cost_surface_parent:
+    zoom_manager.register_object(cost_surface_parent)
 
 zoom_manager.update_transform()
 
