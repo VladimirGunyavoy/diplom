@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.linalg import expm
 from typing import Tuple
+from scipy.integrate import solve_ivp
 
 class PendulumSystem:
     """
@@ -101,3 +102,60 @@ class PendulumSystem:
 
         next_state = A_discrete @ state + B_discrete @ control
         return next_state.flatten()
+    
+    def pendulum_dynamics(self, state: np.ndarray, control: float) -> np.ndarray:
+        """
+        Описывает непрерывную динамику нелинейного маятника.
+        
+        Args:
+            state (np.ndarray): Текущее состояние [theta, theta_dot].
+            control (float): Управляющее воздействие (крутящий момент).
+            
+        Returns:
+            np.ndarray: Производная состояния [d_theta/dt, d_theta_dot/dt].
+        """
+        theta, theta_dot = state
+        
+        # Нелинейное уравнение движения маятника
+        d_theta = theta_dot
+        d_theta_dot = -self.g / self.l * np.sin(theta) - self.damping * theta_dot + control / (self.m * self.l**2)
+        
+        return np.array([d_theta, d_theta_dot])
+    
+
+    def scipy_rk45_step(self, state: np.ndarray, control: float, dt: float) -> np.ndarray:
+        """
+        Выполняет один шаг численного интегрирования с помощью solve_ivp (RK45).
+        
+        Args:
+            state (np.ndarray): Текущее состояние [theta, theta_dot].
+            control (float): Управляющее воздействие.
+            dt (float): Размер временного шага.
+            
+        Returns:
+            np.ndarray: Следующее состояние системы.
+        """
+        # solve_ivp решает систему от t_span[0] до t_span[1]
+        # Мы хотим сделать всего один шаг, поэтому t_span = [0, dt]
+        t_span = [0, dt]
+        
+        # y0 - начальное состояние
+        y0 = state
+
+        def dynamics_wrapper(t, y):
+            return self.pendulum_dynamics(y, control)
+        
+        # Передаем функцию динамики и дополнительные аргументы (control)
+        solution = solve_ivp(
+            fun=dynamics_wrapper,
+            t_span=t_span,
+            y0=y0,
+            method='RK45', 
+            rtol=1e-6, # Относительный допуск по ошибке
+            atol=1e-8 # Абсолютный допуск по ошибке
+        )
+        
+        # Результат находится в последнем столбце массива y
+        next_state = solution.y[:, -1]
+        
+        return next_state
