@@ -204,14 +204,16 @@ class ManualSporeManager:
             self._clear_predictions()
             
             # Создаем предсказания для min и max управления
+
+
             prediction_configs = [
-                {'control': self.min_control, 'name': 'min'},
-                {'control': self.max_control, 'name': 'max'}
+                {'control': self.min_control, 'name': 'min', 'color': 'ghost_min'},  # 🔵 Голубой
+                {'control': self.max_control, 'name': 'max', 'color': 'ghost_max'}   # 🔴 Красный
             ]
             
             for i, config in enumerate(prediction_configs):
                 # Вычисляем будущую позицию
-                future_pos_2d = self.pendulum.discrete_step(
+                future_pos_2d = self.pendulum.scipy_rk45_step(
                     self.preview_position_2d, 
                     config['control'], 
                     self.config.get('pendulum', {}).get('dt', 0.1)
@@ -229,7 +231,7 @@ class ManualSporeManager:
                 
                 # Устанавливаем обычный цвет для призрака (как у реальных спор)
                 if prediction_viz.ghost_spore:
-                    prediction_viz.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
+                    prediction_viz.ghost_spore.color = self.color_manager.get_color('spore', config['color'])
                 
                 # Обновляем позицию предсказания
                 prediction_viz.update(future_pos_2d)
@@ -245,7 +247,8 @@ class ManualSporeManager:
                     )
                     
                     # Устанавливаем обычный цвет для линка (как у реальных)
-                    prediction_link.color = self.color_manager.get_color('link', 'ghost')
+                    link_color = 'ghost_min' if config['name'] == 'min' else 'ghost_max'
+                    prediction_link.color = self.color_manager.get_color('link', link_color)
                     
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
@@ -325,7 +328,7 @@ class ManualSporeManager:
                 child_id = self._get_next_spore_id()
 
                 # Вычисляем позицию дочерней споры
-                child_pos_2d = self.pendulum.discrete_step(
+                child_pos_2d = self.pendulum.scipy_rk45_step(
                     self.preview_position_2d, 
                     config['control'], 
                     dt

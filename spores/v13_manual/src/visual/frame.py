@@ -56,3 +56,36 @@ class Frame(Entity):
         )
 
         self.entities: List[Scalable] = [self.origin_cube, self.x_axis, self.y_axis, self.z_axis]
+
+    def toggle_visibility(self) -> None:
+        """Переключает видимость всех элементов Frame (оси и куб)."""
+        current_state = self.origin_cube.enabled
+        new_state = not current_state
+        
+        # Переключаем все элементы Frame
+        self.origin_cube.enabled = new_state
+        self.x_axis.enabled = new_state
+        self.y_axis.enabled = new_state
+        self.z_axis.enabled = new_state
+        
+        # Выводим статус
+        status = "показан" if new_state else "скрыт"
+        print(f"📐 Frame {status}")
+
+    def hide_frame(self) -> None:
+        """Скрывает все элементы Frame."""
+        self.origin_cube.enabled = False
+        self.x_axis.enabled = False
+        self.y_axis.enabled = False
+        self.z_axis.enabled = False
+
+    def show_frame(self) -> None:
+        """Показывает все элементы Frame."""
+        self.origin_cube.enabled = True
+        self.x_axis.enabled = True
+        self.y_axis.enabled = True
+        self.z_axis.enabled = True
+
+    def is_visible(self) -> bool:
+        """Проверяет видим ли Frame."""
+        return self.origin_cube.enabled

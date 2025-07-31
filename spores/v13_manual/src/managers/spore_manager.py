@@ -809,7 +809,7 @@ class SporeManager:
         # Определяем конкретные управления и цвета
         ghost_configs = [
             {'control': max_control, 'color': 'ghost_max', 'name': 'max_pos'},     # Красный +макс
-            {'control': min_control, 'color': 'ghost_max', 'name': 'max_neg'},     # Красный -макс  
+            {'control': min_control, 'color': 'ghost_min', 'name': 'min_neg'},     # Голубой -макс  
             {'control': 0.0, 'color': 'ghost_zero', 'name': 'zero'},              # Зеленый
             {'control': optimal_control, 'color': 'ghost_optimal', 'name': 'optimal'}  # Синий
         ]

@@ -175,7 +175,8 @@ E/T - zoom in/out
 R - reset zoom
 1 - larger spores
 2 - smaller spores
-H - hide/show all UI"""
+H - hide/show all UI
+U - hide/show frame"""
         
         self.ui_elements['game_commands'] = self.ui_manager.create_instructions(
             'game_controls',

@@ -80,6 +80,7 @@ class Link(Scalable):
         # Затем ориентируем стрелку от parent к child
         # The arrow's "forward" is its Y-axis.
         self.look_at(Vec3(*self.child_spore.real_position), axis='up')
+        # self.rotation_x = 0
         
         # После этого устанавливаем real координаты и масштаб
         self.real_scale = np.array(real_scale)

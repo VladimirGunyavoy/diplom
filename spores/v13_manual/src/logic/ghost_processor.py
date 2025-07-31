@@ -13,12 +13,11 @@ class GhostProcessor:
         self.pendulum = pendulum_system
         self.dt = dt
         
-        # Оптимизация: буфер для control массива чтобы избежать np.array([control]) в цикле
-        self._control_buffer = np.array([0.0], dtype=float)
 
     def process(self, current_state_2d, controls):
         """
         Рассчитывает будущие 2D-позиции на основе текущего состояния и набора управлений.
+        Использует scipy RK45 интегрирование для высокой точности.
 
         :param current_state_2d: np.array, текущая 2D-позиция (состояние).
         :param controls: list | np.array, список управляющих воздействий.
@@ -26,14 +25,10 @@ class GhostProcessor:
         """
         # Оптимизация: заранее выделяем память под результат
         future_states = [None] * len(controls)
-        A, B = self.pendulum.get_linearized_matrices_at_state(current_state_2d)
-        Ad, Bd = self.pendulum.discretize(A, B, self.dt)
 
         for i, control in enumerate(controls):
-            # Оптимизация: используем буфер вместо создания np.array([control])
-            self._control_buffer[0] = control
-            # x_k+1 = Ad * x_k + Bd * u_k
-            next_state = Ad @ current_state_2d + Bd @ self._control_buffer
+            # Используем RK45 интегрирование для каждого управления
+            next_state = self.pendulum.scipy_rk45_step(current_state_2d, control, self.dt)
             future_states[i] = next_state
             
-        return future_states 
+        return future_states

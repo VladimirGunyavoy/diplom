@@ -132,6 +132,11 @@ class InputManager:
             if self.spore_manager:
                 self.spore_manager.evolve_all_candidates_to_completion()
             return
+        
+        if key == 'u':
+            if self.scene_setup and hasattr(self.scene_setup, 'frame'):
+                self.scene_setup.frame.toggle_visibility()
+            return
             
         # 3. Управление масштабированием
         if self.zoom_manager:
