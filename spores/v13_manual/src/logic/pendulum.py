@@ -13,7 +13,7 @@ class PendulumSystem:
                  l: float = 2.0,
                  m: float = 1.0,
                  damping: float = 0.1, 
-                 max_control: float = 10):
+                 max_control: float = 5):
         self.g: float = g
         self.l: float = l
         self.m: float = m
