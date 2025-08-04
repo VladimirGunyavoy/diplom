@@ -32,3 +32,21 @@ class GhostProcessor:
             future_states[i] = next_state
             
         return future_states
+    
+
+    def process_backward(self, current_state_2d, controls):
+        """
+        Простой расчет призраков назад во времени.
+        
+        :param current_state_2d: np.array, текущее состояние
+        :param controls: list, список управлений
+        :return: list[np.array], список прошлых состояний
+        """
+        past_states = []
+        
+        for control in controls:
+            # Простой шаг назад
+            past_state = self.pendulum.scipy_rk45_step_backward(current_state_2d, control, self.dt)
+            past_states.append(past_state)
+        
+        return past_states

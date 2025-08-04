@@ -194,8 +194,9 @@ class ManualSporeManager:
         except Exception as e:
             print(f"Ошибка создания превью споры: {e}")
     
+
     def _update_predictions(self) -> None:
-        """Обновляет предсказания при min/max управлении."""
+        """Обновляет предсказания: 2 вперед (min/max) + 2 назад (min/max)."""
         if not self.preview_spore:
             return
             
@@ -203,21 +204,34 @@ class ManualSporeManager:
             # Очищаем старые предсказания
             self._clear_predictions()
             
-            # Создаем предсказания для min и max управления
-
-
+            dt = self.config.get('pendulum', {}).get('dt', 0.1)
+            
+            # 4 предсказания: 2 вперед + 2 назад
             prediction_configs = [
-                {'control': self.min_control, 'name': 'min', 'color': 'ghost_min'},  # 🔵 Голубой
-                {'control': self.max_control, 'name': 'max', 'color': 'ghost_max'}   # 🔴 Красный
+                # Вперед
+                {'control': self.min_control, 'name': 'forward_min', 'color': 'ghost_min', 'direction': 'forward'},
+                {'control': self.max_control, 'name': 'forward_max', 'color': 'ghost_max', 'direction': 'forward'},
+                # Назад  
+                {'control': self.min_control, 'name': 'backward_min', 'color': 'ghost_min', 'direction': 'backward'},
+                {'control': self.max_control, 'name': 'backward_max', 'color': 'ghost_max', 'direction': 'backward'}
             ]
             
             for i, config in enumerate(prediction_configs):
-                # Вычисляем будущую позицию
-                future_pos_2d = self.pendulum.scipy_rk45_step(
-                    self.preview_position_2d, 
-                    config['control'], 
-                    self.config.get('pendulum', {}).get('dt', 0.1)
-                )
+                # Вычисляем позицию в зависимости от направления
+                if config['direction'] == 'forward':
+                    # Обычный шаг вперед
+                    predicted_pos_2d = self.pendulum.scipy_rk45_step(
+                        self.preview_position_2d, 
+                        config['control'], 
+                        dt
+                    )
+                else:  # backward
+                    # Шаг назад во времени
+                    predicted_pos_2d = self.pendulum.scipy_rk45_step_backward(
+                        self.preview_position_2d, 
+                        config['control'], 
+                        dt
+                    )
                 
                 # Создаем визуализатор предсказания
                 prediction_viz = PredictionVisualizer(
@@ -225,34 +239,90 @@ class ManualSporeManager:
                     color_manager=self.color_manager,
                     zoom_manager=self.zoom_manager,
                     cost_function=None,  # Не показываем cost для предсказаний
-                    config={'spore': {'show_ghosts': True}, 'angel': {'show_angels': False, 'show_pillars': False}},
+                    config={
+                        'spore': {'show_ghosts': True}, 
+                        'angel': {'show_angels': False, 'show_pillars': False}
+                    },
                     spore_id=f'manual_prediction_{config["name"]}'
                 )
                 
-                # Устанавливаем обычный цвет для призрака (как у реальных спор)
+                # Устанавливаем цвет призрака
                 if prediction_viz.ghost_spore:
-                    prediction_viz.ghost_spore.color = self.color_manager.get_color('spore', config['color'])
+                    base_color = self.color_manager.get_color('spore', config['color'])
+                    
+                    # Для призраков назад делаем цвет более тусклым
+                    if config['direction'] == 'backward':
+                        # Уменьшаем яркость для призраков назад
+                        if hasattr(base_color, 'r'):
+                            r, g, b = base_color.r * 0.6, base_color.g * 0.6, base_color.b * 0.6
+                            prediction_viz.ghost_spore.color = (r, g, b, 0.7)
+                        else:
+                            # Fallback
+                            prediction_viz.ghost_spore.color = (0.3, 0.3, 0.6, 0.7)  # Тусклый синий
+                    else:
+                        # Обычный цвет для призраков вперед
+                        prediction_viz.ghost_spore.color = base_color
                 
                 # Обновляем позицию предсказания
-                prediction_viz.update(future_pos_2d)
+                prediction_viz.update(predicted_pos_2d)
                 
-                # Создаем линк от превью споры к призраку с обычным цветом
+                # # Создаем линк от превью споры к призраку
+                # if prediction_viz.ghost_spore:
+                #     prediction_link = Link(
+                #         parent_spore=self.preview_spore,
+                #         child_spore=prediction_viz.ghost_spore,
+                #         color_manager=self.color_manager,
+                #         zoom_manager=self.zoom_manager,
+                #         config=self.config
+                #     )
+
+                # Создаем линк от превью споры к призраку
                 if prediction_viz.ghost_spore:
+                    # Для обратного направления меняем местами parent и child
+                    if config['direction'] == 'forward':
+                        # Вперед: превью → будущее состояние  
+                        parent_spore = self.preview_spore
+                        child_spore = prediction_viz.ghost_spore
+                    else:  # backward
+                        # Назад: прошлое состояние → превью (показываем откуда пришли)
+                        parent_spore = prediction_viz.ghost_spore  
+                        child_spore = self.preview_spore
+                    
                     prediction_link = Link(
-                        parent_spore=self.preview_spore,
-                        child_spore=prediction_viz.ghost_spore,
+                        parent_spore=parent_spore,
+                        child_spore=child_spore,
                         color_manager=self.color_manager,
                         zoom_manager=self.zoom_manager,
                         config=self.config
                     )
                     
-                    # Устанавливаем обычный цвет для линка (как у реальных)
-                    link_color = 'ghost_min' if config['name'] == 'min' else 'ghost_max'
-                    prediction_link.color = self.color_manager.get_color('link', link_color)
+                    # Устанавливаем цвет линка в зависимости от управления  
+                    if config['direction'] == 'forward':
+                        # Обычные цвета для линков вперед
+                        if 'min' in config['name']:
+                            link_color_name = 'ghost_min'  # Синий для min
+                        else:  # max
+                            link_color_name = 'ghost_max'  # Красный для max
+                    else:  # backward
+                        # Те же цвета для линков назад
+                        if 'min' in config['name']:
+                            link_color_name = 'ghost_min'  # Синий для min
+                        else:  # max
+                            link_color_name = 'ghost_max'  # Красный для max
+                        
+                    prediction_link.color = self.color_manager.get_color('link', link_color_name)
+                    
+                    # Для линков назад делаем более тонкими или пунктирными
+                    if config['direction'] == 'backward':
+                        # Можно добавить дополнительную стилизацию линков назад
+                        pass
                     
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
-                    self.zoom_manager.register_object(prediction_link, f'manual_prediction_link_{config["name"]}')
+                    self.zoom_manager.register_object(
+                        prediction_link, 
+                        f'manual_prediction_link_{config["name"]}'
+                    )
                     
                     self.prediction_links.append(prediction_link)
                 
@@ -260,7 +330,9 @@ class ManualSporeManager:
                 
         except Exception as e:
             print(f"Ошибка обновления предсказаний: {e}")
-    
+            import traceback
+            traceback.print_exc()
+
     def _clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
         # Очищаем визуализаторы предсказаний
@@ -280,10 +352,14 @@ class ManualSporeManager:
     
     def create_spore_at_cursor(self) -> Optional[List[Spore]]:
         """
-        Создает родительскую спору в позиции курсора + 2 дочерние споры (min и max control).
+        Создает полную семью спор:
+        - Центральная спора в позиции курсора
+        - 2 дочерние споры (forward min/max control)  
+        - 2 родительские споры (backward min/max control)
+        - Все соединительные линки с правильными цветами
         
         Returns:
-            Список созданных спор [parent, min_child, max_child] или None при ошибке
+            Список созданных спор [center, forward_min, forward_max, backward_min, backward_max] или None при ошибке
         """
         if not self.preview_enabled or not self.preview_spore:
             return None
@@ -295,12 +371,11 @@ class ManualSporeManager:
             dt = pendulum_config.get('dt', 0.1)
             
             created_spores = []
+            created_links = []
             
-            # 1. Создаем родительскую спору в позиции курсора
-
-            parent_id = self._get_next_spore_id()
-
-            parent_spore = Spore(
+            # 1. Создаем ЦЕНТРАЛЬНУЮ спору в позиции курсора
+            center_id = self._get_next_spore_id()
+            center_spore = Spore(
                 pendulum=self.pendulum,
                 dt=dt,
                 goal_position=goal_position,
@@ -310,31 +385,42 @@ class ManualSporeManager:
                 config=spore_config
             )
             
-            # Добавляем родителя в систему БЕЗ автоматических призраков
-            self.spore_manager.add_spore_manual(parent_spore)
-            self.zoom_manager.register_object(parent_spore, f'manual_parent_{parent_id}')
-            created_spores.append(parent_spore)
-            print(f"   ✓ Создана родительская спора в позиции ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
+            # Добавляем центральную спору в систему
+            self.spore_manager.add_spore_manual(center_spore)
+            self.zoom_manager.register_object(center_spore, f'manual_center_{center_id}')
+            created_spores.append(center_spore)
+            print(f"   ✓ Создана центральная спора в позиции ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
             
-            # 2. Создаем дочерние споры в предсказанных позициях
-            child_configs = [
-                {'control': self.min_control, 'name': 'min'},
-                {'control': self.max_control, 'name': 'max'}
+            # 2. Создаем ДОЧЕРНИЕ споры (forward) + РОДИТЕЛЬСКИЕ споры (backward)
+            spore_configs = [
+                # Дочерние (forward)
+                {'control': self.min_control, 'name': 'forward_min', 'color': 'ghost_min', 'direction': 'forward'},
+                {'control': self.max_control, 'name': 'forward_max', 'color': 'ghost_max', 'direction': 'forward'},
+                # Родительские (backward) 
+                {'control': self.min_control, 'name': 'backward_min', 'color': 'ghost_min', 'direction': 'backward'},
+                {'control': self.max_control, 'name': 'backward_max', 'color': 'ghost_max', 'direction': 'backward'}
             ]
             
-            created_links = []
-            
-            for config in child_configs:
+            for config in spore_configs:
                 child_id = self._get_next_spore_id()
-
-                # Вычисляем позицию дочерней споры
-                child_pos_2d = self.pendulum.scipy_rk45_step(
-                    self.preview_position_2d, 
-                    config['control'], 
-                    dt
-                )
                 
-                # Создаем дочернюю спору
+                # Вычисляем позицию в зависимости от направления
+                if config['direction'] == 'forward':
+                    # Обычный шаг вперед
+                    child_pos_2d = self.pendulum.scipy_rk45_step(
+                        self.preview_position_2d, 
+                        config['control'], 
+                        dt
+                    )
+                else:  # backward
+                    # Шаг назад во времени
+                    child_pos_2d = self.pendulum.scipy_rk45_step_backward(
+                        self.preview_position_2d, 
+                        config['control'], 
+                        dt
+                    )
+                
+                # Создаем спору
                 child_spore = Spore(
                     pendulum=self.pendulum,
                     dt=dt,
@@ -345,59 +431,69 @@ class ManualSporeManager:
                     config=spore_config
                 )
                 
-                # Добавляем дочернюю спору в систему БЕЗ автоматических призраков
+                # Добавляем спору в систему БЕЗ автоматических призраков
                 self.spore_manager.add_spore_manual(child_spore)
-                self.zoom_manager.register_object(child_spore, f'manual_child_{child_id}_{config["name"]}')
+                self.zoom_manager.register_object(child_spore, f'manual_{config["name"]}_{child_id}')
                 
                 # Переопределяем управление на конкретное значение
                 child_spore.logic.optimal_control = np.array([config['control']])
                 
                 created_spores.append(child_spore)
-                print(f"   ✓ Создана дочерняя спора ({config['name']}) в позиции ({child_pos_2d[0]:.3f}, {child_pos_2d[1]:.3f}) с управлением {config['control']:.2f}")
+                print(f"   ✓ Создана спора {config['name']} в позиции ({child_pos_2d[0]:.3f}, {child_pos_2d[1]:.3f}) с управлением {config['control']:.2f}")
                 
-                # 3. Создаем линк от родителя к ребёнку
-
+                # 3. Создаем ЛИНК с правильным направлением и цветом
                 link_id = self._get_next_link_id()
-                unique_link_name = f'manual_link_{link_id}_{config["name"]}'
-
-                child_link = Link(
+                
+                # Определяем направление стрелки
+                if config['direction'] == 'forward':
+                    # Вперед: центр → дочерняя
+                    parent_spore = center_spore
+                    child_link_spore = child_spore
+                else:  # backward
+                    # Назад: родительская → центр (показываем откуда пришли)
+                    parent_spore = child_spore
+                    child_link_spore = center_spore
+                
+                # Создаем линк
+                spore_link = Link(
                     parent_spore=parent_spore,
-                    child_spore=child_spore,
+                    child_spore=child_link_spore,
                     color_manager=self.color_manager,
                     zoom_manager=self.zoom_manager,
                     config=self.config
                 )
                 
-                # Обновляем геометрию и регистрируем линк
-                child_link.update_geometry()
-                self.zoom_manager.register_object(child_link, unique_link_name)
+                # Устанавливаем цвет линка в зависимости от управления
+                if 'min' in config['name']:
+                    # Синий цвет для минимального управления
+                    link_color_name = 'ghost_min'
+                else:  # max
+                    # Красный цвет для максимального управления  
+                    link_color_name = 'ghost_max'
                 
-                created_links.append(child_link)
-                self.created_links.append(child_link)
-
-                print(f"   ✓ Создан линк: родитель → {config['name']} ребёнок")
+                spore_link.color = self.color_manager.get_color('link', link_color_name)
+                
+                # Обновляем геометрию и регистрируем линк
+                spore_link.update_geometry()
+                self.zoom_manager.register_object(spore_link, f'manual_link_{config["name"]}_{link_id}')
+                
+                created_links.append(spore_link)
+                self.created_links.append(spore_link)
+                
+                print(f"   ✓ Создан {link_color_name} линк для {config['name']} (направление: {config['direction']})")
             
-            print(f"   🎯 Итого создано: 1 родитель + 2 ребёнка + 2 линка")
-            self.zoom_manager.update_transform()
-
-            print(f"   📊 ДИАГНОСТИКА после создания:")
-            print(f"      🧮 Всего созданных спор: {self._spore_counter}")
-            print(f"      🔗 Всего созданных линков: {self._link_counter}")
-            print(f"      📋 Объектов в ZoomManager: {len(self.zoom_manager.objects)}")
+            print(f"   🎯 Создано ВСЕГО: {len(created_spores)} спор + {len(created_links)} линков")
+            print(f"   📊 Состав: 1 центральная + 2 дочерние (forward) + 2 родительские (backward)")
             
-            # Показать все линки в ZoomManager
-            link_count = 0
-            for name, obj in self.zoom_manager.objects.items():
-                if 'link' in name.lower():
-                    link_count += 1
-            print(f"      🔍 Зарегистрированных линков: {link_count}")
-
             return created_spores
             
         except Exception as e:
-            print(f"Ошибка создания спор: {e}")
+            print(f"Ошибка создания семьи спор: {e}")
+            import traceback
+            traceback.print_exc()
             return None
-    
+
+
     def _destroy_preview(self) -> None:
         """Уничтожает превью спору, предсказания и их линки."""
         if self.preview_spore:

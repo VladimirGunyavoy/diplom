@@ -159,3 +159,18 @@ class PendulumSystem:
         next_state = solution.y[:, -1]
         
         return next_state
+        
+    def scipy_rk45_step_backward(self, state: np.ndarray, control: float, dt: float) -> np.ndarray:
+        """
+        Простой шаг назад во времени - интегрируем с отрицательным dt.
+        
+        Args:
+            state: Текущее состояние [theta, theta_dot]
+            control: Управляющее воздействие  
+            dt: Временной шаг (положительный)
+            
+        Returns:
+            Состояние на dt секунд раньше
+        """
+        # Просто используем обычный метод с отрицательным временным шагом
+        return self.scipy_rk45_step(state, control, -dt)
