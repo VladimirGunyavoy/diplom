@@ -1,0 +1,59 @@
+{
+  "scene_setup": {
+    "init_position": [0.263, -1.451, 0.116],
+    "init_rotation_x": 42.750,
+    "init_rotation_y": -12.135
+  },
+  "pendulum": {
+    "dt": 0.2,
+    "damping": 0.3,
+    "optimizer": {
+      "dt_min": 0.0,
+      "dt_max": 0.1
+    }
+  },
+  "zoom_manager": {
+    "initial_zoom_a": 1.602
+  },
+  "spore": {
+    "goal_position": [3.14159, 0],
+    "initial_position": [0, 0, 2]
+  },
+  "spawn_area": {
+    "eccentricity": 0.9
+  },
+  "cost_surface": {
+    "enabled": false,
+    "show_points": false,
+    "show_edges": false,
+    "show_contours": true,
+    "alpha": 0.7,
+    "mesh_generation": {
+      "boundary_points": 128,
+      "interior_min_radius": 0.01
+    },
+    "contour_visualization": {
+      "levels": 22,
+      "thickness": 2,
+      "resolution": 150,
+      "y_offset": 0.05,
+      "alpha": 0.5
+    }
+  },
+  "angel": {
+    "show_angels": false,
+    "show_pillars": false
+  },
+  "trajectory_optimization": {
+    "merge_tolerance": 0.02,
+    "trajectory_merge_tolerance": 0.02,
+    "enabled": true,
+    "debug_output": false
+  },
+  "debug": {
+    "enable_verbose_output": false,
+    "enable_detailed_evolution": false,
+    "enable_candidate_logging": false,
+    "enable_trajectory_logging": false
+  }
+} 
