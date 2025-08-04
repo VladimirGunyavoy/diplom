@@ -152,7 +152,7 @@ class InputManager:
                 self.zoom_manager.decrease_spores_scale()
         
         # 4. Очистка объектов (v13_manual)
-        if key == 'c' and self.spore_manager:
+        if  held_keys['c'] and self.spore_manager and held_keys['left control']:
             print("🧹 Клавиша C: Полная очистка всех спор и объектов")
             
             # 🆕 ДИАГНОСТИКА: Проверяем есть ли manual_spore_manager
@@ -170,11 +170,24 @@ class InputManager:
             self.spore_manager.clear_all_manual()
             
         # 5. Управление параметром
-        if self.param_manager:
-            if key == 'z': 
-                self.param_manager.increase()
-            elif key == 'x': 
-                self.param_manager.decrease()
+        # if self.param_manager:
+        #     if key == 'z': 
+        #         self.param_manager.increase()
+        #     elif key == 'x': 
+        #         self.param_manager.decrease()
+
+
+        if key == 'z' or key == 'backspace':
+            if self.manual_spore_manager:
+                print("🗑️ Клавиша удаления: Удаление последней группы спор")
+                success = self.manual_spore_manager.delete_last_spore_group()
+                if success:
+                    print("   ✅ Последняя группа спор успешно удалена")
+                else:
+                    print("   ❌ Не удалось удалить группу (возможно, нет групп для удаления)")
+            else:
+                print("   ❌ ManualSporeManager не найден!")
+            return
 
         # 5. Управление областью спавна
         if self.spawn_area_manager:

@@ -836,4 +836,36 @@ class SporeManager:
                 visualizer.set_visibility(False)
 
 
+    def remove_spore(self, spore: Spore) -> bool:
+        """
+        Удаляет спору из списка управления SporeManager.
+        
+        Args:
+            spore: Спора для удаления
+            
+        Returns:
+            True если спора была найдена и удалена, False иначе
+        """
+        try:
+            if spore in self.objects:
+                self.objects.remove(spore)
+                
+                # Получаем информацию о споре для логирования
+                spore_id = getattr(spore, 'id', 'unknown')
+                spore_pos = spore.calc_2d_pos() if hasattr(spore, 'calc_2d_pos') else 'unknown'
+                
+                debug_print(f"   ➖ Спора {spore_id} удалена из SporeManager")
+                debug_print(f"      📍 Позиция: {spore_pos}")
+                debug_print(f"      📊 Спор осталось: {len(self.objects)}")
+                
+                return True
+            else:
+                debug_print(f"   ⚠️ Спора не найдена в SporeManager.objects")
+                return False
+                
+        except Exception as e:
+            debug_print(f"   ❌ Ошибка удаления споры из SporeManager: {e}")
+            return False
+
+
 

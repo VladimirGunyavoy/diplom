@@ -55,8 +55,14 @@ class ManualSporeManager:
 
         self._link_counter = 0
         self._spore_counter = 0
-        
+
+
+        # История созданных групп спор для возможности удаления
+        self.spore_groups_history: List[List[Spore]] = []  # История групп спор
+        self.group_links_history: List[List[Link]] = []    # История линков для каждой группы
+
         print(f"   ✓ Manual Spore Manager создан (управление: {self.min_control} .. {self.max_control})")
+        print(f"   📚 История групп инициализирована")
 
     def _get_next_link_id(self) -> int:
         """Возвращает уникальный ID для линка"""
@@ -484,6 +490,14 @@ class ManualSporeManager:
             
             print(f"   🎯 Создано ВСЕГО: {len(created_spores)} спор + {len(created_links)} линков")
             print(f"   📊 Состав: 1 центральная + 2 дочерние (forward) + 2 родительские (backward)")
+
+            print(f"   🎯 Создано ВСЕГО: {len(created_spores)} спор + {len(created_links)} линков")
+            print(f"   📊 Состав: 1 центральная + 2 дочерние (forward) + 2 родительские (backward)")
+            
+            # 🆕 СОХРАНЕНИЕ В ИСТОРИЮ для возможности удаления
+            self.spore_groups_history.append(created_spores.copy())
+            self.group_links_history.append(created_links.copy())
+            print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
             
             return created_spores
             
@@ -542,6 +556,12 @@ class ManualSporeManager:
             print(f"   🏹 Entities со стрелками: {len(arrow_entities)}")
         except Exception as e:
             print(f"   ⚠️ Ошибка диагностики сцены: {e}")
+
+        # 🆕 Очищаем историю групп
+        cleared_groups = len(self.spore_groups_history)
+        self.spore_groups_history.clear()
+        self.group_links_history.clear()
+        print(f"   📚 Очищена история: {cleared_groups} групп")
         
         self.created_links.clear()
 
@@ -549,3 +569,130 @@ class ManualSporeManager:
         """Очищает все ресурсы менеджера."""
         self.clear_all()  # Используем новый метод
         print("   ✓ Manual Spore Manager уничтожен")
+
+    def delete_last_spore_group(self) -> bool:
+        """
+        Удаляет последнюю созданную группу спор и их линки.
+        
+        Returns:
+            True если удаление успешно, False если нечего удалять
+        """
+        if not self.spore_groups_history:
+            print("   ⚠️ Нет групп для удаления")
+            return False
+            
+        try:
+            # 1. Получаем последнюю группу из истории
+            last_spores = self.spore_groups_history.pop()
+            last_links = self.group_links_history.pop()
+            
+            print(f"   🗑️ Удаление группы #{len(self.spore_groups_history) + 1}")
+            print(f"   📊 К удалению: {len(last_spores)} спор + {len(last_links)} линков")
+            
+            # 2. УДАЛЯЕМ ЛИНКИ (важно делать ДО удаления спор)
+            deleted_links = 0
+            for i, link in enumerate(last_links):
+                try:
+                    # Дерегистрируем из zoom_manager
+                    # Нужно найти правильный ключ - проверяем registered objects
+                    if hasattr(self.zoom_manager, 'objects'):
+                        for key, obj in list(self.zoom_manager.objects.items()):
+                            if obj is link:
+                                self.zoom_manager.unregister_object(key)
+                                print(f"   ✓ Линк {i+1} дерегистрирован: {key}")
+                                break
+                    
+                    # Удаляем из created_links
+                    if link in self.created_links:
+                        self.created_links.remove(link)
+                        
+                    # Уничтожаем объект Ursina
+                    destroy(link)
+                    deleted_links += 1
+                    print(f"   ✅ Линк {i+1} удален")
+                    
+                except Exception as e:
+                    print(f"   ❌ Ошибка удаления линка {i+1}: {e}")
+            
+            # 3. УДАЛЯЕМ СПОРЫ  
+            deleted_spores = 0
+            for i, spore in enumerate(last_spores):
+                try:
+                    # Удаляем из SporeManager
+                    if hasattr(self.spore_manager, 'remove_spore'):
+                        removed = self.spore_manager.remove_spore(spore)
+                        if removed:
+                            print(f"   ✓ Спора {i+1} удалена из SporeManager")
+                    else:
+                        # Fallback если remove_spore еще не реализован
+                        if hasattr(self.spore_manager, 'objects') and spore in self.spore_manager.objects:
+                            self.spore_manager.objects.remove(spore)
+                            print(f"   ✓ Спора {i+1} удалена из objects (fallback)")
+                    
+                    # Дерегистрируем из zoom_manager
+                    if hasattr(self.zoom_manager, 'objects'):
+                        for key, obj in list(self.zoom_manager.objects.items()):
+                            if obj is spore:
+                                self.zoom_manager.unregister_object(key)
+                                print(f"   ✓ Спора {i+1} дерегистрирована: {key}")
+                                break
+                    
+                    # Уничтожаем объект Ursina
+                    destroy(spore)
+                    deleted_spores += 1
+                    print(f"   ✅ Спора {i+1} уничтожена")
+                    
+                except Exception as e:
+                    print(f"   ❌ Ошибка удаления споры {i+1}: {e}")
+            
+            # 4. ИТОГОВАЯ СТАТИСТИКА
+            print(f"   🎯 УДАЛЕНИЕ ЗАВЕРШЕНО:")
+            print(f"      📊 Спор удалено: {deleted_spores}/{len(last_spores)}")
+            print(f"      🔗 Линков удалено: {deleted_links}/{len(last_links)}")
+            print(f"      📚 Групп осталось в истории: {len(self.spore_groups_history)}")
+            
+            # Проверяем что удаление было успешным
+            if deleted_spores == len(last_spores) and deleted_links == len(last_links):
+                print(f"   ✅ Группа успешно удалена!")
+                return True
+            else:
+                print(f"   ⚠️ Удаление частично неуспешно")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Критическая ошибка удаления группы: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        
+    def get_groups_history_stats(self) -> dict:
+        """
+        Возвращает статистику по истории созданных групп.
+        
+        Returns:
+            Словарь с информацией о количестве групп, спор и линков в истории
+        """
+        total_groups = len(self.spore_groups_history)
+        total_spores = sum(len(group) for group in self.spore_groups_history)
+        total_links = sum(len(links) for links in self.group_links_history)
+        
+        return {
+            'total_groups': total_groups,
+            'total_spores': total_spores,
+            'total_links': total_links,
+            'can_delete': total_groups > 0
+        }
+
+    def print_groups_history_stats(self) -> None:
+        """Выводит детальную статистику истории групп."""
+        stats = self.get_groups_history_stats()
+        
+        print(f"\n📚 СТАТИСТИКА ИСТОРИИ ГРУПП:")
+        print(f"   🔢 Всего групп: {stats['total_groups']}")
+        print(f"   🧬 Всего спор: {stats['total_spores']}")
+        print(f"   🔗 Всего линков: {stats['total_links']}")
+        print(f"   🗑️ Можно удалить: {'Да' if stats['can_delete'] else 'Нет'}")
+        
+        if stats['total_groups'] > 0:
+            print(f"   📋 Последняя группа: {len(self.spore_groups_history[-1])} спор + {len(self.group_links_history[-1])} линков")
+        print("========================")
