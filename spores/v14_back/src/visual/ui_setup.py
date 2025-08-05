@@ -45,6 +45,27 @@ class UI_setup:
         
         # Хранилище функций-поставщиков данных
         self.data_providers: Dict[str, Callable[[], Any]] = {}
+
+
+    def _create_param_ui(self) -> None:
+        """Создает UI элементы для param manager и dt manager."""
+        
+        # Существующий param_manager UI
+        param_value, show_param = self.param_manager.get_value_and_visibility() if self.param_manager else (0, False)
+        
+        if show_param:
+            self.ui_elements['param_info'] = self.ui_manager.create_info_block(
+                'param_info', f"Parameter: {param_value:.3f}", position=UI_POSITIONS.PARAM_INFO
+            )
+        
+        # 🆕 DTManager UI
+        if hasattr(self, 'dt_manager') and self.dt_manager:
+            dt_stats = self.dt_manager.get_stats()
+            dt_text = f"dt: {dt_stats['current_dt']:.4f} (×{dt_stats['multiplier_from_original']:.2f})"
+            
+            self.ui_elements['dt_info'] = self.ui_manager.create_info_block(
+                'dt_info', dt_text, position=UI_POSITIONS.DT_INFO
+            )
     
     def setup_spawn_area_ui(self, spawn_area: SpawnAreaLogic) -> None:
         """Создает UI для SpawnArea и настраивает колбэки."""
@@ -141,6 +162,18 @@ class UI_setup:
                 position=UI_POSITIONS.CANDIDATE_CONTROLS
             )
             print("   ✓ Информация о кандидатах")
+
+        if 'get_dt_info' in self.data_providers:
+            dt_stats = self.data_providers['get_dt_info']()
+            dt_text = f"dt: {dt_stats['current_dt']:.4f}"
+            
+            self.ui_elements['dt_info'] = self.ui_manager.create_element(
+                'dynamic', 'dt_info',
+                text=dt_text,
+                position=UI_POSITIONS.DT_INFO,
+                style='normal'
+            )
+            print("   ✓ DT Manager UI")
         
         # X. UI для SpawnArea
         if spawn_area:
@@ -176,7 +209,11 @@ R - reset zoom
 1 - larger spores
 2 - smaller spores
 H - hide/show all UI
-U - hide/show frame"""
+U - hide/show frame
+M - reset dt
+J - show dt stats
+Ctrl+Scroll - 
+change dt"""
         
         self.ui_elements['game_commands'] = self.ui_manager.create_instructions(
             'game_controls',
@@ -296,6 +333,42 @@ U - hide/show frame"""
                     pass
         
         self.ui_manager.register_update_function('candidate_info', update_candidate_info)
+
+        def update_dt_info() -> None:
+            if 'get_dt_info' in self.data_providers:
+                try:
+                    dt_stats = self.data_providers['get_dt_info']()
+                    dt_text = f"dt: {dt_stats['current_dt']:.4f}"
+                    
+                    # Показываем изменение от оригинала если значительное
+                    if abs(dt_stats['multiplier_from_original'] - 1.0) > 0.01:
+                        dt_text += f" (×{dt_stats['multiplier_from_original']:.2f})"
+                    
+                    # Индикаторы достижения границ
+                    if dt_stats['at_min']:
+                        dt_text += " [MIN]"
+                    elif dt_stats['at_max']:
+                        dt_text += " [MAX]"
+                        
+                    self.ui_manager.update_text('dt_info', dt_text)
+                    
+                    # 🎨 Цветовая индикация (опционально)
+                    element = self.ui_manager.get_element('dt_info')
+                    if element:
+                        multiplier = dt_stats['multiplier_from_original']
+                        if abs(multiplier - 1.0) < 0.1:
+                            element.color = color.white      # Близко к оригиналу
+                        elif abs(multiplier - 1.0) < 0.5:
+                            element.color = color.yellow     # Умеренное изменение  
+                        elif multiplier < 1.0:
+                            element.color = color.cyan       # Замедлено
+                        else:
+                            element.color = color.orange     # Ускорено
+                            
+                except Exception:
+                    pass  # Игнорируем ошибки если DTManager еще не готов
+
+        self.ui_manager.register_update_function('dt_info', update_dt_info)
 
 
     # ===== ОБРАБОТЧИК КОМАНД =====

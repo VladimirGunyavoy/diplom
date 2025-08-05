@@ -12,8 +12,9 @@ class UI_POSITIONS:
     _BASE_POSITIONS = {
         # --- Левая сторона экрана ---
         'GAME_CONTROLS': Vec2(-0.76, 0.46),
-        'SPORE_INSTRUCTION': Vec2(-0.76, 0.26),
-        'SPORE_COUNTER': Vec2(-0.76, 0.2),
+        'SPORE_INSTRUCTION': Vec2(-0.76, 0.19),
+        'SPORE_COUNTER': Vec2(-0.76, 0.13),
+        'DT_INFO': Vec2(-0.76, 0.07), 
         
         # --- Правая сторона экрана ---
         'SPAWN_AREA_INFO': Vec2(0.5, 0.27),

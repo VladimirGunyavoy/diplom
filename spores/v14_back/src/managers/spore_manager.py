@@ -284,7 +284,15 @@ class SporeManager:
             
         # ИСПРАВЛЕНИЕ: Сначала создаем новую спору (позволяем реально дойти до позиции)
         evolution_print(f"   🏗️  СОЗДАНИЕ новой споры...")
-        new_spore = parent_spore.step(control=parent_spore.logic.optimal_control, dt=parent_spore.logic.optimal_dt)
+
+
+        # 🆕 Получаем актуальный dt
+        if hasattr(self, 'dt_manager') and self.dt_manager:
+            current_dt = self.dt_manager.get_dt()
+        else:
+            current_dt = self.config.get('pendulum', {}).get('dt', 0.1)
+            
+        new_spore = parent_spore.step(control=parent_spore.logic.optimal_control, dt=current_dt)
         new_position_2d = new_spore.calc_2d_pos()
         
         evolution_print(f"   ✅ Новая спора создана:")

@@ -34,17 +34,20 @@ class InputManager:
                  ui_setup: Optional[UI_setup] = None,
                  angel_manager: Optional['AngelManager'] = None,
                  cost_visualizer: Optional['CostVisualizer'] = None,
-                 manual_spore_manager: Optional["ManualSporeManager"] = None):
+                 manual_spore_manager: Optional["ManualSporeManager"] = None,
+                 dt_manager: Optional['DTManager'] = None):
         
         self.scene_setup: Optional[SceneSetup] = scene_setup
         self.zoom_manager: Optional[ZoomManager] = zoom_manager
         self.spore_manager: Optional[SporeManager] = spore_manager
+        self.dt_manager: Optional['DTManager'] = dt_manager
         self.spawn_area_manager: Optional[SpawnAreaManager] = spawn_area_manager
         self.param_manager: Optional[ParamManager] = param_manager
         self.ui_setup: Optional[UI_setup] = ui_setup
         self.angel_manager: Optional['AngelManager'] = angel_manager
         self.cost_visualizer: Optional['CostVisualizer'] = cost_visualizer
         self.manual_spore_manager: Optional["ManualSporeManager"] = manual_spore_manager
+        self.dt_manager: Optional['DTManager'] = dt_manager
 
         # Настройки для генерации спор по клавише 'f'
         self.f_key_down_time: float = 0
@@ -140,16 +143,43 @@ class InputManager:
             
         # 3. Управление масштабированием
         if self.zoom_manager:
-            if key == 'e' or key == 'scroll up':  # E или прокрутка колёсика вверх
-                self.zoom_manager.zoom_in()
-            elif key == 't' or key == 'scroll down':  # T или прокрутка колёсика вниз
-                self.zoom_manager.zoom_out()
-            elif key == 'r': 
+                # Проверяем нажат ли Ctrl
+            ctrl_pressed = held_keys['left control'] or held_keys['right control']
+            
+            if ctrl_pressed:
+                # Ctrl + колесико = управление dt
+                if key == 'scroll up' and self.dt_manager:
+                    self.dt_manager.increase_dt()
+                    return
+                elif key == 'scroll down' and self.dt_manager:
+                    self.dt_manager.decrease_dt()
+                    return
+            else:
+                # Обычное колесико = зум
+                if key == 'e' or key == 'scroll up':
+                    self.zoom_manager.zoom_in()
+                elif key == 't' or key == 'scroll down':
+                    self.zoom_manager.zoom_out()
+        
+        # Остальные команды зума
+            if key == 'r': 
                 self.zoom_manager.reset_zoom()
             elif key == '1': 
                 self.zoom_manager.increase_spores_scale()
             elif key == '2': 
                 self.zoom_manager.decrease_spores_scale()
+
+        if key == 'm':  # Reset dt to original
+            if self.dt_manager:
+                self.dt_manager.reset_dt()
+            return
+
+        # 4. Показ статистики dt
+        if key == 'j':  # Show dt info
+            if self.dt_manager:
+                self.dt_manager.print_stats()
+            return
+
         
         # 4. Очистка объектов (v13_manual)
         if  held_keys['c'] and self.spore_manager and held_keys['left control']:

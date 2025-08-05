@@ -210,7 +210,10 @@ class ManualSporeManager:
             # Очищаем старые предсказания
             self._clear_predictions()
             
-            dt = self.config.get('pendulum', {}).get('dt', 0.1)
+            if hasattr(self, 'dt_manager') and self.dt_manager:
+                dt = self.dt_manager.get_dt()
+            else:
+                dt = self.config.get('pendulum', {}).get('dt', 0.1)
             
             # 4 предсказания: 2 вперед + 2 назад
             prediction_configs = [

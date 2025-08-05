@@ -80,6 +80,7 @@ from src.managers.update_manager import UpdateManager
 from src.managers.spawn_area_manager import SpawnAreaManager
 from src.managers.manual_spore_manager import ManualSporeManager  # v13_manual: для ручного создания спор
 from src.utils.debug_output import init_debug_output
+from src.managers.dt_manager import DTManager
 
 print("=== ДЕМОНСТРАЦИЯ UI_SETUP ===")
 print("🎨 Готовые настройки UI для демо скриптов")
@@ -167,8 +168,12 @@ print("   ✓ Param Manager создан")
 # ===== СОЗДАНИЕ СИСТЕМЫ МАЯТНИКА =====
 pendulum_config = config['pendulum']
 pendulum = PendulumSystem(
-    damping=pendulum_config['damping']
+    damping=pendulum_config['damping'],
+    max_control=pendulum_config['max_control']
 )
+
+dt_manager = DTManager(config, pendulum)
+print("   ✓ DT Manager создан")
 
 # ===== СОЗДАНИЕ ТЕСТОВЫХ СПОР =====
 print("\n🌟 4. Создание тестовых спор...")
@@ -299,6 +304,9 @@ manual_spore_manager = ManualSporeManager(
 
 spore_manager._manual_spore_manager_ref = manual_spore_manager
 
+dt_manager = DTManager(config, pendulum)
+dt_manager.spore_manager = spore_manager  # 🆕 Связываем с SporeManager
+
 # ===== СОЗДАНИЕ INPUT MANAGER =====
 input_manager = InputManager(
     scene_setup=scene_setup,
@@ -309,7 +317,8 @@ input_manager = InputManager(
     ui_setup=ui_setup,
     angel_manager=angel_manager,
     cost_visualizer=cost_surface,
-    manual_spore_manager=manual_spore_manager  # v13_manual: для обработки ЛКМ
+    manual_spore_manager=manual_spore_manager,  # v13_manual: для обработки ЛКМ
+    dt_manager=dt_manager
 )
 
 # ===== СОЗДАНИЕ UPDATE MANAGER =====
@@ -361,7 +370,8 @@ data_providers = {
         getattr(zoom_manager, 'spores_scale', 1)
     ),
     'get_param_info': lambda: (settings_param.param, settings_param.show),
-    'get_candidate_info': lambda: (spore_manager.min_radius, spore_manager.candidate_count)
+    'get_candidate_info': lambda: (spore_manager.min_radius, spore_manager.candidate_count),
+    'get_dt_info': lambda: dt_manager.get_stats()
 }
 
 # Настраиваем весь UI одной командой, передавая колбэки
