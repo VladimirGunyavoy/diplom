@@ -14,7 +14,7 @@ class DTManager:
         self.current_dt = self.original_dt  # Начинаем с оригинального
         
         # Настройки для изменения dt
-        self.dt_multiplier = 1.2  # На сколько изменяем dt за один шаг колесика
+        self.dt_multiplier = 1.1  # На сколько изменяем dt за один шаг колесика
         self.min_dt = 0.001       # Минимальное значение dt
         self.max_dt = 1.0         # Максимальное значение dt
         
