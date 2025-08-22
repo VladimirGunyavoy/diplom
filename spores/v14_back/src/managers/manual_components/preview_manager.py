@@ -50,6 +50,9 @@ class PreviewManager:
         self.prediction_visualizers: List[PredictionVisualizer] = []
         self.prediction_links: List[Link] = []
 
+        # Храним текущее призрачное дерево
+        self.current_ghost_tree = None
+
         # Получаем границы управления из маятника
         control_bounds = self.pendulum.get_control_bounds()
         self.min_control = float(control_bounds[0])
@@ -58,7 +61,7 @@ class PreviewManager:
         # Режим создания (для разных типов предсказаний)
         self.creation_mode = 'spores'  # будет устанавливаться извне
 
-    def update_preview(self) -> None:
+    def update_preview(self, tree_optimizer=None) -> None:
         """
         Обновляет превью спору и предсказания.
         """
@@ -70,7 +73,7 @@ class PreviewManager:
 
         # Обновляем предсказания
         if self.show_predictions:
-            self._update_predictions()
+            self._update_predictions(tree_optimizer)
 
     def set_preview_enabled(self, enabled: bool) -> None:
         """Включает/выключает превью спор."""
@@ -147,7 +150,7 @@ class PreviewManager:
         except Exception as e:
             print(f"Ошибка создания превью споры: {e}")
 
-    def _update_predictions(self) -> None:
+    def _update_predictions(self, tree_optimizer=None) -> None:
         """Обновляет предсказания в зависимости от режима создания."""
         # Проверяем нужно ли принудительное обновление (при изменении dt)
         current_dt = self.config.get('pendulum', {}).get('dt', 0.1)
@@ -170,7 +173,7 @@ class PreviewManager:
         self._last_update_pos = self.cursor_tracker.get_current_position().copy()
 
         if self.creation_mode == 'tree':
-            self._update_ghost_predictions()
+            self._update_ghost_predictions(tree_optimizer)
         else:
             self._update_spore_predictions()
 
@@ -297,85 +300,99 @@ class PreviewManager:
             import traceback
             traceback.print_exc()
 
-    def _update_ghost_predictions(self):
+    def _update_ghost_predictions(self, tree_optimizer):
         """Обновляет призрачные предсказания дерева."""
         if not self.preview_spore:
             return
 
-        # Очищаем старые предсказания
         self._clear_predictions()
 
         try:
             from ...logic.tree.spore_tree import SporeTree
             from ...logic.tree.spore_tree_config import SporeTreeConfig
 
-            # Получаем текущую позицию и dt
             current_pos = self.cursor_tracker.get_current_position()
             dt = self.config.get('pendulum', {}).get('dt', 0.1)
 
-            # Создаем мини-дерево для предсказания
-            tree_config = SporeTreeConfig()
-            tree_config.initial_position = current_pos.copy()
-            tree_config.dt_base = dt
+            # Проверяем изменился ли dt
+            dt_changed = tree_optimizer.check_dt_changed()
+            use_optimized_dt = tree_optimizer.should_use_optimized_dt(dt_changed)
 
-            tree_logic = SporeTree(
-                pendulum=self.pendulum,
-                config=tree_config,
-                show=False
+            tree_config = SporeTreeConfig(
+                initial_position=current_pos.copy(),
+                dt_base=dt,
+                dt_grandchildren_factor=0.2,
+                show_debug=False
             )
 
-            # Создаем призрачные споры для детей
-            if hasattr(tree_logic, 'children'):
-                for i, child_data in enumerate(tree_logic.children):
-                    child_pos = child_data['position']
+            # Получаем оптимизированные dt
+            dt_children, dt_grandchildren = tree_optimizer.get_optimized_dt_vectors()
 
-                    prediction_viz = PredictionVisualizer(
-                        parent_spore=self.preview_spore,
-                        color_manager=self.color_manager,
-                        zoom_manager=self.zoom_manager,
-                        cost_function=None,
-                        config={
-                            'spore': {'show_ghosts': True},
-                            'angel': {'show_angels': False, 'show_pillars': False}
-                        },
-                        spore_id=f'tree_child_{i}'
-                    )
+            if use_optimized_dt and dt_children is not None and dt_grandchildren is not None:
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    dt_children=dt_children,
+                    dt_grandchildren=dt_grandchildren,
+                    auto_create=True,
+                    show=False
+                )
+            else:
+                dt_children_std = np.array([dt, -dt, dt, -dt], dtype=float)
+                dt_grandchildren_std = np.array([dt * 0.2, -dt * 0.2] * 4, dtype=float)
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    dt_children=dt_children_std,
+                    dt_grandchildren=dt_grandchildren_std,
+                    auto_create=True,
+                    show=False
+                )
 
-                    # Устанавливаем цвет и позицию
-                    if prediction_viz.ghost_spore:
-                        color = self.color_manager.get_color('spore', 'ghost_min' if i % 2 == 0 else 'ghost_max')
-                        prediction_viz.ghost_spore.color = color
-                        prediction_viz.update(child_pos)
+            # Сохраняем dt вектор, если он еще не сохранен
+            tree_optimizer.save_dt_vector_from_tree(tree_logic, dt)
 
-                    self.prediction_visualizers.append(prediction_viz)
+            # Создаем призрачные споры и линки
+            child_ghosts = []
+            for i, child_data in enumerate(tree_logic.children):
+                ghost_viz = self._create_ghost_spore_from_data(child_data, f"tree_child_{i}", 0.4)
+                if ghost_viz and ghost_viz.ghost_spore:
+                    child_ghosts.append(ghost_viz.ghost_spore)
 
-            # Аналогично для внуков, если есть
-            if hasattr(tree_logic, 'grandchildren'):
-                for i, gc_data in enumerate(tree_logic.grandchildren):
-                    gc_pos = gc_data['position']
+            grandchild_ghosts = []
+            if self.tree_depth >= 2 and hasattr(tree_logic, 'grandchildren'):
+                for i, grandchild_data in enumerate(tree_logic.grandchildren):
+                    ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"tree_grandchild_{i}", 0.3)
+                    if ghost_viz and ghost_viz.ghost_spore:
+                        grandchild_ghosts.append(ghost_viz.ghost_spore)
 
-                    prediction_viz = PredictionVisualizer(
-                        parent_spore=self.preview_spore,
-                        color_manager=self.color_manager,
-                        zoom_manager=self.zoom_manager,
-                        cost_function=None,
-                        config={
-                            'spore': {'show_ghosts': True},
-                            'angel': {'show_angels': False, 'show_pillars': False}
-                        },
-                        spore_id=f'tree_grandchild_{i}'
-                    )
+            # Создаем линки от корня к детям
+            for i, child_ghost in enumerate(child_ghosts):
+                if child_ghost:
+                    link_color = 'ghost_max' if tree_logic.children[i]['control'] >= 0 else 'ghost_min'
+                    self._create_ghost_link(self.preview_spore, child_ghost, f"root_to_child_{i}", link_color)
 
-                    # Устанавливаем цвет и позицию
-                    if prediction_viz.ghost_spore:
-                        color = self.color_manager.get_color('spore', 'ghost_min' if i % 2 == 0 else 'ghost_max')
-                        prediction_viz.ghost_spore.color = (color[0]*0.7, color[1]*0.7, color[2]*0.7, 0.5)  # Более тусклые
-                        prediction_viz.update(gc_pos)
+            # Создаем линки от детей к внукам
+            if self.tree_depth >= 2 and grandchild_ghosts:
+                for i, grandchild_ghost in enumerate(grandchild_ghosts):
+                    if grandchild_ghost:
+                        parent_idx = tree_logic.grandchildren[i]['parent_idx']
+                        if parent_idx < len(child_ghosts) and child_ghosts[parent_idx]:
+                            link_color = 'ghost_max' if tree_logic.grandchildren[i]['control'] >= 0 else 'ghost_min'
+                            self._create_ghost_link(
+                                child_ghosts[parent_idx],
+                                grandchild_ghost,
+                                f"child_{parent_idx}_to_grandchild_{i}",
+                                link_color
+                            )
 
-                    self.prediction_visualizers.append(prediction_viz)
+            if self.debug_mode:
+                self._debug_dump_tree("GHOST" if use_optimized_dt else "STD", tree_logic)
 
         except Exception as e:
-            print(f"Ошибка создания призрачного дерева: {e}")
+            print(f"❌ Ошибка создания призрачного дерева: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
@@ -450,3 +467,83 @@ class PreviewManager:
     def add_prediction_link(self, link) -> None:
         """Добавляет линк предсказания в список."""
         self.prediction_links.append(link)
+
+    def _debug_dump_tree(self, tag: str, tree_logic):
+        """Диагностическая функция для отладки деревьев."""
+        try:
+            ch = getattr(tree_logic, 'children', [])
+            gc = getattr(tree_logic, 'grandchildren', [])
+            print(f"[{tag}] children={len(ch)} grandchildren={len(gc)}")
+            if ch:
+                dtc = [round(c.get('dt', float('nan')), 6) for c in ch]
+                uc = [round(c.get('control', float('nan')), 6) for c in ch]
+                print(f"[{tag}] dt_children={dtc}")
+                print(f"[{tag}] u_children={uc}")
+            if gc:
+                dtg = [round(g.get('dt', float('nan')), 6) for g in gc]
+                ug = [round(g.get('control', float('nan')), 6) for g in gc]
+                print(f"[{tag}] dt_grandchildren={dtg}")
+                print(f"[{tag}] u_grandchildren={ug}")
+        except Exception as e:
+            print(f"[{tag}] dump failed: {e}")
+
+    def _create_ghost_spore_from_data(self, spore_data: dict, spore_id: str, alpha: float = 0.4):
+        """Создает призрачную спору из данных."""
+        try:
+            from ...visual.prediction_visualizer import PredictionVisualizer
+
+            prediction_viz = PredictionVisualizer(
+                parent_spore=self.preview_spore,
+                color_manager=self.color_manager,
+                zoom_manager=self.zoom_manager,
+                cost_function=None,
+                config={
+                    'spore': {'show_ghosts': True},
+                    'angel': {'show_angels': False, 'show_pillars': False}
+                },
+                spore_id=spore_id
+            )
+
+            # Устанавливаем позицию и цвет
+            if prediction_viz.ghost_spore:
+                position = spore_data.get('position', [0, 0, 0])
+                color_type = 'ghost_max' if spore_data.get('control', 0) >= 0 else 'ghost_min'
+                base_color = self.color_manager.get_color('spore', color_type)
+
+                # Применяем прозрачность
+                color = (base_color[0], base_color[1], base_color[2], alpha)
+                prediction_viz.ghost_spore.color = color
+                prediction_viz.update(position)
+
+                self.prediction_visualizers.append(prediction_viz)
+                return prediction_viz
+
+            return None
+
+        except Exception as e:
+            print(f"❌ Ошибка создания ghost spore {spore_id}: {e}")
+            return None
+
+    def _create_ghost_link(self, parent_spore, child_spore, link_id: str, color_type: str):
+        """Создает призрачный линк между спорами."""
+        try:
+            from ...visual.link import Link
+
+            link = Link(
+                parent_spore=parent_spore,
+                child_spore=child_spore,
+                color_manager=self.color_manager,
+                zoom_manager=self.zoom_manager,
+                link_id=link_id
+            )
+
+            # Устанавливаем цвет линка
+            color = self.color_manager.get_color('link', color_type)
+            link.set_color(color)
+
+            self.prediction_links.append(link)
+            return link
+
+        except Exception as e:
+            print(f"❌ Ошибка создания ghost link {link_id}: {e}")
+            return None
