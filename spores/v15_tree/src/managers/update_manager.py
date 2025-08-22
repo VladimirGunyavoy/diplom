@@ -48,8 +48,8 @@ class UpdateManager:
             self.zoom_manager.identify_invariant_point()  # Для зума и UI
         
         # v13_manual: обновляем позицию курсора для превью споры
-        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'preview_manager'):
-            self.manual_spore_manager.preview_manager.update_cursor_position()  # Через PreviewManager
+        if self.manual_spore_manager:
+            self.manual_spore_manager.update_cursor_position()  # Через PreviewManager
         
         if self.param_manager:
             self.param_manager.update()

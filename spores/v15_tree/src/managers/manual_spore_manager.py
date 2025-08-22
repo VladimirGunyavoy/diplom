@@ -8,6 +8,7 @@ from ..managers.spore_manager import SporeManager
 from ..managers.color_manager import ColorManager
 from ..managers.manual_creation.preview_manager import PreviewManager
 from ..managers.manual_creation.prediction_manager import PredictionManager
+from ..managers.manual_creation.tree_creation_manager import TreeCreationManager
 from ..logic.pendulum import PendulumSystem
 from ..visual.link import Link
 
@@ -51,6 +52,18 @@ class ManualSporeManager:
             config=config
         )
 
+        # Создаем TreeCreationManager
+        self.tree_creation_manager = TreeCreationManager(
+            spore_manager=spore_manager,
+            zoom_manager=zoom_manager,
+            pendulum=pendulum,
+            color_manager=color_manager,
+            config=config
+        )
+        
+        # Синхронизируем ghost_tree_dt_vector
+        # self.tree_creation_manager.ghost_tree_dt_vector = self._ghost_tree_dt_vector
+
         # Общие созданные линки
         self.created_links: List[Link] = []
 
@@ -58,216 +71,76 @@ class ManualSporeManager:
         self._spore_counter = 0
 
         # Сохранение dt вектора от призрачного дерева
-        self.ghost_tree_dt_vector = None
+        self._ghost_tree_dt_vector = None
 
         # История созданных групп спор для возможности удаления
         self.spore_groups_history: List[List[Spore]] = []  # История групп спор
         self.group_links_history: List[List[Link]] = []    # История линков для каждой группы
 
-        self.creation_mode = 'spores'  # 'spores' или 'tree'
-        self.tree_depth = 2
-        self._global_tree_counter = 0
+        # Синхронизируем режимы с TreeCreationManager
+        self.creation_mode = self.tree_creation_manager.creation_mode
+        self.tree_depth = self.tree_creation_manager.tree_depth
 
         print(f"   ✓ Manual Spore Manager создан (управление: {self.prediction_manager.min_control} .. {self.prediction_manager.max_control})")
         print(f"   📚 История групп инициализирована")
 
     def toggle_creation_mode(self):
         """Переключает режим создания."""
-        if self.creation_mode == 'spores':
-            self.creation_mode = 'tree'
-            print("🌲 Режим: Создание деревьев")
-        else:
-            self.creation_mode = 'spores'
-            print("🌟 Режим: Создание спор")
+        self.tree_creation_manager.toggle_creation_mode()
+        # Синхронизируем режим
+        self.creation_mode = self.tree_creation_manager.creation_mode
 
     def set_tree_depth(self, depth: int):
         """Устанавливает глубину дерева."""
-        self.tree_depth = max(1, min(depth, 2))
-        print(f"🌲 Глубина дерева: {self.tree_depth}")
+        self.tree_creation_manager.set_tree_depth(depth)
+        # Синхронизируем глубину
+        self.tree_depth = self.tree_creation_manager.tree_depth
 
     def create_tree_at_cursor(self):
-        """
-        Создает дерево в позиции курсора.
-
-        ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
-        """
+        """Создает дерево в позиции курсора."""
         if not self.preview_manager.preview_enabled or not self.preview_manager.has_preview():
             return None
 
-        try:
-            from ..visual.spore_tree_visual import SporeTreeVisual
-            from ..logic.tree.spore_tree import SporeTree
-            from ..logic.tree.spore_tree_config import SporeTreeConfig
-
-            self._global_tree_counter += 1
-
-            # Получаем текущий dt
-            dt = self._get_current_dt()
-
-            # ИСПРАВЛЕНИЕ: Правильная позиция для дерева
-            tree_position = np.array([self.preview_manager.get_preview_position()[0], self.preview_manager.get_preview_position()[1]])
-
-            # Создаем логику дерева с правильными dt векторами
-            if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
-                # ИСПРАВЛЕНИЕ: Берем абсолютные значения, т.к. create_children() применит знаки сам
-                dt_children = np.abs(self.ghost_tree_dt_vector[:4])
-                dt_grandchildren = np.abs(self.ghost_tree_dt_vector[4:12])
-
-                print(f"🎯 Используем dt вектор от призрачного дерева:")
-                print(f"   Исходный dt_children: {self.ghost_tree_dt_vector[:4]}")
-                print(f"   Абсолютный dt_children: {dt_children}")
-                print(f"   Исходный dt_grandchildren: {self.ghost_tree_dt_vector[4:12]}")
-                print(f"   Абсолютный dt_grandchildren: {dt_grandchildren}")
-
-                # Создаем конфиг дерева
-                tree_config = SporeTreeConfig(
-                    initial_position=tree_position,  # ИСПРАВЛЕНО
-                    dt_base=dt,
-                    dt_grandchildren_factor=0.05,
-                    show_debug=False
-                )
-
-                # ИСПРАВЛЕНИЕ: Всегда используем auto_create=False
-                tree_logic = SporeTree(
-                    pendulum=self.pendulum,
-                    config=tree_config,
-                    dt_children=None,  # Не передаем в конструктор
-                    dt_grandchildren=None,  # Не передаем в конструктор
-                    auto_create=False,  # ИСПРАВЛЕНО: Всегда False
-                    show=False
-                )
-
-                # ПРИНУДИТЕЛЬНО создаем все элементы с правильными dt
-                tree_logic.create_children(dt_children=dt_children, show=True)
-                if self.tree_depth >= 2:
-                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren, show=True)
-
-            else:
-                # Fallback: создаем дерево стандартным способом
-                tree_config = SporeTreeConfig(
-                    initial_position=tree_position,  # ИСПРАВЛЕНО
-                    dt_base=dt,
-                    dt_grandchildren_factor=0.05,
-                    show_debug=False
-                )
-
-                tree_logic = SporeTree(
-                    pendulum=self.pendulum,
-                    config=tree_config,
-                    auto_create=False
-                )
-
-                # Создаем детей и внуков стандартно
-                tree_logic.create_children(show=True)
-                if self.tree_depth >= 2:
-                    tree_logic.create_grandchildren(show=True)
-
-            # ДОБАВЛЯЕМ ПРИНУДИТЕЛЬНУЮ ПРОВЕРКУ
-            print(f"🔍 ПРОВЕРКА ДЕРЕВА:")
-            print(f"   Ожидаем: 4 ребенка, получили: {len(getattr(tree_logic, 'children', []))}")
-            print(f"   Ожидаем: 8 внуков, получили: {len(getattr(tree_logic, 'grandchildren', []))}")
-
-            # Если детей меньше 4, пересоздаем
-            if not hasattr(tree_logic, 'children') or len(tree_logic.children) != 4:
-                print(f"⚠️ Неполное количество детей, принудительно пересоздаем...")
-                tree_logic.create_children(dt_children=dt_children if 'dt_children' in locals() else None, show=True)
-                print(f"   После пересоздания детей: {len(tree_logic.children)}")
-
-            if self.tree_depth >= 2:
-                # Если внуков меньше 8, пересоздаем
-                if not hasattr(tree_logic, 'grandchildren') or len(tree_logic.grandchildren) != 8:
-                    print(f"⚠️ Неполное количество внуков, принудительно пересоздаем...")
-                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren if 'dt_grandchildren' in locals() else None, show=True)
-                    print(f"   После пересоздания внуков: {len(tree_logic.grandchildren)}")
-
-            print(f"✅ ФИНАЛЬНАЯ СТРУКТУРА ДЕРЕВА:")
-            print(f"   Детей: {len(tree_logic.children)}")
-            print(f"   Внуков: {len(getattr(tree_logic, 'grandchildren', []))}")
-            print(f"   Корень в позиции: {tree_logic.root['position']}")
-
-            # ДИАГНОСТИКА: Проверим позиции детей
-            print(f"🔍 ПОЗИЦИИ ДЕТЕЙ:")
-            for i, child in enumerate(tree_logic.children):
-                print(f"   Ребенок {i}: {child['position']} (dt={child['dt']:.4f})")
-
-            if hasattr(tree_logic, 'grandchildren'):
-                print(f"🔍 ПОЗИЦИИ ВНУКОВ:")
-                for i, gc in enumerate(tree_logic.grandchildren):
-                    print(f"   Внук {i}: {gc['position']} (родитель {gc['parent_idx']}, dt={gc['dt']:.4f})")
-
-
-            # Создаем визуализацию (ВРЕМЕННО)
-            tree_visual = SporeTreeVisual(
-                color_manager=self.color_manager,
-                zoom_manager=self.zoom_manager,
-                config=self.config
-            )
-
-            tree_visual.set_tree_logic(tree_logic)
-            tree_visual.create_visual()
-
-            # =============================================
-            # ЗАБИРАЕМ СОЗДАННЫЕ ОБЪЕКТЫ В ОБЩИЙ ГРАФ
-            # =============================================
-
-            created_spores = []
-            created_links = []
-
-            # Собираем все споры
-            all_spores = [tree_visual.root_spore] + tree_visual.child_spores + tree_visual.grandchild_spores
-
-            # Добавляем споры в общую систему (как обычные споры)
-            for i, spore in enumerate(all_spores):
+        # Делегируем создание дерева в TreeCreationManager
+        preview_position_2d = self.preview_manager.get_preview_position()
+        created_spores = self.tree_creation_manager.create_tree_at_cursor(preview_position_2d)
+        
+        if created_spores:
+            # Создаем линки если нужно (TreeCreationManager уже создал основные)
+            created_links = []  # TreeCreationManager уже обработал линки
+            
+            # Применяем правильный масштаб ко всем спорам дерева
+            for spore in created_spores:
                 if spore:
-                    self.spore_manager.add_spore_manual(spore)
-                    created_spores.append(spore)
-                    # Регистрируем спору в ZoomManager с уникальным именем
-                    self.zoom_manager.register_object(spore, f"tree_spore_{self._global_tree_counter}_{i}")
-
-            # Добавляем линки в общий список (как обычные линки)
-            all_links = tree_visual.child_links + tree_visual.grandchild_links
-            for i, link in enumerate(all_links):
-                if link:
-                    self.created_links.append(link)
-                    created_links.append(link)
-                    # ✅ ДОБАВИТЬ РЕГИСТРАЦИЮ:
-                    self.zoom_manager.register_object(link, f"tree_link_{self._global_tree_counter}_{i}")
-
-            # =============================================
-            # ОСВОБОЖДАЕМ SporeTreeVisual
-            # =============================================
-            #
-            # Очищаем ссылки чтобы tree_visual не уничтожил объекты
-            tree_visual.root_spore = None
-            tree_visual.child_spores.clear()
-            tree_visual.grandchild_spores.clear()
-            tree_visual.child_links.clear()
-            tree_visual.grandchild_links.clear()
-            tree_visual.visual_created = False
-
-            # tree_visual больше не нужен
-            tree_visual = None
-            tree_logic = None
-
-            # =============================================
-            # СОХРАНЯЕМ В ИСТОРИЮ (как обычную группу спор)
-            # =============================================
-
+                    spore.apply_transform(
+                        self.zoom_manager.a_transformation,
+                        self.zoom_manager.b_translation,
+                        spores_scale=self.zoom_manager.spores_scale
+                    )
+            
+            # Сохраняем в историю групп
             self.spore_groups_history.append(created_spores.copy())
             self.group_links_history.append(created_links.copy())
-
-            print(f"🌲 Дерево создано в ({self.preview_manager.get_preview_position()[0]:.3f}, {self.preview_manager.get_preview_position()[1]:.3f})")
-            print(f"   📊 Глубина: {self.tree_depth}, dt: {dt:.4f}")
-            print(f"   🎯 Добавлено в граф: {len(created_spores)} спор + {len(created_links)} линков")
+            
             print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
+            
+            return created_spores
+        
+        return None
 
-            return created_spores  # Возвращаем как обычную группу спор
+    @property
+    def ghost_tree_dt_vector(self):
+        """Получает dt вектор от призрачного дерева."""
+        return self._ghost_tree_dt_vector
 
-        except Exception as e:
-            print(f"❌ Ошибка создания дерева: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+    @ghost_tree_dt_vector.setter
+    def ghost_tree_dt_vector(self, value):
+        """Устанавливает dt вектор и синхронизирует с TreeCreationManager."""
+        self._ghost_tree_dt_vector = value
+        if hasattr(self, 'tree_creation_manager'):
+            self.tree_creation_manager.ghost_tree_dt_vector = value
+            
+
 
     def _get_current_dt(self):
         """Получает текущий dt из конфига."""
@@ -329,8 +202,8 @@ class ManualSporeManager:
         """
         Обновляет позицию превью споры по позиции курсора мыши.
         """
-        print(f"DEBUG: update_cursor_position вызван")
-        print(f"   preview_enabled: {self.preview_manager.preview_enabled}")
+            # print(f"DEBUG: update_cursor_position вызван")
+            # print(f"   preview_enabled: {self.preview_manager.preview_enabled}")
         
         if not self.preview_manager.preview_enabled:
             print("   STOP: preview отключен")
@@ -338,20 +211,20 @@ class ManualSporeManager:
 
         # Получаем правильную позицию курсора мыши
         mouse_pos = self.get_mouse_world_position()
-        print(f"   mouse_pos: {mouse_pos}")
+        # print(f"   mouse_pos: {mouse_pos}")
         
         if mouse_pos is None:
             print("   STOP: mouse_pos = None")
             return
 
         # Используем PreviewManager для обновления позиции
-        print("   Вызываем preview_manager.update_cursor_position...")
+        # print("   Вызываем preview_manager.update_cursor_position...")
         self.preview_manager.update_cursor_position(mouse_pos)
 
         # Обновляем предсказания
-        print(f"   show_predictions: {self.prediction_manager.show_predictions}")
+        # print(f"   show_predictions: {self.prediction_manager.show_predictions}")
         if self.prediction_manager.show_predictions:
-            print("   Вызываем _update_predictions...")
+            # print("   Вызываем _update_predictions...")
             self._update_predictions()
         else:
             print("   SKIP: предсказания отключены")
@@ -361,13 +234,13 @@ class ManualSporeManager:
         self.prediction_manager.update_predictions(
             preview_spore=self.preview_manager.get_preview_spore(),
             preview_position_2d=self.preview_manager.get_preview_position(),
-            creation_mode=self.creation_mode,
-            tree_depth=self.tree_depth
+            creation_mode=self.tree_creation_manager.creation_mode,
+            tree_depth=self.tree_creation_manager.tree_depth
         )
 
     def create_spore_at_cursor(self):
         """Создает споры или дерево в зависимости от режима."""
-        if self.creation_mode == 'tree':
+        if self.tree_creation_manager.creation_mode == 'tree':
             return self.create_tree_at_cursor()
         else:
             return self._create_spore_at_cursor_original()

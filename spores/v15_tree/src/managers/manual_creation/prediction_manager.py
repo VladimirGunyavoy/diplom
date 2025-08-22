@@ -56,11 +56,11 @@ class PredictionManager:
             creation_mode: 'spores' или 'tree'
             tree_depth: Глубина дерева для режима 'tree'
         """
-        print(f"🔍 PredictionManager.update_predictions вызван:")
-        print(f"   show_predictions: {self.show_predictions}")
-        print(f"   preview_spore: {preview_spore is not None}")
-        print(f"   creation_mode: {creation_mode}")
-        print(f"   tree_depth: {tree_depth}")
+        # print(f"🔍 PredictionManager.update_predictions вызван:")
+        # print(f"   show_predictions: {self.show_predictions}")
+        # print(f"   preview_spore: {preview_spore is not None}")
+        # print(f"   creation_mode: {creation_mode}")
+        # print(f"   tree_depth: {tree_depth}")
         
         if not self.show_predictions:
             print("   ❌ Предсказания отключены (show_predictions=False)")
@@ -71,22 +71,22 @@ class PredictionManager:
             return
 
         self.tree_depth = tree_depth
-        print(f"   ✅ Все проверки пройдены, создаем предсказания...")
+        # print(f"   ✅ Все проверки пройдены, создаем предсказания...")
 
         if creation_mode == 'tree':
-            print("   🌲 Режим дерева")
+            # print("   🌲 Режим дерева")
             self._update_tree_preview(preview_spore, preview_position_2d)
         else:
-            print("   🧬 Режим спор")
+            # print("   🧬 Режим спор")
             self._update_spore_predictions(preview_spore, preview_position_2d)
         
-        print(f"   📊 Создано visualizers: {len(self.prediction_visualizers)}")
-        print(f"   📊 Создано links: {len(self.prediction_links)}")
+        # print(f"   📊 Создано visualizers: {len(self.prediction_visualizers)}")
+        # print(f"   📊 Создано links: {len(self.prediction_links)}")
 
     def _update_spore_predictions(self, preview_spore, preview_position_2d: np.ndarray) -> None:
         """Обновляет предсказания: 2 вперед (min/max) + 2 назад (min/max)."""
         
-        print(f"🔍 _update_spore_predictions начал работу")
+        # print(f"🔍 _update_spore_predictions начал работу")
         
         # Очищаем старые предсказания
         self.clear_predictions()

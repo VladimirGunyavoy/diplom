@@ -24,7 +24,7 @@ class PredictionVisualizer:
     ANGEL_HEIGHT_OFFSET_RATIO: float = 0.01
 
     def __init__(self,
-                 parent_spore: Spore,
+                 parent_spore: Optional[Spore],
                  color_manager: ColorManager,
                  zoom_manager: ZoomManager,
                  cost_function: Optional[CostFunction],
@@ -34,14 +34,14 @@ class PredictionVisualizer:
         Инициализирует визуализатор для одного предсказания.
 
         Args:
-            parent_spore: Реальная спора, от которой делается предсказание.
+            parent_spore: Реальная спора, от которой делается предсказание, или None для призрачных деревьев.
             color_manager: Менеджер цветов.
             zoom_manager: Менеджер масштабирования.
             cost_function: Функция стоимости для расчета высоты ангелов.
             config: Словарь с конфигурацией, содержащий флаги 'show_ghosts', 'show_angels', 'show_pillars'.
             spore_id: Уникальный ID для этого набора визуальных элементов.
         """
-        self.parent_spore: Spore = parent_spore
+        self.parent_spore: Optional[Spore] = parent_spore
         self.color_manager: ColorManager = color_manager
         self.zoom_manager: ZoomManager = zoom_manager
         self.cost_function: Optional[CostFunction] = cost_function
@@ -75,28 +75,69 @@ class PredictionVisualizer:
         
         # 1. Создаем спору-призрака (базовый элемент)
         if self.show_ghost_spore:
-            self.ghost_spore = self.parent_spore.clone()
-            self.ghost_spore.is_ghost = True
-            self.ghost_spore.id = f"ghost_{self.id}"
-            self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
-            self.ghost_spore.set_y_coordinate(0.0)  # Принудительно устанавливаем Y=0 для плоскости XZ
-            self.zoom_manager.register_object(self.ghost_spore, self.ghost_spore.id)
+            if self.parent_spore is not None:
+                # Обычный случай - клонируем родительскую спору
+                self.ghost_spore = self.parent_spore.clone()
+                self.ghost_spore.is_ghost = True
+                self.ghost_spore.id = f"ghost_{self.id}"
+                self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
+                self.ghost_spore.set_y_coordinate(0.0)
+                self.zoom_manager.register_object(self.ghost_spore, self.ghost_spore.id)
+            else:
+                # Случай призрачного дерева - создаем новую спору
+                from ..core.spore import Spore
+                from ..logic.pendulum import PendulumSystem
+                
+                # Создаем временный маятник для призрака
+                temp_pendulum = PendulumSystem()
+                
+                self.ghost_spore = Spore(
+                    dt=0.1,
+                    pendulum=temp_pendulum,
+                    goal_position=[0, 0],
+                    model='sphere',
+                    position=(0, 0, 0),
+                    color_manager=self.color_manager,
+                    is_ghost=True
+                )
+                self.ghost_spore.id = f"ghost_{self.id}"
+                self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
+                self.ghost_spore.set_y_coordinate(0.0)
+                self.zoom_manager.register_object(self.ghost_spore, self.ghost_spore.id)
 
         # Для ангела и столба нужен ghost_spore, даже если он невидимый, для получения координат
-        if not self.ghost_spore:
+        if not self.ghost_spore and self.parent_spore is not None:
             self.ghost_spore = self.parent_spore.clone()
             self.ghost_spore.enabled = False
-            self.ghost_spore.set_y_coordinate(0.0)  # Принудительно устанавливаем Y=0 для плоскости XZ 
+            self.ghost_spore.set_y_coordinate(0.0)
+        elif not self.ghost_spore:
+            # Случай когда нет parent_spore - создаем минимальную призрачную спору
+            from ..core.spore import Spore
+            from ..logic.pendulum import PendulumSystem
+            
+            temp_pendulum = PendulumSystem()
+            self.ghost_spore = Spore(
+                dt=0.1,
+                pendulum=temp_pendulum,
+                goal_position=[0, 0],
+                model='sphere',
+                position=(0, 0, 0),
+                color_manager=self.color_manager,
+                is_ghost=True
+            )
+            self.ghost_spore.enabled = False
+            self.ghost_spore.set_y_coordinate(0.0)
 
         # 2. Создаем ангела
-        if self.show_angel and self.cost_function:
-            self.angel = self.ghost_spore.clone()
-            self.angel.id = f"ghost_angel_{self.id}"
-            self.angel.color = self.color_manager.get_color('angel', 'ghost')
-            self.zoom_manager.register_object(self.angel, self.angel.id)
+        if self.show_angel and self.cost_function and self.ghost_spore:
+            if hasattr(self.ghost_spore, 'clone'):
+                self.angel = self.ghost_spore.clone()
+                self.angel.id = f"ghost_angel_{self.id}"
+                self.angel.color = self.color_manager.get_color('angel', 'ghost')
+                self.zoom_manager.register_object(self.angel, self.angel.id)
 
         # 3. Создаем столб
-        if self.show_pillar and self.cost_function:
+        if self.show_pillar and self.cost_function and self.ghost_spore:
             self.pillar = Pillar(
                 model='cube',
                 color=self.color_manager.get_color('angel', 'ghost_pillar')
