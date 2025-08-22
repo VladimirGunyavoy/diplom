@@ -261,3 +261,7 @@ class InputManager:
             if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'optimize_tree'):
                 self.manual_spore_manager.optimize_tree()  # Если добавите этот метод
             return
+        if key == 'p':
+            if self.manual_spore_manager:
+                self.manual_spore_manager.update_ghost_tree_with_optimal_pairs()
+            return

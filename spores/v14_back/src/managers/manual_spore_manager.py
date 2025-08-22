@@ -7,6 +7,8 @@ from ..managers.zoom_manager import ZoomManager
 from ..managers.spore_manager import SporeManager
 from ..managers.color_manager import ColorManager
 from ..logic.pendulum import PendulumSystem
+from ..logic.tree.pairs.find_optimal_pairs import find_optimal_pairs
+from ..logic.tree.pairs.extract_optimal_times_from_pairs import extract_optimal_times_from_pairs
 from ..visual.prediction_visualizer import PredictionVisualizer
 from ..visual.link import Link
 
@@ -37,6 +39,7 @@ class ManualSporeManager:
         # Настройки превью
         self.preview_enabled = True
         self.preview_alpha = 0.5  # Полупрозрачность
+        self.debug_mode = False  # Флаг для отладочного вывода
         
         # Превью спора
         self.preview_spore: Optional[Spore] = None
@@ -427,7 +430,7 @@ class ManualSporeManager:
     def _update_predictions(self) -> None:
         """Обновляет предсказания в зависимости от режима создания."""
         if self.creation_mode == 'tree':
-            self._update_tree_preview()
+            self._update_ghost_predictions()
         else:
             self._update_spore_predictions()
 
@@ -610,13 +613,18 @@ class ManualSporeManager:
                 pass
         self.prediction_links.clear()
 
-    def _update_tree_preview(self) -> None:
-        """Создает призрачное дерево для превью."""
+    def _update_ghost_predictions(self):
+        """Обновляет призрачные предсказания дерева."""
         # Очищаем старые предсказания
         self._clear_predictions()
 
         if not self.preview_spore:
             return
+
+        # Если дерево уже оптимизировано, не перезаписываем dt при движении мыши
+        if hasattr(self, 'ghost_tree_optimized') and self.ghost_tree_optimized:
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                print("🎯 Используем заблокированные оптимизированные dt")
 
         try:
             # Импорты для дерева
@@ -634,12 +642,32 @@ class ManualSporeManager:
                 show_debug=False
             )
 
-            # Создаем логику дерева
-            tree_logic = SporeTree(
-                pendulum=self.pendulum,
-                config=tree_config,
-                auto_create=False
-            )
+            # ПРОВЕРЯЕМ: есть ли сохраненный оптимизированный dt_vector
+            if hasattr(self, 'ghost_tree_dt_vector') and self.ghost_tree_dt_vector is not None:
+                # Используем сохраненные оптимизированные dt
+                dt_children = self.ghost_tree_dt_vector[:4]
+                dt_grandchildren = self.ghost_tree_dt_vector[4:]
+
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    dt_children=dt_children,
+                    dt_grandchildren=dt_grandchildren,
+                    auto_create=False
+                )
+                # Используем сохраненные оптимизированные dt
+                if hasattr(self, 'debug_mode') and self.debug_mode:
+                    print("🎯 Используем оптимизированные dt для призрачного дерева")
+            else:
+                # Создаем обычное дерево с базовыми параметрами
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    auto_create=False
+                )
+
+            # Сохраняем ссылку на призрачное дерево для дальнейшего использования
+            self.current_ghost_tree = tree_logic
 
             # Создаем детей
             tree_logic.create_children()
@@ -648,17 +676,17 @@ class ManualSporeManager:
             if self.tree_depth >= 2:
                 tree_logic.create_grandchildren()
 
-            # Сохраняем dt вектор от призрачного дерева для будущего использования
+            # Сохраняем dt вектор ТОЛЬКО если его еще нет
             if hasattr(tree_logic, 'children') and hasattr(tree_logic, 'grandchildren'):
-                try:
-                    # Извлекаем dt из дерева
-                    dt_children = [child.get('dt', dt) for child in tree_logic.children]
-                    dt_grandchildren = [gc.get('dt', dt * 0.2) for gc in tree_logic.grandchildren]
-                    self.ghost_tree_dt_vector = np.hstack([dt_children, dt_grandchildren])
-                    # Убрали print - сохраняем тихо при preview
-                except Exception as e:
-                    print(f"⚠️ Ошибка сохранения dt вектора: {e}")
-                    self.ghost_tree_dt_vector = None
+                if not hasattr(self, 'ghost_tree_dt_vector') or self.ghost_tree_dt_vector is None:
+                    try:
+                        # Извлекаем dt из дерева
+                        dt_children = [child.get('dt', dt) for child in tree_logic.children]
+                        dt_grandchildren = [gc.get('dt', dt * 0.2) for gc in tree_logic.grandchildren]
+                        self.ghost_tree_dt_vector = np.hstack([dt_children, dt_grandchildren])
+                    except Exception as e:
+                        print(f"⚠️ Ошибка сохранения dt вектора: {e}")
+                        self.ghost_tree_dt_vector = None
 
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic)
@@ -1142,6 +1170,71 @@ class ManualSporeManager:
         if stats['total_groups'] > 0:
             print(f"   📋 Последняя группа: {len(self.spore_groups_history[-1])} спор + {len(self.group_links_history[-1])} линков")
         print("========================")
+
+    def update_ghost_tree_with_optimal_pairs(self):
+        """Обновляет призрачное дерево оптимальными dt из найденных пар."""
+        if not self.preview_spore or not hasattr(self, 'current_ghost_tree'):
+            print("⚠️ Нет призрачного дерева для обновления")
+            return
+
+        try:
+            print("🔍 Поиск оптимальных пар для текущего призрачного дерева...")
+
+            # Ищем оптимальные пары в уже созданном призрачном дереве
+            pairs = find_optimal_pairs(self.current_ghost_tree, show=True)
+
+            if pairs is None or len(pairs) == 0:
+                print("⚠️ Не найдено оптимальных пар")
+                return
+
+            print(f"✅ Найдено {len(pairs)} оптимальных пар")
+
+            # ИСПОЛЬЗУЕМ ПРАВИЛЬНУЮ ФУНКЦИЮ для извлечения dt
+            dt_results = extract_optimal_times_from_pairs(pairs, self.current_ghost_tree, show=True)
+
+            if dt_results is None:
+                print("❌ Ошибка извлечения оптимальных времен")
+                return
+
+            # Получаем оптимизированные dt из результата
+            optimal_dt_children = dt_results['dt_children']
+            optimal_dt_grandchildren = dt_results['dt_grandchildren']
+
+            print(f"🔍 РЕЗУЛЬТАТ ИЗВЛЕЧЕНИЯ:")
+            print(f"   Обновлено внуков: {dt_results['stats']['changed_count']}/{dt_results['stats']['total_grandchildren']}")
+            print(f"   Пар использовано: {len(pairs)}")
+            print(f"   Неспаренных внуков: {len(dt_results['unpaired_grandchildren'])}")
+
+            # Обновляем сохраненный dt вектор
+            old_dt_vector = self.ghost_tree_dt_vector.copy() if self.ghost_tree_dt_vector is not None else None
+            self.ghost_tree_dt_vector = np.hstack([optimal_dt_children, optimal_dt_grandchildren])
+
+            print(f"🔍 СРАВНЕНИЕ dt векторов:")
+            if old_dt_vector is not None:
+                print(f"   Старый: {old_dt_vector}")
+            print(f"   Новый:  {self.ghost_tree_dt_vector}")
+
+            # БЛОКИРУЕМ автообновление при движении мыши
+            self.ghost_tree_optimized = True
+
+            # Принудительно пересоздаем призрачную визуализацию
+            print("🔄 Принудительное пересоздание призрачного дерева...")
+            self._update_ghost_predictions()
+
+            print(f"🎯 Призрачное дерево обновлено оптимальными dt из {len(pairs)} пар!")
+            print(f"   📊 Изменено dt у {dt_results['stats']['changed_count']} внуков")
+
+        except Exception as e:
+            print(f"❌ Ошибка обновления призрачного дерева: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def reset_ghost_tree_optimization(self):
+        """Сбрасывает блокировку оптимизированного призрачного дерева."""
+        if hasattr(self, 'ghost_tree_optimized'):
+            self.ghost_tree_optimized = False
+            self.ghost_tree_dt_vector = None
+            print("🔓 Оптимизация призрачного дерева сброшена")
 
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
