@@ -464,14 +464,19 @@ class ManualSporeManager:
             deleted_links = 0
             for i, link in enumerate(last_links):
                 try:
-                    # Дерегистрируем из zoom_manager
-                    # Нужно найти правильный ключ - проверяем registered objects
-                    if hasattr(self.zoom_manager, 'objects'):
-                        for key, obj in list(self.zoom_manager.objects.items()):
-                            if obj is link:
-                                self.zoom_manager.unregister_object(key)
-                                print(f"   ✓ Линк {i+1} дерегистрирован: {key}")
-                                break
+                    # Дерегистрируем из zoom_manager используя сохраненный ключ
+                    if hasattr(link, '_zoom_manager_key'):
+                        key = link._zoom_manager_key
+                        self.zoom_manager.unregister_object(key)
+                        print(f"   ✓ Линк {i+1} дерегистрирован: {key}")
+                    else:
+                        # Fallback: поиск по ссылке
+                        if hasattr(self.zoom_manager, 'objects'):
+                            for key, obj in list(self.zoom_manager.objects.items()):
+                                if obj is link:
+                                    self.zoom_manager.unregister_object(key)
+                                    print(f"   ✓ Линк {i+1} дерегистрирован (fallback): {key}")
+                                    break
 
                     # Удаляем из created_links
                     if link in self.created_links:
@@ -500,13 +505,19 @@ class ManualSporeManager:
                             self.spore_manager.objects.remove(spore)
                             print(f"   ✓ Спора {i+1} удалена из objects (fallback)")
 
-                    # Дерегистрируем из zoom_manager
-                    if hasattr(self.zoom_manager, 'objects'):
-                        for key, obj in list(self.zoom_manager.objects.items()):
-                            if obj is spore:
-                                self.zoom_manager.unregister_object(key)
-                                print(f"   ✓ Спора {i+1} дерегистрирована: {key}")
-                                break
+                    # Дерегистрируем из zoom_manager используя сохраненный ключ
+                    if hasattr(spore, '_zoom_manager_key'):
+                        key = spore._zoom_manager_key
+                        self.zoom_manager.unregister_object(key)
+                        print(f"   ✓ Спора {i+1} дерегистрирована: {key}")
+                    else:
+                        # Fallback: поиск по ссылке
+                        if hasattr(self.zoom_manager, 'objects'):
+                            for key, obj in list(self.zoom_manager.objects.items()):
+                                if obj is spore:
+                                    self.zoom_manager.unregister_object(key)
+                                    print(f"   ✓ Спора {i+1} дерегистрирована (fallback): {key}")
+                                    break
 
                     # Уничтожаем объект Ursina
                     destroy(spore)

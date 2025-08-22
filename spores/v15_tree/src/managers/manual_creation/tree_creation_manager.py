@@ -70,6 +70,7 @@ class TreeCreationManager:
 
         ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
         """
+        print("🚨 ВЫЗВАН create_tree_at_cursor()!!! Начинаем создание дерева!")
         try:
             from ...visual.spore_tree_visual import SporeTreeVisual
             from ...logic.tree.spore_tree import SporeTree
@@ -94,9 +95,8 @@ class TreeCreationManager:
                 print(f"   📊 dt_grandchildren: {dt_grandchildren_abs}")
 
                 tree_config = SporeTreeConfig(
-                    dt_base=dt,
-                    tree_depth=self.tree_depth,
-                    position=tree_position
+                    initial_position=tree_position,
+                    dt_base=dt
                 )
 
                 tree_logic = SporeTree(
@@ -106,14 +106,20 @@ class TreeCreationManager:
                     dt_grandchildren=dt_grandchildren_abs,
                     auto_create=False
                 )
+                
+                # Создаем детей (всегда)
+                tree_logic.create_children()
+                
+                # Создаем внуков если нужна глубина 2
+                if self.tree_depth >= 2:
+                    tree_logic.create_grandchildren()
             else:
                 # Создаем обычное дерево с автоматическими dt
                 print(f"🌲 Создаем автоматическое дерево")
 
                 tree_config = SporeTreeConfig(
-                    dt_base=dt,
-                    tree_depth=self.tree_depth,
-                    position=tree_position
+                    initial_position=tree_position,
+                    dt_base=dt
                 )
 
                 tree_logic = SporeTree(
@@ -121,16 +127,30 @@ class TreeCreationManager:
                     config=tree_config,
                     auto_create=True
                 )
+                
+                # Создаем детей (всегда)
+                tree_logic.create_children()
+                
+                # Создаем внуков если нужна глубина 2
+                if self.tree_depth >= 2:
+                    tree_logic.create_grandchildren()
 
             # Создаем визуализацию дерева
             goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
             
-            # DEBUG: Проверяем конфигурацию
-            spore_scale = self.config.get('spore', {}).get('scale', 0.1)
+            # DEBUG: Диагностика конфигурации
+            print(f"🔍 DEBUG: Полный self.config['spore']: {self.config.get('spore', 'НЕТ КЛЮЧА!')}")
+            spore_config = self.config.get('spore', {})
+            print(f"🔍 DEBUG: spore_config: {spore_config}")
+            spore_scale = spore_config.get('scale', 'НЕТ SCALE!')
             print(f"🔍 DEBUG: spore scale из конфигурации: {spore_scale}")
             print(f"🔍 DEBUG: zoom_manager.spores_scale: {self.zoom_manager.spores_scale}")
-            
-            spore_config = self.config.get('spore', {})
+
+            # ПРОВЕРКА: Если scale отсутствует - это баг!
+            if 'scale' not in spore_config:
+                print(f"❌ БАГ: scale отсутствует в spore_config! Принудительно устанавливаем 0.02")
+                spore_config = spore_config.copy()
+                spore_config['scale'] = 0.02
 
             # ВАЖНО: Передаем весь config, не только spore_config, чтобы включить goal_position
             visual_config = self.config.copy()
@@ -168,10 +188,15 @@ class TreeCreationManager:
                 if spore:
                     self.spore_manager.add_spore_manual(spore)
 
-            # 2. Регистрируем споры в zoom_manager
+            # 2. Регистрируем споры в zoom_manager и сохраняем ключи
+            spore_keys = []
             for i, spore in enumerate(created_spores):
                 if spore:
-                    self.zoom_manager.register_object(spore, f"tree_spore_{self._global_tree_counter}_{i}")
+                    key = f"tree_spore_{self._global_tree_counter}_{i}"
+                    self.zoom_manager.register_object(spore, key)
+                    spore_keys.append(key)
+                    # Сохраняем ключ в самой споре для быстрого доступа
+                    spore._zoom_manager_key = key
 
             # Собираем линки
             created_links.extend(tree_visual.child_links)
@@ -179,10 +204,15 @@ class TreeCreationManager:
             if self.tree_depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
-            # 3. Регистрируем линки в zoom manager
+            # 3. Регистрируем линки в zoom manager и сохраняем ключи
+            link_keys = []
             for i, link in enumerate(created_links):
                 if link:
-                    self.zoom_manager.register_object(link, f"tree_link_{self._global_tree_counter}_{i}")
+                    key = f"tree_link_{self._global_tree_counter}_{i}"
+                    self.zoom_manager.register_object(link, key)
+                    link_keys.append(key)
+                    # Сохраняем ключ в самом линке для быстрого доступа
+                    link._zoom_manager_key = key
 
             # 4. Применяем трансформации ко всем объектам сразу
             self.zoom_manager.update_transform()

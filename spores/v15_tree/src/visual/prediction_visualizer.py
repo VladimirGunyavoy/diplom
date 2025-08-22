@@ -91,12 +91,14 @@ class PredictionVisualizer:
                 # Создаем временный маятник для призрака
                 temp_pendulum = PendulumSystem()
                 
+                correct_scale = getattr(self.zoom_manager, 'config', {}).get('spore', {}).get('scale', 0.02)
                 self.ghost_spore = Spore(
                     dt=0.1,
                     pendulum=temp_pendulum,
                     goal_position=[0, 0],
                     model='sphere',
                     position=(0, 0, 0),
+                    scale=correct_scale,  # 🔧 ИСПРАВЛЕНИЕ: Добавляем правильный scale
                     color_manager=self.color_manager,
                     is_ghost=True
                 )
