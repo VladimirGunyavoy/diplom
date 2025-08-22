@@ -56,6 +56,8 @@ class ManualSporeManager:
         self._link_counter = 0
         self._spore_counter = 0
 
+        # Сохранение dt вектора от призрачного дерева
+        self.ghost_tree_dt_vector = None
 
         # История созданных групп спор для возможности удаления
         self.spore_groups_history: List[List[Spore]] = []  # История групп спор
@@ -134,6 +136,31 @@ class ManualSporeManager:
             # Создаем внуков только для глубины 2
             if self.tree_depth >= 2:
                 tree_logic.create_grandchildren()
+
+            # Используем dt вектор от призрачного дерева если доступен
+            if self.ghost_tree_dt_vector is not None:
+                print(f"🎯 Используем dt вектор от призрачного дерева: {self.ghost_tree_dt_vector}")
+
+            # Применяем сохраненный dt вектор от призрачного дерева
+            if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
+                try:
+                    # Первые 4 элемента - dt для детей, следующие 8 - для внуков
+                    dt_children = self.ghost_tree_dt_vector[:4]
+                    dt_grandchildren = self.ghost_tree_dt_vector[4:12]
+
+                    # Переопределяем dt для детей
+                    for i, child in enumerate(tree_logic.children):
+                        if i < len(dt_children):
+                            child['dt'] = dt_children[i]
+
+                    # Переопределяем dt для внуков
+                    for i, grandchild in enumerate(tree_logic.grandchildren):
+                        if i < len(dt_grandchildren):
+                            grandchild['dt'] = dt_grandchildren[i]
+
+                    print(f"✅ Применен dt вектор призрачного дерева к реальному дереву")
+                except Exception as e:
+                    print(f"⚠️ Ошибка применения dt вектора: {e}")
             
             # Создаем визуализацию (ВРЕМЕННО)
             tree_visual = SporeTreeVisual(
@@ -574,6 +601,18 @@ class ManualSporeManager:
             # Создаем внуков если нужна глубина 2
             if self.tree_depth >= 2:
                 tree_logic.create_grandchildren()
+
+            # Сохраняем dt вектор от призрачного дерева для будущего использования
+            if hasattr(tree_logic, 'children') and hasattr(tree_logic, 'grandchildren'):
+                try:
+                    # Извлекаем dt из дерева
+                    dt_children = [child.get('dt', dt) for child in tree_logic.children]
+                    dt_grandchildren = [gc.get('dt', dt * 0.2) for gc in tree_logic.grandchildren]
+                    self.ghost_tree_dt_vector = np.hstack([dt_children, dt_grandchildren])
+                    print(f"🔮 Сохранен dt вектор призрачного дерева: {len(self.ghost_tree_dt_vector)} элементов")
+                except Exception as e:
+                    print(f"⚠️ Ошибка сохранения dt вектора: {e}")
+                    self.ghost_tree_dt_vector = None
 
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic)
