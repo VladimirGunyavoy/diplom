@@ -116,11 +116,9 @@ class SporeTreeVisual:
         )
         
         # Цвет корня как в matplotlib версии
-        self.root_spore.color = self.color_manager.hex_to_color('#2C3E50')
+        self.root_spore.color = self.color_manager.get_color('spore', 'default')
         
         # Регистрируем
-        root_id = self._get_next_spore_id()
-        self.zoom_manager.register_object(self.root_spore, f'tree_root_{root_id}')
         
     def _create_children_visual(self, goal_position: List[float], spore_config: dict):
         """Создает визуальных детей на основе данных из tree_logic."""
@@ -140,11 +138,9 @@ class SporeTreeVisual:
             )
             
             # Цвет ребенка
-            child_spore.color = self.color_manager.hex_to_color(self.child_colors[i])
+            child_spore.color = self.color_manager.get_color('spore', 'default')
             
             # Регистрируем
-            child_id = self._get_next_spore_id()
-            self.zoom_manager.register_object(child_spore, f'tree_child_{i}_{child_id}')
             self.child_spores.append(child_spore)
             
             # Создаем стрелку
@@ -173,14 +169,12 @@ class SporeTreeVisual:
         
         # Цвет стрелки по управлению (читаем из логики)
         if child_data['control'] > 0:  # u_max
-            link.color = self.color_manager.hex_to_color('#FF6B6B')  # Красный
+            link.color = self.color_manager.get_color('link', 'ghost_max')
         else:  # u_min
-            link.color = self.color_manager.hex_to_color('#1ABC9C')  # Бирюзовый
+            link.color = self.color_manager.get_color('link', 'ghost_min')
             
         # Регистрируем
         link.update_geometry()
-        link_id = self._get_next_link_id()
-        self.zoom_manager.register_object(link, f'tree_child_link_{child_idx}_{link_id}')
         self.child_links.append(link)
         
     def _create_grandchildren_visual(self, goal_position: List[float], spore_config: dict):
@@ -194,19 +188,15 @@ class SporeTreeVisual:
                 pendulum=self.tree_logic.pendulum,
                 dt=abs(gc_data['dt']),  # Читаем из логики
                 goal_position=goal_position,
-                scale=spore_config.get('scale', 0.1) * 0.8,  # Меньше детей
+                scale=spore_config.get('scale', 0.1),
                 position=(gc_data['position'][0], 0.0, gc_data['position'][1]),
                 color_manager=self.color_manager,
                 config=spore_config
             )
             
             # Цвет внука
-            color_idx = i % len(self.grandchild_colors)
-            grandchild_spore.color = self.color_manager.hex_to_color(self.grandchild_colors[color_idx])
-            
+            grandchild_spore.color = self.color_manager.get_color('spore', 'default')
             # Регистрируем
-            gc_id = self._get_next_spore_id()
-            self.zoom_manager.register_object(grandchild_spore, f'tree_grandchild_{i}_{gc_id}')
             self.grandchild_spores.append(grandchild_spore)
             
             # Создаем стрелку внука
@@ -234,16 +224,13 @@ class SporeTreeVisual:
             config=self.config
         )
         
-        # Цвет по управлению (читаем из логики)
         if gc_data['control'] > 0:
-            link.color = self.color_manager.hex_to_color('#FF6B6B')
+            link.color = self.color_manager.get_color('link', 'ghost_max')
         else:
-            link.color = self.color_manager.hex_to_color('#1ABC9C')
-            
+            link.color = self.color_manager.get_color('link', 'ghost_min')
+
         # Регистрируем
         link.update_geometry()
-        link_id = self._get_next_link_id()
-        self.zoom_manager.register_object(link, f'tree_grandchild_link_{gc_idx}_{link_id}')
         self.grandchild_links.append(link)
         
     def sync_with_logic(self) -> None:

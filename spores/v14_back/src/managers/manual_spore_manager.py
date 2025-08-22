@@ -63,6 +63,7 @@ class ManualSporeManager:
 
         self.creation_mode = 'spores'  # 'spores' или 'tree'
         self.tree_depth = 2 
+        self._global_tree_counter = 0
 
         print(f"   ✓ Manual Spore Manager создан (управление: {self.min_control} .. {self.max_control})")
         print(f"   📚 История групп инициализирована")
@@ -107,6 +108,8 @@ class ManualSporeManager:
             from ..visual.spore_tree_visual import SporeTreeVisual
             from ..logic.tree.spore_tree import SporeTree
             from ..logic.tree.spore_tree_config import SporeTreeConfig
+
+            self._global_tree_counter += 1
             
             # Получаем текущий dt
             dt = self._get_current_dt()
@@ -152,18 +155,22 @@ class ManualSporeManager:
             # Собираем все споры
             all_spores = [tree_visual.root_spore] + tree_visual.child_spores + tree_visual.grandchild_spores
             
-            # Добавляем споры в общую систему (как обычные споры)
-            for spore in all_spores:
+            # Добавляем споры в общую систему (как обычные споры)  
+            for i, spore in enumerate(all_spores):
                 if spore:
                     self.spore_manager.add_spore_manual(spore)
                     created_spores.append(spore)
+                    # Регистрируем спору в ZoomManager с уникальным именем
+                    self.zoom_manager.register_object(spore, f"tree_spore_{self._global_tree_counter}_{i}")
             
             # Добавляем линки в общий список (как обычные линки)
             all_links = tree_visual.child_links + tree_visual.grandchild_links
-            for link in all_links:
+            for i, link in enumerate(all_links):
                 if link:
                     self.created_links.append(link)
                     created_links.append(link)
+                    # ✅ ДОБАВИТЬ РЕГИСТРАЦИЮ:
+                    self.zoom_manager.register_object(link, f"tree_link_{self._global_tree_counter}_{i}")
             
             # =============================================
             # ОСВОБОЖДАЕМ SporeTreeVisual
@@ -510,7 +517,7 @@ class ManualSporeManager:
             return self.create_tree_at_cursor()
         else:
             # ... весь существующий код создания спор ...
-            return self._create_spores_original()
+            return self._create_spore_at_cursor_original()
     def _create_spore_at_cursor_original(self) -> Optional[List[Spore]]:
         """
         Создает полную семью спор:
