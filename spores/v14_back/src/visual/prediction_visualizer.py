@@ -116,6 +116,8 @@ class PredictionVisualizer:
         if not self.ghost_spore:
             return
 
+
+
         # 1. Обновляем позицию споры-призрака (Y=0 для плоскости XZ)
         # Оптимизация: используем буфер вместо np.array()
         self._position_3d_buffer[0] = predicted_state_2d[0]

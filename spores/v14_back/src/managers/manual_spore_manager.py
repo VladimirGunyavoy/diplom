@@ -85,7 +85,31 @@ class ManualSporeManager:
         self.tree_depth = 2  # 1 или 2
         # НЕ НУЖНО: self.active_trees = [] - споры идут в общий граф!
     
-    print(f"   🌲 Поддержка деревьев добавлена")
+        print("   🌲 Поддержка деревьев добавлена")
+
+        # Безопасные методы для регистрации/удаления объектов
+        self._safe_register = lambda obj, reg_id: self._safe_register_impl(obj, reg_id)
+        self._safe_unregister_and_destroy = lambda obj: self._safe_unregister_and_destroy_impl(obj)
+
+    def _safe_register_impl(self, obj, reg_id: str):
+        """Безопасная регистрация объекта в zoom_manager."""
+        try:
+            self.zoom_manager.register_object(obj, reg_id)
+            setattr(obj, '_reg_id', reg_id)
+        except Exception as e:
+            print(f"⚠️ Регистрация {reg_id} не удалась: {e}")
+
+    def _safe_unregister_and_destroy_impl(self, obj):
+        """Безопасное удаление объекта с отменой регистрации."""
+        try:
+            if hasattr(obj, '_reg_id'):
+                try:
+                    self.zoom_manager.unregister_object(obj._reg_id)
+                except:
+                    pass
+            destroy(obj)
+        except Exception as e:
+            print(f"⚠️ Удаление {getattr(obj, '_reg_id', '<no_id>')} не удалось: {e}")
 
 # В том же файле добавить методы:
 
@@ -125,17 +149,19 @@ class ManualSporeManager:
             # ИСПРАВЛЕНИЕ: Правильная позиция для дерева
             tree_position = np.array([self.preview_position_2d[0], self.preview_position_2d[1]])
 
+            # ДОБАВЛЯЕМ ЖЕСТКУЮ ВАЛИДАЦИЮ
+            assert self.ghost_tree_dt_vector is None or len(self.ghost_tree_dt_vector)==12, "ghost_tree_dt_vector должен быть длины 12"
+
             # Создаем логику дерева с правильными dt векторами
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
-                # ИСПРАВЛЕНИЕ: Берем абсолютные значения, т.к. create_children() применит знаки сам
-                dt_children = np.abs(self.ghost_tree_dt_vector[:4])
-                dt_grandchildren = np.abs(self.ghost_tree_dt_vector[4:12])
+                # ИСПРАВЛЕНИЕ: Сохраняем знаки dt, т.к. они содержат информацию о направлении
+                dt_children = np.array(self.ghost_tree_dt_vector[:4], dtype=float)
+                dt_grandchildren = np.array(self.ghost_tree_dt_vector[4:12], dtype=float)
 
-                print(f"🎯 Используем dt вектор от призрачного дерева:")
-                print(f"   Исходный dt_children: {self.ghost_tree_dt_vector[:4]}")
-                print(f"   Абсолютный dt_children: {dt_children}")
-                print(f"   Исходный dt_grandchildren: {self.ghost_tree_dt_vector[4:12]}")
-                print(f"   Абсолютный dt_grandchildren: {dt_grandchildren}")
+                if hasattr(self, 'debug_mode') and self.debug_mode:
+                    print(f"🎯 Используем dt вектор от призрачного дерева:")
+                    print(f"   dt_children: {dt_children}")
+                    print(f"   dt_grandchildren: {dt_grandchildren}")
 
                 # Создаем конфиг дерева
                 tree_config = SporeTreeConfig(
@@ -145,23 +171,30 @@ class ManualSporeManager:
                     show_debug=False
                 )
 
-                # ИСПРАВЛЕНИЕ: Всегда используем auto_create=False
+                # ИСПРАВЛЕНИЕ: Используем auto_create=True с правильными dt
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
                     config=tree_config,
-                    dt_children=None,  # Не передаем в конструктор
-                    dt_grandchildren=None,  # Не передаем в конструктор
-                    auto_create=False,  # ИСПРАВЛЕНО: Всегда False
+                    dt_children=dt_children,  # ✅ Передаем подписанные dt
+                    dt_grandchildren=dt_grandchildren,  # ✅ Передаем подписанные dt
+                    auto_create=True,  # ✅ ИСПРАВЛЕНИЕ: используем auto_create=True
                     show=False
                 )
-
-                # ПРИНУДИТЕЛЬНО создаем все элементы с правильными dt
-                tree_logic.create_children(dt_children=dt_children, show=True)
-                if self.tree_depth >= 2:
-                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren, show=True)
+                # ✅ НЕ вызываем create_children() и create_grandchildren() - дерево уже создано!
 
             else:
-                # Fallback: создаем дерево стандартным способом
+                # Fallback: создаем дерево с детерминированными стандартными dt
+                current_dt = self._get_current_dt()
+
+                # Стандартные dt: детям - полный dt, внукам - в 5 раз меньше
+                dt_children_std = np.array([current_dt, -current_dt, current_dt, -current_dt], dtype=float)
+                dt_grandchildren_std = np.array([
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_0
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_1
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_2
+                    current_dt * 0.2, -current_dt * 0.2   # внуки от child_3
+                ])
+
                 tree_config = SporeTreeConfig(
                     initial_position=tree_position,  # ИСПРАВЛЕНО
                     dt_base=dt,
@@ -172,18 +205,16 @@ class ManualSporeManager:
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
                     config=tree_config,
-                    auto_create=False
+                    dt_children=dt_children_std,  # ✅ С правильными знаками
+                    dt_grandchildren=dt_grandchildren_std,  # ✅ С правильными знаками
+                    auto_create=True,  # ✅ ИСПРАВЛЕНИЕ: используем auto_create=True
+                    show=False
                 )
+                # ✅ НЕ вызываем create_children() и create_grandchildren() - дерево уже создано!
 
-                # Создаем детей и внуков стандартно
-                tree_logic.create_children(show=True)
-                if self.tree_depth >= 2:
-                    tree_logic.create_grandchildren(show=True)
-
-            # ДОБАВЛЯЕМ ПРИНУДИТЕЛЬНУЮ ПРОВЕРКУ
-            print(f"🔍 ПРОВЕРКА ДЕРЕВА:")
-            print(f"   Ожидаем: 4 ребенка, получили: {len(getattr(tree_logic, 'children', []))}")
-            print(f"   Ожидаем: 8 внуков, получили: {len(getattr(tree_logic, 'grandchildren', []))}")
+            # ДОБАВЛЯЕМ ПРИНУДИТЕЛЬНУЮ ПРОВЕРКУ (только в режиме отладки)
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                self._debug_dump_tree("REAL", tree_logic)
 
             # Если детей меньше 4, пересоздаем
             if not hasattr(tree_logic, 'children') or len(tree_logic.children) != 4:
@@ -287,11 +318,7 @@ class ManualSporeManager:
             traceback.print_exc()
             return None
 
-    def _get_current_dt(self):
-        """Получает текущий dt из DTManager или конфига."""
-        if hasattr(self, 'dt_manager') and self.dt_manager:
-            return self.dt_manager.get_current_dt()
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+
 
     def _get_next_link_id(self) -> int:
         """Возвращает уникальный ID для линка"""
@@ -343,7 +370,7 @@ class ManualSporeManager:
                 
         except Exception as e:
             print(f"Ошибка определения позиции мыши: {e}")
-            return (0.0, 0.0)
+            return None
     
     def update_cursor_position(self) -> None:
         """
@@ -584,38 +611,19 @@ class ManualSporeManager:
 
     def _clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
-        # Сначала дерегистрируем из zoom_manager, ПОТОМ уничтожаем
-        for i, viz in enumerate(self.prediction_visualizers):
-            if viz.ghost_spore:
-                # Ищем и дерегистрируем ghost_spore
-                ghost_id = getattr(viz.ghost_spore, 'id', f'tree_ghost_{i}')
-                try:
-                    self.zoom_manager.unregister_object(ghost_id)
-                except:
-                    pass
-            viz.destroy()
+        # Очищаем визуализаторы предсказаний
+        for viz in self.prediction_visualizers:
+            if getattr(viz, 'ghost_spore', None):
+                self._safe_unregister_and_destroy(viz.ghost_spore)
+            try:
+                viz.destroy()
+            except:
+                pass
         self.prediction_visualizers.clear()
 
         # Очищаем линки предсказаний
-        for i, link in enumerate(self.prediction_links):
-            # Пытаемся найти правильный ключ регистрации
-            possible_keys = [
-                f'manual_prediction_link_{["forward_min", "forward_max", "backward_min", "backward_max"][i] if i < 4 else i}',
-                f'ghost_link_root_to_child_{i}',
-                f'ghost_link_child_{i//2}_to_grandchild_{i}'
-            ]
-
-            for key in possible_keys:
-                try:
-                    self.zoom_manager.unregister_object(key)
-                    break
-                except:
-                    continue
-
-            try:
-                destroy(link)
-            except:
-                pass
+        for link in self.prediction_links:
+            self._safe_unregister_and_destroy(link)
         self.prediction_links.clear()
 
     def _update_ghost_predictions(self):
@@ -634,14 +642,20 @@ class ManualSporeManager:
         if hasattr(self, 'last_known_dt') and self.last_known_dt is not None:
             if abs(current_dt - self.last_known_dt) > 1e-10:  # dt изменился
                 dt_changed = True
-                print(f"🔄 dt изменился: {self.last_known_dt:.6f} → {current_dt:.6f}")
+                if hasattr(self, 'debug_mode') and self.debug_mode:
+                    print(f"🔄 dt изменился: {self.last_known_dt:.6f} → {current_dt:.6f}")
 
                 # Если была оптимизация - сбрасываем её
                 if hasattr(self, 'ghost_tree_optimized') and self.ghost_tree_optimized:
-                    print(f"🔓 Сброс оптимизации из-за изменения dt")
+                    if hasattr(self, 'debug_mode') and self.debug_mode:
+                        print(f"🔓 Сброс оптимизации из-за изменения dt")
                     self.ghost_tree_optimized = False
                     self.ghost_tree_dt_vector = None
                     self.tree_created_with_dt = None  # ✅ Сбрасываем созданный dt
+
+                # Также сбрасываем tree_created_with_dt при изменении dt
+                if hasattr(self, 'tree_created_with_dt'):
+                    self.tree_created_with_dt = None
 
         # Сохраняем текущий dt для следующего раза
         self.last_known_dt = current_dt
@@ -657,21 +671,21 @@ class ManualSporeManager:
             if hasattr(self, 'debug_mode') and self.debug_mode:
                 print("🎯 Используем заблокированные оптимизированные dt")
         else:
-            # Выводим сообщение только если dt изменился или это первый вызов
-            if dt_changed:
-                print(f"🔄 Пересоздаем дерево с новым dt: {current_dt:.6f}")
-            elif not hasattr(self, 'tree_created_with_dt') or self.tree_created_with_dt != current_dt:
-                print(f"🌲 Создаем дерево с dt: {current_dt:.6f}")
-                self.tree_created_with_dt = current_dt
-            # Иначе - дерево уже создано с этим dt, не выводим сообщение
+            # Выводим сообщение только если dt изменился или это первый вызов (и включен режим отладки)
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                if dt_changed:
+                    print(f"🔄 Пересоздаем дерево с новым dt: {current_dt:.6f}")
+                elif not hasattr(self, 'tree_created_with_dt') or self.tree_created_with_dt != current_dt:
+                    print(f"🌲 Создаем дерево с dt: {current_dt:.6f}")
+                    self.tree_created_with_dt = current_dt
 
         try:
             # Импорты для дерева
             from ..logic.tree.spore_tree import SporeTree
             from ..logic.tree.spore_tree_config import SporeTreeConfig
 
-            # Получаем текущий dt
-            dt = self._get_current_dt()
+            # Используем уже полученный current_dt вместо повторного вызова
+            dt = current_dt
 
             # Создаем конфиг дерева
             tree_config = SporeTreeConfig(
@@ -696,6 +710,7 @@ class ManualSporeManager:
                     print(f"🎯 Создаем дерево с оптимизированными dt:")
                     print(f"   dt_children: {dt_children}")
                     print(f"   dt_grandchildren: {dt_grandchildren}")
+                    print(f"   Используем ghost_tree_dt_vector: {self.ghost_tree_dt_vector}")
 
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
@@ -710,8 +725,7 @@ class ManualSporeManager:
                 if hasattr(self, 'debug_mode') and self.debug_mode:
                     print("🎯 Используем оптимизированные dt для призрачного дерева")
             else:
-                # Создаем обычное дерево с стандартными dt (dt из dt-менеджера для детей, в 5 раз меньше для внуков)
-                current_dt = self._get_current_dt()
+                # Создаем обычное дерево с стандартными dt (используем уже полученный current_dt)
 
                 # Стандартные dt: детям - полный dt, внукам - в 5 раз меньше
                 dt_children_std = np.array([current_dt, -current_dt, current_dt, -current_dt])  # ✅ с правильными знаками
@@ -742,14 +756,33 @@ class ManualSporeManager:
                     try:
                         # Извлекаем dt из дерева
                         dt_children = [child.get('dt', dt) for child in tree_logic.children]
-                        dt_grandchildren = [gc.get('dt', dt * 0.2) for gc in tree_logic.grandchildren]
+                        # Для внуков используем dt их родителя, умноженный на 0.2
+                        dt_grandchildren = []
+                        for gc in tree_logic.grandchildren:
+                            parent_idx = gc.get('parent_idx', 0)
+                            parent_dt = dt_children[parent_idx] if parent_idx < len(dt_children) else dt
+                            dt_grandchildren.append(gc.get('dt', parent_dt * 0.2))
                         self.ghost_tree_dt_vector = np.hstack([dt_children, dt_grandchildren])
+
+                        # Отладка: показываем что сохраняем
+                        if hasattr(self, 'debug_mode') and self.debug_mode:
+                            print(f"💾 Сохраняем ghost_tree_dt_vector:")
+                            print(f"   dt_children: {dt_children}")
+                            print(f"   dt_grandchildren: {dt_grandchildren}")
+                            print(f"   ghost_tree_dt_vector: {self.ghost_tree_dt_vector}")
                     except Exception as e:
                         print(f"⚠️ Ошибка сохранения dt вектора: {e}")
-                        self.ghost_tree_dt_vector = None
+                        # Не сбрасываем ghost_tree_dt_vector, если он был установлен ранее
+                        if not hasattr(self, 'ghost_tree_dt_vector'):
+                            self.ghost_tree_dt_vector = None
 
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic)
+
+            # Диагностика созданного дерева (только в режиме отладки)
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                use_optimized = hasattr(self, 'ghost_tree_dt_vector') and self.ghost_tree_dt_vector is not None and not dt_changed
+                self._debug_dump_tree("GHOST" if use_optimized else "STD", tree_logic)
 
         except Exception as e:
             print(f"Ошибка создания призрачного дерева: {e}")
@@ -799,11 +832,15 @@ class ManualSporeManager:
                     parent_idx = grandchild_data['parent_idx']
 
                     if parent_idx < len(child_ghosts) and child_ghosts[parent_idx]:
+                        # Определяем цвет по реальному управлению внука
+                        grandchild_control = grandchild_data.get('control', 0.0)
+                        link_color = ('ghost_max' if grandchild_control >= 0 else 'ghost_min')
+
                         self._create_ghost_link(
                             child_ghosts[parent_idx],
                             grandchild_ghost,
                             f"child_{parent_idx}_to_grandchild_{i}",
-                            'ghost_min' if i % 2 == 0 else 'ghost_max'  # Чередуем цвета
+                            link_color  # Цвет по реальному управлению
                         )
 
     def _create_ghost_spore_from_data(self, spore_data, name_suffix, alpha):
@@ -811,7 +848,17 @@ class ManualSporeManager:
         from ..visual.prediction_visualizer import PredictionVisualizer
 
         # Получаем финальную позицию споры
-        final_position = spore_data['position']  # должно быть [x, z]
+        final_position = spore_data['position']  # должно быть [угол, угловая_скорость]
+
+        # Конвертируем в numpy array если нужно
+        if not isinstance(final_position, np.ndarray):
+            final_position = np.array(final_position, dtype=np.float64)
+
+        # Убеждаемся что форма правильная (2,)
+        if final_position.shape != (2,):
+            final_position = final_position.reshape(2)
+
+
 
         # Создаем визуализатор предсказания
         prediction_viz = PredictionVisualizer(
@@ -842,6 +889,7 @@ class ManualSporeManager:
             try:
                 ghost_id = f'tree_ghost_{name_suffix}'
                 prediction_viz.ghost_spore.id = ghost_id
+                prediction_viz.ghost_spore._reg_id = ghost_id  # Для корректного удаления
                 self.zoom_manager.register_object(prediction_viz.ghost_spore, ghost_id)
             except Exception as e:
                 print(f"Ошибка регистрации призрака {name_suffix}: {e}")
@@ -873,6 +921,7 @@ class ManualSporeManager:
             # Обновляем геометрию и регистрируем
             ghost_link.update_geometry()
             link_id = f'ghost_link_{link_suffix}'
+            ghost_link._reg_id = link_id  # Для корректного удаления
             self.zoom_manager.register_object(ghost_link, link_id)
 
             # Добавляем в список для очистки
@@ -1051,10 +1100,7 @@ class ManualSporeManager:
             
         self._clear_predictions()  # Это очистит и визуализаторы, и линки
     
-    def destroy(self) -> None:
-        """Очищает все ресурсы менеджера."""
-        self._destroy_preview()
-        print("   ✓ Manual Spore Manager уничтожен") 
+ 
 
     def clear_all(self) -> None:
         """Очищает все ресурсы созданные ManualSporeManager."""
@@ -1299,6 +1345,25 @@ class ManualSporeManager:
             self.ghost_tree_dt_vector = None
             self.tree_created_with_dt = None  # ✅ Сбрасываем также созданный dt
             print("🔓 Оптимизация призрачного дерева сброшена")
+
+    def _debug_dump_tree(self, tag: str, tree_logic):
+        """Диагностическая функция для отладки деревьев."""
+        try:
+            ch = getattr(tree_logic, 'children', [])
+            gc = getattr(tree_logic, 'grandchildren', [])
+            print(f"[{tag}] children={len(ch)} grandchildren={len(gc)}")
+            if ch:
+                dtc = [round(c.get('dt', float('nan')), 6) for c in ch]
+                uc = [round(c.get('control', float('nan')), 6) for c in ch]
+                print(f"[{tag}] dt_children={dtc}")
+                print(f"[{tag}] u_children={uc}")
+            if gc:
+                dtg = [round(g.get('dt', float('nan')), 6) for g in gc]
+                ug = [round(g.get('control', float('nan')), 6) for g in gc]
+                print(f"[{tag}] dt_grandchildren={dtg}")
+                print(f"[{tag}] u_grandchildren={ug}")
+        except Exception as e:
+            print(f"[{tag}] dump failed: {e}")
 
     def _get_current_dt(self) -> float:
         """Получает текущий dt из DTManager или конфига."""
