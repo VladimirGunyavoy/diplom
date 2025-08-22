@@ -61,8 +61,151 @@ class ManualSporeManager:
         self.spore_groups_history: List[List[Spore]] = []  # История групп спор
         self.group_links_history: List[List[Link]] = []    # История линков для каждой группы
 
+        self.creation_mode = 'spores'  # 'spores' или 'tree'
+        self.tree_depth = 2 
+
         print(f"   ✓ Manual Spore Manager создан (управление: {self.min_control} .. {self.max_control})")
         print(f"   📚 История групп инициализирована")
+
+
+
+
+    
+    # 🆕 Добавляем поддержку деревьев
+    self.creation_mode = 'spores'  # 'spores' или 'tree'
+    self.tree_depth = 2  # 1 или 2
+    # НЕ НУЖНО: self.active_trees = [] - споры идут в общий граф!
+    
+    print(f"   🌲 Поддержка деревьев добавлена")
+
+# В том же файле добавить методы:
+
+    def toggle_creation_mode(self):
+        """Переключает режим создания."""
+        if self.creation_mode == 'spores':
+            self.creation_mode = 'tree'
+            print("🌲 Режим: Создание деревьев")
+        else:
+            self.creation_mode = 'spores'
+            print("🌟 Режим: Создание спор")
+
+    def set_tree_depth(self, depth: int):
+        """Устанавливает глубину дерева."""
+        self.tree_depth = max(1, min(depth, 2))
+        print(f"🌲 Глубина дерева: {self.tree_depth}")
+
+    def create_tree_at_cursor(self):
+        """
+        Создает дерево в позиции курсора.
+        
+        ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
+        """
+        if not self.preview_enabled or not self.preview_spore:
+            return None
+            
+        try:
+            from ..visual.spore_tree_visual import SporeTreeVisual
+            from ..spore_tree import SporeTree
+            from ..spore_tree_config import SporeTreeConfig
+            
+            # Получаем текущий dt
+            dt = self._get_current_dt()
+            
+            # Создаем логику дерева
+            tree_config = SporeTreeConfig(
+                initial_position=self.preview_position_2d.copy(),
+                dt_base=dt,
+                dt_grandchildren_factor=0.05,
+                show_debug=False
+            )
+            
+            tree_logic = SporeTree(
+                pendulum=self.pendulum,
+                config=tree_config,
+                auto_create=False
+            )
+            
+            # Создаем детей всегда
+            tree_logic.create_children()
+            
+            # Создаем внуков только для глубины 2
+            if self.tree_depth >= 2:
+                tree_logic.create_grandchildren()
+            
+            # Создаем визуализацию (ВРЕМЕННО)
+            tree_visual = SporeTreeVisual(
+                color_manager=self.color_manager,
+                zoom_manager=self.zoom_manager,
+                config=self.config
+            )
+            
+            tree_visual.set_tree_logic(tree_logic)
+            tree_visual.create_visual()
+            
+            # =============================================
+            # ЗАБИРАЕМ СОЗДАННЫЕ ОБЪЕКТЫ В ОБЩИЙ ГРАФ
+            # =============================================
+            
+            created_spores = []
+            created_links = []
+            
+            # Собираем все споры
+            all_spores = [tree_visual.root_spore] + tree_visual.child_spores + tree_visual.grandchild_spores
+            
+            # Добавляем споры в общую систему (как обычные споры)
+            for spore in all_spores:
+                if spore:
+                    self.spore_manager.add_spore_manual(spore)
+                    created_spores.append(spore)
+            
+            # Добавляем линки в общий список (как обычные линки)
+            all_links = tree_visual.child_links + tree_visual.grandchild_links
+            for link in all_links:
+                if link:
+                    self.created_links.append(link)
+                    created_links.append(link)
+            
+            # =============================================
+            # ОСВОБОЖДАЕМ SporeTreeVisual
+            # =============================================
+            
+            # Очищаем ссылки чтобы tree_visual не уничтожил объекты
+            tree_visual.root_spore = None
+            tree_visual.child_spores.clear()
+            tree_visual.grandchild_spores.clear()
+            tree_visual.child_links.clear()
+            tree_visual.grandchild_links.clear()
+            tree_visual.visual_created = False
+            
+            # tree_visual больше не нужен
+            tree_visual = None
+            tree_logic = None
+            
+            # =============================================
+            # СОХРАНЯЕМ В ИСТОРИЮ (как обычную группу спор)
+            # =============================================
+            
+            self.spore_groups_history.append(created_spores.copy())
+            self.group_links_history.append(created_links.copy())
+            
+            print(f"🌲 Дерево создано в ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
+            print(f"   📊 Глубина: {self.tree_depth}, dt: {dt:.4f}")
+            print(f"   🎯 Добавлено в граф: {len(created_spores)} спор + {len(created_links)} линков")
+            print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
+            
+            return created_spores  # Возвращаем как обычную группу спор
+            
+        except Exception as e:
+            print(f"❌ Ошибка создания дерева: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _get_current_dt(self):
+        """Получает текущий dt из DTManager или конфига."""
+        if hasattr(self, 'dt_manager') and self.dt_manager:
+            return self.dt_manager.get_current_dt()
+        return self.config.get('pendulum', {}).get('dt', 0.1)
 
     def _get_next_link_id(self) -> int:
         """Возвращает уникальный ID для линка"""
@@ -359,7 +502,14 @@ class ManualSporeManager:
             destroy(link)
         self.prediction_links.clear()
     
-    def create_spore_at_cursor(self) -> Optional[List[Spore]]:
+    def create_spore_at_cursor(self):
+        """Создает споры или дерево в зависимости от режима."""
+        if self.creation_mode == 'tree':
+            return self.create_tree_at_cursor()
+        else:
+            return self._create_spore_at_cursor_original()
+
+    def _create_spore_at_cursor_original(self) -> Optional[List[Spore]]:
         """
         Создает полную семью спор:
         - Центральная спора в позиции курсора
