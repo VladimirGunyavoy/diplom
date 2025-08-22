@@ -185,13 +185,11 @@ class InputManager:
         if  held_keys['c'] and self.spore_manager and held_keys['left control']:
             print("🧹 Клавиша C: Полная очистка всех спор и объектов")
             
-            # 🆕 ДИАГНОСТИКА: Проверяем есть ли manual_spore_manager
             if self.manual_spore_manager:
                 print(f"   🔍 ManualSporeManager найден: {type(self.manual_spore_manager)}")
                 if hasattr(self.manual_spore_manager, 'clear_all'):
-                    print(f"   🔍 Метод clear_all найден")
                     print(f"   📊 created_links до очистки: {len(self.manual_spore_manager.created_links)}")
-                    self.manual_spore_manager.clear_all()  
+                    self.manual_spore_manager.clear_all()
                 else:
                     print(f"   ❌ Метод clear_all НЕ найден!")
             else:

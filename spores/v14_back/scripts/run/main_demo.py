@@ -307,6 +307,9 @@ spore_manager._manual_spore_manager_ref = manual_spore_manager
 dt_manager = DTManager(config, pendulum)
 dt_manager.spore_manager = spore_manager  # 🆕 Связываем с SporeManager
 
+# Устанавливаем dt_manager в manual_spore_manager
+manual_spore_manager.set_dt_manager(dt_manager)
+
 # ===== СОЗДАНИЕ INPUT MANAGER =====
 input_manager = InputManager(
     scene_setup=scene_setup,

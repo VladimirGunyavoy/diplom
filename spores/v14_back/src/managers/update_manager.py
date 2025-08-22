@@ -38,40 +38,36 @@ class UpdateManager:
         """
         Основной метод, который должен вызываться каждый кадр из главного цикла.
         """
-        # 🚨 ДЕБАГ: Проверяем manual_spore_manager перед обновлением
+        # Проверяем manual_spore_manager перед обновлением
         if self.manual_spore_manager:
             try:
                 # Проверяем есть ли проблемные preview объекты
                 preview_spore = self.manual_spore_manager.preview_manager.get_preview_spore()
-                if preview_spore:
-                    if not hasattr(preview_spore, 'parent') or preview_spore.parent is None:
-                        print(f"⚠️ UpdateManager: Preview spore has no parent, removing...")
-                        self.manual_spore_manager.preview_manager.clear_all()
+                if preview_spore and (not hasattr(preview_spore, 'parent') or preview_spore.parent is None):
+                    print(f"⚠️ UpdateManager: Preview spore has no parent, removing...")
+                    self.manual_spore_manager.preview_manager.clear_all()
 
                 # Проверяем prediction objects
                 pred_viz = self.manual_spore_manager.preview_manager.prediction_visualizers
                 pred_links = self.manual_spore_manager.preview_manager.prediction_links
 
-                bad_visualizers = []
-                for i, viz in enumerate(pred_viz):
+                # Проверяем целостность объектов
+                bad_objects = []
+                for viz in pred_viz:
                     if hasattr(viz, 'ghost_spore') and viz.ghost_spore:
                         if not hasattr(viz.ghost_spore, 'parent') or viz.ghost_spore.parent is None:
-                            bad_visualizers.append(i)
+                            bad_objects.append(viz)
 
-                bad_links = []
-                for i, link in enumerate(pred_links):
+                for link in pred_links:
                     if not hasattr(link, 'parent') or link.parent is None:
-                        bad_links.append(i)
+                        bad_objects.append(link)
 
-                if bad_visualizers or bad_links:
-                    print(f"⚠️ UpdateManager: Найдены плохие prediction объекты:")
-                    print(f"  Плохих visualizers: {len(bad_visualizers)}")
-                    print(f"  Плохих links: {len(bad_links)}")
-                    # Очищаем все предсказания
+                if bad_objects:
+                    print(f"⚠️ UpdateManager: Найдены плохие prediction объекты: {len(bad_objects)}")
                     self.manual_spore_manager.preview_manager.clear_all()
 
             except Exception as e:
-                print(f"❌ Ошибка в дебаге UpdateManager: {e}")
+                print(f"❌ Ошибка в проверке UpdateManager: {e}")
 
         if self.input_manager:
             self.input_manager.update()

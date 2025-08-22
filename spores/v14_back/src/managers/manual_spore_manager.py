@@ -67,9 +67,8 @@ class ManualSporeManager:
 
         # Создаем оптимизатор деревьев
         self.tree_optimizer = TreeOptimizer(pendulum, config)
-        # Передаем ссылку на dt_manager если есть
-        if hasattr(self, 'dt_manager'):
-            self.tree_optimizer.set_dt_manager(self.dt_manager)
+        # dt_manager будет установлен позже из main_demo.py
+        self.dt_manager = None
         
 
         
@@ -254,13 +253,7 @@ class ManualSporeManager:
     def reset_ghost_tree_optimization(self):
         self.tree_optimizer.reset_ghost_tree_optimization()
 
-    @property
-    def creation_mode(self):
-        return self.spore_creator.creation_mode
 
-    @creation_mode.setter
-    def creation_mode(self, value):
-        self.spore_creator.creation_mode = value
 
     @property
     def tree_depth(self):
@@ -269,3 +262,9 @@ class ManualSporeManager:
     @tree_depth.setter
     def tree_depth(self, value):
         self.spore_creator.tree_depth = value
+
+    def set_dt_manager(self, dt_manager) -> None:
+        """Устанавливает dt_manager после инициализации."""
+        self.dt_manager = dt_manager
+        if self.tree_optimizer:
+            self.tree_optimizer.set_dt_manager(dt_manager)
