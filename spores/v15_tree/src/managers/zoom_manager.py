@@ -78,8 +78,11 @@ class ZoomManager:
         for obj in self.objects.values():
             try:
                 # Проверяем что объект существует и имеет валидный NodePath
+                if isinstance(obj, Link):
+                    obj.update_geometry()
                 if hasattr(obj, 'enabled') and obj.enabled and hasattr(obj, 'position'):
                     obj.apply_transform(self.a_transformation, self.b_translation, spores_scale=self.spores_scale)
+                
             except (AssertionError, AttributeError, RuntimeError) as e:
                 # Объект невалиден - пропускаем без краша
                 continue

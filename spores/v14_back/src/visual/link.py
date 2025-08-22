@@ -88,5 +88,6 @@ class Link(Scalable):
         
     def apply_transform(self, a: float, b: np.ndarray, **kwargs) -> None:
         spores_scale = kwargs.get('spores_scale', 1.0)
+        self.update_geometry()
         self.position = self.real_position * a + b
-        self.scale = self.real_scale * a 
+        self.scale = self.real_scale * a * spores_scale

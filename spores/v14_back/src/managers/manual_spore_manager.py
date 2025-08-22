@@ -6,6 +6,7 @@ from ..core.spore import Spore
 from ..managers.zoom_manager import ZoomManager
 from ..managers.spore_manager import SporeManager
 from ..managers.color_manager import ColorManager
+from ..managers.manual_creation.preview_manager import PreviewManager
 from ..logic.pendulum import PendulumSystem
 from ..visual.prediction_visualizer import PredictionVisualizer
 from ..visual.link import Link
@@ -33,14 +34,14 @@ class ManualSporeManager:
         self.pendulum = pendulum
         self.color_manager = color_manager
         self.config = config
-        
-        # Настройки превью
-        self.preview_enabled = True
-        self.preview_alpha = 0.5  # Полупрозрачность
-        
-        # Превью спора
-        self.preview_spore: Optional[Spore] = None
-        self.preview_position_2d = np.array([0.0, 0.0], dtype=float)
+
+        # Создаем PreviewManager
+        self.preview_manager = PreviewManager(
+            zoom_manager=zoom_manager,
+            pendulum=pendulum,
+            color_manager=color_manager,
+            config=config
+        )
         
         # Предсказания min/max управления
         self.prediction_visualizers: List[PredictionVisualizer] = []
@@ -103,7 +104,7 @@ class ManualSporeManager:
 
         ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
         """
-        if not self.preview_enabled or not self.preview_spore:
+        if not self.preview_manager.preview_enabled or not self.preview_manager.has_preview():
             return None
 
         try:
@@ -117,7 +118,7 @@ class ManualSporeManager:
             dt = self._get_current_dt()
 
             # ИСПРАВЛЕНИЕ: Правильная позиция для дерева
-            tree_position = np.array([self.preview_position_2d[0], self.preview_position_2d[1]])
+            tree_position = np.array([self.preview_manager.get_preview_position()[0], self.preview_manager.get_preview_position()[1]])
 
             # Создаем логику дерева с правильными dt векторами
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
@@ -268,7 +269,7 @@ class ManualSporeManager:
             self.spore_groups_history.append(created_spores.copy())
             self.group_links_history.append(created_links.copy())
             
-            print(f"🌲 Дерево создано в ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
+            print(f"🌲 Дерево создано в ({self.preview_manager.get_preview_position()[0]:.3f}, {self.preview_manager.get_preview_position()[1]:.3f})")
             print(f"   📊 Глубина: {self.tree_depth}, dt: {dt:.4f}")
             print(f"   🎯 Добавлено в граф: {len(created_spores)} спор + {len(created_links)} линков")
             print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
@@ -339,89 +340,8 @@ class ManualSporeManager:
             print(f"Ошибка определения позиции мыши: {e}")
             return (0.0, 0.0)
     
-    def update_cursor_position(self) -> None:
-        """
-        Обновляет позицию превью споры по позиции курсора мыши.
-        """
-        if not self.preview_enabled:
-            return
-        
-        # Получаем правильную позицию курсора мыши
-        mouse_pos = self.get_mouse_world_position()
-        if mouse_pos is None:
-            return
-            
-        # Обновляем позицию
-        self.preview_position_2d[0] = mouse_pos[0]
-        self.preview_position_2d[1] = mouse_pos[1]
-        
-        # Создаем или обновляем превью спору
-        self._update_preview_spore()
-        
-        # Обновляем предсказания
-        if self.show_predictions:
-            self._update_predictions()
-    
-    def set_preview_enabled(self, enabled: bool) -> None:
-        """Включает/выключает превью спор."""
-        self.preview_enabled = enabled
-        if not enabled:
-            self._destroy_preview()
-    
-    def _update_preview_spore(self) -> None:
-        """Создает или обновляет превью спору."""
-        if not self.preview_spore:
-            self._create_preview_spore()
-        else:
-            # Обновляем позицию существующей споры
-            self.preview_spore.real_position = Vec3(
-                self.preview_position_2d[0], 
-                0.0, 
-                self.preview_position_2d[1]
-            )
-            # Применяем трансформации zoom manager
-            self.preview_spore.apply_transform(
-                self.zoom_manager.a_transformation,
-                self.zoom_manager.b_translation,
-                spores_scale=self.zoom_manager.spores_scale
-            )
-    
-    def _create_preview_spore(self) -> None:
-        """Создает новую превью спору."""
-        try:
-            goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
-            spore_config = self.config.get('spore', {})
-            pendulum_config = self.config.get('pendulum', {})
-            
-            self.preview_spore = Spore(
-                pendulum=self.pendulum,
-                dt=pendulum_config.get('dt', 0.1),
-                goal_position=goal_position,
-                scale=spore_config.get('scale', 0.1),
-                position=(self.preview_position_2d[0], 0.0, self.preview_position_2d[1]),
-                color_manager=self.color_manager,
-                is_ghost=True  # Делаем спору-призрак
-            )
-            
-            base_color = self.color_manager.get_color('spore', 'default')
-            
-            # Способ 1: Используем атрибуты r, g, b
-            try:
-                self.preview_spore.color = (base_color.r, base_color.g, base_color.b, self.preview_alpha)
-            except AttributeError:
-                # Способ 2: Если это Vec4 или tuple
-                try:
-                    self.preview_spore.color = (base_color[0], base_color[1], base_color[2], self.preview_alpha)
-                except (TypeError, IndexError):
-                    # Способ 3: Fallback на стандартный цвет
-                    self.preview_spore.color = (0.6, 0.4, 0.9, self.preview_alpha)  # Фиолетовый по умолчанию
-                    print(f"   ⚠️ Использован fallback цвет для preview spore")
-            
-            # Регистрируем в zoom manager
-            self.zoom_manager.register_object(self.preview_spore, name='manual_preview')
-            
-        except Exception as e:
-            print(f"Ошибка создания превью споры: {e}")
+
+
     
 
     def _update_predictions(self) -> None:
@@ -433,7 +353,7 @@ class ManualSporeManager:
 
     def _update_spore_predictions(self) -> None:
         """Обновляет предсказания: 2 вперед (min/max) + 2 назад (min/max)."""
-        if not self.preview_spore:
+        if not self.preview_manager.get_preview_spore():
             return
 
         try:
@@ -460,7 +380,7 @@ class ManualSporeManager:
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
                     predicted_pos_2d = self.pendulum.step(
-                        self.preview_position_2d,
+                        self.preview_manager.get_preview_position(),
                         config['control'],
                         dt,
                         method='jit'
@@ -468,7 +388,7 @@ class ManualSporeManager:
                 else:  # backward
                     # Шаг назад во времени
                     predicted_pos_2d = self.pendulum.step(
-                        self.preview_position_2d,
+                        self.preview_manager.get_preview_position(),
                         config['control'],
                         -dt,
                         method='jit'
@@ -476,7 +396,7 @@ class ManualSporeManager:
 
                 # Создаем визуализатор предсказания
                 prediction_viz = PredictionVisualizer(
-                    parent_spore=self.preview_spore,
+                    parent_spore=self.preview_manager.get_preview_spore(),
                     color_manager=self.color_manager,
                     zoom_manager=self.zoom_manager,
                     cost_function=None,  # Не показываем cost для предсказаний
@@ -510,7 +430,7 @@ class ManualSporeManager:
                 # # Создаем линк от превью споры к призраку
                 # if prediction_viz.ghost_spore:
                 #     prediction_link = Link(
-                #         parent_spore=self.preview_spore,
+                #         parent_spore=self.preview_manager.get_preview_spore(),
                 #         child_spore=prediction_viz.ghost_spore,
                 #         color_manager=self.color_manager,
                 #         zoom_manager=self.zoom_manager,
@@ -522,12 +442,12 @@ class ManualSporeManager:
                     # Для обратного направления меняем местами parent и child
                     if config['direction'] == 'forward':
                         # Вперед: превью → будущее состояние
-                        parent_spore = self.preview_spore
+                        parent_spore = self.preview_manager.get_preview_spore()
                         child_spore = prediction_viz.ghost_spore
                     else:  # backward
                         # Назад: прошлое состояние → превью (показываем откуда пришли)
                         parent_spore = prediction_viz.ghost_spore
-                        child_spore = self.preview_spore
+                        child_spore = self.preview_manager.get_preview_spore()
 
                     prediction_link = Link(
                         parent_spore=parent_spore,
@@ -615,7 +535,7 @@ class ManualSporeManager:
         # Очищаем старые предсказания
         self._clear_predictions()
 
-        if not self.preview_spore:
+        if not self.preview_manager.get_preview_spore():
             return
 
         try:
@@ -628,7 +548,7 @@ class ManualSporeManager:
 
             # Создаем конфиг дерева
             tree_config = SporeTreeConfig(
-                initial_position=self.preview_position_2d.copy(),
+                initial_position=self.preview_manager.get_preview_position().copy(),
                 dt_base=dt,
                 dt_grandchildren_factor=0.2,
                 show_debug=False
@@ -696,7 +616,7 @@ class ManualSporeManager:
                     link_color = 'ghost_min'  # Отрицательное управление - синий
 
                 self._create_ghost_link(
-                    self.preview_spore,
+                    self.preview_manager.get_preview_spore(),
                     child_ghost,
                     f"root_to_child_{i}",
                     link_color
@@ -727,7 +647,7 @@ class ManualSporeManager:
 
         # Создаем визуализатор предсказания
         prediction_viz = PredictionVisualizer(
-            parent_spore=self.preview_spore,
+            parent_spore=self.preview_manager.get_preview_spore(),
             color_manager=self.color_manager,
             zoom_manager=self.zoom_manager,
             cost_function=None,
@@ -804,14 +724,14 @@ class ManualSporeManager:
         """
         Создает полную семью спор:
         - Центральная спора в позиции курсора
-        - 2 дочерние споры (forward min/max control)  
+        - 2 дочерние споры (forward min/max control)
         - 2 родительские споры (backward min/max control)
         - Все соединительные линки с правильными цветами
-        
+
         Returns:
             Список созданных спор [center, forward_min, forward_max, backward_min, backward_max] или None при ошибке
         """
-        if not self.preview_enabled or not self.preview_spore:
+        if not self.preview_manager.preview_enabled or not self.preview_manager.has_preview():
             return None
             
         try:
@@ -830,7 +750,7 @@ class ManualSporeManager:
                 dt=dt,
                 goal_position=goal_position,
                 scale=spore_config.get('scale', 0.1),
-                position=(self.preview_position_2d[0], 0.0, self.preview_position_2d[1]),
+                position=(self.preview_manager.get_preview_position()[0], 0.0, self.preview_manager.get_preview_position()[1]),
                 color_manager=self.color_manager,
                 config=spore_config
             )
@@ -839,7 +759,7 @@ class ManualSporeManager:
             self.spore_manager.add_spore_manual(center_spore)
             self.zoom_manager.register_object(center_spore, f'manual_center_{center_id}')
             created_spores.append(center_spore)
-            print(f"   ✓ Создана центральная спора в позиции ({self.preview_position_2d[0]:.3f}, {self.preview_position_2d[1]:.3f})")
+            print(f"   ✓ Создана центральная спора в позиции ({self.preview_manager.get_preview_position()[0]:.3f}, {self.preview_manager.get_preview_position()[1]:.3f})")
             
             # 2. Создаем ДОЧЕРНИЕ споры (forward) + РОДИТЕЛЬСКИЕ споры (backward)
             spore_configs = [
@@ -858,7 +778,7 @@ class ManualSporeManager:
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
                     child_pos_2d = self.pendulum.step(
-                        self.preview_position_2d, 
+                        self.preview_manager.get_preview_position(), 
                         config['control'], 
                         dt,
                         method='jit'
@@ -866,7 +786,7 @@ class ManualSporeManager:
                 else:  # backward
                     # Шаг назад во времени
                     child_pos_2d = self.pendulum.step(
-                        self.preview_position_2d, 
+                        self.preview_manager.get_preview_position(), 
                         config['control'], 
                         -dt,
                         method='jit'
@@ -954,18 +874,11 @@ class ManualSporeManager:
             return None
 
 
-    def _destroy_preview(self) -> None:
-        """Уничтожает превью спору, предсказания и их линки."""
-        if self.preview_spore:
-            self.zoom_manager.unregister_object('manual_preview')
-            destroy(self.preview_spore)
-            self.preview_spore = None
-            
-        self._clear_predictions()  # Это очистит и визуализаторы, и линки
+
     
     def destroy(self) -> None:
         """Очищает все ресурсы менеджера."""
-        self._destroy_preview()
+        self.preview_manager.destroy()
         print("   ✓ Manual Spore Manager уничтожен") 
 
     def clear_all(self) -> None:
@@ -1013,6 +926,7 @@ class ManualSporeManager:
 
     def destroy(self) -> None:
         """Очищает все ресурсы менеджера."""
+        self.preview_manager.destroy()
         self.clear_all()  # Используем новый метод
         print("   ✓ Manual Spore Manager уничтожен")
 
