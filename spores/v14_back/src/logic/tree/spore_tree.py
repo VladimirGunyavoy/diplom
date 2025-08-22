@@ -154,8 +154,8 @@ class SporeTree:
         self.children = []
         
         for i in range(4):
-            # Используем dt с нужным знаком
-            signed_dt = dt_children[i] * dt_signs[i]
+            # Применяем знак к dt для чередования направлений
+            signed_dt = dt_children[i] * dt_signs[i]  # ПРАВИЛЬНО: применяем знаки!
             
             # Вычисляем новую позицию через step
             new_position = self.pendulum.step(
@@ -226,12 +226,15 @@ class SporeTree:
         else:
             assert len(dt_grandchildren) == 8, "dt_grandchildren должен содержать ровно 8 элементов"
         
+        # Знаки для внуков: чередуем + и - для каждого родителя
+        dt_signs_grandchildren = [1, -1, 1, -1, 1, -1, 1, -1]  # для 8 внуков
+
         self.grandchildren = []
         grandchild_global_idx = 0
-        
+
         if show:
             print(f"👶 Создание внуков с ОБРАТНЫМ управлением:")
-        
+
         for parent_idx, parent in enumerate(self.children):
             # ОБРАТНОЕ управление родителя
             reversed_control = -parent['control']
@@ -242,16 +245,10 @@ class SporeTree:
             
             # Создаем 2 внуков: один вперед (+dt), другой назад (-dt)
             for local_idx in range(2):
-                # dt для текущего внука (всегда передается положительное)
-                dt_positive = dt_grandchildren[grandchild_global_idx]
-                
-                # Первый внук: +dt (вперед), второй внук: -dt (назад)
-                if local_idx == 0:
-                    final_dt = dt_positive  # вперед во времени
-                    direction = "forward"
-                else:
-                    final_dt = -dt_positive  # назад во времени  
-                    direction = "backward"
+                # Применяем знак к dt для чередования направлений
+                dt_positive = abs(dt_grandchildren[grandchild_global_idx])
+                final_dt = dt_positive * dt_signs_grandchildren[grandchild_global_idx]
+                direction = "forward" if final_dt > 0 else "backward"
                 
                 # Вычисляем позицию внука от позиции родителя
                 new_position = self.pendulum.step(

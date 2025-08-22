@@ -100,56 +100,64 @@ class ManualSporeManager:
     def create_tree_at_cursor(self):
         """
         Создает дерево в позиции курсора.
-        
+
         ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
         """
         if not self.preview_enabled or not self.preview_spore:
             return None
-            
+
         try:
             from ..visual.spore_tree_visual import SporeTreeVisual
             from ..logic.tree.spore_tree import SporeTree
             from ..logic.tree.spore_tree_config import SporeTreeConfig
 
             self._global_tree_counter += 1
-            
+
             # Получаем текущий dt
             dt = self._get_current_dt()
 
+            # ИСПРАВЛЕНИЕ: Правильная позиция для дерева
+            tree_position = np.array([self.preview_position_2d[0], self.preview_position_2d[1]])
+
             # Создаем логику дерева с правильными dt векторами
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
-                # Используем сохраненный dt вектор от призрачного дерева
-                dt_children = self.ghost_tree_dt_vector[:4]
-                dt_grandchildren = self.ghost_tree_dt_vector[4:12]
+                # ИСПРАВЛЕНИЕ: Берем абсолютные значения, т.к. create_children() применит знаки сам
+                dt_children = np.abs(self.ghost_tree_dt_vector[:4])
+                dt_grandchildren = np.abs(self.ghost_tree_dt_vector[4:12])
 
                 print(f"🎯 Используем dt вектор от призрачного дерева:")
-                print(f"   dt_children: {dt_children}")
-                print(f"   dt_grandchildren: {dt_grandchildren}")
+                print(f"   Исходный dt_children: {self.ghost_tree_dt_vector[:4]}")
+                print(f"   Абсолютный dt_children: {dt_children}")
+                print(f"   Исходный dt_grandchildren: {self.ghost_tree_dt_vector[4:12]}")
+                print(f"   Абсолютный dt_grandchildren: {dt_grandchildren}")
 
                 # Создаем конфиг дерева
                 tree_config = SporeTreeConfig(
-                    initial_position=self.preview_position_2d.copy(),
-                    dt_base=dt,  # Базовый dt (не используется, но нужен для конфига)
+                    initial_position=tree_position,  # ИСПРАВЛЕНО
+                    dt_base=dt,
                     dt_grandchildren_factor=0.05,
                     show_debug=False
                 )
 
-                # Создаем дерево с точными dt векторами
+                # ИСПРАВЛЕНИЕ: Всегда используем auto_create=False
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
                     config=tree_config,
-                    dt_children=dt_children,
-                    dt_grandchildren=dt_grandchildren,
-                    auto_create=True,  # Создаем автоматически с переданными dt
+                    dt_children=None,  # Не передаем в конструктор
+                    dt_grandchildren=None,  # Не передаем в конструктор
+                    auto_create=False,  # ИСПРАВЛЕНО: Всегда False
                     show=False
                 )
 
-                print(f"✅ Реальное дерево создано с dt вектором призрачного дерева")
+                # ПРИНУДИТЕЛЬНО создаем все элементы с правильными dt
+                tree_logic.create_children(dt_children=dt_children, show=True)
+                if self.tree_depth >= 2:
+                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren, show=True)
 
             else:
                 # Fallback: создаем дерево стандартным способом
                 tree_config = SporeTreeConfig(
-                    initial_position=self.preview_position_2d.copy(),
+                    initial_position=tree_position,  # ИСПРАВЛЕНО
                     dt_base=dt,
                     dt_grandchildren_factor=0.05,
                     show_debug=False
@@ -162,12 +170,42 @@ class ManualSporeManager:
                 )
 
                 # Создаем детей и внуков стандартно
-                tree_logic.create_children()
+                tree_logic.create_children(show=True)
                 if self.tree_depth >= 2:
-                    tree_logic.create_grandchildren()
+                    tree_logic.create_grandchildren(show=True)
 
-                print(f"⚠️ Реальное дерево создано стандартным способом (нет dt вектора)")
+            # ДОБАВЛЯЕМ ПРИНУДИТЕЛЬНУЮ ПРОВЕРКУ
+            print(f"🔍 ПРОВЕРКА ДЕРЕВА:")
+            print(f"   Ожидаем: 4 ребенка, получили: {len(getattr(tree_logic, 'children', []))}")
+            print(f"   Ожидаем: 8 внуков, получили: {len(getattr(tree_logic, 'grandchildren', []))}")
 
+            # Если детей меньше 4, пересоздаем
+            if not hasattr(tree_logic, 'children') or len(tree_logic.children) != 4:
+                print(f"⚠️ Неполное количество детей, принудительно пересоздаем...")
+                tree_logic.create_children(dt_children=dt_children if 'dt_children' in locals() else None, show=True)
+                print(f"   После пересоздания детей: {len(tree_logic.children)}")
+
+            if self.tree_depth >= 2:
+                # Если внуков меньше 8, пересоздаем
+                if not hasattr(tree_logic, 'grandchildren') or len(tree_logic.grandchildren) != 8:
+                    print(f"⚠️ Неполное количество внуков, принудительно пересоздаем...")
+                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren if 'dt_grandchildren' in locals() else None, show=True)
+                    print(f"   После пересоздания внуков: {len(tree_logic.grandchildren)}")
+
+            print(f"✅ ФИНАЛЬНАЯ СТРУКТУРА ДЕРЕВА:")
+            print(f"   Детей: {len(tree_logic.children)}")
+            print(f"   Внуков: {len(getattr(tree_logic, 'grandchildren', []))}")
+            print(f"   Корень в позиции: {tree_logic.root['position']}")
+
+            # ДИАГНОСТИКА: Проверим позиции детей
+            print(f"🔍 ПОЗИЦИИ ДЕТЕЙ:")
+            for i, child in enumerate(tree_logic.children):
+                print(f"   Ребенок {i}: {child['position']} (dt={child['dt']:.4f})")
+
+            if hasattr(tree_logic, 'grandchildren'):
+                print(f"🔍 ПОЗИЦИИ ВНУКОВ:")
+                for i, gc in enumerate(tree_logic.grandchildren):
+                    print(f"   Внук {i}: {gc['position']} (родитель {gc['parent_idx']}, dt={gc['dt']:.4f})")
 
             
             # Создаем визуализацию (ВРЕМЕННО)
@@ -1108,3 +1146,4 @@ class ManualSporeManager:
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
         return self.config.get('pendulum', {}).get('dt', 0.1)
+
