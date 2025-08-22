@@ -58,6 +58,9 @@ class SporeManager:
         for spore in self.objects:
             destroy(spore)
         for link in self.links:
+            # Удаляем из zoom_manager перед удалением объекта
+            if hasattr(link, '_zoom_manager_key'):
+                self.zoom_manager.unregister_object(link._zoom_manager_key)
             destroy(link)
         if self.ghost_link:
             destroy(self.ghost_link)
@@ -95,6 +98,10 @@ class SporeManager:
             registered_objects = getattr(self.zoom_manager, 'objects', {}) 
             
             for key in registered_objects:
+                # НЕ удаляем постоянные призрачные споры (предсказания)
+                if key.startswith('prediction_ghost_'):
+                    continue
+
                 name_list = ['spore', 'link', 'ghost', 'predict', 'manual', 'angel', 'pillar']
                 if any(pattern in key.lower() for pattern in name_list):
                     keys_to_remove.append(key)
@@ -198,7 +205,9 @@ class SporeManager:
             if not spore.is_alive():
                 debug_print(f"🪦 Спора {spore.id} объявлена мертвой (dt = {optimal_dt}) - цвет изменен на серый")
         
-        self.objects.append(spore)
+        # Не добавляем призрачные споры в основной список - они постоянные
+        if not getattr(spore, 'is_ghost', False):
+            self.objects.append(spore)
 
         if self.angel_manager:
             self.angel_manager.on_spore_created(spore)
@@ -240,10 +249,12 @@ class SporeManager:
             if not spore.is_alive():
                 debug_print(f"🪦 Спора {spore.id} объявлена мертвой (dt = {optimal_dt}) - цвет изменен на серый")
         
-        self.objects.append(spore)
-        
+        # Не добавляем призрачные споры в основной список - они постоянные
+        if not getattr(spore, 'is_ghost', False):
+            self.objects.append(spore)
+
         # НЕ вызываем:
-        # - self.angel_manager.on_spore_created(spore) 
+        # - self.angel_manager.on_spore_created(spore)
         # - self.sample_ghost_spores()
         # - self.update_ghost_link()
 
@@ -356,7 +367,8 @@ class SporeManager:
         # ID будет присвоен в add_spore
         
         self.add_spore(new_spore)
-        self.zoom_manager.register_object(new_spore, f"spore_{new_spore.id}")
+        spore_key = self.zoom_manager.get_unique_spore_id()
+        self.zoom_manager.register_object(new_spore, spore_key)
 
         # Create a link if enabled in config
         if self.config.get('link', {}).get('show', True):
@@ -367,7 +379,9 @@ class SporeManager:
                             zoom_manager=self.zoom_manager,
                             config=self.config)
             self.links.append(new_link)
-            self.zoom_manager.register_object(new_link, f"link_{len(self.links)}")
+            link_id = self.zoom_manager.get_unique_link_id()
+            self.zoom_manager.register_object(new_link, link_id)
+            new_link._zoom_manager_key = link_id  # Сохраняем для удаления
 
         # --- ИСПРАВЛЕНИЕ (финальная, простая версия): ---
         # Вызываем полный цикл обновления, как это происходит при зуме.
@@ -416,9 +430,10 @@ class SporeManager:
             config=self.config.get('spore', {})
         )
         
-        # Добавляем спору в менеджер 
+        # Добавляем спору в менеджер
         self.add_spore(new_spore)
-        self.zoom_manager.register_object(new_spore, f"random_spore_{new_spore.id}")
+        random_spore_key = self.zoom_manager.get_unique_spore_id()
+        self.zoom_manager.register_object(new_spore, random_spore_key)
         
         always_print(f"🎲 Создана случайная спора {new_spore.id} в позиции {random_position_2d}")
         
@@ -535,7 +550,8 @@ class SporeManager:
         
         # Добавляем новую спору через стандартную систему
         self.add_spore(new_spore)
-        self.zoom_manager.register_object(new_spore, f"activated_spore_{new_spore.id}")
+        activated_spore_key = self.zoom_manager.get_unique_spore_id()
+        self.zoom_manager.register_object(new_spore, activated_spore_key)
         
         candidate_print(f"✅ КАНДИДАТ АКТИВИРОВАН:")
         candidate_print(f"   🆔 Новый ID: {new_spore.id}")
@@ -716,7 +732,9 @@ class SporeManager:
             trajectory_print(f"      🎨 Цвет связи: {link_color} (активная связь объединения)")
             
             self.links.append(new_link)
-            self.zoom_manager.register_object(new_link, f"merge_link_{len(self.links)}")
+            link_id = self.zoom_manager.get_unique_link_id()
+            self.zoom_manager.register_object(new_link, link_id)
+            new_link._zoom_manager_key = link_id  # Сохраняем для удаления
             
             trajectory_print(f"      🔧 Обновление геометрии и трансформации...")
             # Обновляем геометрию и трансформацию
@@ -762,7 +780,8 @@ class SporeManager:
                                    zoom_manager=self.zoom_manager,
                                    config=self.config)
             self.ghost_link.color = self.color_manager.get_color('link', 'ghost')
-            self.zoom_manager.register_object(self.ghost_link, "ghost_link")
+            ghost_link_key = self.zoom_manager.get_unique_link_id()
+            self.zoom_manager.register_object(self.ghost_link, ghost_link_key)
         else:
             # Обновляем связь если она уже существует
             self.ghost_link.parent_spore = last_spore

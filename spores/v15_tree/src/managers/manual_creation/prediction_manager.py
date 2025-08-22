@@ -124,7 +124,7 @@ class PredictionManager:
                         'spore': {'show_ghosts': True},
                         'angel': {'show_angels': False, 'show_pillars': False}
                     },
-                    spore_id=f'manual_prediction_{config["name"]}'
+                    spore_id=self.zoom_manager.get_unique_spore_id()
                 )
 
                 # Обновляем позицию предсказания
@@ -168,10 +168,9 @@ class PredictionManager:
 
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
-                    self.zoom_manager.register_object(
-                        prediction_link,
-                        f'manual_prediction_link_{config["name"]}'
-                    )
+                    link_id = self.zoom_manager.get_unique_link_id()
+                    self.zoom_manager.register_object(prediction_link, link_id)
+                    prediction_link._zoom_manager_key = link_id  # Сохраняем для удаления
 
                     self.prediction_links.append(prediction_link)
 
@@ -233,7 +232,7 @@ class PredictionManager:
         # Создаем призрачные споры для детей
         child_ghosts = []
         for i, child_data in enumerate(tree_logic.children):
-            ghost_viz = self._create_ghost_spore_from_data(child_data, f"tree_child_{i}", 0.4)
+            ghost_viz = self._create_ghost_spore_from_data(child_data, f"child_{i}", 0.4)
             if ghost_viz and ghost_viz.ghost_spore:
                 child_ghosts.append(ghost_viz.ghost_spore)
 
@@ -241,7 +240,7 @@ class PredictionManager:
         grandchild_ghosts = []
         if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
             for i, grandchild_data in enumerate(tree_logic.grandchildren):
-                ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"tree_grandchild_{i}", 0.3)
+                ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"grandchild_{i}", 0.3)
                 if ghost_viz and ghost_viz.ghost_spore:
                     grandchild_ghosts.append(ghost_viz.ghost_spore)
 
@@ -296,7 +295,7 @@ class PredictionManager:
                 'spore': {'show_ghosts': True},
                 'angel': {'show_angels': False, 'show_pillars': False}
             },
-            spore_id=f'tree_ghost_{name_suffix}'
+            spore_id=self.zoom_manager.get_unique_spore_id()
         )
 
         # Устанавливаем позицию призрака
@@ -311,13 +310,9 @@ class PredictionManager:
             # Обновляем позицию
             prediction_viz.update(final_position)
 
-            # Безопасно регистрируем призрака в zoom_manager
-            try:
-                ghost_id = f'tree_ghost_{name_suffix}'
-                prediction_viz.ghost_spore.id = ghost_id
-                self.zoom_manager.register_object(prediction_viz.ghost_spore, ghost_id)
-            except Exception as e:
-                print(f"Ошибка регистрации призрака {name_suffix}: {e}")
+            # Призрачные споры больше не регистрируются в ZoomManager - они постоянные
+            # Просто устанавливаем ID
+            prediction_viz.ghost_spore.id = f"tree_ghost_{name_suffix}"
 
         # Добавляем в список предсказаний
         self.prediction_visualizers.append(prediction_viz)
@@ -343,8 +338,9 @@ class PredictionManager:
 
             # Обновляем геометрию и регистрируем
             ghost_link.update_geometry()
-            link_id = f'ghost_link_{link_suffix}'
+            link_id = self.zoom_manager.get_unique_link_id()
             self.zoom_manager.register_object(ghost_link, link_id)
+            ghost_link._zoom_manager_key = link_id  # Сохраняем для удаления
 
             # Добавляем в список для очистки
             self.prediction_links.append(ghost_link)
@@ -355,33 +351,27 @@ class PredictionManager:
     def clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
 
-        # Сначала дерегистрируем из zoom_manager, ПОТОМ уничтожаем
-        for i, viz in enumerate(self.prediction_visualizers):
-            if viz.ghost_spore:
-                # Ищем и дерегистрируем ghost_spore
-                ghost_id = getattr(viz.ghost_spore, 'id', f'tree_ghost_{i}')
-                try:
-                    self.zoom_manager.unregister_object(ghost_id)
-                except:
-                    pass
+        # Призрачные споры больше не регистрируются в ZoomManager, просто уничтожаем визуализаторы
+        for viz in self.prediction_visualizers:
             viz.destroy()
         self.prediction_visualizers.clear()
 
         # Очищаем линки предсказаний
         for i, link in enumerate(self.prediction_links):
-            # Пытаемся найти правильный ключ регистрации
-            possible_keys = [
-                f'manual_prediction_link_{["forward_min", "forward_max", "backward_min", "backward_max"][i] if i < 4 else i}',
-                f'ghost_link_root_to_child_{i}',
-                f'ghost_link_child_{i//2}_to_grandchild_{i}'
-            ]
-
-            for key in possible_keys:
+            # Используем сохраненный ключ если есть
+            if hasattr(link, '_zoom_manager_key'):
                 try:
-                    self.zoom_manager.unregister_object(key)
-                    break
+                    self.zoom_manager.unregister_object(link._zoom_manager_key)
                 except:
-                    continue
+                    pass
+            else:
+                # Fallback - используем сохраненный ключ линка если есть
+                link_key = getattr(link, '_zoom_manager_key', None)
+                if link_key:
+                    try:
+                        self.zoom_manager.unregister_object(link_key)
+                    except:
+                        pass
 
             try:
                 destroy(link)

@@ -79,10 +79,10 @@ class PredictionVisualizer:
                 # Обычный случай - клонируем родительскую спору
                 self.ghost_spore = self.parent_spore.clone()
                 self.ghost_spore.is_ghost = True
-                self.ghost_spore.id = f"ghost_{self.id}"
+                self.ghost_spore.id = f"prediction_ghost_{self.id}"
                 self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
                 self.ghost_spore.set_y_coordinate(0.0)
-                self.zoom_manager.register_object(self.ghost_spore, self.ghost_spore.id)
+                # Призрачные споры не регистрируются в ZoomManager - они постоянные
             else:
                 # Случай призрачного дерева - создаем новую спору
                 from ..core.spore import Spore
@@ -102,10 +102,10 @@ class PredictionVisualizer:
                     color_manager=self.color_manager,
                     is_ghost=True
                 )
-                self.ghost_spore.id = f"ghost_{self.id}"
+                self.ghost_spore.id = f"prediction_ghost_{self.id}"
                 self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
                 self.ghost_spore.set_y_coordinate(0.0)
-                self.zoom_manager.register_object(self.ghost_spore, self.ghost_spore.id)
+                # Призрачные споры не регистрируются в ZoomManager - они постоянные
 
         # Для ангела и столба нужен ghost_spore, даже если он невидимый, для получения координат
         if not self.ghost_spore and self.parent_spore is not None:

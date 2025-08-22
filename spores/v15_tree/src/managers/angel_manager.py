@@ -108,7 +108,9 @@ class AngelManager:
                 new_link.color = self.color_manager.get_color('angel', 'link')
                 new_link.enabled = self.angels_visible  # Устанавливаем видимость согласно флагу
                 self.links.append(new_link)
-                self.zoom_manager.register_object(new_link, f"angel_link_{len(self.links)}")
+                link_id = self.zoom_manager.get_unique_link_id()
+                self.zoom_manager.register_object(new_link, link_id)
+                new_link._zoom_manager_key = link_id  # Сохраняем для удаления
                 new_link.update_geometry()
                 new_link.apply_transform(self.zoom_manager.a_transformation, self.zoom_manager.b_translation, spores_scale=self.zoom_manager.spores_scale)
 

@@ -37,7 +37,6 @@ class TreeCreationManager:
         # Настройки создания
         self.creation_mode = 'spores'  # 'spores' или 'tree'
         self.tree_depth = 2
-        self._global_tree_counter = 0
 
         # Сохранение dt вектора от призрачного дерева
         self.ghost_tree_dt_vector = None
@@ -75,8 +74,6 @@ class TreeCreationManager:
             from ...visual.spore_tree_visual import SporeTreeVisual
             from ...logic.tree.spore_tree import SporeTree
             from ...logic.tree.spore_tree_config import SporeTreeConfig
-
-            self._global_tree_counter += 1
 
             # Получаем текущий dt
             dt = self._get_current_dt()
@@ -188,14 +185,13 @@ class TreeCreationManager:
                 if spore:
                     self.spore_manager.add_spore_manual(spore)
 
-            # 2. Регистрируем споры в zoom_manager и сохраняем ключи
+            # 2. Регистрируем споры в zoom_manager (уникальные имена)
             spore_keys = []
-            for i, spore in enumerate(created_spores):
+            for spore in created_spores:
                 if spore:
-                    key = f"tree_spore_{self._global_tree_counter}_{i}"
+                    key = self.zoom_manager.get_unique_spore_id()
                     self.zoom_manager.register_object(spore, key)
                     spore_keys.append(key)
-                    # Сохраняем ключ в самой споре для быстрого доступа
                     spore._zoom_manager_key = key
 
             # Собираем линки
@@ -204,14 +200,13 @@ class TreeCreationManager:
             if self.tree_depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
-            # 3. Регистрируем линки в zoom manager и сохраняем ключи
+            # 3. Регистрируем линки в zoom_manager (уникальные имена)
             link_keys = []
-            for i, link in enumerate(created_links):
+            for link in created_links:
                 if link:
-                    key = f"tree_link_{self._global_tree_counter}_{i}"
+                    key = self.zoom_manager.get_unique_link_id()
                     self.zoom_manager.register_object(link, key)
                     link_keys.append(key)
-                    # Сохраняем ключ в самом линке для быстрого доступа
                     link._zoom_manager_key = key
 
             # 4. Применяем трансформации ко всем объектам сразу

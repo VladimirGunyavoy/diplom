@@ -39,6 +39,11 @@ class ZoomManager:
 
         self.invariant_point: Tuple[float, float, float] = (0, 0, 0)
 
+        # Глобальные счетчики для уникальных ID
+        self._global_spore_counter = 0
+        self._global_link_counter = 0
+        self._global_object_counter = 0
+
     def register_object(self, obj: Scalable, name: Optional[str] = None) -> None:
         if name is None:
             name = f"obj_{len(self.objects)}"
@@ -49,6 +54,21 @@ class ZoomManager:
         """Удаляет объект из менеджера масштабирования."""
         if name in self.objects:
             del self.objects[name]
+
+    def get_unique_spore_id(self) -> str:
+        """Возвращает уникальный ID для споры."""
+        self._global_spore_counter += 1
+        return f"spore_{self._global_spore_counter}"
+
+    def get_unique_link_id(self) -> str:
+        """Возвращает уникальный ID для линка."""
+        self._global_link_counter += 1
+        return f"link_{self._global_link_counter}"
+
+    def get_unique_object_id(self, prefix: str = "obj") -> str:
+        """Возвращает уникальный ID для любого объекта."""
+        self._global_object_counter += 1
+        return f"{prefix}_{self._global_object_counter}"
 
 
     def identify_invariant_point(self) -> Tuple[float, float]:
