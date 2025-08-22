@@ -43,6 +43,7 @@ class PreviewManager:
         self.preview_enabled = True
         self.preview_alpha = 0.5  # Полупрозрачность
         self.show_predictions = True
+        self.debug_mode = False  # Флаг для отладочного вывода
 
         # Превью объекты
         self.preview_spore: Optional[Spore] = None
