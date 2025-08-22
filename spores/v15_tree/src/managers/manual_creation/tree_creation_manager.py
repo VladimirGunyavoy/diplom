@@ -149,14 +149,16 @@ class TreeCreationManager:
             if self.tree_depth >= 2:
                 created_spores.extend(tree_visual.grandchild_spores)
 
-            # Применяем правильный масштаб ко всем спорам дерева
+            # ПРАВИЛЬНЫЙ ПОРЯДОК: Сначала добавляем в систему, потом применяем трансформации
+            # 1. Добавляем споры в spore_manager
             for spore in created_spores:
                 if spore:
-                    spore.apply_transform(
-                        self.zoom_manager.a_transformation,
-                        self.zoom_manager.b_translation,
-                        spores_scale=self.zoom_manager.spores_scale
-                    )
+                    self.spore_manager.add_spore_manual(spore)
+
+            # 2. Регистрируем споры в zoom_manager
+            for i, spore in enumerate(created_spores):
+                if spore:
+                    self.zoom_manager.register_object(spore, f"tree_spore_{self._global_tree_counter}_{i}")
 
             # Собираем линки
             created_links.extend(tree_visual.child_links)
@@ -164,10 +166,13 @@ class TreeCreationManager:
             if self.tree_depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
-            # Регистрируем линки в zoom manager
+            # 3. Регистрируем линки в zoom manager
             for i, link in enumerate(created_links):
                 if link:
                     self.zoom_manager.register_object(link, f"tree_link_{self._global_tree_counter}_{i}")
+
+            # 4. Применяем трансформации ко всем объектам сразу
+            self.zoom_manager.update_transform()
 
             # Освобождаем SporeTreeVisual
             tree_visual.root_spore = None

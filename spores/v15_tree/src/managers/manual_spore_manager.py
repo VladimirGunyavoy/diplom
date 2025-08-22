@@ -109,14 +109,7 @@ class ManualSporeManager:
             # Создаем линки если нужно (TreeCreationManager уже создал основные)
             created_links = []  # TreeCreationManager уже обработал линки
             
-            # Применяем правильный масштаб ко всем спорам дерева
-            for spore in created_spores:
-                if spore:
-                    spore.apply_transform(
-                        self.zoom_manager.a_transformation,
-                        self.zoom_manager.b_translation,
-                        spores_scale=self.zoom_manager.spores_scale
-                    )
+
             
             # Сохраняем в историю групп
             self.spore_groups_history.append(created_spores.copy())
