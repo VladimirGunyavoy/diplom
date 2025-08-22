@@ -71,10 +71,10 @@ class ManualSporeManager:
 
 
     
-    # 🆕 Добавляем поддержку деревьев
-    self.creation_mode = 'spores'  # 'spores' или 'tree'
-    self.tree_depth = 2  # 1 или 2
-    # НЕ НУЖНО: self.active_trees = [] - споры идут в общий граф!
+        # 🆕 Добавляем поддержку деревьев
+        self.creation_mode = 'spores'  # 'spores' или 'tree'
+        self.tree_depth = 2  # 1 или 2
+        # НЕ НУЖНО: self.active_trees = [] - споры идут в общий граф!
     
     print(f"   🌲 Поддержка деревьев добавлена")
 
@@ -105,8 +105,8 @@ class ManualSporeManager:
             
         try:
             from ..visual.spore_tree_visual import SporeTreeVisual
-            from ..spore_tree import SporeTree
-            from ..spore_tree_config import SporeTreeConfig
+            from ..logic.tree.spore_tree import SporeTree
+            from ..logic.tree.spore_tree_config import SporeTreeConfig
             
             # Получаем текущий dt
             dt = self._get_current_dt()
@@ -372,17 +372,19 @@ class ManualSporeManager:
                 # Вычисляем позицию в зависимости от направления
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
-                    predicted_pos_2d = self.pendulum.scipy_rk45_step(
+                    predicted_pos_2d = self.pendulum.step(
                         self.preview_position_2d, 
                         config['control'], 
-                        dt
+                        dt,
+                        method='jit'
                     )
                 else:  # backward
                     # Шаг назад во времени
-                    predicted_pos_2d = self.pendulum.scipy_rk45_step_backward(
+                    predicted_pos_2d = self.pendulum.step(
                         self.preview_position_2d, 
                         config['control'], 
-                        dt
+                        -dt,
+                        method='jit'
                     )
                 
                 # Создаем визуализатор предсказания
@@ -507,8 +509,8 @@ class ManualSporeManager:
         if self.creation_mode == 'tree':
             return self.create_tree_at_cursor()
         else:
-            return self._create_spore_at_cursor_original()
-
+            # ... весь существующий код создания спор ...
+            return self._create_spores_original()
     def _create_spore_at_cursor_original(self) -> Optional[List[Spore]]:
         """
         Создает полную семью спор:
@@ -566,17 +568,19 @@ class ManualSporeManager:
                 # Вычисляем позицию в зависимости от направления
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
-                    child_pos_2d = self.pendulum.scipy_rk45_step(
+                    child_pos_2d = self.pendulum.step(
                         self.preview_position_2d, 
                         config['control'], 
-                        dt
+                        dt,
+                        method='jit'
                     )
                 else:  # backward
                     # Шаг назад во времени
-                    child_pos_2d = self.pendulum.scipy_rk45_step_backward(
+                    child_pos_2d = self.pendulum.step(
                         self.preview_position_2d, 
                         config['control'], 
-                        dt
+                        -dt,
+                        method='jit'
                     )
                 
                 # Создаем спору

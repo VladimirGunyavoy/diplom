@@ -240,35 +240,24 @@ class InputManager:
             else:
                 always_print("⚠️ Angel Manager не найден")
         
-        # # 8. Переключение поверхности стоимости
-        # if key == 'c':
-        #     if self.cost_visualizer:
-        #         self.cost_visualizer.toggle()
-        #     else:
-        #         always_print("⚠️ Cost Visualizer не найден")
+        # Команды деревьев
+        if key == 'k':
+            if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'toggle_creation_mode'):
+                self.manual_spore_manager.toggle_creation_mode()
+            return
 
-    # def handle_input(self, key):
-    #     """
-    #     Обрабатывает нажатия клавиш. 
-    #     Этот метод предназначен для передачи в `input()` Ursina.
-    #     """
-    #     # --- Управление приложением ---
-    #     if key == 'q':
-    #         application.quit()
+        # Глубина дерева (только в режиме дерева)
+        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'creation_mode'):
+            if self.manual_spore_manager.creation_mode == 'tree':
+                if key == '7' and hasattr(self.manual_spore_manager, 'set_tree_depth'):
+                    self.manual_spore_manager.set_tree_depth(1)
+                    return
+                if key == '8' and hasattr(self.manual_spore_manager, 'set_tree_depth'):
+                    self.manual_spore_manager.set_tree_depth(2)
+                    return
 
-    #     # --- Управление симуляцией ---
-    #     if key == '8':  # Клавиша для спавна новой споры
-    #         self.engine.spawn_spore()
-
-    #     # --- Управление видимостью ---
-    #     if key == '5':  # Клавиша для поверхности стоимости
-    #         self.is_cost_surface_visible = not self.is_cost_surface_visible
-    #         self.visual_manager.toggle_cost_surface(self.is_cost_surface_visible)
-        
-    #     if key == '6':  # Клавиша для области спавна
-    #         self.is_spawn_area_visible = not self.is_spawn_area_visible
-    #         self.visual_manager.toggle_spawn_area(self.is_spawn_area_visible)
-            
-    #     if key == '7':  # Клавиша для "призраков"
-    #         self.is_ghosts_visible = not self.is_ghosts_visible
-    #         self.visual_manager.toggle_ghosts(self.is_ghosts_visible) 
+        # Оптимизация дерева
+        if key == 'o':
+            if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'optimize_tree'):
+                self.manual_spore_manager.optimize_tree()  # Если добавите этот метод
+            return

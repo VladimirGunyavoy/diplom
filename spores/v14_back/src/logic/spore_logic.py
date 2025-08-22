@@ -44,7 +44,7 @@ class SporeLogic:
         Returns:
             Новое 2D состояние.
         """
-        next_state_2d = self.pendulum.scipy_rk45_step(self.position_2d, control, dt)
+        next_state_2d = self.pendulum.step(self.position_2d, control, dt)
         return next_state_2d
 
     def evolve(self, control: float = 0, dt: Optional[float] = None) -> np.ndarray:
@@ -137,7 +137,7 @@ class SporeLogic:
         """
         # Оптимизация: используем pendulum напрямую без создания временного объекта
         dt_value = dt or self.dt
-        return [self.pendulum.scipy_rk45_step(self.position_2d, control=c, dt=dt_value) for c in controls]
+        return [self.pendulum.step(self.position_2d, control=c, dt=dt_value, method='jit') for c in controls]
 
     def clone(self) -> 'SporeLogic':
         """Создает и возвращает глубокую копию объекта."""

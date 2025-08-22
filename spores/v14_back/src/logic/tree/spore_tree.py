@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 
 # Импорт конфигурации (должен быть в том же пакете или добавлен в путь)
 from .spore_tree_config import SporeTreeConfig
+from ..pendulum import PendulumSystem
 
 class SporeTree:
     """
