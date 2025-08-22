@@ -10,7 +10,7 @@ class SporeTree:
     """
     
     
-    def __init__(self, pendulum, config: SporeTreeConfig, 
+    def __init__(self, pendulum: PendulumSystem, config: SporeTreeConfig, 
                  dt_children: Optional[np.ndarray] = None, 
                  dt_grandchildren: Optional[np.ndarray] = None,
                  auto_create: bool = False,
