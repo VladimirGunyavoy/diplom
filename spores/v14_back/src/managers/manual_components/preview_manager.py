@@ -146,7 +146,7 @@ class PreviewManager:
         except Exception as e:
             print(f"Ошибка создания превью споры: {e}")
 
-        def _update_predictions(self) -> None:
+    def _update_predictions(self) -> None:
         """Обновляет предсказания в зависимости от режима создания."""
         # Проверяем нужно ли принудительное обновление (при изменении dt)
         current_dt = self.config.get('pendulum', {}).get('dt', 0.1)

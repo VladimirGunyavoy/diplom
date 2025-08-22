@@ -336,6 +336,28 @@ class SporeCreator:
                     print(f"  ✓ Линк {i}: {old_parent} → scene")
 
             # =============================================
+            # ИСПРАВЛЕНИЕ: Принудительно применяем трансформации для видимости
+            # =============================================
+            print(f"🔧 Применяем трансформации для видимости объектов...")
+
+            # Получаем параметры трансформации из zoom_manager
+            transform_a = self.zoom_manager.a_transformation
+            transform_b = self.zoom_manager.b_translation
+            spores_scale = self.zoom_manager.spores_scale
+
+            for i, spore in enumerate(all_spores):
+                if spore and hasattr(spore, 'real_position'):
+                    # Принудительно вычисляем position из real_position
+                    spore.apply_transform(transform_a, transform_b, spores_scale=spores_scale)
+                    print(f"  ✓ Спора {i}: position = {spore.position}")
+
+            for i, link in enumerate(all_links):
+                if link and hasattr(link, 'real_position'):
+                    # Принудительно вычисляем position из real_position
+                    link.apply_transform(transform_a, transform_b, spores_scale=spores_scale)
+                    print(f"  ✓ Линк {i}: position = {link.position}")
+
+            # =============================================
             # ДОБАВЛЯЕМ ОБЪЕКТЫ В СИСТЕМУ БЕЗ РЕГИСТРАЦИИ В ZOOM_MANAGER
             # =============================================
 
