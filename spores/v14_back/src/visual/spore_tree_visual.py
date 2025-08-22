@@ -279,6 +279,11 @@ class SporeTreeVisual:
                     
     def destroy_visual(self) -> None:
         """Уничтожает все визуальные объекты."""
+        # Проверяем, что визуализация была создана, чтобы избежать двойного уничтожения
+        if not self.visual_created:
+            print("⚠️ Попытка уничтожить уже уничтоженную визуализацию - пропускаем")
+            return
+
         # Уничтожаем стрелки внуков
         for link in self.grandchild_links:
             try:
