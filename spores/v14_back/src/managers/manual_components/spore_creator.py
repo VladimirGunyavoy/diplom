@@ -303,42 +303,91 @@ class SporeCreator:
 
             print(f"🔧 Безопасное извлечение: {len(all_spores)} спор + {len(all_links)} линков")
 
+            # 🚨 ДИАГНОСТИКА: Проверяем состояние объектов ДО отвязки
+            print(f"🔍 ДИАГНОСТИКА ДО отвязки:")
+            for i, spore in enumerate(all_spores):
+                if spore:
+                    parent_info = getattr(spore, 'parent', 'None')
+                    parent_str = str(parent_info)[:50] + "..." if len(str(parent_info)) > 50 else str(parent_info)
+                    print(f"  Спора {i}: parent = {parent_str}")
+                    print(f"             enabled = {getattr(spore, 'enabled', 'N/A')}")
+                    print(f"             visible = {getattr(spore, 'visible', 'N/A')}")
+
+            for i, link in enumerate(all_links):
+                if link:
+                    parent_info = getattr(link, 'parent', 'None')
+                    parent_str = str(parent_info)[:50] + "..." if len(str(parent_info)) > 50 else str(parent_info)
+                    print(f"  Линк {i}: parent = {parent_str}")
+                    print(f"           enabled = {getattr(link, 'enabled', 'N/A')}")
+                    print(f"           visible = {getattr(link, 'visible', 'N/A')}")
+
             # КРИТИЧЕСКИ ВАЖНО: Сначала отвязываем от tree_visual
-            for spore in all_spores:
+            print(f"🔧 Начинаем отвязку объектов...")
+            for i, spore in enumerate(all_spores):
                 if hasattr(spore, 'parent') and spore.parent:
+                    old_parent = str(spore.parent)[:30]
                     spore.parent = scene  # Немедленно перевешиваем к корню
+                    print(f"  ✓ Спора {i}: {old_parent} → scene")
 
-            for link in all_links:
+            for i, link in enumerate(all_links):
                 if hasattr(link, 'parent') and link.parent:
+                    old_parent = str(link.parent)[:30]
                     link.parent = scene  # Немедленно перевешиваем к корню
+                    print(f"  ✓ Линк {i}: {old_parent} → scene")
 
-            # Добавляем споры в общую систему
+            # =============================================
+            # ДОБАВЛЯЕМ ОБЪЕКТЫ В СИСТЕМУ БЕЗ РЕГИСТРАЦИИ В ZOOM_MANAGER
+            # =============================================
+
+            # Добавляем споры в общую систему (БЕЗ zoom_manager регистрации)
             for i, spore in enumerate(all_spores):
                 try:
                     self.spore_manager.add_spore_manual(spore)
                     created_spores.append(spore)
-                    # Регистрируем с защитой от ошибок
-                    reg_id = f"tree_spore_{self._global_tree_counter}_{i}"
-                    self.zoom_manager.register_object(spore, reg_id)
+                    # НЕ регистрируем в zoom_manager - объекты уже правильно созданы
+                    print(f"  ✓ Добавлена спора {i} в систему")
                 except Exception as e:
                     print(f"⚠️ Ошибка добавления споры {i}: {e}")
 
-            # Добавляем линки с защитой от дублирования
+            # Добавляем линки в систему (БЕЗ zoom_manager регистрации)
             for i, link in enumerate(all_links):
                 try:
                     # Проверяем, что линк еще не добавлен
                     if link not in self.created_links:
                         self.created_links.append(link)
                         created_links.append(link)
-                        # Регистрируем с защитой от ошибок
-                        reg_id = f"tree_link_{self._global_tree_counter}_{i}"
-                        self.zoom_manager.register_object(link, reg_id)
+                        # НЕ регистрируем в zoom_manager - объекты уже правильно созданы
+                        print(f"  ✓ Добавлен линк {i} в систему")
                 except Exception as e:
                     print(f"⚠️ Ошибка добавления линка {i}: {e}")
 
             # tree_visual больше не нужен - все объекты уже отвязаны
             tree_visual = None
             tree_logic = None
+
+            # 🚨 ДИАГНОСТИКА: Проверяем состояние объектов ПОСЛЕ освобождения tree_visual
+            print(f"🔍 ДИАГНОСТИКА ПОСЛЕ освобождения tree_visual:")
+            for i, spore in enumerate(created_spores):
+                if spore:
+                    parent_info = getattr(spore, 'parent', 'None')
+                    enabled_info = getattr(spore, 'enabled', 'N/A')
+                    visible_info = getattr(spore, 'visible', 'N/A')
+                    reg_id = getattr(spore, '_reg_id', 'N/A')
+                    print(f"  Финальная спора {i}:")
+                    print(f"    parent = {parent_info}")
+                    print(f"    enabled = {enabled_info}, visible = {visible_info}")
+                    print(f"    _reg_id = {reg_id}")
+
+            for i, link in enumerate(created_links):
+                if link:
+                    parent_info = getattr(link, 'parent', 'None')
+                    enabled_info = getattr(link, 'enabled', 'N/A')
+                    visible_info = getattr(link, 'visible', 'N/A')
+                    reg_id = getattr(link, '_reg_id', 'N/A')
+                    print(f"  Финальный линк {i}:")
+                    print(f"    parent = {parent_info}")
+                    print(f"    enabled = {enabled_info}, visible = {visible_info}")
+                    print(f"    _reg_id = {reg_id}")
 
             print(f"🌲 Дерево создано в ({current_pos[0]:.3f}, {current_pos[1]:.3f})")
             print(f"   📊 Глубина: {self.tree_depth}, dt: {dt:.4f}")

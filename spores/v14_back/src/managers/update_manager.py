@@ -38,21 +38,56 @@ class UpdateManager:
         """
         Основной метод, который должен вызываться каждый кадр из главного цикла.
         """
+        # 🚨 ДЕБАГ: Проверяем manual_spore_manager перед обновлением
+        if self.manual_spore_manager:
+            try:
+                # Проверяем есть ли проблемные preview объекты
+                preview_spore = self.manual_spore_manager.preview_manager.get_preview_spore()
+                if preview_spore:
+                    if not hasattr(preview_spore, 'parent') or preview_spore.parent is None:
+                        print(f"⚠️ UpdateManager: Preview spore has no parent, removing...")
+                        self.manual_spore_manager.preview_manager.clear_all()
+
+                # Проверяем prediction objects
+                pred_viz = self.manual_spore_manager.preview_manager.prediction_visualizers
+                pred_links = self.manual_spore_manager.preview_manager.prediction_links
+
+                bad_visualizers = []
+                for i, viz in enumerate(pred_viz):
+                    if hasattr(viz, 'ghost_spore') and viz.ghost_spore:
+                        if not hasattr(viz.ghost_spore, 'parent') or viz.ghost_spore.parent is None:
+                            bad_visualizers.append(i)
+
+                bad_links = []
+                for i, link in enumerate(pred_links):
+                    if not hasattr(link, 'parent') or link.parent is None:
+                        bad_links.append(i)
+
+                if bad_visualizers or bad_links:
+                    print(f"⚠️ UpdateManager: Найдены плохие prediction объекты:")
+                    print(f"  Плохих visualizers: {len(bad_visualizers)}")
+                    print(f"  Плохих links: {len(bad_links)}")
+                    # Очищаем все предсказания
+                    self.manual_spore_manager.preview_manager.clear_all()
+
+            except Exception as e:
+                print(f"❌ Ошибка в дебаге UpdateManager: {e}")
+
         if self.input_manager:
             self.input_manager.update()
 
         if self.scene_setup:
             self.scene_setup.update(time.dt)
-        
+
         if self.zoom_manager:
             self.zoom_manager.identify_invariant_point()  # Для зума и UI
-        
+
         # v13_manual: обновляем позицию курсора для превью споры
         if self.manual_spore_manager:
             self.manual_spore_manager.update_cursor_position()  # Без параметров - сам вычислит
-        
+
         if self.param_manager:
             self.param_manager.update()
-            
+
         if self.ui_setup:
             self.ui_setup.update() 

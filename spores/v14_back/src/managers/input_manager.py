@@ -230,8 +230,14 @@ class InputManager:
         if self.spore_manager:
             if key == '5':
                 self.spore_manager.adjust_min_radius(1/1.2)  # Уменьшить радиус (÷1.2)
+                # Принудительно обновляем предсказания
+                if self.manual_spore_manager:
+                    self.manual_spore_manager.preview_manager.force_update_predictions()
             elif key == '6':
                 self.spore_manager.adjust_min_radius(1.2)    # Увеличить радиус (×1.2)
+                # Принудительно обновляем предсказания
+                if self.manual_spore_manager:
+                    self.manual_spore_manager.preview_manager.force_update_predictions()
         
         # 7. Переключение ангелов
         if key == 'y':

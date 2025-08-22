@@ -1,6 +1,6 @@
 from typing import Optional, List
 import numpy as np
-from ursina import Vec3
+from ursina import Vec3, destroy
 
 from ...core.spore import Spore
 from ...managers.zoom_manager import ZoomManager
@@ -81,6 +81,13 @@ class PreviewManager:
         """Устанавливает режим создания для предсказаний."""
         self.creation_mode = mode
 
+    def force_update_predictions(self) -> None:
+        """Принудительно обновляет предсказания (например, при изменении dt)."""
+        # Сбрасываем кэш позиции для принудительного обновления
+        if hasattr(self, '_last_update_pos'):
+            delattr(self, '_last_update_pos')
+        self._update_predictions()
+
     def _update_preview_spore(self) -> None:
         """Создает или обновляет превью спору."""
         if not self.preview_spore:
@@ -139,8 +146,28 @@ class PreviewManager:
         except Exception as e:
             print(f"Ошибка создания превью споры: {e}")
 
-    def _update_predictions(self) -> None:
+        def _update_predictions(self) -> None:
         """Обновляет предсказания в зависимости от режима создания."""
+        # Проверяем нужно ли принудительное обновление (при изменении dt)
+        current_dt = self.config.get('pendulum', {}).get('dt', 0.1)
+        force_update = False
+
+        if not hasattr(self, '_last_dt') or self._last_dt != current_dt:
+            # dt изменился - принудительное обновление
+            force_update = True
+            self._last_dt = current_dt
+
+        # Защита от слишком частых обновлений при движении мыши
+        if not force_update and hasattr(self, '_last_update_pos'):
+            current_pos = self.cursor_tracker.get_current_position()
+            # Обновляем только если курсор сдвинулся значительно (> 0.01)
+            pos_diff = np.linalg.norm(current_pos - self._last_update_pos)
+            if pos_diff < 0.01:
+                return  # Пропускаем обновление если курсор почти не двигался
+
+        # Сохраняем текущую позицию
+        self._last_update_pos = self.cursor_tracker.get_current_position().copy()
+
         if self.creation_mode == 'tree':
             self._update_ghost_predictions()
         else:
@@ -250,12 +277,15 @@ class PreviewManager:
 
                     prediction_link.color = self.color_manager.get_color('link', link_color_name)
 
-                    # Обновляем геометрию и регистрируем в zoom manager
+                    # Обновляем геометрию
                     prediction_link.update_geometry()
-                    self.zoom_manager.register_object(
-                        prediction_link,
-                        f'manual_prediction_link_{config["name"]}'
-                    )
+
+                    # Сохраняем reg_id для правильной очистки
+                    link_reg_id = f'manual_prediction_link_{config["name"]}'
+                    prediction_link._reg_id = link_reg_id
+
+                    # Регистрируем в zoom manager
+                    self.zoom_manager.register_object(prediction_link, link_reg_id)
 
                     self.prediction_links.append(prediction_link)
 
@@ -358,9 +388,20 @@ class PreviewManager:
                 pass
         self.prediction_visualizers.clear()
 
-        # Очищаем линки предсказаний
+        # Очищаем линки предсказаний с принудительной отменой регистрации
         for link in self.prediction_links:
-            self._safe_unregister_and_destroy(link)
+            # Принудительно отменяем регистрацию по известному ID
+            if hasattr(link, '_reg_id'):
+                try:
+                    self.zoom_manager.unregister_object(link._reg_id)
+                except:
+                    pass
+
+            # Уничтожаем объект
+            try:
+                destroy(link)
+            except:
+                pass
         self.prediction_links.clear()
 
     def _destroy_preview(self) -> None:
@@ -389,7 +430,6 @@ class PreviewManager:
             if hasattr(obj, 'destroy'):
                 obj.destroy()
             else:
-                from ursina import destroy
                 destroy(obj)
         except:
             pass

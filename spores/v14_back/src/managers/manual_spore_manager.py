@@ -432,11 +432,11 @@ class ManualSporeManager:
             if hasattr(ghost_link, 'alpha'):
                 ghost_link.alpha = 0.6
 
-            # Обновляем геометрию и регистрируем
+            # Обновляем геометрию (БЕЗ регистрации в zoom_manager для временных объектов)
             ghost_link.update_geometry()
-            link_id = f'ghost_link_{link_suffix}'
-            ghost_link._reg_id = link_id  # Для корректного удаления
-            self.zoom_manager.register_object(ghost_link, link_id)
+            # link_id = f'ghost_link_{link_suffix}'
+            # ghost_link._reg_id = link_id  # Для корректного удаления - НЕ НУЖНО для временных
+            # self.zoom_manager.register_object(ghost_link, link_id)  # ← ЗАКОММЕНТИРОВАТЬ
 
             # Добавляем в список для очистки через PreviewManager
             self.preview_manager.add_prediction_link(ghost_link)

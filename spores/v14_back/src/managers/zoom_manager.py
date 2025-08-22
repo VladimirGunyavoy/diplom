@@ -52,20 +52,61 @@ class ZoomManager:
 
 
     def identify_invariant_point(self) -> Tuple[float, float]:
+        # 🚨 ДЕБАГ: Проверяем объекты перед трансформацией
+        try:
+            problematic_objects = []
+            for reg_id, obj in self.objects.items():
+                try:
+                    # Проверяем базовые атрибуты объекта
+                    if not hasattr(obj, 'parent'):
+                        problematic_objects.append((reg_id, "no parent attr"))
+                    elif obj.parent is None:
+                        problematic_objects.append((reg_id, "parent is None"))
+                    elif not hasattr(obj, 'enabled'):
+                        problematic_objects.append((reg_id, "no enabled attr"))
+                    elif not obj.enabled:
+                        problematic_objects.append((reg_id, "not enabled"))
+                    elif not hasattr(obj, 'position'):
+                        problematic_objects.append((reg_id, "no position attr"))
+
+                    # Проверяем состояние nodePath в Panda3D
+                    if hasattr(obj, 'isEmpty') and callable(obj.isEmpty):
+                        if obj.isEmpty():
+                            problematic_objects.append((reg_id, "isEmpty() returns True"))
+
+                except Exception as e:
+                    problematic_objects.append((reg_id, f"exception during check: {e}"))
+
+            if problematic_objects:
+                print(f"⚠️ ZoomManager.identify_invariant_point(): Найдены проблемные объекты:")
+                for reg_id, issue in problematic_objects:
+                    print(f"  {reg_id}: {issue}")
+
+                # Удаляем проблемные объекты из списка
+                for reg_id, issue in problematic_objects:
+                    print(f"  🗑️ Удаляем проблемный объект: {reg_id}")
+                    try:
+                        del self.objects[reg_id]
+                    except:
+                        pass
+
+        except Exception as e:
+            print(f"❌ Ошибка в дебаге ZoomManager: {e}")
+
         player = self.scene_setup.player
         psi = np.radians(self.scene_setup.player.rotation_y)
         phi = np.radians(self.scene_setup.player.camera_pivot.rotation_x)
 
         h = self.scene_setup.player.camera_pivot.world_position.y
-        
+
         if np.tan(phi) == 0:
             # Avoid division by zero if camera is looking straight ahead
             return 0, 0
 
-        d = (h / np.tan(phi)) 
+        d = (h / np.tan(phi))
 
         dx = d * np.sin(psi)
-        dy = d * np.cos(psi) 
+        dy = d * np.cos(psi)
 
         x_0 = self.scene_setup.player.camera_pivot.world_position.x + dx
         z_0 = self.scene_setup.player.camera_pivot.world_position.z + dy
@@ -75,6 +116,25 @@ class ZoomManager:
 
     def update_transform(self) -> None:
         from src.visual.link import Link
+
+        # 🚨 ДЕБАГ: Проверяем объекты перед трансформацией
+        problematic_objects = []
+        for reg_id, obj in self.objects.items():
+            try:
+                if hasattr(obj, 'parent') and obj.parent is None:
+                    problematic_objects.append((reg_id, obj, "parent is None"))
+                elif hasattr(obj, 'enabled') and not obj.enabled:
+                    problematic_objects.append((reg_id, obj, "not enabled"))
+                elif not hasattr(obj, 'parent'):
+                    problematic_objects.append((reg_id, obj, "no parent attr"))
+            except Exception as e:
+                problematic_objects.append((reg_id, obj, f"exception: {e}"))
+
+        if problematic_objects:
+            print(f"⚠️ ZoomManager: Найдены проблемные объекты ({len(problematic_objects)}):")
+            for reg_id, obj, issue in problematic_objects:
+                print(f"  {reg_id}: {issue}")
+
         for obj in self.objects.values():
             try:
                 # Проверяем что объект существует и имеет валидный NodePath
