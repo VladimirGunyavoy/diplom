@@ -61,6 +61,9 @@ class ManualSporeManager:
 
         # Сохранение dt вектора от призрачного дерева
         self.ghost_tree_dt_vector = None
+        self.ghost_tree_optimized = False
+        self.last_known_dt = None  # ✅ ДОБАВИТЬ: для отслеживания изменений dt
+        self.tree_created_with_dt = None  # ✅ ДОБАВИТЬ: для отслеживания созданного dt
 
         # История созданных групп спор для возможности удаления
         self.spore_groups_history: List[List[Spore]] = []  # История групп спор
@@ -348,6 +351,8 @@ class ManualSporeManager:
         """
         if not self.preview_enabled:
             return
+
+
         
         # Получаем правильную позицию курсора мыши
         mouse_pos = self.get_mouse_world_position()
@@ -621,10 +626,44 @@ class ManualSporeManager:
         if not self.preview_spore:
             return
 
-        # Если дерево уже оптимизировано, не перезаписываем dt при движении мыши
-        if hasattr(self, 'ghost_tree_optimized') and self.ghost_tree_optimized:
+        # Получаем текущий dt
+        current_dt = self._get_current_dt()
+
+        # Проверяем изменение dt
+        dt_changed = False
+        if hasattr(self, 'last_known_dt') and self.last_known_dt is not None:
+            if abs(current_dt - self.last_known_dt) > 1e-10:  # dt изменился
+                dt_changed = True
+                print(f"🔄 dt изменился: {self.last_known_dt:.6f} → {current_dt:.6f}")
+
+                # Если была оптимизация - сбрасываем её
+                if hasattr(self, 'ghost_tree_optimized') and self.ghost_tree_optimized:
+                    print(f"🔓 Сброс оптимизации из-за изменения dt")
+                    self.ghost_tree_optimized = False
+                    self.ghost_tree_dt_vector = None
+                    self.tree_created_with_dt = None  # ✅ Сбрасываем созданный dt
+
+        # Сохраняем текущий dt для следующего раза
+        self.last_known_dt = current_dt
+
+        # Определяем режим создания дерева
+        use_optimized_dt = (hasattr(self, 'ghost_tree_optimized') and
+                            self.ghost_tree_optimized and
+                            hasattr(self, 'ghost_tree_dt_vector') and
+                            self.ghost_tree_dt_vector is not None and
+                            not dt_changed)  # ✅ НЕ используем оптимизированные dt если dt изменился
+
+        if use_optimized_dt:
             if hasattr(self, 'debug_mode') and self.debug_mode:
                 print("🎯 Используем заблокированные оптимизированные dt")
+        else:
+            # Выводим сообщение только если dt изменился или это первый вызов
+            if dt_changed:
+                print(f"🔄 Пересоздаем дерево с новым dt: {current_dt:.6f}")
+            elif not hasattr(self, 'tree_created_with_dt') or self.tree_created_with_dt != current_dt:
+                print(f"🌲 Создаем дерево с dt: {current_dt:.6f}")
+                self.tree_created_with_dt = current_dt
+            # Иначе - дерево уже создано с этим dt, не выводим сообщение
 
         try:
             # Импорты для дерева
@@ -642,39 +681,60 @@ class ManualSporeManager:
                 show_debug=False
             )
 
-            # ПРОВЕРЯЕМ: есть ли сохраненный оптимизированный dt_vector
-            if hasattr(self, 'ghost_tree_dt_vector') and self.ghost_tree_dt_vector is not None:
-                # Используем сохраненные оптимизированные dt
-                dt_children = self.ghost_tree_dt_vector[:4]
-                dt_grandchildren = self.ghost_tree_dt_vector[4:]
+            # ПРОВЕРЯЕМ: используем ли оптимизированные dt
+            if use_optimized_dt:
+                # Используем сохраненные оптимизированные dt с сохранением знаков
+                dt_children = self.ghost_tree_dt_vector[:4]  # ✅ ИСПРАВЛЕНИЕ: сохраняем знаки
+                dt_grandchildren = self.ghost_tree_dt_vector[4:12]  # ✅ ИСПРАВЛЕНИЕ: сохраняем знаки
+
+                # Проверяем размеры векторов перед использованием
+                assert len(dt_children) == 4, f"Ожидается 4 dt для детей, получено {len(dt_children)}"
+                assert len(dt_grandchildren) == 8, f"Ожидается 8 dt для внуков, получено {len(dt_grandchildren)}"
+
+                # Отладочные принты для проверки что dt действительно применяются
+                if hasattr(self, 'debug_mode') and self.debug_mode:
+                    print(f"🎯 Создаем дерево с оптимизированными dt:")
+                    print(f"   dt_children: {dt_children}")
+                    print(f"   dt_grandchildren: {dt_grandchildren}")
 
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
                     config=tree_config,
-                    dt_children=dt_children,
-                    dt_grandchildren=dt_grandchildren,
-                    auto_create=False
+                    dt_children=dt_children,  # ✅ ИСПРАВЛЕНИЕ: передаем подписанные dt в конструктор
+                    dt_grandchildren=dt_grandchildren,  # ✅ ИСПРАВЛЕНИЕ: передаем подписанные dt в конструктор
+                    auto_create=True,  # ✅ ИСПРАВЛЕНИЕ: используем auto_create=True
+                    show=False
                 )
-                # Используем сохраненные оптимизированные dt
+                # ✅ НЕ вызываем create_children() и create_grandchildren() - дерево уже создано с правильными dt!
+
                 if hasattr(self, 'debug_mode') and self.debug_mode:
                     print("🎯 Используем оптимизированные dt для призрачного дерева")
             else:
-                # Создаем обычное дерево с базовыми параметрами
+                # Создаем обычное дерево с стандартными dt (dt из dt-менеджера для детей, в 5 раз меньше для внуков)
+                current_dt = self._get_current_dt()
+
+                # Стандартные dt: детям - полный dt, внукам - в 5 раз меньше
+                dt_children_std = np.array([current_dt, -current_dt, current_dt, -current_dt])  # ✅ с правильными знаками
+                dt_grandchildren_std = np.array([
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_0
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_1
+                    current_dt * 0.2, -current_dt * 0.2,  # внуки от child_2
+                    current_dt * 0.2, -current_dt * 0.2   # внуки от child_3
+                ])
+
                 tree_logic = SporeTree(
                     pendulum=self.pendulum,
                     config=tree_config,
-                    auto_create=False
+                    dt_children=dt_children_std,  # ✅ ИСПРАВЛЕНИЕ: передаем стандартные dt с правильными знаками
+                    dt_grandchildren=dt_grandchildren_std,  # ✅ ИСПРАВЛЕНИЕ: передаем стандартные dt с правильными знаками
+                    auto_create=True,  # ✅ ИСПРАВЛЕНИЕ: используем auto_create=True
+                    show=False
                 )
 
             # Сохраняем ссылку на призрачное дерево для дальнейшего использования
             self.current_ghost_tree = tree_logic
 
-            # Создаем детей
-            tree_logic.create_children()
-
-            # Создаем внуков если нужна глубина 2
-            if self.tree_depth >= 2:
-                tree_logic.create_grandchildren()
+            # ✅ НЕ вызываем create_children() и create_grandchildren() - дерево уже создано с auto_create=True!
 
             # Сохраняем dt вектор ТОЛЬКО если его еще нет
             if hasattr(tree_logic, 'children') and hasattr(tree_logic, 'grandchildren'):
@@ -1217,6 +1277,9 @@ class ManualSporeManager:
             # БЛОКИРУЕМ автообновление при движении мыши
             self.ghost_tree_optimized = True
 
+            # ✅ НОВОЕ: Фиксируем текущий dt для отслеживания изменений
+            self.last_known_dt = self._get_current_dt()
+
             # Принудительно пересоздаем призрачную визуализацию
             print("🔄 Принудительное пересоздание призрачного дерева...")
             self._update_ghost_predictions()
@@ -1234,9 +1297,18 @@ class ManualSporeManager:
         if hasattr(self, 'ghost_tree_optimized'):
             self.ghost_tree_optimized = False
             self.ghost_tree_dt_vector = None
+            self.tree_created_with_dt = None  # ✅ Сбрасываем также созданный dt
             print("🔓 Оптимизация призрачного дерева сброшена")
 
     def _get_current_dt(self) -> float:
-        """Получает текущий dt из конфигурации."""
+        """Получает текущий dt из DTManager или конфига."""
+        if hasattr(self, 'dt_manager') and self.dt_manager:
+            # Проверяем разные возможные названия метода
+            if hasattr(self.dt_manager, 'get_current_dt'):
+                return self.dt_manager.get_current_dt()
+            elif hasattr(self.dt_manager, 'get_dt'):
+                return self.dt_manager.get_dt()
+            else:
+                print("⚠️ DTManager не имеет метода get_dt() или get_current_dt()")
         return self.config.get('pendulum', {}).get('dt', 0.1)
 
