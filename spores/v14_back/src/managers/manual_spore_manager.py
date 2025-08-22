@@ -248,7 +248,7 @@ class ManualSporeManager:
             # =============================================
             # ОСВОБОЖДАЕМ SporeTreeVisual
             # =============================================
-            
+            #
             # Очищаем ссылки чтобы tree_visual не уничтожил объекты
             tree_visual.root_spore = None
             tree_visual.child_spores.clear()
