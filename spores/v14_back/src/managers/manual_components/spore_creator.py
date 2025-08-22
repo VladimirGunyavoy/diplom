@@ -358,28 +358,36 @@ class SporeCreator:
                     print(f"  ✓ Линк {i}: position = {link.position}")
 
             # =============================================
-            # ДОБАВЛЯЕМ ОБЪЕКТЫ В СИСТЕМУ БЕЗ РЕГИСТРАЦИИ В ZOOM_MANAGER
+            # ИСПРАВЛЕНИЕ: Используем полный цикл как обычные споры
             # =============================================
 
-            # Добавляем споры в общую систему (БЕЗ zoom_manager регистрации)
+            # Добавляем споры в общую систему через ПОЛНЫЙ цикл
             for i, spore in enumerate(all_spores):
                 try:
-                    self.spore_manager.add_spore_manual(spore)
+                    # 1. Добавляем через обычный add_spore (полный цикл)
+                    self.spore_manager.add_spore(spore)
                     created_spores.append(spore)
-                    # НЕ регистрируем в zoom_manager - объекты уже правильно созданы
-                    print(f"  ✓ Добавлена спора {i} в систему")
+
+                    # 2. ОБЯЗАТЕЛЬНО регистрируем в zoom_manager для трансформаций
+                    spore_id = f"tree_spore_{spore.id}"
+                    self.zoom_manager.register_object(spore, spore_id)
+
+                    print(f"  ✓ Спора {i} добавлена через полный цикл (ID: {spore.id})")
                 except Exception as e:
                     print(f"⚠️ Ошибка добавления споры {i}: {e}")
 
-            # Добавляем линки в систему (БЕЗ zoom_manager регистрации)
+            # Добавляем линки в систему И регистрируем в zoom_manager
             for i, link in enumerate(all_links):
                 try:
-                    # Проверяем, что линк еще не добавлен
                     if link not in self.created_links:
                         self.created_links.append(link)
                         created_links.append(link)
-                        # НЕ регистрируем в zoom_manager - объекты уже правильно созданы
-                        print(f"  ✓ Добавлен линк {i} в систему")
+
+                        # ИСПРАВЛЕНИЕ: ОБЯЗАТЕЛЬНО регистрируем в zoom_manager
+                        link_id = f"tree_link_{self._get_next_link_id()}"
+                        self.zoom_manager.register_object(link, link_id)
+
+                        print(f"  ✓ Линк {i} добавлен в систему + zoom_manager")
                 except Exception as e:
                     print(f"⚠️ Ошибка добавления линка {i}: {e}")
 
