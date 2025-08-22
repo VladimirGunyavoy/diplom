@@ -115,52 +115,60 @@ class ManualSporeManager:
             
             # Получаем текущий dt
             dt = self._get_current_dt()
-            
-            # Создаем логику дерева
-            tree_config = SporeTreeConfig(
-                initial_position=self.preview_position_2d.copy(),
-                dt_base=dt,
-                dt_grandchildren_factor=0.05,
-                show_debug=False
-            )
-            
-            tree_logic = SporeTree(
-                pendulum=self.pendulum,
-                config=tree_config,
-                auto_create=False
-            )
-            
-            # Создаем детей всегда
-            tree_logic.create_children()
-            
-            # Создаем внуков только для глубины 2
-            if self.tree_depth >= 2:
-                tree_logic.create_grandchildren()
 
-            # Используем dt вектор от призрачного дерева если доступен
-            if self.ghost_tree_dt_vector is not None:
-                print(f"🎯 Используем dt вектор от призрачного дерева: {self.ghost_tree_dt_vector}")
-
-            # Применяем сохраненный dt вектор от призрачного дерева
+            # Создаем логику дерева с правильными dt векторами
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
-                try:
-                    # Первые 4 элемента - dt для детей, следующие 8 - для внуков
-                    dt_children = self.ghost_tree_dt_vector[:4]
-                    dt_grandchildren = self.ghost_tree_dt_vector[4:12]
+                # Используем сохраненный dt вектор от призрачного дерева
+                dt_children = self.ghost_tree_dt_vector[:4]
+                dt_grandchildren = self.ghost_tree_dt_vector[4:12]
 
-                    # Переопределяем dt для детей
-                    for i, child in enumerate(tree_logic.children):
-                        if i < len(dt_children):
-                            child['dt'] = dt_children[i]
+                print(f"🎯 Используем dt вектор от призрачного дерева:")
+                print(f"   dt_children: {dt_children}")
+                print(f"   dt_grandchildren: {dt_grandchildren}")
 
-                    # Переопределяем dt для внуков
-                    for i, grandchild in enumerate(tree_logic.grandchildren):
-                        if i < len(dt_grandchildren):
-                            grandchild['dt'] = dt_grandchildren[i]
+                # Создаем конфиг дерева
+                tree_config = SporeTreeConfig(
+                    initial_position=self.preview_position_2d.copy(),
+                    dt_base=dt,  # Базовый dt (не используется, но нужен для конфига)
+                    dt_grandchildren_factor=0.05,
+                    show_debug=False
+                )
 
-                    print(f"✅ Применен dt вектор призрачного дерева к реальному дереву")
-                except Exception as e:
-                    print(f"⚠️ Ошибка применения dt вектора: {e}")
+                # Создаем дерево с точными dt векторами
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    dt_children=dt_children,
+                    dt_grandchildren=dt_grandchildren,
+                    auto_create=True,  # Создаем автоматически с переданными dt
+                    show=False
+                )
+
+                print(f"✅ Реальное дерево создано с dt вектором призрачного дерева")
+
+            else:
+                # Fallback: создаем дерево стандартным способом
+                tree_config = SporeTreeConfig(
+                    initial_position=self.preview_position_2d.copy(),
+                    dt_base=dt,
+                    dt_grandchildren_factor=0.05,
+                    show_debug=False
+                )
+
+                tree_logic = SporeTree(
+                    pendulum=self.pendulum,
+                    config=tree_config,
+                    auto_create=False
+                )
+
+                # Создаем детей и внуков стандартно
+                tree_logic.create_children()
+                if self.tree_depth >= 2:
+                    tree_logic.create_grandchildren()
+
+                print(f"⚠️ Реальное дерево создано стандартным способом (нет dt вектора)")
+
+
             
             # Создаем визуализацию (ВРЕМЕННО)
             tree_visual = SporeTreeVisual(
@@ -609,7 +617,7 @@ class ManualSporeManager:
                     dt_children = [child.get('dt', dt) for child in tree_logic.children]
                     dt_grandchildren = [gc.get('dt', dt * 0.2) for gc in tree_logic.grandchildren]
                     self.ghost_tree_dt_vector = np.hstack([dt_children, dt_grandchildren])
-                    print(f"🔮 Сохранен dt вектор призрачного дерева: {len(self.ghost_tree_dt_vector)} элементов")
+                    # Убрали print - сохраняем тихо при preview
                 except Exception as e:
                     print(f"⚠️ Ошибка сохранения dt вектора: {e}")
                     self.ghost_tree_dt_vector = None
