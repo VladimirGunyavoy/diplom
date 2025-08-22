@@ -352,48 +352,55 @@ class ManualSporeManager:
     
 
     def _update_predictions(self) -> None:
+        """Обновляет предсказания в зависимости от режима создания."""
+        if self.creation_mode == 'tree':
+            self._update_tree_preview()
+        else:
+            self._update_spore_predictions()
+
+    def _update_spore_predictions(self) -> None:
         """Обновляет предсказания: 2 вперед (min/max) + 2 назад (min/max)."""
         if not self.preview_spore:
             return
-            
+
         try:
             # Очищаем старые предсказания
             self._clear_predictions()
-            
+
             if hasattr(self, 'dt_manager') and self.dt_manager:
                 dt = self.dt_manager.get_dt()
             else:
                 dt = self.config.get('pendulum', {}).get('dt', 0.1)
-            
+
             # 4 предсказания: 2 вперед + 2 назад
             prediction_configs = [
                 # Вперед
                 {'control': self.min_control, 'name': 'forward_min', 'color': 'ghost_min', 'direction': 'forward'},
                 {'control': self.max_control, 'name': 'forward_max', 'color': 'ghost_max', 'direction': 'forward'},
-                # Назад  
+                # Назад
                 {'control': self.min_control, 'name': 'backward_min', 'color': 'ghost_min', 'direction': 'backward'},
                 {'control': self.max_control, 'name': 'backward_max', 'color': 'ghost_max', 'direction': 'backward'}
             ]
-            
+
             for i, config in enumerate(prediction_configs):
                 # Вычисляем позицию в зависимости от направления
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
                     predicted_pos_2d = self.pendulum.step(
-                        self.preview_position_2d, 
-                        config['control'], 
+                        self.preview_position_2d,
+                        config['control'],
                         dt,
                         method='jit'
                     )
                 else:  # backward
                     # Шаг назад во времени
                     predicted_pos_2d = self.pendulum.step(
-                        self.preview_position_2d, 
-                        config['control'], 
+                        self.preview_position_2d,
+                        config['control'],
                         -dt,
                         method='jit'
                     )
-                
+
                 # Создаем визуализатор предсказания
                 prediction_viz = PredictionVisualizer(
                     parent_spore=self.preview_spore,
@@ -401,16 +408,16 @@ class ManualSporeManager:
                     zoom_manager=self.zoom_manager,
                     cost_function=None,  # Не показываем cost для предсказаний
                     config={
-                        'spore': {'show_ghosts': True}, 
+                        'spore': {'show_ghosts': True},
                         'angel': {'show_angels': False, 'show_pillars': False}
                     },
                     spore_id=f'manual_prediction_{config["name"]}'
                 )
-                
+
                 # Устанавливаем цвет призрака
                 if prediction_viz.ghost_spore:
                     base_color = self.color_manager.get_color('spore', config['color'])
-                    
+
                     # Для призраков назад делаем цвет более тусклым
                     if config['direction'] == 'backward':
                         # Уменьшаем яркость для призраков назад
@@ -423,10 +430,10 @@ class ManualSporeManager:
                     else:
                         # Обычный цвет для призраков вперед
                         prediction_viz.ghost_spore.color = base_color
-                
+
                 # Обновляем позицию предсказания
                 prediction_viz.update(predicted_pos_2d)
-                
+
                 # # Создаем линк от превью споры к призраку
                 # if prediction_viz.ghost_spore:
                 #     prediction_link = Link(
@@ -441,14 +448,14 @@ class ManualSporeManager:
                 if prediction_viz.ghost_spore:
                     # Для обратного направления меняем местами parent и child
                     if config['direction'] == 'forward':
-                        # Вперед: превью → будущее состояние  
+                        # Вперед: превью → будущее состояние
                         parent_spore = self.preview_spore
                         child_spore = prediction_viz.ghost_spore
                     else:  # backward
                         # Назад: прошлое состояние → превью (показываем откуда пришли)
-                        parent_spore = prediction_viz.ghost_spore  
+                        parent_spore = prediction_viz.ghost_spore
                         child_spore = self.preview_spore
-                    
+
                     prediction_link = Link(
                         parent_spore=parent_spore,
                         child_spore=child_spore,
@@ -456,8 +463,8 @@ class ManualSporeManager:
                         zoom_manager=self.zoom_manager,
                         config=self.config
                     )
-                    
-                    # Устанавливаем цвет линка в зависимости от управления  
+
+                    # Устанавливаем цвет линка в зависимости от управления
                     if config['direction'] == 'forward':
                         # Обычные цвета для линков вперед
                         if 'min' in config['name']:
@@ -470,25 +477,25 @@ class ManualSporeManager:
                             link_color_name = 'ghost_min'  # Синий для min
                         else:  # max
                             link_color_name = 'ghost_max'  # Красный для max
-                        
+
                     prediction_link.color = self.color_manager.get_color('link', link_color_name)
-                    
+
                     # Для линков назад делаем более тонкими или пунктирными
                     if config['direction'] == 'backward':
                         # Можно добавить дополнительную стилизацию линков назад
                         pass
-                    
+
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
                     self.zoom_manager.register_object(
-                        prediction_link, 
+                        prediction_link,
                         f'manual_prediction_link_{config["name"]}'
                     )
-                    
+
                     self.prediction_links.append(prediction_link)
-                
+
                 self.prediction_visualizers.append(prediction_viz)
-                
+
         except Exception as e:
             print(f"Ошибка обновления предсказаний: {e}")
             import traceback
@@ -496,21 +503,211 @@ class ManualSporeManager:
 
     def _clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
-        # Очищаем визуализаторы предсказаний
-        for viz in self.prediction_visualizers:
+        # Сначала дерегистрируем из zoom_manager, ПОТОМ уничтожаем
+        for i, viz in enumerate(self.prediction_visualizers):
+            if viz.ghost_spore:
+                # Ищем и дерегистрируем ghost_spore
+                ghost_id = getattr(viz.ghost_spore, 'id', f'tree_ghost_{i}')
+                try:
+                    self.zoom_manager.unregister_object(ghost_id)
+                except:
+                    pass
             viz.destroy()
         self.prediction_visualizers.clear()
-        
+
         # Очищаем линки предсказаний
         for i, link in enumerate(self.prediction_links):
-            link_name = f'manual_prediction_link_{["min", "max"][i] if i < 2 else i}'
+            # Пытаемся найти правильный ключ регистрации
+            possible_keys = [
+                f'manual_prediction_link_{["forward_min", "forward_max", "backward_min", "backward_max"][i] if i < 4 else i}',
+                f'ghost_link_root_to_child_{i}',
+                f'ghost_link_child_{i//2}_to_grandchild_{i}'
+            ]
+
+            for key in possible_keys:
+                try:
+                    self.zoom_manager.unregister_object(key)
+                    break
+                except:
+                    continue
+
             try:
-                self.zoom_manager.unregister_object(link_name)
+                destroy(link)
             except:
-                pass  # Игнорируем ошибки если объект уже не зарегистрирован
-            destroy(link)
+                pass
         self.prediction_links.clear()
-    
+
+    def _update_tree_preview(self) -> None:
+        """Создает призрачное дерево для превью."""
+        # Очищаем старые предсказания
+        self._clear_predictions()
+
+        if not self.preview_spore:
+            return
+
+        try:
+            # Импорты для дерева
+            from ..logic.tree.spore_tree import SporeTree
+            from ..logic.tree.spore_tree_config import SporeTreeConfig
+
+            # Получаем текущий dt
+            dt = self._get_current_dt()
+
+            # Создаем конфиг дерева
+            tree_config = SporeTreeConfig(
+                initial_position=self.preview_position_2d.copy(),
+                dt_base=dt,
+                dt_grandchildren_factor=0.2,
+                show_debug=False
+            )
+
+            # Создаем логику дерева
+            tree_logic = SporeTree(
+                pendulum=self.pendulum,
+                config=tree_config,
+                auto_create=False
+            )
+
+            # Создаем детей
+            tree_logic.create_children()
+
+            # Создаем внуков если нужна глубина 2
+            if self.tree_depth >= 2:
+                tree_logic.create_grandchildren()
+
+            # Конвертируем в призрачные предсказания
+            self._create_ghost_tree_from_logic(tree_logic)
+
+        except Exception as e:
+            print(f"Ошибка создания призрачного дерева: {e}")
+
+    def _create_ghost_tree_from_logic(self, tree_logic):
+        """Создает призрачные споры и линки из логики дерева."""
+        # Создаем призрачные споры для детей
+        child_ghosts = []
+        for i, child_data in enumerate(tree_logic.children):
+            ghost_viz = self._create_ghost_spore_from_data(child_data, f"tree_child_{i}", 0.4)
+            if ghost_viz and ghost_viz.ghost_spore:
+                child_ghosts.append(ghost_viz.ghost_spore)
+
+        # Создаем призрачные споры для внуков (если есть)
+        grandchild_ghosts = []
+        if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+            for i, grandchild_data in enumerate(tree_logic.grandchildren):
+                ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"tree_grandchild_{i}", 0.3)
+                if ghost_viz and ghost_viz.ghost_spore:
+                    grandchild_ghosts.append(ghost_viz.ghost_spore)
+
+        # Создаем призрачные линки от корня к детям с цветом по управлению
+        for i, child_ghost in enumerate(child_ghosts):
+            if child_ghost and i < len(tree_logic.children):
+                # Получаем управление ребенка из данных дерева
+                child_control = tree_logic.children[i]['control']
+
+                # Выбираем цвет в зависимости от знака управления
+                if child_control >= 0:
+                    link_color = 'ghost_max'  # Положительное управление - красный
+                else:
+                    link_color = 'ghost_min'  # Отрицательное управление - синий
+
+                self._create_ghost_link(
+                    self.preview_spore,
+                    child_ghost,
+                    f"root_to_child_{i}",
+                    link_color
+                )
+
+        # Создаем призрачные линки от детей к внукам (если tree_depth >= 2)
+        if self.tree_depth >= 2 and grandchild_ghosts:
+            for i, grandchild_ghost in enumerate(grandchild_ghosts):
+                if grandchild_ghost:
+                    # Определяем родителя внука из данных
+                    grandchild_data = tree_logic.grandchildren[i]
+                    parent_idx = grandchild_data['parent_idx']
+
+                    if parent_idx < len(child_ghosts) and child_ghosts[parent_idx]:
+                        self._create_ghost_link(
+                            child_ghosts[parent_idx],
+                            grandchild_ghost,
+                            f"child_{parent_idx}_to_grandchild_{i}",
+                            'ghost_min' if i % 2 == 0 else 'ghost_max'  # Чередуем цвета
+                        )
+
+    def _create_ghost_spore_from_data(self, spore_data, name_suffix, alpha):
+        """Создает одну призрачную спору из данных дерева."""
+        from ..visual.prediction_visualizer import PredictionVisualizer
+
+        # Получаем финальную позицию споры
+        final_position = spore_data['position']  # должно быть [x, z]
+
+        # Создаем визуализатор предсказания
+        prediction_viz = PredictionVisualizer(
+            parent_spore=self.preview_spore,
+            color_manager=self.color_manager,
+            zoom_manager=self.zoom_manager,
+            cost_function=None,
+            config={
+                'spore': {'show_ghosts': True},
+                'angel': {'show_angels': False, 'show_pillars': False}
+            },
+            spore_id=f'tree_ghost_{name_suffix}'
+        )
+
+        # Устанавливаем позицию призрака
+        if prediction_viz.ghost_spore:
+            # Устанавливаем полупрозрачность
+            base_color = self.color_manager.get_color('spore', 'default')
+            try:
+                prediction_viz.ghost_spore.color = (base_color.r, base_color.g, base_color.b, alpha)
+            except:
+                prediction_viz.ghost_spore.color = (0.6, 0.4, 0.9, alpha)
+
+            # Обновляем позицию
+            prediction_viz.update(final_position)
+
+            # Безопасно регистрируем призрака в zoom_manager
+            try:
+                ghost_id = f'tree_ghost_{name_suffix}'
+                prediction_viz.ghost_spore.id = ghost_id
+                self.zoom_manager.register_object(prediction_viz.ghost_spore, ghost_id)
+            except Exception as e:
+                print(f"Ошибка регистрации призрака {name_suffix}: {e}")
+
+        # Добавляем в список предсказаний
+        self.prediction_visualizers.append(prediction_viz)
+        return prediction_viz
+
+    def _create_ghost_link(self, parent_spore, child_spore, link_suffix, color_name):
+        """Создает призрачный линк между двумя спорами."""
+        try:
+            from ..visual.link import Link
+
+            ghost_link = Link(
+                parent_spore=parent_spore,
+                child_spore=child_spore,
+                color_manager=self.color_manager,
+                zoom_manager=self.zoom_manager,
+                config=self.config
+            )
+
+            # Устанавливаем цвет линка
+            ghost_link.color = self.color_manager.get_color('link', color_name)
+
+            # Делаем линк полупрозрачным
+            if hasattr(ghost_link, 'alpha'):
+                ghost_link.alpha = 0.6
+
+            # Обновляем геометрию и регистрируем
+            ghost_link.update_geometry()
+            link_id = f'ghost_link_{link_suffix}'
+            self.zoom_manager.register_object(ghost_link, link_id)
+
+            # Добавляем в список для очистки
+            self.prediction_links.append(ghost_link)
+
+        except Exception as e:
+            print(f"Ошибка создания призрачного линка {link_suffix}: {e}")
+
     def create_spore_at_cursor(self):
         """Создает споры или дерево в зависимости от режима."""
         if self.creation_mode == 'tree':
@@ -860,3 +1057,7 @@ class ManualSporeManager:
         if stats['total_groups'] > 0:
             print(f"   📋 Последняя группа: {len(self.spore_groups_history[-1])} спор + {len(self.group_links_history[-1])} линков")
         print("========================")
+
+    def _get_current_dt(self) -> float:
+        """Получает текущий dt из конфигурации."""
+        return self.config.get('pendulum', {}).get('dt', 0.1)

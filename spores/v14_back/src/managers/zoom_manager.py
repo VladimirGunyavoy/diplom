@@ -76,9 +76,13 @@ class ZoomManager:
     def update_transform(self) -> None:
         from src.visual.link import Link
         for obj in self.objects.values():
-            if isinstance(obj, Link):
-                obj.update_geometry()
-            obj.apply_transform(self.a_transformation, self.b_translation, spores_scale=self.spores_scale)
+            try:
+                # Проверяем что объект существует и имеет валидный NodePath
+                if hasattr(obj, 'enabled') and obj.enabled and hasattr(obj, 'position'):
+                    obj.apply_transform(self.a_transformation, self.b_translation, spores_scale=self.spores_scale)
+            except (AssertionError, AttributeError, RuntimeError) as e:
+                # Объект невалиден - пропускаем без краша
+                continue
         # self.scene_setup.player.speed = self.scene_setup.base_speed * self.a_transformation
     
     def change_zoom(self, sign: int) -> None:
