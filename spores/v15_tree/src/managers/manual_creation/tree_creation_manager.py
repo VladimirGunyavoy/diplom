@@ -124,17 +124,30 @@ class TreeCreationManager:
 
             # Создаем визуализацию дерева
             goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
+            
+            # DEBUG: Проверяем конфигурацию
+            spore_scale = self.config.get('spore', {}).get('scale', 0.1)
+            print(f"🔍 DEBUG: spore scale из конфигурации: {spore_scale}")
+            print(f"🔍 DEBUG: zoom_manager.spores_scale: {self.zoom_manager.spores_scale}")
+            
             spore_config = self.config.get('spore', {})
 
+            # ВАЖНО: Передаем весь config, не только spore_config, чтобы включить goal_position
+            visual_config = self.config.copy()
+            visual_config['spore']['goal_position'] = goal_position
+
+            # Правильный конструктор SporeTreeVisual
             tree_visual = SporeTreeVisual(
-                tree=tree_logic,
-                pendulum=self.pendulum,
-                goal_position=goal_position,
-                config=spore_config,
                 color_manager=self.color_manager,
                 zoom_manager=self.zoom_manager,
-                spore_manager=self.spore_manager
+                config=visual_config
             )
+
+            # Устанавливаем логику дерева
+            tree_visual.set_tree_logic(tree_logic)
+            
+            # Создаем визуализацию
+            tree_visual.create_visual()
 
             # Извлекаем споры и линки из дерева
             created_spores = []
