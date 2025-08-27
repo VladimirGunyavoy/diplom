@@ -150,6 +150,10 @@ class TreeCreationManager:
                 if depth >= 2:
                     tree_logic.create_grandchildren()
 
+            # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересчитываем позиции с новыми dt
+            if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
+                self._recalculate_positions_with_new_dt(tree_logic, self.ghost_tree_dt_vector, tree_position)
+
             # Создаем визуализацию дерева
             goal_position = self.deps.config.get('spore', {}).get('goal_position', [0, 0])
             
@@ -261,6 +265,57 @@ class TreeCreationManager:
             import traceback
             traceback.print_exc()
             return None
+
+    def _recalculate_positions_with_new_dt(self, tree_logic, ghost_dt_vector, initial_position):
+        """
+        🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересчитывает позиции всех узлов дерева с новыми dt.
+        
+        Args:
+            tree_logic: SporeTree с новыми dt
+            ghost_dt_vector: Вектор из 12 dt (4 детей + 8 внуков)  
+            initial_position: Начальная позиция корня дерева
+        """
+        try:
+            print(f"   🔧 ПЕРЕСЧЕТ ПОЗИЦИЙ: Начинаем пересчет с новыми dt")
+            print(f"      Начальная позиция: {initial_position}")
+            print(f"      Новые dt детей: {ghost_dt_vector[:4]}")
+            print(f"      Новые dt внуков: {ghost_dt_vector[4:12]}")
+            
+            # Пересчитываем позиции детей
+            for i, child_data in enumerate(tree_logic.children):
+                if i < len(ghost_dt_vector[:4]):
+                    new_dt = ghost_dt_vector[i]
+                    # Получаем управление ребенка
+                    control = child_data.get('control', 0.0)
+                    # Используем pendulum для расчета новой позиции
+                    new_position = self.deps.pendulum.step(initial_position, control, new_dt)
+                    # Обновляем позицию в данных дерева
+                    child_data['position'] = new_position
+                    
+                    print(f"      Ребенок {i}: dt={new_dt:+.6f}, control={control:+.6f}, pos → {new_position}")
+            
+            # Пересчитываем позиции внуков
+            if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+                for i, grandchild_data in enumerate(tree_logic.grandchildren):
+                    if i < len(ghost_dt_vector[4:12]):
+                        new_dt = ghost_dt_vector[4 + i]
+                        # Получаем управление внука
+                        control = grandchild_data.get('control', 0.0)
+                        # Получаем позицию родителя внука
+                        parent_idx = grandchild_data['parent_idx']
+                        if parent_idx < len(tree_logic.children):
+                            parent_position = tree_logic.children[parent_idx]['position']
+                            # Используем pendulum для расчета новой позиции внука от родителя
+                            new_position = self.deps.pendulum.step(parent_position, control, new_dt)
+                            # Обновляем позицию в данных дерева
+                            grandchild_data['position'] = new_position
+                            
+                            print(f"      Внук {i}: dt={new_dt:+.6f}, control={control:+.6f}, parent_idx={parent_idx}, pos → {new_position}")
+            
+            print(f"   🔧 ПЕРЕСЧЕТ ПОЗИЦИЙ: Завершен")
+            
+        except Exception as e:
+            print(f"❌ Ошибка при пересчете позиций: {e}")
 
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
