@@ -73,7 +73,7 @@ class InputManager:
             self.previous_mouse_left = current_mouse_left
         
         # Логика для непрерывной генерации спор при удержании 'f'
-        if held_keys['f']:
+        if held_keys['f']:  # type: ignore
             if self.f_key_down_time > 0:  # Проверяем, что нажатие было зафиксировано
                 now = time.time()
                 if now >= self.next_spawn_time:
@@ -138,13 +138,13 @@ class InputManager:
         
         if key == 'u':
             if self.scene_setup and hasattr(self.scene_setup, 'frame'):
-                self.scene_setup.frame.toggle_visibility()
+                self.scene_setup.frame.toggle_visibility()  # type: ignore
             return
             
         # 3. Управление масштабированием
         if self.zoom_manager:
                 # Проверяем нажат ли Ctrl
-            ctrl_pressed = held_keys['left control'] or held_keys['right control']
+            ctrl_pressed = held_keys['left control'] or held_keys['right control']  # type: ignore
             
             if ctrl_pressed:
                 # Ctrl + колесико = управление dt
@@ -182,7 +182,7 @@ class InputManager:
 
         
         # 4. Очистка объектов (v13_manual)
-        if  held_keys['c'] and self.spore_manager and held_keys['left control']:
+        if  held_keys['c'] and self.spore_manager and held_keys['left control']:  # type: ignore
             print("🧹 Клавиша C: Полная очистка всех спор и объектов")
             
             # 🆕 ДИАГНОСТИКА: Проверяем есть ли manual_spore_manager

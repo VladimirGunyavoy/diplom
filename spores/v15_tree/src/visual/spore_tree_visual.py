@@ -25,7 +25,8 @@ class SporeTreeVisual:
     def __init__(self,
                  color_manager: ColorManager,
                  zoom_manager: ZoomManager,
-                 config: dict):
+                 config: dict,
+                 id_manager=None):
         """
         Инициализация визуализатора.
         
@@ -33,10 +34,12 @@ class SporeTreeVisual:
             color_manager: Менеджер цветов
             zoom_manager: Менеджер зума  
             config: Конфигурация для создания Spore объектов
+            id_manager: Централизованный менеджер ID (опционально)
         """
         self.color_manager = color_manager
         self.zoom_manager = zoom_manager
         self.config = config
+        self.id_manager = id_manager
         
         # Ссылка на логическое дерево (устанавливается извне)
         self.tree_logic = None
@@ -47,10 +50,6 @@ class SporeTreeVisual:
         self.grandchild_spores: List[Spore] = []
         self.child_links: List[Link] = []
         self.grandchild_links: List[Link] = []
-        
-        # Счетчики ID
-        self._spore_counter = 0
-        self._link_counter = 0
         
         # Флаг создания
         self.visual_created = False
@@ -115,10 +114,11 @@ class SporeTreeVisual:
             config=spore_config
         )
         
+        # Присваиваем уникальный ID
+        self.root_spore.id = self._get_next_spore_id()
+        
         # Цвет корня как в matplotlib версии
         self.root_spore.color = self.color_manager.get_color('spore', 'default')
-        
-        # Регистрируем
         
     def _create_children_visual(self, goal_position: List[float], spore_config: dict):
         """Создает визуальных детей на основе данных из tree_logic."""
@@ -136,6 +136,9 @@ class SporeTreeVisual:
                 color_manager=self.color_manager,
                 config=spore_config
             )
+            
+            # Присваиваем уникальный ID
+            child_spore.id = self._get_next_spore_id()
             
             # Цвет ребенка
             child_spore.color = self.color_manager.get_color('spore', 'default')
@@ -167,6 +170,9 @@ class SporeTreeVisual:
             config=self.config
         )
         
+        # Присваиваем уникальный ID
+        link.id = self._get_next_link_id()
+        
         # Цвет стрелки по управлению (читаем из логики)
         if child_data['control'] > 0:  # u_max
             link.color = self.color_manager.get_color('link', 'ghost_max')
@@ -193,6 +199,9 @@ class SporeTreeVisual:
                 color_manager=self.color_manager,
                 config=spore_config
             )
+            
+            # Присваиваем уникальный ID
+            grandchild_spore.id = self._get_next_spore_id()
             
             # Цвет внука
             grandchild_spore.color = self.color_manager.get_color('spore', 'default')
@@ -223,6 +232,9 @@ class SporeTreeVisual:
             zoom_manager=self.zoom_manager,
             config=self.config
         )
+        
+        # Присваиваем уникальный ID
+        link.id = self._get_next_link_id()
         
         if gc_data['control'] > 0:
             link.color = self.color_manager.get_color('link', 'ghost_max')
@@ -340,13 +352,21 @@ class SporeTreeVisual:
         
     def _get_next_spore_id(self) -> int:
         """Генерирует уникальный ID для споры."""
-        self._spore_counter += 1
-        return self._spore_counter
+        if self.id_manager:
+            return self.id_manager.get_next_spore_id()
+        else:
+            # Fallback для обратной совместимости
+            print("⚠️ WARNING: SporeTreeVisual создан без ID manager!")
+            return 0
         
     def _get_next_link_id(self) -> int:
         """Генерирует уникальный ID для стрелки."""
-        self._link_counter += 1
-        return self._link_counter
+        if self.id_manager:
+            return self.id_manager.get_next_link_id()
+        else:
+            # Fallback для обратной совместимости
+            print("⚠️ WARNING: SporeTreeVisual создан без ID manager!")
+            return 0
 
     def __del__(self):
         """Деструктор - очищает ресурсы."""

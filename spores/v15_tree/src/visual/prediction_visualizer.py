@@ -95,7 +95,7 @@ class PredictionVisualizer:
                 self.ghost_spore = Spore(
                     dt=0.1,
                     pendulum=temp_pendulum,
-                    goal_position=[0, 0],
+                    goal_position=(0, 0),
                     model='sphere',
                     position=(0, 0, 0),
                     scale=correct_scale,  # 🔧 ИСПРАВЛЕНИЕ: Добавляем правильный scale
@@ -121,7 +121,7 @@ class PredictionVisualizer:
             self.ghost_spore = Spore(
                 dt=0.1,
                 pendulum=temp_pendulum,
-                goal_position=[0, 0],
+                goal_position=(0, 0),
                 model='sphere',
                 position=(0, 0, 0),
                 color_manager=self.color_manager,

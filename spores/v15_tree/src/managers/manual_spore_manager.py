@@ -66,9 +66,9 @@ class ManualSporeManager:
 
         # Общие созданные линки
         self.created_links: List[Link] = []
-
-        self._link_counter = 0
-        self._spore_counter = 0
+        
+        # Получаем id_manager от spore_manager
+        self.id_manager = self.spore_manager.id_manager
 
         # Сохранение dt вектора от призрачного дерева
         self._ghost_tree_dt_vector = None
@@ -135,19 +135,15 @@ class ManualSporeManager:
             
 
 
-    def _get_current_dt(self):
-        """Получает текущий dt из конфига."""
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+
 
     def _get_next_link_id(self) -> int:
         """Возвращает уникальный ID для линка"""
-        self._link_counter += 1
-        return self._link_counter
+        return self.id_manager.get_next_link_id()
 
     def _get_next_spore_id(self) -> int:
         """Возвращает уникальный ID для споры"""
-        self._spore_counter += 1
-        return self._spore_counter
+        return self.id_manager.get_next_spore_id()
 
     def get_mouse_world_position(self) -> Optional[Tuple[float, float]]:
         """
@@ -262,7 +258,6 @@ class ManualSporeManager:
             created_links = []
 
             # 1. Создаем ЦЕНТРАЛЬНУЮ спору в позиции курсора
-            center_id = self._get_next_spore_id()
             center_spore = Spore(
                 pendulum=self.pendulum,
                 dt=dt,
@@ -272,10 +267,12 @@ class ManualSporeManager:
                 color_manager=self.color_manager,
                 config=spore_config
             )
+            # Присваиваем уникальный ID
+            center_spore.id = self._get_next_spore_id()
 
             # Добавляем центральную спору в систему
             self.spore_manager.add_spore_manual(center_spore)
-            self.zoom_manager.register_object(center_spore, f'manual_center_{center_id}')
+            self.zoom_manager.register_object(center_spore, f'manual_center_{center_spore.id}')
             created_spores.append(center_spore)
             print(f"   ✓ Создана центральная спора в позиции ({self.preview_manager.get_preview_position()[0]:.3f}, {self.preview_manager.get_preview_position()[1]:.3f})")
 
@@ -290,8 +287,6 @@ class ManualSporeManager:
             ]
 
             for config in spore_configs:
-                child_id = self._get_next_spore_id()
-
                 # Вычисляем позицию в зависимости от направления
                 if config['direction'] == 'forward':
                     # Обычный шаг вперед
@@ -320,10 +315,12 @@ class ManualSporeManager:
                     color_manager=self.color_manager,
                     config=spore_config
                 )
+                # Присваиваем уникальный ID
+                child_spore.id = self._get_next_spore_id()
 
                 # Добавляем спору в систему БЕЗ автоматических призраков
                 self.spore_manager.add_spore_manual(child_spore)
-                self.zoom_manager.register_object(child_spore, f'manual_{config["name"]}_{child_id}')
+                self.zoom_manager.register_object(child_spore, f'manual_{config["name"]}_{child_spore.id}')
 
                 # Переопределяем управление на конкретное значение
                 child_spore.logic.optimal_control = np.array([config['control']])
@@ -332,8 +329,6 @@ class ManualSporeManager:
                 print(f"   ✓ Создана спора {config['name']} в позиции ({child_pos_2d[0]:.3f}, {child_pos_2d[1]:.3f}) с управлением {config['control']:.2f}")
 
                 # 3. Создаем ЛИНК с правильным направлением и цветом
-                link_id = self._get_next_link_id()
-
                 # Определяем направление стрелки
                 if config['direction'] == 'forward':
                     # Вперед: центр → дочерняя
@@ -352,6 +347,8 @@ class ManualSporeManager:
                     zoom_manager=self.zoom_manager,
                     config=self.config
                 )
+                # Присваиваем уникальный ID
+                spore_link.id = self._get_next_link_id()
 
                 # Устанавливаем цвет линка в зависимости от управления
                 if 'min' in config['name']:
@@ -365,7 +362,7 @@ class ManualSporeManager:
 
                 # Обновляем геометрию и регистрируем линк
                 spore_link.update_geometry()
-                self.zoom_manager.register_object(spore_link, f'manual_link_{config["name"]}_{link_id}')
+                self.zoom_manager.register_object(spore_link, f'manual_link_{config["name"]}_{spore_link.id}')
 
                 created_links.append(spore_link)
                 self.created_links.append(spore_link)

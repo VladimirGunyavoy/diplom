@@ -284,8 +284,10 @@ class ManualSporeManager:
 
     def _get_current_dt(self):
         """Получает текущий dt из DTManager или конфига."""
-        if hasattr(self, 'dt_manager') and self.dt_manager:
-            return self.dt_manager.get_current_dt()
+        # Исправлено: безопасно получаем dt_manager через getattr, если он есть
+        dt_manager = getattr(self, 'dt_manager', None)
+        if dt_manager is not None:
+            return dt_manager.get_current_dt()
         return self.config.get('pendulum', {}).get('dt', 0.1)
 
     def _get_next_link_id(self) -> int:
@@ -1057,7 +1059,5 @@ class ManualSporeManager:
             print(f"   📋 Последняя группа: {len(self.spore_groups_history[-1])} спор + {len(self.group_links_history[-1])} линков")
         print("========================")
 
-    def _get_current_dt(self) -> float:
-        """Получает текущий dt из конфигурации."""
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+
 

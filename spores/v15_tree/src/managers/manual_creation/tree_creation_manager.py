@@ -157,7 +157,8 @@ class TreeCreationManager:
             tree_visual = SporeTreeVisual(
                 color_manager=self.color_manager,
                 zoom_manager=self.zoom_manager,
-                config=visual_config
+                config=visual_config,
+                id_manager=self.spore_manager.id_manager  # Передаем id_manager
             )
 
             # Устанавливаем логику дерева
@@ -185,11 +186,11 @@ class TreeCreationManager:
                 if spore:
                     self.spore_manager.add_spore_manual(spore)
 
-            # 2. Регистрируем споры в zoom_manager (уникальные имена)
+            # 2. Регистрируем споры в zoom_manager (используем уже присвоенные ID)
             spore_keys = []
             for spore in created_spores:
                 if spore:
-                    key = self.zoom_manager.get_unique_spore_id()
+                    key = f"tree_spore_{spore.id}"  # Используем уже присвоенный ID
                     self.zoom_manager.register_object(spore, key)
                     spore_keys.append(key)
                     spore._zoom_manager_key = key
@@ -200,11 +201,11 @@ class TreeCreationManager:
             if self.tree_depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
-            # 3. Регистрируем линки в zoom_manager (уникальные имена)
+            # 3. Регистрируем линки в zoom_manager (используем уже присвоенные ID)
             link_keys = []
             for link in created_links:
                 if link:
-                    key = self.zoom_manager.get_unique_link_id()
+                    key = f"tree_link_{link.id}"  # Используем уже присвоенный ID
                     self.zoom_manager.register_object(link, key)
                     link_keys.append(key)
                     link._zoom_manager_key = key

@@ -11,6 +11,7 @@ from .zoom_manager import ZoomManager
 from ..logic.optimizer import SporeOptimizer
 from .param_manager import ParamManager
 from .angel_manager import AngelManager
+from .id_manager import IDManager
 from ..utils.debug_output import DebugOutput, always_print, debug_print, evolution_print, candidate_print, trajectory_print
 
 if TYPE_CHECKING:
@@ -46,7 +47,9 @@ class SporeManager:
         self.ghost_link: Optional[Link] = None
         self.optimal_ghost_spore: Optional[Spore] = None  # Ссылка на оптимальную призрачную спору
         self.links: List[Link] = []
-        self._next_spore_id: int = 0
+        
+        # Инициализируем ID Manager
+        self.id_manager = IDManager()
         
         # Система кандидатских спор
         self.candidate_spores: List[Spore] = []  # Споры-кандидаты (белые прозрачные)
@@ -72,7 +75,7 @@ class SporeManager:
         self.prediction_visualizers = []
         self.ghost_link = None
         self.optimal_ghost_spore = None
-        self._next_spore_id = 0
+        self.id_manager.reset_counters()
         
         # Очищаем кандидатские споры
         for candidate in self.candidate_spores:
@@ -169,13 +172,16 @@ class SporeManager:
         remaining_spores = [s for s in self.objects if hasattr(s, 'is_goal') and s.is_goal]
         print(f"   💚 Сохранено целевых спор: {len(remaining_spores)}")
         
+        # Сбрасываем счетчики ID
+        self.id_manager.reset_counters()
+        print(f"   ✓ Счетчики ID сброшены")
+        
         print("🧹 Полная очистка завершена (целевые споры сохранены)")
 
     def add_spore(self, spore: Spore) -> None:
         """Добавляет спору в список управления."""
         if not isinstance(spore.id, int): # Присваиваем ID, если его еще нет
-            spore.id = self._next_spore_id
-            self._next_spore_id += 1
+            spore.id = self.id_manager.get_next_spore_id()
 
         optimal_control, optimal_dt = self.optimizer.find_optimal_step(spore)['x']
         optimal_control = np.array([optimal_control])
@@ -218,8 +224,7 @@ class SporeManager:
     def add_spore_manual(self, spore: Spore) -> None:
         """Добавляет спору БЕЗ автоматических призраков и обновлений (для v13_manual)."""
         if not isinstance(spore.id, int): # Присваиваем ID, если его еще нет
-            spore.id = self._next_spore_id
-            self._next_spore_id += 1
+            spore.id = self.id_manager.get_next_spore_id()
 
         optimal_control, optimal_dt = self.optimizer.find_optimal_step(spore)['x']
         optimal_control = np.array([optimal_control])
@@ -893,6 +898,10 @@ class SporeManager:
         except Exception as e:
             debug_print(f"   ❌ Ошибка удаления споры из SporeManager: {e}")
             return False
+
+    def get_id_stats(self) -> dict:
+        """Возвращает статистику по выданным ID."""
+        return self.id_manager.get_stats()
 
 
 
