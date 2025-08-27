@@ -1,5 +1,6 @@
 from ursina import held_keys, mouse
 import time
+import numpy as np
 from typing import Optional
 
 # Предварительное объявление классов для аннотаций типов
@@ -139,6 +140,12 @@ class InputManager:
                 self.spore_manager.evolve_all_candidates_to_completion()
             return
         
+        if key == 'p':
+            # Применить оптимальные пары к призрачному дереву под курсором
+            if self.manual_spore_manager:
+                self._apply_optimal_pairs_to_ghost_tree()
+            return
+        
         if key == 'u':
             if self.scene_setup and hasattr(self.scene_setup, 'frame'):
                 self.scene_setup.frame.toggle_visibility()  # type: ignore
@@ -264,3 +271,117 @@ class InputManager:
             if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'optimize_tree'):
                 self.manual_spore_manager.optimize_tree()  # Если добавите этот метод
             return
+
+    def _apply_optimal_pairs_to_ghost_tree(self) -> None:
+        """
+        Находит оптимальные пары для призрачного дерева под курсором
+        и подставляет соответствующие dt в ghost_tree_dt_vector
+        """
+        try:
+            # Проверяем что мы в режиме дерева глубины 2
+            if not self.manual_spore_manager:
+                print(f"❌ ManualSporeManager не найден")
+                return
+                
+            if self.manual_spore_manager.creation_mode != 'tree' or self.manual_spore_manager.tree_depth != 2:
+                print(f"❌ Оптимизация пар доступна только для деревьев глубины 2")
+                print(f"   Текущий режим: {self.manual_spore_manager.creation_mode}")
+                print(f"   Текущая глубина: {self.manual_spore_manager.tree_depth}")
+                return
+            
+            # Получаем позицию курсора
+            mouse_pos = self.manual_spore_manager.get_mouse_world_position()
+            if mouse_pos is None:
+                print("❌ Не удалось получить позицию курсора")
+                return
+
+            # Конвертируем в numpy array
+            cursor_position_2d = np.array([mouse_pos[0], mouse_pos[1]])
+            
+            print(f"🎯 Поиск оптимальных пар для позиции {cursor_position_2d}")
+            
+            # Импортируем нужные классы
+            from ..logic.tree.spore_tree import SporeTree
+            from ..logic.tree.spore_tree_config import SporeTreeConfig
+            from ..logic.tree.pairs.find_optimal_pairs import find_optimal_pairs
+            
+            # Получаем текущий dt из системы
+            dt = self.dt_manager.get_dt() if self.dt_manager else 0.05
+            
+            # Создаем временное дерево для поиска пар
+            tree_config = SporeTreeConfig(
+                initial_position=cursor_position_2d,
+                dt_base=dt,
+                dt_grandchildren_factor=0.2,
+                show_debug=False
+            )
+            
+            temp_tree = SporeTree(
+                pendulum=self.manual_spore_manager.deps.pendulum,
+                config=tree_config,
+                auto_create=True  # Создает полное дерево автоматически
+            )
+            
+            print(f"🌲 Временное дерево создано: {len(temp_tree.children)} детей, {len(temp_tree.grandchildren)} внуков")
+            
+            # Ищем оптимальные пары
+            pairs = find_optimal_pairs(temp_tree, show=True)
+            
+            if pairs is None:
+                print(f"❌ Не удалось найти пары")
+                return
+            
+            # КРИТИЧЕСКАЯ ПРОВЕРКА: должно быть ровно 4 пары
+            if len(pairs) != 4:
+                raise Exception(f"ОШИБКА: Найдено {len(pairs)} пар, а должно быть ровно 4!")
+            
+            print(f"✅ Найдено {len(pairs)} оптимальных пар")
+            
+            # Извлекаем dt из пар
+            # Инициализируем массивы исходными значениями
+            dt_children = np.array([child['dt'] for child in temp_tree.children])
+            dt_grandchildren = np.array([gc['dt'] for gc in temp_tree.grandchildren])
+            
+            print(f"📊 Исходные dt детей: {dt_children}")
+            print(f"📊 Исходные dt внуков: {dt_grandchildren}")
+            
+            # Обновляем dt внуков согласно найденным парам
+            for pair_idx, (gc_i, gc_j, meeting_info) in enumerate(pairs):
+                # Извлекаем оптимальные времена (ВАЖНО: сохраняем знаки!)
+                optimal_dt_i = meeting_info['time_gc']      # время для gc_i
+                optimal_dt_j = meeting_info['time_partner'] # время для gc_j
+                
+                # Обновляем массив dt_grandchildren
+                dt_grandchildren[gc_i] = optimal_dt_i
+                dt_grandchildren[gc_j] = optimal_dt_j
+                
+                print(f"   Пара {pair_idx+1}: gc_{gc_i} ↔ gc_{gc_j}")
+                print(f"     gc_{gc_i}: {temp_tree.grandchildren[gc_i]['dt']:+.6f} → {optimal_dt_i:+.6f}")
+                print(f"     gc_{gc_j}: {temp_tree.grandchildren[gc_j]['dt']:+.6f} → {optimal_dt_j:+.6f}")
+                print(f"     Расстояние встречи: {meeting_info['distance']:.6f}")
+            
+            # Формируем финальный dt_vector из 12 элементов
+            # Первые 4 - dt детей, следующие 8 - dt внуков
+            dt_vector = np.concatenate([dt_children, dt_grandchildren])
+            
+            print(f"🎯 Сформированный dt_vector:")
+            print(f"   dt_children (0:4): {dt_vector[:4]}")  
+            print(f"   dt_grandchildren (4:12): {dt_vector[4:12]}")
+            
+            # Подставляем в призрачное дерево
+            self.manual_spore_manager.ghost_tree_dt_vector = dt_vector
+            
+            # ВАЖНО: Принудительно обновляем предсказания чтобы показать спаренное дерево
+            # Принудительно обновляем призрачное дерево с новым dt_vector
+            # Очищаем старые предсказания и пересоздаем с новым dt_vector
+            self.manual_spore_manager.prediction_manager.clear_predictions()
+            self.manual_spore_manager._update_predictions()
+
+            print(f"🔄 Призрачное дерево пересоздано с новыми dt")
+            
+            print(f"🌲 Призрачное дерево обновлено со спаренными dt!")
+            
+        except Exception as e:
+            print(f"❌ Ошибка применения пар: {e}")
+            import traceback
+            traceback.print_exc()

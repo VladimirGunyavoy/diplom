@@ -35,7 +35,7 @@ class PredictionManager:
 
         print(f"   ✓ Prediction Manager создан (управление: {self.min_control} .. {self.max_control})")
 
-    def update_predictions(self, preview_spore, preview_position_2d: np.ndarray, creation_mode: str, tree_depth: int) -> None:
+    def update_predictions(self, preview_spore, preview_position_2d: np.ndarray, creation_mode: str, tree_depth: int, ghost_dt_vector=None) -> None:
         """
         Обновляет предсказания в зависимости от режима создания.
 
@@ -64,7 +64,7 @@ class PredictionManager:
 
         if creation_mode == 'tree':
             # print("   🌲 Режим дерева")
-            self._update_tree_preview(preview_spore, preview_position_2d)
+            self._update_tree_preview(preview_spore, preview_position_2d, ghost_dt_vector)
         else:
             # print("   🧬 Режим спор")
             self._update_spore_predictions(preview_spore, preview_position_2d)
@@ -170,7 +170,7 @@ class PredictionManager:
             import traceback
             traceback.print_exc()
 
-    def _update_tree_preview(self, preview_spore, preview_position_2d: np.ndarray) -> None:
+    def _update_tree_preview(self, preview_spore, preview_position_2d: np.ndarray, ghost_dt_vector=None) -> None:
         """Создает призрачное дерево для превью."""
 
         # Очищаем старые предсказания
@@ -195,12 +195,28 @@ class PredictionManager:
                 show_debug=False
             )
 
-            # Создаем логику дерева
-            tree_logic = SporeTree(
-                pendulum=self.deps.pendulum,
-                config=tree_config,
-                auto_create=False
-            )
+            # Создаем логику дерева с учетом ghost_tree_dt_vector
+            if ghost_dt_vector is not None and len(ghost_dt_vector) == 12:
+                print(f"🎯 Используем оптимизированный ghost_tree_dt_vector для призрачного дерева")
+                
+                # Извлекаем dt из вектора (берем абсолютные значения для SporeTree)
+                dt_children_abs = np.abs(ghost_dt_vector[:4])
+                dt_grandchildren_abs = np.abs(ghost_dt_vector[4:12])
+                
+                tree_logic = SporeTree(
+                    pendulum=self.deps.pendulum,
+                    config=tree_config,
+                    dt_children=dt_children_abs,
+                    dt_grandchildren=dt_grandchildren_abs,
+                    auto_create=False
+                )
+            else:
+                # Стандартное создание
+                tree_logic = SporeTree(
+                    pendulum=self.deps.pendulum,
+                    config=tree_config,
+                    auto_create=False
+                )
 
             # Создаем детей
             tree_logic.create_children()

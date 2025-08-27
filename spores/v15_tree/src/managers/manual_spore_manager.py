@@ -148,7 +148,8 @@ class ManualSporeManager:
             preview_spore=self.preview_manager.get_preview_spore(),
             preview_position_2d=self.preview_manager.get_preview_position(),
             creation_mode=self.creation_mode,
-            tree_depth=self.tree_depth
+            tree_depth=self.tree_depth,
+            ghost_dt_vector=self._ghost_tree_dt_vector
         )
 
     def create_spore_at_cursor(self):
