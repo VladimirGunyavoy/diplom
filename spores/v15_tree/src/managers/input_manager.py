@@ -411,15 +411,8 @@ class InputManager:
             # ВАЖНО: Принудительно обновляем предсказания чтобы показать спаренное дерево
             # Принудительно обновляем призрачное дерево с новым dt_vector
             # Очищаем старые предсказания и пересоздаем с новым dt_vector
-            
-            # 🔍 ВКЛЮЧАЕМ DEBUG РЕЖИМ для диагностики обновления
-            self.manual_spore_manager.prediction_manager.enable_debug_mode(True)
-            
             self.manual_spore_manager.prediction_manager.clear_predictions()
             self.manual_spore_manager._update_predictions()
-            
-            # 🔍 ВЫКЛЮЧАЕМ DEBUG РЕЖИМ после обновления
-            self.manual_spore_manager.prediction_manager.enable_debug_mode(False)
 
             print(f"🔄 Призрачное дерево пересоздано с новыми dt")
             
