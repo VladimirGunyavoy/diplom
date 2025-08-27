@@ -2,9 +2,7 @@ from typing import Optional, List
 import numpy as np
 from ursina import destroy
 
-from ...managers.zoom_manager import ZoomManager
-from ...managers.color_manager import ColorManager
-from ...logic.pendulum import PendulumSystem
+from .shared_dependencies import SharedDependencies
 from ...visual.prediction_visualizer import PredictionVisualizer
 from ...visual.link import Link
 
@@ -20,26 +18,17 @@ class PredictionManager:
     - Очистка всех предсказаний
     """
 
-    def __init__(self,
-                 zoom_manager: ZoomManager,
-                 pendulum: PendulumSystem,
-                 color_manager: ColorManager,
-                 config: dict):
-
-        self.zoom_manager = zoom_manager
-        self.pendulum = pendulum
-        self.color_manager = color_manager
-        self.config = config
+    def __init__(self, deps: SharedDependencies):
+        self.deps = deps
 
         # Предсказания min/max управления
         self.prediction_visualizers: List[PredictionVisualizer] = []
         self.prediction_links: List[Link] = []  # Линки от превью споры к призракам
         self.show_predictions = True
 
-        # Получаем границы управления из маятника
-        control_bounds = self.pendulum.get_control_bounds()
-        self.min_control = float(control_bounds[0])
-        self.max_control = float(control_bounds[1])
+        # Используем кэшированные значения из SharedDependencies
+        self.min_control = deps.min_control
+        self.max_control = deps.max_control
 
         # Текущая глубина дерева для предсказаний
         self.tree_depth = 2
@@ -108,7 +97,7 @@ class PredictionManager:
 
             for config in prediction_configs:
                 # Создаем предсказание
-                predicted_pos_2d = self.pendulum.step(
+                predicted_pos_2d = self.deps.pendulum.step(
                     preview_position_2d,
                     config['control'],
                     config['dt']
@@ -117,14 +106,14 @@ class PredictionManager:
                 # Создаем визуализатор предсказания
                 prediction_viz = PredictionVisualizer(
                     parent_spore=preview_spore,
-                    color_manager=self.color_manager,
-                    zoom_manager=self.zoom_manager,
+                    color_manager=self.deps.color_manager,
+                    zoom_manager=self.deps.zoom_manager,
                     cost_function=None,
                     config={
                         'spore': {'show_ghosts': True},
                         'angel': {'show_angels': False, 'show_pillars': False}
                     },
-                    spore_id=self.zoom_manager.get_unique_spore_id()
+                    spore_id=self.deps.zoom_manager.get_unique_spore_id()
                 )
 
                 # Обновляем позицию предсказания
@@ -145,9 +134,9 @@ class PredictionManager:
                     prediction_link = Link(
                         parent_spore=parent_spore,
                         child_spore=child_spore,
-                        color_manager=self.color_manager,
-                        zoom_manager=self.zoom_manager,
-                        config=self.config
+                        color_manager=self.deps.color_manager,
+                        zoom_manager=self.deps.zoom_manager,
+                        config=self.deps.config
                     )
 
                     # Устанавливаем цвет линка в зависимости от управления
@@ -164,12 +153,12 @@ class PredictionManager:
                         else:  # max
                             link_color_name = 'ghost_max'  # Красный для max
 
-                    prediction_link.color = self.color_manager.get_color('link', link_color_name)
+                    prediction_link.color = self.deps.color_manager.get_color('link', link_color_name)
 
                     # Обновляем геометрию и регистрируем в zoom manager
                     prediction_link.update_geometry()
-                    link_id = self.zoom_manager.get_unique_link_id()
-                    self.zoom_manager.register_object(prediction_link, link_id)
+                    link_id = self.deps.zoom_manager.get_unique_link_id()
+                    self.deps.zoom_manager.register_object(prediction_link, link_id)
                     prediction_link._zoom_manager_key = link_id  # Сохраняем для удаления
 
                     self.prediction_links.append(prediction_link)
@@ -208,7 +197,7 @@ class PredictionManager:
 
             # Создаем логику дерева
             tree_logic = SporeTree(
-                pendulum=self.pendulum,
+                pendulum=self.deps.pendulum,
                 config=tree_config,
                 auto_create=False
             )
@@ -288,20 +277,20 @@ class PredictionManager:
         # Создаем визуализатор предсказания
         prediction_viz = PredictionVisualizer(
             parent_spore=None,  # Для призраков дерева не нужен parent
-            color_manager=self.color_manager,
-            zoom_manager=self.zoom_manager,
+            color_manager=self.deps.color_manager,
+            zoom_manager=self.deps.zoom_manager,
             cost_function=None,
             config={
                 'spore': {'show_ghosts': True},
                 'angel': {'show_angels': False, 'show_pillars': False}
             },
-            spore_id=self.zoom_manager.get_unique_spore_id()
+            spore_id=self.deps.zoom_manager.get_unique_spore_id()
         )
 
         # Устанавливаем позицию призрака
         if prediction_viz.ghost_spore:
             # Устанавливаем полупрозрачность
-            base_color = self.color_manager.get_color('spore', 'default')
+            base_color = self.deps.color_manager.get_color('spore', 'default')
             try:
                 prediction_viz.ghost_spore.color = (base_color.r, base_color.g, base_color.b, alpha)
             except:
@@ -324,13 +313,13 @@ class PredictionManager:
             ghost_link = Link(
                 parent_spore=parent_spore,
                 child_spore=child_spore,
-                color_manager=self.color_manager,
-                zoom_manager=self.zoom_manager,
-                config=self.config
+                color_manager=self.deps.color_manager,
+                zoom_manager=self.deps.zoom_manager,
+                config=self.deps.config
             )
 
             # Устанавливаем цвет линка
-            ghost_link.color = self.color_manager.get_color('link', color_name)
+            ghost_link.color = self.deps.color_manager.get_color('link', color_name)
 
             # Делаем линк полупрозрачным
             if hasattr(ghost_link, 'alpha'):
@@ -338,8 +327,8 @@ class PredictionManager:
 
             # Обновляем геометрию и регистрируем
             ghost_link.update_geometry()
-            link_id = self.zoom_manager.get_unique_link_id()
-            self.zoom_manager.register_object(ghost_link, link_id)
+            link_id = self.deps.zoom_manager.get_unique_link_id()
+            self.deps.zoom_manager.register_object(ghost_link, link_id)
             ghost_link._zoom_manager_key = link_id  # Сохраняем для удаления
 
             # Добавляем в список для очистки
@@ -361,7 +350,7 @@ class PredictionManager:
             # Используем сохраненный ключ если есть
             if hasattr(link, '_zoom_manager_key'):
                 try:
-                    self.zoom_manager.unregister_object(link._zoom_manager_key)
+                    self.deps.zoom_manager.unregister_object(link._zoom_manager_key)
                 except:
                     pass
             else:
@@ -369,7 +358,7 @@ class PredictionManager:
                 link_key = getattr(link, '_zoom_manager_key', None)
                 if link_key:
                     try:
-                        self.zoom_manager.unregister_object(link_key)
+                        self.deps.zoom_manager.unregister_object(link_key)
                     except:
                         pass
 
@@ -387,7 +376,7 @@ class PredictionManager:
 
     def _get_current_dt(self):
         """Получает текущий dt из конфига."""
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+        return self.deps.config.get('pendulum', {}).get('dt', 0.1)
 
     def destroy(self) -> None:
         """Очищает все ресурсы менеджера."""

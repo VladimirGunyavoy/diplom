@@ -15,6 +15,9 @@ from ..visual.ui_setup import UI_setup
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..managers.manual_spore_manager import ManualSporeManager
+    from ..managers.angel_manager import AngelManager
+    from ..visual.cost_visualizer import CostVisualizer
+    from ..managers.dt_manager import DTManager
     
 from ..utils.debug_output import always_print
 

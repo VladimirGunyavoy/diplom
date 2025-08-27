@@ -2,10 +2,8 @@ from typing import Optional, List
 import numpy as np
 from ursina import destroy
 
-from ...managers.zoom_manager import ZoomManager
+from .shared_dependencies import SharedDependencies
 from ...managers.spore_manager import SporeManager
-from ...managers.color_manager import ColorManager
-from ...logic.pendulum import PendulumSystem
 from ...core.spore import Spore
 from ...visual.link import Link
 
@@ -21,18 +19,9 @@ class TreeCreationManager:
     - Интеграция с SporeTree логикой
     """
 
-    def __init__(self,
-                 spore_manager: SporeManager,
-                 zoom_manager: ZoomManager,
-                 pendulum: PendulumSystem,
-                 color_manager: ColorManager,
-                 config: dict):
-
+    def __init__(self, deps: SharedDependencies, spore_manager: SporeManager):
+        self.deps = deps
         self.spore_manager = spore_manager
-        self.zoom_manager = zoom_manager
-        self.pendulum = pendulum
-        self.color_manager = color_manager
-        self.config = config
 
         # Настройки создания
         self.creation_mode = 'spores'  # 'spores' или 'tree'
@@ -57,18 +46,22 @@ class TreeCreationManager:
         self.tree_depth = max(1, min(depth, 2))
         print(f"🌲 Глубина дерева: {self.tree_depth}")
 
-    def create_tree_at_cursor(self, preview_position_2d: np.ndarray) -> Optional[List[Spore]]:
+    def create_tree_at_cursor(self, preview_position_2d: np.ndarray, depth: Optional[int] = None) -> Optional[List[Spore]]:
         """
-        Создает дерево в позиции курсора.
-
+        Создает дерево указанной глубины.
+        
         Args:
             preview_position_2d: Позиция курсора в 2D координатах
+            depth: Глубина дерева (1 или 2). Если None, использует self.tree_depth
 
         Returns:
             Список созданных спор или None при ошибке
 
         ЛОГИКА: дерево → споры и линки → добавляем в общий граф → забываем дерево
         """
+        if depth is None:
+            depth = self.tree_depth
+        depth = int(depth)  # Убеждаемся что depth - это int
         print("🚨 ВЫЗВАН create_tree_at_cursor()!!! Начинаем создание дерева!")
         try:
             from ...visual.spore_tree_visual import SporeTreeVisual
@@ -97,7 +90,7 @@ class TreeCreationManager:
                 )
 
                 tree_logic = SporeTree(
-                    pendulum=self.pendulum,
+                    pendulum=self.deps.pendulum,
                     config=tree_config,
                     dt_children=dt_children_abs,
                     dt_grandchildren=dt_grandchildren_abs,
@@ -108,7 +101,7 @@ class TreeCreationManager:
                 tree_logic.create_children()
                 
                 # Создаем внуков если нужна глубина 2
-                if self.tree_depth >= 2:
+                if depth >= 2:
                     tree_logic.create_grandchildren()
             else:
                 # Создаем обычное дерево с автоматическими dt
@@ -120,7 +113,7 @@ class TreeCreationManager:
                 )
 
                 tree_logic = SporeTree(
-                    pendulum=self.pendulum,
+                    pendulum=self.deps.pendulum,
                     config=tree_config,
                     auto_create=True
                 )
@@ -129,19 +122,19 @@ class TreeCreationManager:
                 tree_logic.create_children()
                 
                 # Создаем внуков если нужна глубина 2
-                if self.tree_depth >= 2:
+                if depth >= 2:
                     tree_logic.create_grandchildren()
 
             # Создаем визуализацию дерева
-            goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
+            goal_position = self.deps.config.get('spore', {}).get('goal_position', [0, 0])
             
             # DEBUG: Диагностика конфигурации
-            print(f"🔍 DEBUG: Полный self.config['spore']: {self.config.get('spore', 'НЕТ КЛЮЧА!')}")
-            spore_config = self.config.get('spore', {})
+            print(f"🔍 DEBUG: Полный self.config['spore']: {self.deps.config.get('spore', 'НЕТ КЛЮЧА!')}")
+            spore_config = self.deps.config.get('spore', {})
             print(f"🔍 DEBUG: spore_config: {spore_config}")
             spore_scale = spore_config.get('scale', 'НЕТ SCALE!')
             print(f"🔍 DEBUG: spore scale из конфигурации: {spore_scale}")
-            print(f"🔍 DEBUG: zoom_manager.spores_scale: {self.zoom_manager.spores_scale}")
+            print(f"🔍 DEBUG: zoom_manager.spores_scale: {self.deps.zoom_manager.spores_scale}")
 
             # ПРОВЕРКА: Если scale отсутствует - это баг!
             if 'scale' not in spore_config:
@@ -150,13 +143,13 @@ class TreeCreationManager:
                 spore_config['scale'] = 0.02
 
             # ВАЖНО: Передаем весь config, не только spore_config, чтобы включить goal_position
-            visual_config = self.config.copy()
+            visual_config = self.deps.config.copy()
             visual_config['spore']['goal_position'] = goal_position
 
             # Правильный конструктор SporeTreeVisual
             tree_visual = SporeTreeVisual(
-                color_manager=self.color_manager,
-                zoom_manager=self.zoom_manager,
+                color_manager=self.deps.color_manager,
+                zoom_manager=self.deps.zoom_manager,
                 config=visual_config,
                 id_manager=self.spore_manager.id_manager  # Передаем id_manager
             )
@@ -177,7 +170,7 @@ class TreeCreationManager:
 
             created_spores.extend(tree_visual.child_spores)
 
-            if self.tree_depth >= 2:
+            if depth >= 2:
                 created_spores.extend(tree_visual.grandchild_spores)
 
             # ПРАВИЛЬНЫЙ ПОРЯДОК: Сначала добавляем в систему, потом применяем трансформации
@@ -191,7 +184,7 @@ class TreeCreationManager:
             for spore in created_spores:
                 if spore:
                     key = f"tree_spore_{spore.id}"  # Используем уже присвоенный ID
-                    self.zoom_manager.register_object(spore, key)
+                    self.deps.zoom_manager.register_object(spore, key)
                     spore_keys.append(key)
                     spore._zoom_manager_key = key
 
@@ -206,12 +199,12 @@ class TreeCreationManager:
             for link in created_links:
                 if link:
                     key = f"tree_link_{link.id}"  # Используем уже присвоенный ID
-                    self.zoom_manager.register_object(link, key)
+                    self.deps.zoom_manager.register_object(link, key)
                     link_keys.append(key)
                     link._zoom_manager_key = key
 
             # 4. Применяем трансформации ко всем объектам сразу
-            self.zoom_manager.update_transform()
+            self.deps.zoom_manager.update_transform()
 
             # Освобождаем SporeTreeVisual
             tree_visual.root_spore = None
@@ -238,4 +231,4 @@ class TreeCreationManager:
 
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+        return self.deps.config.get('pendulum', {}).get('dt', 0.1)

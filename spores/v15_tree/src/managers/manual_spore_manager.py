@@ -31,35 +31,20 @@ class ManualSporeManager:
                  config: dict):
 
         self.spore_manager = spore_manager
-        self.zoom_manager = zoom_manager
-        self.pendulum = pendulum
-        self.color_manager = color_manager
-        self.config = config
 
-        # Создаем PreviewManager
-        self.preview_manager = PreviewManager(
+        # Создаем SharedDependencies один раз
+        from .manual_creation.shared_dependencies import SharedDependencies
+        self.deps = SharedDependencies(
             zoom_manager=zoom_manager,
-            pendulum=pendulum,
             color_manager=color_manager,
+            pendulum=pendulum,
             config=config
         )
 
-        # Создаем PredictionManager
-        self.prediction_manager = PredictionManager(
-            zoom_manager=zoom_manager,
-            pendulum=pendulum,
-            color_manager=color_manager,
-            config=config
-        )
-
-        # Создаем TreeCreationManager
-        self.tree_creation_manager = TreeCreationManager(
-            spore_manager=spore_manager,
-            zoom_manager=zoom_manager,
-            pendulum=pendulum,
-            color_manager=color_manager,
-            config=config
-        )
+        # Создаем подкомпоненты с общими зависимостями
+        self.preview_manager = PreviewManager(self.deps)
+        self.prediction_manager = PredictionManager(self.deps) 
+        self.tree_creation_manager = TreeCreationManager(self.deps, spore_manager)
         
         # Синхронизируем ghost_tree_dt_vector
         # self.tree_creation_manager.ghost_tree_dt_vector = self._ghost_tree_dt_vector
@@ -77,49 +62,25 @@ class ManualSporeManager:
         self.spore_groups_history: List[List[Spore]] = []  # История групп спор
         self.group_links_history: List[List[Link]] = []    # История линков для каждой группы
 
-        # Синхронизируем режимы с TreeCreationManager
-        self.creation_mode = self.tree_creation_manager.creation_mode
-        self.tree_depth = self.tree_creation_manager.tree_depth
+        # Собственные поля состояния (без синхронизации)
+        self.creation_mode = 'spores'  # Только в ManualSporeManager
+        self.tree_depth = 2           # Только в ManualSporeManager
 
         print(f"   ✓ Manual Spore Manager создан (управление: {self.prediction_manager.min_control} .. {self.prediction_manager.max_control})")
         print(f"   📚 История групп инициализирована")
 
     def toggle_creation_mode(self):
         """Переключает режим создания."""
-        self.tree_creation_manager.toggle_creation_mode()
-        # Синхронизируем режим
-        self.creation_mode = self.tree_creation_manager.creation_mode
+        self.creation_mode = 'tree' if self.creation_mode == 'spores' else 'spores'
+        mode_name = 'деревья' if self.creation_mode == 'tree' else 'споры'
+        print(f"🔄 Режим создания: {mode_name}")
 
     def set_tree_depth(self, depth: int):
         """Устанавливает глубину дерева."""
-        self.tree_creation_manager.set_tree_depth(depth)
-        # Синхронизируем глубину
-        self.tree_depth = self.tree_creation_manager.tree_depth
+        self.tree_depth = max(1, min(depth, 2))
+        print(f"🌲 Глубина дерева: {self.tree_depth}")
 
-    def create_tree_at_cursor(self):
-        """Создает дерево в позиции курсора."""
-        if not self.preview_manager.preview_enabled or not self.preview_manager.has_preview():
-            return None
 
-        # Делегируем создание дерева в TreeCreationManager
-        preview_position_2d = self.preview_manager.get_preview_position()
-        created_spores = self.tree_creation_manager.create_tree_at_cursor(preview_position_2d)
-        
-        if created_spores:
-            # Создаем линки если нужно (TreeCreationManager уже создал основные)
-            created_links = []  # TreeCreationManager уже обработал линки
-            
-
-            
-            # Сохраняем в историю групп
-            self.spore_groups_history.append(created_spores.copy())
-            self.group_links_history.append(created_links.copy())
-            
-            print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
-            
-            return created_spores
-        
-        return None
 
     @property
     def ghost_tree_dt_vector(self):
@@ -146,46 +107,9 @@ class ManualSporeManager:
         return self.id_manager.get_next_spore_id()
 
     def get_mouse_world_position(self) -> Optional[Tuple[float, float]]:
-        """
-        Получает позицию курсора мыши с правильной трансформацией зума.
-
-        Алгоритм:
-        1. Определить точку на которую смотрит камера (без зума)
-        2. Отнять позицию frame origin_cube
-        3. Поделить на common_scale
-
-        Returns:
-            (x, z) координаты курсора в правильной системе координат
-        """
-        try:
-            # 1. Получаем точку взгляда камеры (без зума)
-            look_point_x, look_point_z = self.zoom_manager.identify_invariant_point()
-
-            # 2. Получаем трансформированную позицию origin_cube из frame
-            frame = getattr(self.zoom_manager.scene_setup, 'frame', None)
-            if frame and hasattr(frame, 'origin_cube'):
-                # Используем обычную position (после трансформаций) а не real_position
-                origin_pos = frame.origin_cube.position
-                if hasattr(origin_pos, 'x'):
-                    origin_x, origin_z = origin_pos.x, origin_pos.z
-                else:
-                    origin_x, origin_z = origin_pos[0], origin_pos[2]
-            else:
-                # Fallback если frame не найден
-                origin_x, origin_z = 0.0, 0.0
-
-            # 3. Получаем масштаб трансформации
-            transform_scale = getattr(self.zoom_manager, 'a_transformation', 1.0)
-
-            # 4. ПРАВИЛЬНАЯ ФОРМУЛА: (look_point - frame_origin_cube) / scale
-            corrected_x = (look_point_x - origin_x) / transform_scale
-            corrected_z = (look_point_z - origin_z) / transform_scale
-
-            return (corrected_x, corrected_z)
-
-        except Exception as e:
-            print(f"Ошибка определения позиции мыши: {e}")
-            return (0.0, 0.0)
+        """Получает позицию курсора мыши."""
+        pos_2d = self.deps.get_cursor_position_2d()
+        return (pos_2d[0], pos_2d[1])
 
     def update_cursor_position(self) -> None:
         """
@@ -223,167 +147,36 @@ class ManualSporeManager:
         self.prediction_manager.update_predictions(
             preview_spore=self.preview_manager.get_preview_spore(),
             preview_position_2d=self.preview_manager.get_preview_position(),
-            creation_mode=self.tree_creation_manager.creation_mode,
-            tree_depth=self.tree_creation_manager.tree_depth
+            creation_mode=self.creation_mode,
+            tree_depth=self.tree_depth
         )
 
     def create_spore_at_cursor(self):
-        """Создает споры или дерево в зависимости от режима."""
-        if self.tree_creation_manager.creation_mode == 'tree':
-            return self.create_tree_at_cursor()
-        else:
-            return self._create_spore_at_cursor_original()
-
-    def _create_spore_at_cursor_original(self) -> Optional[List[Spore]]:
-        """
-        Создает полную семью спор:
-        - Центральная спора в позиции курсора
-        - 2 дочерние споры (forward min/max control)
-        - 2 родительские споры (backward min/max control)
-        - Все соединительные линки с правильными цветами
-
-        Returns:
-            Список созданных спор [center, forward_min, forward_max, backward_min, backward_max] или None при ошибке
-        """
+        """Создает дерево нужной глубины в зависимости от режима."""
         if not self.preview_manager.preview_enabled or not self.preview_manager.has_preview():
             return None
 
-        try:
-            goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
-            spore_config = self.config.get('spore', {})
-            pendulum_config = self.config.get('pendulum', {})
-            dt = pendulum_config.get('dt', 0.1)
-
-            created_spores = []
-            created_links = []
-
-            # 1. Создаем ЦЕНТРАЛЬНУЮ спору в позиции курсора
-            center_spore = Spore(
-                pendulum=self.pendulum,
-                dt=dt,
-                goal_position=goal_position,
-                scale=spore_config.get('scale', 0.1),
-                position=(self.preview_manager.get_preview_position()[0], 0.0, self.preview_manager.get_preview_position()[1]),
-                color_manager=self.color_manager,
-                config=spore_config
-            )
-            # Присваиваем уникальный ID
-            center_spore.id = self._get_next_spore_id()
-
-            # Добавляем центральную спору в систему
-            self.spore_manager.add_spore_manual(center_spore)
-            self.zoom_manager.register_object(center_spore, f'manual_center_{center_spore.id}')
-            created_spores.append(center_spore)
-            print(f"   ✓ Создана центральная спора в позиции ({self.preview_manager.get_preview_position()[0]:.3f}, {self.preview_manager.get_preview_position()[1]:.3f})")
-
-            # 2. Создаем ДОЧЕРНИЕ споры (forward) + РОДИТЕЛЬСКИЕ споры (backward)
-            spore_configs = [
-                # Дочерние (forward)
-                {'control': self.prediction_manager.min_control, 'name': 'forward_min', 'color': 'ghost_min', 'direction': 'forward'},
-                {'control': self.prediction_manager.max_control, 'name': 'forward_max', 'color': 'ghost_max', 'direction': 'forward'},
-                # Родительские (backward)
-                {'control': self.prediction_manager.min_control, 'name': 'backward_min', 'color': 'ghost_min', 'direction': 'backward'},
-                {'control': self.prediction_manager.max_control, 'name': 'backward_max', 'color': 'ghost_max', 'direction': 'backward'}
-            ]
-
-            for config in spore_configs:
-                # Вычисляем позицию в зависимости от направления
-                if config['direction'] == 'forward':
-                    # Обычный шаг вперед
-                    child_pos_2d = self.pendulum.step(
-                        self.preview_manager.get_preview_position(),
-                        config['control'],
-                        dt,
-                        method='jit'
-                    )
-                else:  # backward
-                    # Шаг назад во времени
-                    child_pos_2d = self.pendulum.step(
-                        self.preview_manager.get_preview_position(),
-                        config['control'],
-                        -dt,
-                        method='jit'
-                    )
-
-                # Создаем спору
-                child_spore = Spore(
-                    pendulum=self.pendulum,
-                    dt=dt,
-                    goal_position=goal_position,
-                    scale=spore_config.get('scale', 0.1),
-                    position=(child_pos_2d[0], 0.0, child_pos_2d[1]),
-                    color_manager=self.color_manager,
-                    config=spore_config
-                )
-                # Присваиваем уникальный ID
-                child_spore.id = self._get_next_spore_id()
-
-                # Добавляем спору в систему БЕЗ автоматических призраков
-                self.spore_manager.add_spore_manual(child_spore)
-                self.zoom_manager.register_object(child_spore, f'manual_{config["name"]}_{child_spore.id}')
-
-                # Переопределяем управление на конкретное значение
-                child_spore.logic.optimal_control = np.array([config['control']])
-
-                created_spores.append(child_spore)
-                print(f"   ✓ Создана спора {config['name']} в позиции ({child_pos_2d[0]:.3f}, {child_pos_2d[1]:.3f}) с управлением {config['control']:.2f}")
-
-                # 3. Создаем ЛИНК с правильным направлением и цветом
-                # Определяем направление стрелки
-                if config['direction'] == 'forward':
-                    # Вперед: центр → дочерняя
-                    parent_spore = center_spore
-                    child_link_spore = child_spore
-                else:  # backward
-                    # Назад: родительская → центр (показываем откуда пришли)
-                    parent_spore = child_spore
-                    child_link_spore = center_spore
-
-                # Создаем линк
-                spore_link = Link(
-                    parent_spore=parent_spore,
-                    child_spore=child_link_spore,
-                    color_manager=self.color_manager,
-                    zoom_manager=self.zoom_manager,
-                    config=self.config
-                )
-                # Присваиваем уникальный ID
-                spore_link.id = self._get_next_link_id()
-
-                # Устанавливаем цвет линка в зависимости от управления
-                if 'min' in config['name']:
-                    # Синий цвет для минимального управления
-                    link_color_name = 'ghost_min'
-                else:  # max
-                    # Красный цвет для максимального управления
-                    link_color_name = 'ghost_max'
-
-                spore_link.color = self.color_manager.get_color('link', link_color_name)
-
-                # Обновляем геометрию и регистрируем линк
-                spore_link.update_geometry()
-                self.zoom_manager.register_object(spore_link, f'manual_link_{config["name"]}_{spore_link.id}')
-
-                created_links.append(spore_link)
-                self.created_links.append(spore_link)
-
-                print(f"   ✓ Создан {link_color_name} линк для {config['name']} (направление: {config['direction']})")
-
-            print(f"   🎯 Создано ВСЕГО: {len(created_spores)} спор + {len(created_links)} линков")
-            print(f"   📊 Состав: 1 центральная + 2 дочерние (forward) + 2 родительские (backward)")
-
-            # 🆕 СОХРАНЕНИЕ В ИСТОРИЮ (как обычную группу спор)
+        preview_position_2d = self.preview_manager.get_preview_position()
+        
+        # Определяем глубину дерева по режиму
+        if self.creation_mode == 'tree':
+            depth = self.tree_depth  # 1 или 2
+        else:
+            depth = 1  # "spores" режим = дерево глубины 1
+        
+        # Используем TreeCreationManager для всех случаев
+        created_spores = self.tree_creation_manager.create_tree_at_cursor(preview_position_2d, depth)
+        
+        if created_spores:
+            # Сохраняем в историю (логика остается прежней)
+            created_links = []  # TreeCreationManager уже обработал линки
             self.spore_groups_history.append(created_spores.copy())
             self.group_links_history.append(created_links.copy())
             print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
+            
+        return created_spores
 
-            return created_spores
 
-        except Exception as e:
-            print(f"Ошибка создания семьи спор: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
 
     def _destroy_preview(self) -> None:
         """Уничтожает предсказания и их линки."""
@@ -412,7 +205,7 @@ class ManualSporeManager:
                 # Пробуем разные способы удаления
                 link.enabled = False  # Отключаем
                 link.visible = False  # Скрываем
-                link.parent = None    # Отвязываем от родителя
+                link.parent = None    # type: ignore # Отвязываем от родителя
 
                 destroy(link)  # Уничтожаем
                 print(f"   ✅ Линк {i+1} обработан")
@@ -464,14 +257,14 @@ class ManualSporeManager:
                     # Дерегистрируем из zoom_manager используя сохраненный ключ
                     if hasattr(link, '_zoom_manager_key'):
                         key = link._zoom_manager_key
-                        self.zoom_manager.unregister_object(key)
+                        self.deps.zoom_manager.unregister_object(key)
                         print(f"   ✓ Линк {i+1} дерегистрирован: {key}")
                     else:
                         # Fallback: поиск по ссылке
-                        if hasattr(self.zoom_manager, 'objects'):
-                            for key, obj in list(self.zoom_manager.objects.items()):
+                        if hasattr(self.deps.zoom_manager, 'objects'):
+                            for key, obj in list(self.deps.zoom_manager.objects.items()):
                                 if obj is link:
-                                    self.zoom_manager.unregister_object(key)
+                                    self.deps.zoom_manager.unregister_object(key)
                                     print(f"   ✓ Линк {i+1} дерегистрирован (fallback): {key}")
                                     break
 
@@ -505,14 +298,14 @@ class ManualSporeManager:
                     # Дерегистрируем из zoom_manager используя сохраненный ключ
                     if hasattr(spore, '_zoom_manager_key'):
                         key = spore._zoom_manager_key
-                        self.zoom_manager.unregister_object(key)
+                        self.deps.zoom_manager.unregister_object(key)
                         print(f"   ✓ Спора {i+1} дерегистрирована: {key}")
                     else:
                         # Fallback: поиск по ссылке
-                        if hasattr(self.zoom_manager, 'objects'):
-                            for key, obj in list(self.zoom_manager.objects.items()):
+                        if hasattr(self.deps.zoom_manager, 'objects'):
+                            for key, obj in list(self.deps.zoom_manager.objects.items()):
                                 if obj is spore:
-                                    self.zoom_manager.unregister_object(key)
+                                    self.deps.zoom_manager.unregister_object(key)
                                     print(f"   ✓ Спора {i+1} дерегистрирована (fallback): {key}")
                                     break
 
@@ -578,4 +371,4 @@ class ManualSporeManager:
 
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
-        return self.config.get('pendulum', {}).get('dt', 0.1)
+        return self.deps.config.get('pendulum', {}).get('dt', 0.1)

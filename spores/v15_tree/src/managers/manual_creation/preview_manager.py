@@ -3,9 +3,7 @@ import numpy as np
 from ursina import Vec3, mouse, camera, raycast
 
 from ...core.spore import Spore
-from ...managers.zoom_manager import ZoomManager
-from ...managers.color_manager import ColorManager
-from ...logic.pendulum import PendulumSystem
+from .shared_dependencies import SharedDependencies
 
 
 class PreviewManager:
@@ -18,16 +16,8 @@ class PreviewManager:
     - Применение трансформаций zoom manager к превью
     """
 
-    def __init__(self,
-                 zoom_manager: ZoomManager,
-                 pendulum: PendulumSystem,
-                 color_manager: ColorManager,
-                 config: dict):
-
-        self.zoom_manager = zoom_manager
-        self.pendulum = pendulum
-        self.color_manager = color_manager
-        self.config = config
+    def __init__(self, deps: SharedDependencies):
+        self.deps = deps
 
         # Настройки превью
         self.preview_enabled = True
@@ -54,10 +44,10 @@ class PreviewManager:
             else:
                 # Используем правильную формулу коррекции из zoom_manager
                 # 1. Получаем точку взгляда камеры
-                look_point_x, look_point_z = self.zoom_manager.identify_invariant_point()
+                look_point_x, look_point_z = self.deps.zoom_manager.identify_invariant_point()
                 
                 # 2. Получаем позицию origin_cube из frame
-                frame = getattr(self.zoom_manager.scene_setup, 'frame', None)
+                frame = getattr(self.deps.zoom_manager.scene_setup, 'frame', None)
                 if frame and hasattr(frame, 'origin_cube'):
                     origin_pos = frame.origin_cube.position
                     if hasattr(origin_pos, 'x'):
@@ -68,7 +58,7 @@ class PreviewManager:
                     origin_x, origin_z = 0.0, 0.0
                 
                 # 3. Получаем масштаб трансформации
-                transform_scale = getattr(self.zoom_manager, 'a_transformation', 1.0)
+                transform_scale = getattr(self.deps.zoom_manager, 'a_transformation', 1.0)
                 
                 # 4. Применяем формулу коррекции: (look_point - frame_origin) / scale
                 corrected_x = (look_point_x - origin_x) / transform_scale
@@ -114,29 +104,29 @@ class PreviewManager:
             )
             # Применяем трансформации zoom manager
             self.preview_spore.apply_transform(
-                self.zoom_manager.a_transformation,
-                self.zoom_manager.b_translation,
-                spores_scale=self.zoom_manager.spores_scale
+                self.deps.zoom_manager.a_transformation,
+                self.deps.zoom_manager.b_translation,
+                spores_scale=self.deps.zoom_manager.spores_scale
             )
 
     def _create_preview_spore(self) -> None:
         """Создает новую превью спору."""
         try:
-            goal_position = self.config.get('spore', {}).get('goal_position', [0, 0])
-            spore_config = self.config.get('spore', {})
-            pendulum_config = self.config.get('pendulum', {})
+            goal_position = self.deps.config.get('spore', {}).get('goal_position', [0, 0])
+            spore_config = self.deps.config.get('spore', {})
+            pendulum_config = self.deps.config.get('pendulum', {})
 
             self.preview_spore = Spore(
-                pendulum=self.pendulum,
+                pendulum=self.deps.pendulum,
                 dt=pendulum_config.get('dt', 0.1),
                 goal_position=goal_position,
                 scale=spore_config.get('scale', 0.1),
                 position=(self.preview_position_2d[0], 0.0, self.preview_position_2d[1]),
-                color_manager=self.color_manager,
+                color_manager=self.deps.color_manager,
                 is_ghost=True  # Делаем спору-призрак
             )
 
-            base_color = self.color_manager.get_color('spore', 'default')
+            base_color = self.deps.color_manager.get_color('spore', 'default')
 
             # Устанавливаем полупрозрачность
             try:
@@ -150,7 +140,7 @@ class PreviewManager:
                     print("   ⚠️ Использован fallback цвет для preview spore")
 
             # Регистрируем в zoom manager
-            self.zoom_manager.register_object(self.preview_spore, name='manual_preview')
+            self.deps.zoom_manager.register_object(self.preview_spore, name='manual_preview')
 
         except Exception as e:
             print(f"❌ Ошибка создания превью споры: {e}")
@@ -158,7 +148,7 @@ class PreviewManager:
     def _destroy_preview(self) -> None:
         """Уничтожает превью спору."""
         if self.preview_spore:
-            self.zoom_manager.unregister_object('manual_preview')
+            self.deps.zoom_manager.unregister_object('manual_preview')
             from ursina import destroy
             destroy(self.preview_spore)
             self.preview_spore = None
