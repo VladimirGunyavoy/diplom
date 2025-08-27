@@ -159,6 +159,12 @@ class PredictionVisualizer:
         if not self.ghost_spore:
             return
 
+        # 🔍 ОТЛАДКА ОБНОВЛЕНИЯ ПРИЗРАКА
+        if hasattr(self.ghost_spore, 'id') and self.ghost_spore.id and 'tree_ghost' in str(self.ghost_spore.id):
+            print(f"🔄 ОБНОВЛЕНИЕ ПРИЗРАКА {self.ghost_spore.id}:")
+            print(f"   predicted_state_2d: {predicted_state_2d}")
+            print(f"   старая позиция: ({self.ghost_spore.x:.6f}, {self.ghost_spore.y:.6f}, {self.ghost_spore.z:.6f})")
+
         # 1. Обновляем позицию споры-призрака (Y=0 для плоскости XZ)
         # Оптимизация: используем буфер вместо np.array()
         self._position_3d_buffer[0] = predicted_state_2d[0]
@@ -173,6 +179,12 @@ class PredictionVisualizer:
             self.zoom_manager.b_translation,
             spores_scale=self.zoom_manager.spores_scale
         )
+        
+        # 🔍 ОТЛАДКА ПОСЛЕ ОБНОВЛЕНИЯ
+        if hasattr(self.ghost_spore, 'id') and self.ghost_spore.id and 'tree_ghost' in str(self.ghost_spore.id):
+            print(f"   новая позиция: ({self.ghost_spore.x:.6f}, {self.ghost_spore.y:.6f}, {self.ghost_spore.z:.6f})")
+            print(f"   real_position: {self.ghost_spore.real_position}")
+            print(f"   logic.position_2d: {self.ghost_spore.logic.position_2d}")
         
         if not self.cost_function:
             return

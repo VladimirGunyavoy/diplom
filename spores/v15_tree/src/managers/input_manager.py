@@ -53,6 +53,9 @@ class InputManager:
         self.manual_spore_manager: Optional["ManualSporeManager"] = manual_spore_manager
         self.dt_manager: Optional['DTManager'] = dt_manager
 
+        # 🔍 Флаг для включения детальной отладки призрачного дерева
+        self.debug_ghost_tree = False
+
         # Настройки для генерации спор по клавише 'f'
         self.f_key_down_time: float = 0
         self.long_press_threshold: float = 0.4
@@ -271,6 +274,13 @@ class InputManager:
             if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'optimize_tree'):
                 self.manual_spore_manager.optimize_tree()  # Если добавите этот метод
             return
+        
+        # 🔍 Переключение детальной отладки призрачного дерева
+        if key == 'h':
+            self.debug_ghost_tree = not self.debug_ghost_tree
+            status = "ВКЛЮЧЕНА" if self.debug_ghost_tree else "ОТКЛЮЧЕНА"
+            print(f"🔍 Детальная отладка призрачного дерева: {status}")
+            return
 
     def _apply_optimal_pairs_to_ghost_tree(self) -> None:
         """
@@ -301,41 +311,60 @@ class InputManager:
             print(f"🎯 Поиск оптимальных пар для позиции {cursor_position_2d}")
             
             # 🔍 ДИАГНОСТИКА ДО СПАРИВАНИЯ: Показываем текущее состояние дерева
-            print(f"\n🔍 ДИАГНОСТИКА ДО СПАРИВАНИЯ:")
-            
-            # Получаем текущее призрачное дерево ДО изменений
-            if hasattr(self.manual_spore_manager, 'prediction_manager') and self.manual_spore_manager.prediction_manager:
-                pred_manager = self.manual_spore_manager.prediction_manager
+            if self.debug_ghost_tree:
+                print(f"\n🔍 ДИАГНОСТИКА ДО СПАРИВАНИЯ:")
                 
-                # Показываем текущий dt_vector
-                if hasattr(self.manual_spore_manager, 'ghost_tree_dt_vector') and self.manual_spore_manager.ghost_tree_dt_vector is not None:
-                    current_dt_vector = self.manual_spore_manager.ghost_tree_dt_vector
-                    print(f"   📊 Текущий ghost_tree_dt_vector:")
-                    print(f"      Дети (0:4): {current_dt_vector[:4]}")
-                    print(f"      Внуки (4:12): {current_dt_vector[4:12]}")
+                # Получаем текущее призрачное дерево ДО изменений
+                if hasattr(self.manual_spore_manager, 'prediction_manager') and self.manual_spore_manager.prediction_manager:
+                    pred_manager = self.manual_spore_manager.prediction_manager
+                    
+                    # Показываем текущий dt_vector
+                    if hasattr(self.manual_spore_manager, 'ghost_tree_dt_vector') and self.manual_spore_manager.ghost_tree_dt_vector is not None:
+                        current_dt_vector = self.manual_spore_manager.ghost_tree_dt_vector
+                        print(f"   📊 Текущий ghost_tree_dt_vector:")
+                        print(f"      Дети (0:4): {current_dt_vector[:4]}")
+                        print(f"      Внуки (4:12): {current_dt_vector[4:12]}")
+                        
+                        # 🔍 Сохраняем dt детей ДО для сравнения
+                        self._children_dt_before = current_dt_vector[:4].copy()
+                        print(f"   💾 Сохранили dt детей ДО: {self._children_dt_before}")
+                    else:
+                        print(f"   📊 Текущий ghost_tree_dt_vector: НЕ УСТАНОВЛЕН")
+                        self._children_dt_before = None
+                    
+                    # Показываем количество призраков
+                    if hasattr(pred_manager, 'prediction_visualizers'):
+                        ghost_count = len([v for v in pred_manager.prediction_visualizers if v.ghost_spore])
+                        print(f"   👻 Призрачных спор: {ghost_count}")
+                    
+                    # Показываем количество линков
+                    if hasattr(pred_manager, 'prediction_links'):
+                        print(f"   🔗 Призрачных линков: {len(pred_manager.prediction_links)}")
+                    
+                    # Показываем позиции всех призраков
+                    if hasattr(pred_manager, 'prediction_visualizers'):
+                        print(f"   📍 Позиции призраков ДО:")
+                        for i, viz in enumerate(pred_manager.prediction_visualizers):
+                            if viz.ghost_spore:
+                                pos = (viz.ghost_spore.x, viz.ghost_spore.z)
+                                print(f"      Призрак {i}: {pos}")
+                        
+                        # 🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ВИЗУАЛЬНЫХ ОБЪЕКТОВ ДО
+                        print(f"   🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ВИЗУАЛЬНЫХ ОБЪЕКТОВ ДО:")
+                        for i, viz in enumerate(pred_manager.prediction_visualizers):
+                            if viz.ghost_spore:
+                                print(f"      Призрак {i}:")
+                                print(f"         ID: {viz.id}")
+                                print(f"         Позиция: ({viz.ghost_spore.x:.6f}, {viz.ghost_spore.z:.6f})")
+                                print(f"         real_position: {viz.ghost_spore.real_position}")
+                                print(f"         enabled: {viz.ghost_spore.enabled}")
+                                if hasattr(viz.ghost_spore, 'logic'):
+                                    print(f"         logic.position_2d: {viz.ghost_spore.logic.position_2d}")
+                                print(f"         Тип: {type(viz.ghost_spore)}")
                 else:
-                    print(f"   📊 Текущий ghost_tree_dt_vector: НЕ УСТАНОВЛЕН")
+                    print(f"   ❌ PredictionManager не найден")
                 
-                # Показываем количество призраков
-                if hasattr(pred_manager, 'prediction_visualizers'):
-                    ghost_count = len([v for v in pred_manager.prediction_visualizers if v.ghost_spore])
-                    print(f"   👻 Призрачных спор: {ghost_count}")
-                
-                # Показываем количество линков
-                if hasattr(pred_manager, 'prediction_links'):
-                    print(f"   🔗 Призрачных линков: {len(pred_manager.prediction_links)}")
-                
-                # Показываем позиции всех призраков
-                if hasattr(pred_manager, 'prediction_visualizers'):
-                    print(f"   📍 Позиции призраков ДО:")
-                    for i, viz in enumerate(pred_manager.prediction_visualizers):
-                        if viz.ghost_spore:
-                            pos = (viz.ghost_spore.x, viz.ghost_spore.z)
-                            print(f"      Призрак {i}: {pos}")
-            else:
-                print(f"   ❌ PredictionManager не найден")
-            
-            print(f"🔍 ДИАГНОСТИКА ДО СПАРИВАНИЯ ЗАВЕРШЕНА\n")
+                print(f"🔍 ДИАГНОСТИКА ДО СПАРИВАНИЯ ЗАВЕРШЕНА\n")
             
             # Импортируем нужные классы
             from ..logic.tree.spore_tree import SporeTree
@@ -382,6 +411,11 @@ class InputManager:
             print(f"📊 Исходные dt детей: {dt_children}")
             print(f"📊 Исходные dt внуков: {dt_grandchildren}")
             
+            # 🔍 ВАЖНО: Дети НЕ ОПТИМИЗИРУЮТСЯ - их dt остаются стандартными!
+            print(f"⚠️  ВНИМАНИЕ: dt детей НЕ изменяются алгоритмом спаривания!")
+            print(f"   Дети используют стандартные dt: {dt_children}")
+            print(f"   Только внуки получают оптимизированные dt из пар")
+            
             # Обновляем dt внуков согласно найденным парам
             for pair_idx, (gc_i, gc_j, meeting_info) in enumerate(pairs):
                 # Извлекаем оптимальные времена (ВАЖНО: сохраняем знаки!)
@@ -411,47 +445,95 @@ class InputManager:
             # ВАЖНО: Принудительно обновляем предсказания чтобы показать спаренное дерево
             # Принудительно обновляем призрачное дерево с новым dt_vector
             # Очищаем старые предсказания и пересоздаем с новым dt_vector
-            self.manual_spore_manager.prediction_manager.clear_predictions()
-            self.manual_spore_manager._update_predictions()
+            
+            if self.debug_ghost_tree:
+                print(f"🔄 Начинаем обновление призрачного дерева...")
+                print(f"   📊 ghost_tree_dt_vector установлен: {dt_vector is not None}")
+                print(f"   📊 Длина dt_vector: {len(dt_vector) if dt_vector is not None else 'None'}")
+                
+                # Передаем флаг отладки в prediction_manager
+                self.manual_spore_manager.prediction_manager.debug_ghost_tree = True
+                
+                self.manual_spore_manager.prediction_manager.clear_predictions()
+                print(f"   🧹 Предсказания очищены")
+                
+                self.manual_spore_manager._update_predictions()
+                print(f"   🔄 _update_predictions() вызван")
+                
+                # Отключаем отладку после использования
+                self.manual_spore_manager.prediction_manager.debug_ghost_tree = False
+            else:
+                self.manual_spore_manager.prediction_manager.clear_predictions()
+                self.manual_spore_manager._update_predictions()
 
             print(f"🔄 Призрачное дерево пересоздано с новыми dt")
             
             print(f"✅ Призрачное дерево обновлено со спаренными dt!")
             
             # 🔍 ДИАГНОСТИКА ПОСЛЕ СПАРИВАНИЯ: Показываем состояние обновленного дерева
-            print(f"\n🔍 ДИАГНОСТИКА ПОСЛЕ СПАРИВАНИЯ:")
-            
-            # Получаем текущее призрачное дерево
-            if hasattr(self.manual_spore_manager, 'prediction_manager') and self.manual_spore_manager.prediction_manager:
-                pred_manager = self.manual_spore_manager.prediction_manager
+            if self.debug_ghost_tree:
+                print(f"\n🔍 ДИАГНОСТИКА ПОСЛЕ СПАРИВАНИЯ:")
                 
-                # Показываем dt_vector
-                if hasattr(self.manual_spore_manager, 'ghost_tree_dt_vector') and self.manual_spore_manager.ghost_tree_dt_vector is not None:
-                    dt_vector = self.manual_spore_manager.ghost_tree_dt_vector
-                    print(f"   📊 ghost_tree_dt_vector:")
-                    print(f"      Дети (0:4): {dt_vector[:4]}")
-                    print(f"      Внуки (4:12): {dt_vector[4:12]}")
+                # Получаем текущее призрачное дерево
+                if hasattr(self.manual_spore_manager, 'prediction_manager') and self.manual_spore_manager.prediction_manager:
+                    pred_manager = self.manual_spore_manager.prediction_manager
+                    
+                    # Показываем dt_vector
+                    if hasattr(self.manual_spore_manager, 'ghost_tree_dt_vector') and self.manual_spore_manager.ghost_tree_dt_vector is not None:
+                        dt_vector = self.manual_spore_manager.ghost_tree_dt_vector
+                        print(f"   📊 ghost_tree_dt_vector:")
+                        print(f"      Дети (0:4): {dt_vector[:4]} (НЕ ИЗМЕНЕНЫ - стандартные)")
+                        print(f"      Внуки (4:12): {dt_vector[4:12]} (ОПТИМИЗИРОВАНЫ)")
+                        
+                        # 🔍 ПОДТВЕРЖДЕНИЕ: Дети действительно не изменились
+                        print(f"   🔍 АНАЛИЗ dt детей:")
+                        for i, dt in enumerate(dt_vector[:4]):
+                            print(f"      Ребенок {i}: dt = {dt:+.6f} (стандартный)")
+                        
+                        # 🔍 СРАВНЕНИЕ dt детей ДО и ПОСЛЕ
+                        if hasattr(self, '_children_dt_before') and self._children_dt_before is not None:
+                            print(f"   🔍 СРАВНЕНИЕ dt детей:")
+                            for i, (dt_before, dt_after) in enumerate(zip(self._children_dt_before, dt_vector[:4])):
+                                if abs(dt_before - dt_after) < 1e-10:
+                                    print(f"      Ребенок {i}: dt = {dt_before:+.6f} → {dt_after:+.6f} ✅ НЕ ИЗМЕНИЛСЯ")
+                                else:
+                                    print(f"      Ребенок {i}: dt = {dt_before:+.6f} → {dt_after:+.6f} 🔄 ИЗМЕНИЛСЯ!")
+                        else:
+                            print(f"   🔍 СРАВНЕНИЕ dt детей: Нет данных ДО для сравнения")
+                    
+                    # Показываем количество призраков
+                    if hasattr(pred_manager, 'prediction_visualizers'):
+                        ghost_count = len([v for v in pred_manager.prediction_visualizers if v.ghost_spore])
+                        print(f"   👻 Призрачных спор: {ghost_count}")
+                    
+                    # Показываем количество линков
+                    if hasattr(pred_manager, 'prediction_links'):
+                        print(f"   🔗 Призрачных линков: {len(pred_manager.prediction_links)}")
+                    
+                    # Показываем позиции всех призраков
+                    if hasattr(pred_manager, 'prediction_visualizers'):
+                        print(f"   📍 Позиции призраков:")
+                        for i, viz in enumerate(pred_manager.prediction_visualizers):
+                            if viz.ghost_spore:
+                                pos = (viz.ghost_spore.x, viz.ghost_spore.z)
+                                print(f"      Призрак {i}: {pos}")
+                        
+                        # 🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ВИЗУАЛЬНЫХ ОБЪЕКТОВ
+                        print(f"   🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ВИЗУАЛЬНЫХ ОБЪЕКТОВ:")
+                        for i, viz in enumerate(pred_manager.prediction_visualizers):
+                            if viz.ghost_spore:
+                                print(f"      Призрак {i}:")
+                                print(f"         ID: {viz.id}")
+                                print(f"         Позиция: ({viz.ghost_spore.x:.6f}, {viz.ghost_spore.z:.6f})")
+                                print(f"         real_position: {viz.ghost_spore.real_position}")
+                                print(f"         enabled: {viz.ghost_spore.enabled}")
+                                if hasattr(viz.ghost_spore, 'logic'):
+                                    print(f"         logic.position_2d: {viz.ghost_spore.logic.position_2d}")
+                                print(f"         Тип: {type(viz.ghost_spore)}")
+                else:
+                    print(f"   ❌ PredictionManager не найден")
                 
-                # Показываем количество призраков
-                if hasattr(pred_manager, 'prediction_visualizers'):
-                    ghost_count = len([v for v in pred_manager.prediction_visualizers if v.ghost_spore])
-                    print(f"   👻 Призрачных спор: {ghost_count}")
-                
-                # Показываем количество линков
-                if hasattr(pred_manager, 'prediction_links'):
-                    print(f"   🔗 Призрачных линков: {len(pred_manager.prediction_links)}")
-                
-                # Показываем позиции всех призраков
-                if hasattr(pred_manager, 'prediction_visualizers'):
-                    print(f"   📍 Позиции призраков:")
-                    for i, viz in enumerate(pred_manager.prediction_visualizers):
-                        if viz.ghost_spore:
-                            pos = (viz.ghost_spore.x, viz.ghost_spore.z)
-                            print(f"      Призрак {i}: {pos}")
-            else:
-                print(f"   ❌ PredictionManager не найден")
-            
-            print(f"🔍 ДИАГНОСТИКА ЗАВЕРШЕНА\n")
+                print(f"🔍 ДИАГНОСТИКА ЗАВЕРШЕНА\n")
             
         except Exception as e:
             print(f"❌ Ошибка применения пар: {e}")

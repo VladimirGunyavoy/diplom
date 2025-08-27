@@ -60,9 +60,11 @@ class ZoomManager:
             (hasattr(obj, 'color') and hasattr(obj.color, 'a') and getattr(obj.color, 'a', 1.0) < 0.8)
         )
         
-        # Показываем краткую информацию только для не-призрачных объектов
-        if not is_ghost and self.auto_print_enabled:
-            self.print_quick_info(name, obj)
+        # 🔍 ОТЛАДКА: Показываем информацию для ВСЕХ объектов (включая призраки)
+        if self.auto_print_enabled:
+            if not is_ghost:
+                # Для обычных объектов показываем полную информацию
+                self.print_quick_info(name, obj)
     
     def print_quick_info(self, name: str, obj: Scalable) -> None:
         """
@@ -74,6 +76,16 @@ class ZoomManager:
         
         print(f"🔍 Добавлен объект: {name} ({obj_type}, ID: {obj_id})")
         print(f"   📊 Всего объектов в системе: {len(self.objects)}")
+        
+        # 🔍 ДЕТАЛЬНАЯ ОТЛАДКА ПОЗИЦИЙ ДЛЯ СПОР
+        if obj_type == 'Spore':
+            print(f"   📍 ДЕТАЛЬНАЯ ПОЗИЦИЯ СПОРЫ:")
+            print(f"      x, y, z: ({obj.x:.6f}, {obj.y:.6f}, {obj.z:.6f})")
+            print(f"      real_position: {obj.real_position}")
+            if hasattr(obj, 'logic') and obj.logic:
+                print(f"      logic.position_2d: {obj.logic.position_2d}")
+            print(f"      is_ghost: {getattr(obj, 'is_ghost', False)}")
+            print(f"      color: {getattr(obj, 'color', 'N/A')}")
         
         # Показываем количество призраков, если они есть
         ghost_count = 0

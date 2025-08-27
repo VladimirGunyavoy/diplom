@@ -32,6 +32,9 @@ class PredictionManager:
 
         # Текущая глубина дерева для предсказаний
         self.tree_depth = 2
+        
+        # 🔍 Флаг для детальной отладки призрачного дерева
+        self.debug_ghost_tree = False
 
         print(f"   ✓ Prediction Manager создан (управление: {self.min_control} .. {self.max_control})")
 
@@ -225,6 +228,10 @@ class PredictionManager:
             if self.tree_depth >= 2:
                 tree_logic.create_grandchildren()
 
+            # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересчитываем позиции с новыми dt
+            if ghost_dt_vector is not None and len(ghost_dt_vector) == 12:
+                self._recalculate_positions_with_new_dt(tree_logic, ghost_dt_vector, preview_position_2d)
+
             # DEBUG: Проверяем что dt правильно применились к дереву (отключено для избежания спама)
             # print(f"🔍 DEBUG: tree_logic создан:")
             # print(f"   Дети dt: {[child['dt'] for child in tree_logic.children]}")
@@ -237,12 +244,80 @@ class PredictionManager:
         except Exception as e:
             print(f"Ошибка создания призрачного дерева: {e}")
 
+    def _recalculate_positions_with_new_dt(self, tree_logic, ghost_dt_vector, initial_position):
+        """
+        🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересчитывает позиции всех узлов дерева с новыми dt.
+        
+        Args:
+            tree_logic: SporeTree с новыми dt
+            ghost_dt_vector: Вектор из 12 dt (4 детей + 8 внуков)
+            initial_position: Начальная позиция корня дерева
+        """
+        try:
+            if self.debug_ghost_tree:
+                print(f"   🔧 ПЕРЕСЧЕТ ПОЗИЦИЙ: Начинаем пересчет с новыми dt")
+                print(f"      Начальная позиция: {initial_position}")
+                print(f"      Новые dt детей: {ghost_dt_vector[:4]}")
+                print(f"      Новые dt внуков: {ghost_dt_vector[4:12]}")
+            
+            # Пересчитываем позиции детей
+            for i, child_data in enumerate(tree_logic.children):
+                if i < len(ghost_dt_vector[:4]):
+                    new_dt = ghost_dt_vector[i]
+                    # Получаем управление ребенка
+                    control = child_data.get('control', 0.0)
+                    # Используем pendulum для расчета новой позиции
+                    new_position = self.deps.pendulum.step(initial_position, control, new_dt)
+                    # Обновляем позицию в данных дерева
+                    child_data['position'] = new_position
+                    
+                    if self.debug_ghost_tree:
+                        old_pos = child_data.get('original_position', 'N/A')
+                        print(f"      Ребенок {i}: dt={new_dt:+.6f}, control={control:+.6f}, pos={old_pos} → {new_position}")
+                        # Сохраняем оригинальную позицию для сравнения
+                        child_data['original_position'] = old_pos
+            
+            # Пересчитываем позиции внуков
+            if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+                for i, grandchild_data in enumerate(tree_logic.grandchildren):
+                    if i < len(ghost_dt_vector[4:12]):
+                        new_dt = ghost_dt_vector[4 + i]
+                        # Получаем управление внука
+                        control = grandchild_data.get('control', 0.0)
+                        # Получаем позицию родителя внука
+                        parent_idx = grandchild_data['parent_idx']
+                        if parent_idx < len(tree_logic.children):
+                            parent_position = tree_logic.children[parent_idx]['position']
+                            # Используем pendulum для расчета новой позиции внука
+                            new_position = self.deps.pendulum.step(parent_position, control, new_dt)
+                            # Обновляем позицию в данных дерева
+                            grandchild_data['position'] = new_position
+                            
+                            if self.debug_ghost_tree:
+                                old_pos = grandchild_data.get('original_position', 'N/A')
+                                print(f"      Внук {i}: dt={new_dt:+.6f}, control={control:+.6f}, pos={old_pos} → {new_position}")
+                                # Сохраняем оригинальную позицию для сравнения
+                                grandchild_data['original_position'] = old_pos
+            
+            if self.debug_ghost_tree:
+                print(f"   🔧 ПЕРЕСЧЕТ ПОЗИЦИЙ: Завершен")
+                
+        except Exception as e:
+            print(f"❌ Ошибка пересчета позиций: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _create_ghost_tree_from_logic(self, tree_logic, preview_spore):
         """Создает призрачные споры и линки из логики дерева."""
 
         # Создаем призрачные споры для детей
         child_ghosts = []
         for i, child_data in enumerate(tree_logic.children):
+            # 🔍 ДИАГНОСТИКА: Показываем данные ребенка перед созданием призрака (если включена отладка)
+            if hasattr(self, 'debug_ghost_tree') and self.debug_ghost_tree:
+                print(f"   🔍 Создаем призрак ребенка {i}:")
+                print(f"      Исходные данные: dt={child_data['dt']:+.6f}, pos={child_data['position']}")
+            
             ghost_viz = self._create_ghost_spore_from_data(child_data, f"child_{i}", 0.4)
             if ghost_viz and ghost_viz.ghost_spore:
                 child_ghosts.append(ghost_viz.ghost_spore)
@@ -260,6 +335,11 @@ class PredictionManager:
         grandchild_ghosts = []
         if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
             for i, grandchild_data in enumerate(tree_logic.grandchildren):
+                # 🔍 ДИАГНОСТИКА: Показываем данные внука перед созданием призрака (если включена отладка)
+                if self.debug_ghost_tree:
+                    print(f"   🔍 Создаем призрак внука {i}:")
+                    print(f"      Исходные данные: dt={grandchild_data['dt']:+.6f}, pos={grandchild_data['position']}")
+                
                 ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"grandchild_{i}", 0.3)
                 if ghost_viz and ghost_viz.ghost_spore:
                     grandchild_ghosts.append(ghost_viz.ghost_spore)
@@ -304,6 +384,12 @@ class PredictionManager:
 
         # Получаем финальную позицию споры
         final_position = spore_data['position']  # должно быть [x, z]
+        
+        # 🔍 ДИАГНОСТИКА: Показываем что получаем для создания призрака (если включена отладка)
+        if self.debug_ghost_tree:
+            print(f"         🔍 Создание призрака:")
+            print(f"            final_position: {final_position}")
+            print(f"            spore_data keys: {list(spore_data.keys())}")
 
         # Создаем визуализатор предсказания
         prediction_viz = PredictionVisualizer(
