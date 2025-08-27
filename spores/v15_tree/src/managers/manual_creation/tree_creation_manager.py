@@ -30,6 +30,12 @@ class TreeCreationManager:
         # Сохранение dt вектора от призрачного дерева
         self.ghost_tree_dt_vector = None
 
+        # ДОБАВИТЬ: Отслеживание созданных объектов
+        self.created_spores: List[Spore] = []
+        self.created_links: List[Link] = []
+        self.created_spore_keys: List[str] = []  # Ключи в zoom_manager
+        self.created_link_keys: List[str] = []   # Ключи в zoom_manager
+
         print("   ✓ Tree Creation Manager создан")
 
     def toggle_creation_mode(self):
@@ -188,6 +194,10 @@ class TreeCreationManager:
                     spore_keys.append(key)
                     spore._zoom_manager_key = key
 
+            # ДОБАВИТЬ: Сохраняем для отслеживания
+            self.created_spores.extend(created_spores)
+            self.created_spore_keys.extend(spore_keys)
+
             # Собираем линки
             created_links.extend(tree_visual.child_links)
 
@@ -202,6 +212,10 @@ class TreeCreationManager:
                     self.deps.zoom_manager.register_object(link, key)
                     link_keys.append(key)
                     link._zoom_manager_key = key
+
+            # ДОБАВИТЬ: Сохраняем для отслеживания
+            self.created_links.extend(created_links)
+            self.created_link_keys.extend(link_keys)
 
             # 4. Применяем трансформации ко всем объектам сразу
             self.deps.zoom_manager.update_transform()
@@ -232,3 +246,38 @@ class TreeCreationManager:
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
         return self.deps.config.get('pendulum', {}).get('dt', 0.1)
+
+    def clear_all_created_objects(self) -> None:
+        """Очищает все объекты созданные этим менеджером."""
+        print(f"🧹 TreeCreationManager: очистка {len(self.created_spores)} спор и {len(self.created_links)} линков")
+        
+        # 1. Удаляем линки
+        for i, link in enumerate(self.created_links):
+            try:
+                # Дерегистрируем из zoom_manager
+                if i < len(self.created_link_keys):
+                    self.deps.zoom_manager.unregister_object(self.created_link_keys[i])
+                
+                # Уничтожаем объект
+                destroy(link)
+                print(f"   ✓ Удален линк: {self.created_link_keys[i] if i < len(self.created_link_keys) else f'link_{i}'}")
+            except Exception as e:
+                print(f"   ❌ Ошибка удаления линка {i}: {e}")
+        
+        # 2. Удаляем споры (НЕ из spore_manager - это сделает сам spore_manager)
+        for i, spore in enumerate(self.created_spores):
+            try:
+                # Только дерегистрируем из zoom_manager
+                if i < len(self.created_spore_keys):
+                    self.deps.zoom_manager.unregister_object(self.created_spore_keys[i])
+                    print(f"   ✓ Дерегистрирована спора: {self.created_spore_keys[i]}")
+            except Exception as e:
+                print(f"   ❌ Ошибка дерегистрации споры {i}: {e}")
+        
+        # 3. Очищаем списки отслеживания
+        self.created_spores.clear()
+        self.created_links.clear()
+        self.created_spore_keys.clear()
+        self.created_link_keys.clear()
+        
+        print("   ✓ TreeCreationManager очищен")
