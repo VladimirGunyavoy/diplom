@@ -197,7 +197,7 @@ class PredictionManager:
 
             # Создаем логику дерева с учетом ghost_tree_dt_vector
             if ghost_dt_vector is not None and len(ghost_dt_vector) == 12:
-                print(f"🎯 Используем оптимизированный ghost_tree_dt_vector для призрачного дерева")
+                # print(f"🎯 Используем оптимизированный ghost_tree_dt_vector для призрачного дерева")  # Отключен для избежания спама
                 
                 # Извлекаем dt из вектора (берем абсолютные значения для SporeTree)
                 dt_children_abs = np.abs(ghost_dt_vector[:4])
@@ -225,6 +225,12 @@ class PredictionManager:
             if self.tree_depth >= 2:
                 tree_logic.create_grandchildren()
 
+            # DEBUG: Проверяем что dt правильно применились к дереву (отключено для избежания спама)
+            # print(f"🔍 DEBUG: tree_logic создан:")
+            # print(f"   Дети dt: {[child['dt'] for child in tree_logic.children]}")
+            # if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+            #     print(f"   Внуки dt: {[gc['dt'] for gc in tree_logic.grandchildren]}")
+
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic, preview_spore)
 
@@ -240,6 +246,15 @@ class PredictionManager:
             ghost_viz = self._create_ghost_spore_from_data(child_data, f"child_{i}", 0.4)
             if ghost_viz and ghost_viz.ghost_spore:
                 child_ghosts.append(ghost_viz.ghost_spore)
+
+        # DEBUG: Показываем позиции призрачных детей для проверки обновления (отключено для избежания спама)
+        # if len(child_ghosts) > 0:
+        #     print(f"🔍 DEBUG: Позиции призрачных детей:")
+        #     for i, (child_ghost, child_data) in enumerate(zip(child_ghosts, tree_logic.children)):
+        #         if child_ghost:
+        #             actual_pos = (child_ghost.x, child_ghost.z)  
+        #             expected_pos = (child_data['position'][0], child_data['position'][1])
+        #             print(f"   Child {i}: expected={expected_pos}, actual={actual_pos}, dt={child_data['dt']:+.6f}")
 
         # Создаем призрачные споры для внуков (если есть)
         grandchild_ghosts = []
