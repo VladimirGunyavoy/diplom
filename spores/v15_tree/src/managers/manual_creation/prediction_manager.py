@@ -25,6 +25,9 @@ class PredictionManager:
         self.prediction_visualizers: List[PredictionVisualizer] = []
         self.prediction_links: List[Link] = []  # Линки от превью споры к призракам
         self.show_predictions = True
+        
+        # Флаг для отладочной информации (включается только при вызове из input_manager)
+        self.debug_mode = False
 
         # Используем кэшированные значения из SharedDependencies
         self.min_control = deps.min_control
@@ -34,6 +37,14 @@ class PredictionManager:
         self.tree_depth = 2
 
         print(f"   ✓ Prediction Manager создан (управление: {self.min_control} .. {self.max_control})")
+
+    def enable_debug_mode(self, enable: bool = True) -> None:
+        """Включает/выключает режим отладки для диагностики обновления призрачного дерева."""
+        self.debug_mode = enable
+        if enable:
+            print(f"🔍 DEBUG режим включен в PredictionManager")
+        else:
+            print(f"🔍 DEBUG режим выключен в PredictionManager")
 
     def update_predictions(self, preview_spore, preview_position_2d: np.ndarray, creation_mode: str, tree_depth: int, ghost_dt_vector=None) -> None:
         """
@@ -180,6 +191,13 @@ class PredictionManager:
             return
 
         try:
+            # 🔍 DEBUG _update_tree_preview: Проверяем входные параметры (только в debug_mode)
+            if self.debug_mode:
+                print(f"🔍 DEBUG _update_tree_preview: ghost_dt_vector получен = {ghost_dt_vector is not None}")
+                if ghost_dt_vector is not None:
+                    print(f"   Длина вектора: {len(ghost_dt_vector)}")
+                    print(f"   Первые 4 элемента: {ghost_dt_vector[:4] if len(ghost_dt_vector) >= 4 else 'короткий'}")
+            
             # Импорты для дерева
             from ...logic.tree.spore_tree import SporeTree
             from ...logic.tree.spore_tree_config import SporeTreeConfig
@@ -217,6 +235,16 @@ class PredictionManager:
                     config=tree_config,
                     auto_create=False
                 )
+            
+            # DEBUG: Проверяем dt в созданном tree_logic (только в debug_mode)
+            if self.debug_mode:
+                print(f"🔍 DEBUG tree_logic создан:")
+                print(f"   Детей создано: {len(tree_logic.children) if hasattr(tree_logic, 'children') else 0}")  
+                if hasattr(tree_logic, 'children') and tree_logic.children:
+                    print(f"   dt детей: {[child['dt'] for child in tree_logic.children]}")
+                if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+                    print(f"   Внуков создано: {len(tree_logic.grandchildren)}")
+                    print(f"   dt внуков: {[gc['dt'] for gc in tree_logic.grandchildren]}")
 
             # Создаем детей
             tree_logic.create_children()
@@ -233,6 +261,16 @@ class PredictionManager:
 
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic, preview_spore)
+
+            # DEBUG: Проверяем позиции после создания призраков (только в debug_mode)
+            if self.debug_mode:
+                print(f"🔍 DEBUG после создания призраков:")
+                print(f"   Создано visualizers: {len(self.prediction_visualizers)}")
+                if len(self.prediction_visualizers) >= 4:  # Должно быть минимум 4 ребенка
+                    for i in range(4):  # Первые 4 - дети
+                        if i < len(self.prediction_visualizers) and self.prediction_visualizers[i].ghost_spore:
+                            ghost = self.prediction_visualizers[i].ghost_spore
+                            print(f"   Призрачный ребенок {i}: позиция=({ghost.x}, {ghost.z})")
 
         except Exception as e:
             print(f"Ошибка создания призрачного дерева: {e}")
@@ -304,6 +342,10 @@ class PredictionManager:
 
         # Получаем финальную позицию споры
         final_position = spore_data['position']  # должно быть [x, z]
+        
+        # DEBUG: Отладка создания призрака
+        if self.debug_mode:
+            print(f"🔍 DEBUG создание призрака {name_suffix}: expected_pos={final_position}")
 
         # Создаем визуализатор предсказания
         prediction_viz = PredictionVisualizer(
@@ -327,8 +369,23 @@ class PredictionManager:
             except:
                 prediction_viz.ghost_spore.color = (0.6, 0.4, 0.9, alpha)
 
-            # Обновляем позицию
+            # Обновляем позицию призрака
             prediction_viz.update(final_position)
+            
+            # DEBUG: Проверяем что позиция действительно обновилась
+            if self.debug_mode:
+                actual_pos = (prediction_viz.ghost_spore.x, prediction_viz.ghost_spore.z)
+                print(f"🔍 DEBUG призрак {name_suffix} после update: actual_pos={actual_pos}")
+
+            # ПРИНУДИТЕЛЬНО устанавливаем позицию (на случай если update() не работает)
+            prediction_viz.ghost_spore.x = final_position[0]  
+            prediction_viz.ghost_spore.z = final_position[1]
+            prediction_viz.ghost_spore.y = 0.0
+
+            # DEBUG: Финальная проверка позиции
+            if self.debug_mode:
+                final_actual_pos = (prediction_viz.ghost_spore.x, prediction_viz.ghost_spore.z)
+                print(f"🔍 DEBUG призрак {name_suffix} после принудительной установки: final_pos={final_actual_pos}")
 
             # Призрачные споры больше не регистрируются в ZoomManager - они постоянные
             # Просто устанавливаем ID
