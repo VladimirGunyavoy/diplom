@@ -80,8 +80,27 @@ class TreeCreationManager:
             # Правильная позиция для дерева
             tree_position = np.array([preview_position_2d[0], preview_position_2d[1]])
 
-            # Создаем логику дерева с правильными dt векторами
-            if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
+            # Создаем логику дерева с учетом глубины
+            if depth == 1:
+                # Для глубины 1: используем dt из dt_manager для всех детей
+                print(f"🌲 Создаем дерево глубины 1 с единым dt")
+                
+                tree_config = SporeTreeConfig(
+                    initial_position=tree_position,
+                    dt_base=dt
+                )
+
+                tree_logic = SporeTree(
+                    pendulum=self.deps.pendulum,
+                    config=tree_config,
+                    auto_create=False  # Создаем вручную
+                )
+                
+                # Создаем только детей с единым dt
+                dt_children_uniform = np.ones(4) * dt
+                tree_logic.create_children(dt_children=dt_children_uniform)
+                
+            elif self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
                 # Берем абсолютные значения, т.к. SporeTree ожидает положительные dt
                 dt_children_abs = np.abs(self.ghost_tree_dt_vector[:4])
                 dt_grandchildren_abs = np.abs(self.ghost_tree_dt_vector[4:])
@@ -201,7 +220,7 @@ class TreeCreationManager:
             # Собираем линки
             created_links.extend(tree_visual.child_links)
 
-            if self.tree_depth >= 2:
+            if depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
             # 3. Регистрируем линки в zoom_manager (используем уже присвоенные ID)
