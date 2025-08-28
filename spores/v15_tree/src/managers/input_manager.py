@@ -161,10 +161,10 @@ class InputManager:
             
             if ctrl_pressed:
                 # Ctrl + колесико = управление dt
-                if key == 'scroll up' and self.dt_manager:
+                if (key == 'e' or key == 'scroll up') and self.dt_manager:
                     self.dt_manager.increase_dt()
                     return
-                elif key == 'scroll down' and self.dt_manager:
+                elif (key == 't' or key == 'scroll down') and self.dt_manager:
                     self.dt_manager.decrease_dt()
                     return
             else:
