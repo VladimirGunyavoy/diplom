@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v15-tree"
+version = "0.15.0"
+description = "Backward dynamics & spore-tree playground with Ursina visualization"
+requires-python = ">=3.10"
+dependencies = [
+  "ursina",
+  "numpy",
+  "scipy",
+  "matplotlib",
+  "watchdog",
+  "numba",
+]

@@ -38,6 +38,18 @@ class PredictionManager:
 
         print(f"   ✓ Prediction Manager создан (управление: {self.min_control} .. {self.max_control})")
 
+        # ═══════════════════════════════════════════════════════════════
+        # 🚀 ОПТИМИЗАЦИЯ ЭТАП 1: Кэширование объектов предсказаний
+        # ═══════════════════════════════════════════════════════════════
+        
+        # Кэш созданных объектов предсказаний (избегаем пересоздания каждый кадр)
+        self._prediction_objects_cache = {}  # {cache_key: {'visualizers': [...], 'links': [...]}}
+        self._cache_initialized = False      # Флаг инициализации кэша
+        self._current_mode = None           # Текущий режим создания для инвалидации
+        self._current_tree_depth = None     # Текущая глубина дерева для инвалидации
+        
+        print("   🚀 Кэширование предсказаний инициализировано (Этап 1)")
+
     def update_predictions(self, preview_spore, preview_position_2d: np.ndarray, creation_mode: str, tree_depth: int, ghost_dt_vector=None) -> None:
         """
         Обновляет предсказания в зависимости от режима создания.
@@ -124,13 +136,13 @@ class PredictionManager:
 
                 # Создаем линк от превью споры к призраку
                 if prediction_viz.ghost_spore:
-                    # ✅ Направление строго по знаку dt:
-                    #   dt > 0  → preview → ghost (forward)
-                    #   dt < 0  → ghost → preview (backward)
-                    if config['dt'] > 0:
+                    # Для обратного направления меняем местами parent и child
+                    if config['direction'] == 'forward':
+                        # Вперед: превью → будущее состояние
                         parent_spore = preview_spore
                         child_spore = prediction_viz.ghost_spore
-                    else:
+                    else:  # backward
+                        # Назад: прошлое состояние → превью (показываем откуда пришли)
                         parent_spore = prediction_viz.ghost_spore
                         child_spore = preview_spore
 
@@ -142,11 +154,19 @@ class PredictionManager:
                         config=self.deps.config
                     )
 
-                    # ✅ Цвет только по знаку управления
-                    if config['control'] > 0:
-                        link_color_name = 'ghost_max'  # Красный для max
-                    else:
-                        link_color_name = 'ghost_min'  # Синий для min
+                    # Устанавливаем цвет линка в зависимости от управления
+                    if config['direction'] == 'forward':
+                        # Обычные цвета для линков вперед
+                        if 'min' in config['name']:
+                            link_color_name = 'ghost_min'  # Синий для min
+                        else:  # max
+                            link_color_name = 'ghost_max'  # Красный для max
+                    else:  # backward
+                        # Те же цвета для линков назад
+                        if 'min' in config['name']:
+                            link_color_name = 'ghost_min'  # Синий для min
+                        else:  # max
+                            link_color_name = 'ghost_max'  # Красный для max
 
                     prediction_link.color = self.deps.color_manager.get_color('link', link_color_name)
 
@@ -183,11 +203,10 @@ class PredictionManager:
             dt = self._get_current_dt()
 
             # Создаем конфиг дерева
-            factor = self.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
             tree_config = SporeTreeConfig(
                 initial_position=preview_position_2d.copy(),
                 dt_base=dt,
-                dt_grandchildren_factor=factor,
+                dt_grandchildren_factor=0.2,
                 show_debug=False
             )
 
@@ -337,27 +356,21 @@ class PredictionManager:
                 if ghost_viz and ghost_viz.ghost_spore:
                     grandchild_ghosts.append(ghost_viz.ghost_spore)
 
-        # Создаем призрачные линки от корня к детям
+        # Создаем призрачные линки от корня к детям с цветом по управлению
         for i, child_ghost in enumerate(child_ghosts):
             if child_ghost and i < len(tree_logic.children):
-                child_data = tree_logic.children[i]
-                
-                # ✅ Цвет только по знаку управления
-                link_color = 'ghost_max' if child_data['control'] > 0 else 'ghost_min'
+                # Получаем управление ребенка из данных дерева
+                child_control = tree_logic.children[i]['control']
 
-                # ✅ Направление строго по знаку dt:
-                #   dt > 0  → root(preview) → child
-                #   dt < 0  → child → root(preview)
-                if child_data['dt'] > 0:
-                    parent_spore = preview_spore
-                    child_link_spore = child_ghost
+                # Выбираем цвет в зависимости от знака управления
+                if child_control >= 0:
+                    link_color = 'ghost_max'  # Положительное управление - красный
                 else:
-                    parent_spore = child_ghost
-                    child_link_spore = preview_spore
+                    link_color = 'ghost_min'  # Отрицательное управление - синий
 
                 self._create_ghost_link(
-                    parent_spore,
-                    child_link_spore,
+                    preview_spore,
+                    child_ghost,
                     f"root_to_child_{i}",
                     link_color
                 )
@@ -371,24 +384,11 @@ class PredictionManager:
                     parent_idx = grandchild_data['parent_idx']
 
                     if parent_idx < len(child_ghosts) and child_ghosts[parent_idx]:
-                        # ✅ Цвет по знаку управления внука
-                        link_color = 'ghost_max' if grandchild_data['control'] > 0 else 'ghost_min'
-
-                        # ✅ Направление по знаку dt:
-                        #   dt > 0  → child → grandchild
-                        #   dt < 0  → grandchild → child
-                        if grandchild_data['dt'] > 0:
-                            parent_spore = child_ghosts[parent_idx]
-                            child_link_spore = grandchild_ghost
-                        else:
-                            parent_spore = grandchild_ghost
-                            child_link_spore = child_ghosts[parent_idx]
-
                         self._create_ghost_link(
-                            parent_spore,
-                            child_link_spore,
+                            child_ghosts[parent_idx],
+                            grandchild_ghost,
                             f"child_{parent_idx}_to_grandchild_{i}",
-                            link_color
+                            'ghost_min' if i % 2 == 0 else 'ghost_max'  # Чередуем цвета
                         )
 
     def _create_ghost_spore_from_data(self, spore_data, name_suffix, alpha):
@@ -447,10 +447,12 @@ class PredictionManager:
                 config=self.deps.config
             )
 
-            # ✅ Цвет с альфой из colors.json
+            # Устанавливаем цвет линка
             ghost_link.color = self.deps.color_manager.get_color('link', color_name)
-            # убрать принудительную установку alpha
-            # (если очень нужно — делайте это через colors.json или config)
+
+            # Делаем линк полупрозрачным
+            if hasattr(ghost_link, 'alpha'):
+                ghost_link.alpha = 0.6
 
             # Обновляем геометрию и регистрируем
             ghost_link.update_geometry()
@@ -464,36 +466,166 @@ class PredictionManager:
         except Exception as e:
             print(f"Ошибка создания призрачного линка {link_suffix}: {e}")
 
-    def clear_predictions(self) -> None:
-        """Очищает все предсказания и их линки."""
+    # ═══════════════════════════════════════════════════════════════
+    # 🚀 МЕТОДЫ КЭШИРОВАНИЯ - ЭТАП 1
+    # ═══════════════════════════════════════════════════════════════
 
-        # Призрачные споры больше не регистрируются в ZoomManager, просто уничтожаем визуализаторы
-        for viz in self.prediction_visualizers:
-            viz.destroy()
+    def _recreate_prediction_cache(self, creation_mode: str, tree_depth: int) -> None:
+        """
+        Пересоздает кэш объектов предсказаний (вызывается редко - только при смене режима).
+        
+        Args:
+            creation_mode: 'spores' или 'tree'  
+            tree_depth: глубина дерева для tree режима
+        """
+        # Очищаем старый кэш
+        self._clear_prediction_cache()
+        
+        cache_key = f"{creation_mode}_{tree_depth}"
+        print(f"🔄 Пересоздание кэша предсказаний: {cache_key}")
+        
+        if creation_mode == 'tree':
+            # TODO: Реализовать после тестирования spores режима
+            print(f"   ⚠️ Tree режим пока не оптимизирован, используем старую логику")
+            return
+        else:
+            # Для spores режима - создаем 4 стандартных предсказания
+            self._create_spore_prediction_cache()
+            
+        # Обновляем состояние кэша
+        self._cache_initialized = True
+        self._current_mode = creation_mode
+        self._current_tree_depth = tree_depth
+        
+        print(f"   ✅ Кэш создан: {len(self.prediction_visualizers)} предсказаний")
+
+    def _create_spore_prediction_cache(self) -> None:
+        """
+        Создает кэшированные объекты для режима 'spores' - 4 направления min/max x forward/backward.
+        """
         self.prediction_visualizers.clear()
-
-        # Очищаем линки предсказаний
-        for i, link in enumerate(self.prediction_links):
-            # Используем сохраненный ключ если есть
-            if hasattr(link, '_zoom_manager_key'):
-                try:
-                    self.deps.zoom_manager.unregister_object(link._zoom_manager_key)
-                except:
-                    pass
-            else:
-                # Fallback - используем сохраненный ключ линка если есть
-                link_key = getattr(link, '_zoom_manager_key', None)
-                if link_key:
-                    try:
-                        self.deps.zoom_manager.unregister_object(link_key)
-                    except:
-                        pass
-
-            try:
-                destroy(link)
-            except:
-                pass
         self.prediction_links.clear()
+        
+        # Временная позиция - будет обновлена в _update_cached_predictions_positions
+        temp_pos = np.array([0.0, 0.0], dtype=float)
+        
+        # Конфигурации для 4 предсказаний (как в существующем коде)
+        predictions_config = [
+            {'name': 'forward_min', 'control': self.min_control, 'direction': 'forward'},
+            {'name': 'forward_max', 'control': self.max_control, 'direction': 'forward'},
+            {'name': 'backward_min', 'control': self.min_control, 'direction': 'backward'},
+            {'name': 'backward_max', 'control': self.max_control, 'direction': 'backward'}
+        ]
+        
+        for config in predictions_config:
+            # Создаем PredictionVisualizer (аналогично существующему коду)
+            prediction_viz = PredictionVisualizer(
+                parent_spore=None,  # Пока None, обновим при первом использовании
+                color_manager=self.deps.color_manager,
+                zoom_manager=self.deps.zoom_manager,
+                cost_function=None,
+                config={
+                    'spore': {'show_ghosts': True},
+                    'angel': {'show_angels': False, 'show_pillars': False}
+                },
+                spore_id=self.deps.zoom_manager.get_unique_spore_id()
+            )
+            
+            # Сохраняем конфигурацию в объекте для быстрого доступа
+            prediction_viz.name = config['name']  # Добавляем name для идентификации
+            
+            # Временно устанавливаем позицию в [0,0]
+            if prediction_viz.ghost_spore:
+                prediction_viz.update_position_only(temp_pos)
+            
+            self.prediction_visualizers.append(prediction_viz)
+
+    def _update_cached_predictions_positions(self, preview_spore, preview_position_2d: np.ndarray,
+                                           creation_mode: str, tree_depth: int, ghost_dt_vector=None) -> None:
+        """
+        БЫСТРОЕ обновление позиций кэшированных объектов (каждый кадр).
+        НЕ создает новые объекты, только обновляет positions используя update_position_only().
+        
+        Args:
+            preview_spore: превью спора
+            preview_position_2d: позиция превью
+            creation_mode: режим создания
+            tree_depth: глубина дерева
+            ghost_dt_vector: вектор dt для tree режима
+        """
+        if creation_mode == 'tree':
+            # TODO: быстрое обновление для tree режима
+            print("   ⚠️ Tree режим - быстрое обновление пока не реализовано")
+            return
+            
+        # Для spores режима - обновляем 4 предсказания
+        dt = self._get_current_dt()
+        
+        for prediction_viz in self.prediction_visualizers:
+            if not prediction_viz.ghost_spore or not hasattr(prediction_viz, 'name'):
+                continue
+                
+            # Определяем параметры из имени (кэшированная конфигурация)
+            if 'max' in prediction_viz.name:
+                control = self.max_control
+            else:
+                control = self.min_control
+                
+            if 'forward' in prediction_viz.name:
+                dt_direction = dt  # положительный dt
+            else:
+                dt_direction = -dt  # отрицательный dt для backward
+            
+            # Вычисляем новую позицию предсказания
+            try:
+                predicted_pos = self.deps.pendulum.step(
+                    state=preview_position_2d,
+                    control=control,
+                    dt=dt_direction
+                )
+                
+                # БЫСТРОЕ ОБНОВЛЕНИЕ - используем новый оптимизированный метод!
+                prediction_viz.update_position_only(predicted_pos)
+                
+            except Exception as e:
+                print(f"   ❌ Ошибка обновления предсказания {prediction_viz.name}: {e}")
+
+    def _clear_prediction_cache(self) -> None:
+        """
+        Очищает кэш предсказаний и освобождает ресурсы.
+        """
+        # Очищаем visualizers
+        for viz in self.prediction_visualizers:
+            try:
+                # Дерегистрируем из zoom_manager если было зарегистрировано
+                if hasattr(viz, '_zoom_manager_key'):
+                    self.deps.zoom_manager.unregister_object(viz._zoom_manager_key)
+                # Уничтожаем объект
+                viz.destroy()
+            except Exception as e:
+                print(f"   ⚠️ Ошибка при удалении visualizer: {e}")
+                
+        # Очищаем links (пока не используем в кэше)
+        for link in self.prediction_links:
+            try:
+                if hasattr(link, '_zoom_manager_key'):
+                    self.deps.zoom_manager.unregister_object(link._zoom_manager_key)
+                destroy(link)
+            except Exception as e:
+                print(f"   ⚠️ Ошибка при удалении link: {e}")
+                
+        self.prediction_visualizers.clear()
+        self.prediction_links.clear()
+
+    def clear_predictions(self) -> None:
+        """Публичный метод очистки (для обратной совместимости)."""
+        # Вызываем новый метод очистки кэша
+        self._clear_prediction_cache()
+        
+        # Сбрасываем состояние кэша
+        self._cache_initialized = False
+        self._current_mode = None
+        self._current_tree_depth = None
 
     def set_show_predictions(self, enabled: bool) -> None:
         """Включает/выключает показ предсказаний."""

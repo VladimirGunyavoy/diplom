@@ -56,5 +56,8 @@
     "enable_detailed_evolution": false,
     "enable_candidate_logging": false,
     "enable_trajectory_logging": false
+  },
+  "tree": {
+    "dt_grandchildren_factor": 0.1
   }
 } 

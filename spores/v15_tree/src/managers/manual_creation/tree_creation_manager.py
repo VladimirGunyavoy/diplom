@@ -129,26 +129,42 @@ class TreeCreationManager:
                 if depth >= 2:
                     tree_logic.create_grandchildren()
             else:
-                # Создаем обычное дерево с автоматическими dt
-                print(f"🌲 Создаем автоматическое дерево")
+                # Создаем обычное дерево ТОЧНО как в превью: явные dt + единый пересчет
+                print(f"🌲 Создаем дерево без паринга (dt как в превью)")
+
+                factor = self.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
 
                 tree_config = SporeTreeConfig(
                     initial_position=tree_position,
                     dt_base=dt
                 )
 
+                # Положительные dt-массивы (как ожидает SporeTree.create_*):
+                dt_children_abs = np.ones(4, dtype=float) * dt
+                dt_grandchildren_abs = np.ones(8, dtype=float) * (dt * factor)
+
                 tree_logic = SporeTree(
                     pendulum=self.deps.pendulum,
                     config=tree_config,
-                    auto_create=True
+                    auto_create=False
                 )
-                
-                # Создаем детей (всегда)
-                tree_logic.create_children()
-                
-                # Создаем внуков если нужна глубина 2
+
+                # Создаем детей/внуков ровно один раз и с явными массивами
+                tree_logic.create_children(dt_children=dt_children_abs)
                 if depth >= 2:
-                    tree_logic.create_grandchildren()
+                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren_abs)
+
+                # Синтетический подписанный вектор (как в превью)
+                dt_children_signed = np.array([+dt, -dt, +dt, -dt], dtype=float)
+                base_gc = dt * factor
+                dt_grandchildren_signed = np.array(
+                    [ +base_gc, -base_gc,  +base_gc, -base_gc,  +base_gc, -base_gc,  +base_gc, -base_gc ],
+                    dtype=float
+                )
+                synthetic_dt_vector = np.concatenate([dt_children_signed, dt_grandchildren_signed])
+
+                # Принудительно пересчитываем позиции и dt в данных дерева
+                self._recalculate_positions_with_new_dt(tree_logic, synthetic_dt_vector, tree_position)
 
             # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересчитываем позиции с новыми dt
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
@@ -291,6 +307,7 @@ class TreeCreationManager:
                     new_position = self.deps.pendulum.step(initial_position, control, new_dt)
                     # Обновляем позицию в данных дерева
                     child_data['position'] = new_position
+                    child_data['dt'] = new_dt  # ← ВАЖНО: синхронизируем знак/величину dt с превью
                     
                     print(f"      Ребенок {i}: dt={new_dt:+.6f}, control={control:+.6f}, pos → {new_position}")
             
@@ -309,6 +326,7 @@ class TreeCreationManager:
                             new_position = self.deps.pendulum.step(parent_position, control, new_dt)
                             # Обновляем позицию в данных дерева
                             grandchild_data['position'] = new_position
+                            grandchild_data['dt'] = new_dt  # ← ВАЖНО
                             
                             print(f"      Внук {i}: dt={new_dt:+.6f}, control={control:+.6f}, parent_idx={parent_idx}, pos → {new_position}")
             
