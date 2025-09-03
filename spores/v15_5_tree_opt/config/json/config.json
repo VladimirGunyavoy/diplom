@@ -66,10 +66,20 @@
     "dt_grandchildren_factor": 0.1,
     "area_optimization": {
       "enabled": true,
-      "constraint_distance": 1e-4,
+      "constraint_distance": 1e-3,
       "dt_bounds": [0.001, 0.2],
       "max_iterations": 1500,
       "method": "SLSQP"
+    },
+    "pairing": {
+      "enabled": true,
+      "show_debug": true,
+      "dt_grandchildren_factor": 0.2,
+      "max_pairs": 4,
+      "min_distance_threshold": 0.01,
+      "max_distance_threshold": 1.0,
+      "time_precision": 1e-6,
+      "position_precision": 1e-6
     }
   }
 } 
