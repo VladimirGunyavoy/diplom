@@ -206,6 +206,47 @@ class InputManager:
                 self.dt_manager.reset_dt()
             return
 
+        if key == '[':  # Reset all dt to standard mode
+            # 1. Сбрасываем общий dt через dt_manager (как клавиша M)
+            if self.dt_manager:
+                self.dt_manager.reset_dt()
+            
+            # 2. Сбрасываем ghost_tree_dt_vector к стандартным значениям
+            if self.manual_spore_manager:
+                # Получаем текущий dt после сброса
+                current_dt = self.dt_manager.get_dt() if self.dt_manager else 0.001
+                
+                # Получаем фактор для внуков из конфигурации
+                factor = 0.05  # дефолтное значение
+                if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'deps'):
+                    factor = self.manual_spore_manager.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
+                
+                # Формируем стандартный dt_vector: 4 детей + 8 внуков
+                dt_children = np.array([+current_dt, -current_dt, +current_dt, -current_dt], dtype=float)
+                base_gc = current_dt * factor
+                dt_grandchildren = np.array([
+                    +base_gc, -base_gc, +base_gc, -base_gc,
+                    +base_gc, -base_gc, +base_gc, -base_gc
+                ], dtype=float)
+                
+                standard_dt_vector = np.concatenate([dt_children, dt_grandchildren])
+                
+                # Устанавливаем стандартный вектор
+                self.manual_spore_manager.ghost_tree_dt_vector = standard_dt_vector
+                
+                # Обновляем предсказания
+                if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                    self.manual_spore_manager.prediction_manager.clear_predictions()
+                    self.manual_spore_manager._update_predictions()
+                
+                print(f"🔄 Все dt сброшены к стандартным значениям:")
+                print(f"   📊 Общий dt: {current_dt}")
+                print(f"   📊 dt детей: {dt_children}")
+                print(f"   📊 dt внуков (factor={factor}): {dt_grandchildren}")
+                print(f"   📊 Полный dt_vector: {standard_dt_vector}")
+            
+            return
+
         # 4. Показ статистики dt
         if key == 'j':  # Show dt info
             if self.dt_manager:
