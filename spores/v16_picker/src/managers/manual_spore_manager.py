@@ -122,7 +122,7 @@ class ManualSporeManager:
             # print(f"   preview_enabled: {self.preview_manager.preview_enabled}")
         
         if not self.preview_manager.preview_enabled:
-            print("   STOP: preview отключен")
+            # print("   STOP: preview отключен")  # Убрано спам-сообщение
             return
 
         # Получаем правильную позицию курсора мыши
@@ -130,7 +130,7 @@ class ManualSporeManager:
         # print(f"   mouse_pos: {mouse_pos}")
         
         if mouse_pos is None:
-            print("   STOP: mouse_pos = None")
+            # print("   STOP: mouse_pos = None")  # Убрано спам-сообщение
             return
 
         # Используем PreviewManager для обновления позиции
@@ -143,7 +143,8 @@ class ManualSporeManager:
             # print("   Вызываем _update_predictions...")
             self._update_predictions()
         else:
-            print("   SKIP: предсказания отключены")
+            # print("   SKIP: предсказания отключены")  # Убрано спам-сообщение
+            pass
 
     def _update_predictions(self) -> None:
         """Обновляет предсказания в зависимости от режима создания."""

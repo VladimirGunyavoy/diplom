@@ -45,7 +45,6 @@ class InputManager:
         self.scene_setup: Optional[SceneSetup] = scene_setup
         self.zoom_manager: Optional[ZoomManager] = zoom_manager
         self.spore_manager: Optional[SporeManager] = spore_manager
-        self.dt_manager: Optional['DTManager'] = dt_manager
         self.spawn_area_manager: Optional[SpawnAreaManager] = spawn_area_manager
         self.param_manager: Optional[ParamManager] = param_manager
         self.ui_setup: Optional[UI_setup] = ui_setup
@@ -202,7 +201,7 @@ class InputManager:
             },
             
             # === ПРИЗРАКИ ===
-            ':': {
+            ';': {
                 'description': 'включить/выключить призрачную систему', 
                 'handler': self._handle_toggle_ghosts,
                 'category': 'призраки',
@@ -215,6 +214,74 @@ class InputManager:
                 'handler': self._handle_debug_toggle,
                 'category': 'отладка',
                 'enabled': lambda: True
+            },
+            
+            # === СПРАВКА ===
+            'n': {
+                'description': 'показать справку по всем командам',
+                'handler': self._handle_help,
+                'category': 'справка',
+                'enabled': lambda: True
+            },
+            
+            # === ДВИЖЕНИЕ КАМЕРЫ ===
+            'w': {
+                'description': 'движение камеры вперед',
+                'handler': self._handle_move_forward,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            's': {
+                'description': 'движение камеры назад',
+                'handler': self._handle_move_backward,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            'a': {
+                'description': 'движение камеры влево',
+                'handler': self._handle_move_left,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            'd': {
+                'description': 'движение камеры вправо',
+                'handler': self._handle_move_right,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            'space': {
+                'description': 'движение камеры вверх',
+                'handler': self._handle_move_up,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            'shift': {
+                'description': 'движение камеры вниз',
+                'handler': self._handle_move_down,
+                'category': 'движение',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            
+            # === КУРСОР ===
+            'alt': {
+                'description': 'переключить захват курсора',
+                'handler': self._handle_toggle_cursor,
+                'category': 'курсор',
+                'enabled': lambda: self.scene_setup is not None
+            },
+            
+            # === КОЛЕСИКО МЫШИ ===
+            'scroll up': {
+                'description': 'приблизить камеру (колесико вверх)',
+                'handler': self._handle_scroll_up,
+                'category': 'зум',
+                'enabled': lambda: self.zoom_manager is not None
+            },
+            'scroll down': {
+                'description': 'отдалить камеру (колесико вниз)',
+                'handler': self._handle_scroll_down,
+                'category': 'зум',
+                'enabled': lambda: self.zoom_manager is not None
             }
         }
         
@@ -245,6 +312,36 @@ class InputManager:
                 
         print("\n💡 Легенда: ✅ - доступно, ❌ - менеджер отключен")
         print("=" * 50)
+        
+        # Добавляем список всех занятых клавиш
+        print("\n🎹 ЗАНЯТЫЕ КЛАВИШИ:")
+        print("=" * 30)
+        
+        # Разбиваем клавиши на категории
+        digits = []
+        letters = []
+        combinations = []
+        
+        for key in self.commands.keys():
+            if key.isdigit():
+                digits.append(key.upper())
+            elif len(key) == 1 and key.isalpha():
+                letters.append(key.upper())
+            else:
+                combinations.append(key.upper())
+        
+        # Выводим по категориям
+        if digits:
+            print(f"   ЦИФРЫ: {', '.join(sorted(digits))}")
+        if letters:
+            print(f"   БУКВЫ: {', '.join(sorted(letters))}")
+        if combinations:
+            print(f"   КОМБИНАЦИИ: {', '.join(sorted(combinations))}")
+        
+        # Подсчитываем общее количество
+        total_keys = len(self.commands)
+        print(f"\n📊 Всего занято клавиш: {total_keys}")
+        print("=" * 30)
 
     def get_free_keys(self) -> list:
         """Возвращает список свободных клавиш."""
@@ -424,10 +521,76 @@ class InputManager:
         status = "ВКЛЮЧЕНА" if self.debug_ghost_tree else "ОТКЛЮЧЕНА"
         print(f"🔍 Детальная отладка призрачного дерева: {status}")
 
+    def _handle_help(self):
+        """Обработчик вывода справки (N)."""
+        self.print_commands_help()
+
+    def _handle_move_forward(self):
+        """Обработчик движения вперед (W)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['w']:  # type: ignore
+                self.scene_setup.player.y += self.scene_setup.base_speed * 0.016  # Примерно 60 FPS
+
+    def _handle_move_backward(self):
+        """Обработчик движения назад (S)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['s']:  # type: ignore
+                self.scene_setup.player.y -= self.scene_setup.base_speed * 0.016
+
+    def _handle_move_left(self):
+        """Обработчик движения влево (A)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['a']:  # type: ignore
+                self.scene_setup.player.x -= self.scene_setup.base_speed * 0.016
+
+    def _handle_move_right(self):
+        """Обработчик движения вправо (D)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['d']:  # type: ignore
+                self.scene_setup.player.x += self.scene_setup.base_speed * 0.016
+
+    def _handle_move_up(self):
+        """Обработчик движения вверх (Space)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['space']:  # type: ignore
+                self.scene_setup.player.y += self.scene_setup.base_speed * 0.016
+
+    def _handle_move_down(self):
+        """Обработчик движения вниз (Shift)."""
+        if self.scene_setup and self.scene_setup.player:
+            from ursina import held_keys
+            if held_keys['shift']:  # type: ignore
+                self.scene_setup.player.y -= self.scene_setup.base_speed * 0.016
+
+    def _handle_toggle_cursor(self):
+        """Обработчик переключения захвата курсора (Alt)."""
+        print(f"[InputManager] Alt обработан в InputManager")
+        if self.scene_setup:
+            self.scene_setup.toggle_freeze()
+
+    def _handle_scroll_up(self):
+        """Обработчик колесика мыши вверх (приближение)."""
+        if self.zoom_manager:
+            self.zoom_manager.zoom_in()
+
+    def _handle_scroll_down(self):
+        """Обработчик колесика мыши вниз (отдаление)."""
+        if self.zoom_manager:
+            self.zoom_manager.zoom_out()
+
     def handle_input(self, key: str) -> None:
         """
         Новый централизованный обработчик команд через командную систему.
         """
+        # Фильтруем события типа 'left alt up', 'right shift down', 'control' и т.д.
+        if (' ' in key and any(direction in key.lower() for direction in ['up', 'down', 'left', 'right'])) or key == 'control':
+            return  # Игнорируем события нажатия/отпускания модификаторов
+        
         # Проверяем есть ли команда для данной клавиши
         if key in self.commands:
             cmd_info = self.commands[key]
@@ -457,13 +620,6 @@ class InputManager:
         # Неизвестная команда
         else:
             print(f"❓ Неизвестная команда: '{key}'. Нажмите 'N' для справки")
-
-        # 🔍 Переключение детальной отладки призрачного дерева
-        if key == 'h':
-            self.debug_ghost_tree = not self.debug_ghost_tree
-            status = "ВКЛЮЧЕНА" if self.debug_ghost_tree else "ОТКЛЮЧЕНА"
-            print(f"🔍 Детальная отладка призрачного дерева: {status}")
-            return
 
     def _apply_optimal_pairs_to_ghost_tree(self) -> None:
         """

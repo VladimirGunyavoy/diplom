@@ -59,19 +59,34 @@ class SceneSetup:
         self.player.rotation_y = init_rotation_y
         
         # Новый флаг для "заморозки" ввода
+        # input_frozen = False означает, что курсор захвачен (по умолчанию)
+        # input_frozen = True означает, что курсор освобожден
         self.input_frozen: bool = False
         
+        # Флаг для передачи управления в InputManager
+        self.input_manager_mode: bool = False
+        
+        # Курсор заблокирован по умолчанию (захвачен в приложении)
         self.cursor_locked: bool = True
-        mouse.locked = self.cursor_locked
+        
+        # Принудительно захватываем курсор
+        mouse.locked = True
+        mouse.visible = False  # Скрываем курсор мыши
         
         window.color = self.color_manager.get_color('scene', 'window_background')
-        
-        # Add flag for tracking cursor state
-        self.cursor_locked = True
         
         # UI теперь полностью управляется через UI_setup, не создаем здесь
         
         # Управление UI переместилось в UI_setup
+        
+        # Принудительно устанавливаем состояние курсора в конце инициализации
+        self._update_cursor_state()
+        
+    def _update_cursor_state(self) -> None:
+        """Обновляет состояние курсора в соответствии с флагом input_frozen."""
+        mouse.locked = not self.input_frozen
+        mouse.visible = self.input_frozen
+        print(f"[SceneSetup] Курсор установлен: locked={mouse.locked}, visible={mouse.visible}")
         
     def update_position_info(self) -> None:
         """Обновляется автоматически через UI Manager"""
@@ -82,15 +97,22 @@ class SceneSetup:
         """Переключает режим 'заморозки' всего ввода."""
         self.input_frozen = not self.input_frozen
         
-        # Блокируем/разблокируем мышь и игрока
-        mouse.locked = not self.input_frozen
+        # Обновляем состояние курсора
+        self._update_cursor_state()
+        
+        # Блокируем/разблокируем игрока
         self.player.enabled = not self.input_frozen
         
-        print(f"[SceneSetup] toggle_freeze called. New state: input_frozen={self.input_frozen}")
+        status = "освобожден" if self.input_frozen else "захвачен"
+        print(f"[SceneSetup] Курсор {status} (input_frozen={self.input_frozen})")
 
     def update(self, dt: float) -> None:
         """Updates additional parameters not included in FirstPersonController"""
-        # Эта проверка должна выполняться всегда, чтобы можно было "разморозить" ввод
+        # Если включен режим InputManager, не обрабатываем ничего здесь
+        if self.input_manager_mode:
+            return
+            
+        # Эта проверка должна выполняться только если НЕ включен режим InputManager
         if held_keys['alt'] and not hasattr(self, 'alt_timer'):
             self.alt_timer = time.time()
         
@@ -109,6 +131,10 @@ class SceneSetup:
     
     def input_handler(self, key: str) -> None:
         """Input handler for program closing and speed control"""
+        # Если включен режим InputManager, не обрабатываем клавиши здесь
+        if self.input_manager_mode:
+            return
+            
         if key == 'q':
             application.quit()
         
@@ -120,3 +146,14 @@ class SceneSetup:
     def set_visual_manager(self, visual_manager: 'VisualManager') -> None:
         """Позволяет передать visual_manager после инициализации."""
         self.visual_manager = visual_manager
+
+    def enable_input_manager_mode(self, enabled: bool = True) -> None:
+        """Включает или выключает режим передачи управления в InputManager."""
+        self.input_manager_mode = enabled
+        print(f"[SceneSetup] InputManager режим {'включен' if enabled else 'выключен'}")
+        
+        # Если включаем режим InputManager, отключаем обработку движения в FirstPersonController
+        if enabled:
+            self.player.enabled = False
+        else:
+            self.player.enabled = True
