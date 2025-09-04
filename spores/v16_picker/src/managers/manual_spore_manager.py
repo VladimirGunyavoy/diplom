@@ -182,6 +182,41 @@ class ManualSporeManager:
 
 
 
+    def toggle_ghost_system(self):
+        """
+        Переключает видимость всей призрачной системы.
+        Управляет preview_manager и prediction_manager синхронно.
+        
+        Returns:
+            bool: новое состояние (True = включено)
+        """
+        # Получаем текущее состояние от preview_manager
+        current_state = self.preview_manager.preview_enabled
+        new_state = not current_state
+        
+        # Переключаем preview spore
+        self.preview_manager.preview_enabled = new_state
+        
+        # Переключаем predictions
+        self.prediction_manager.show_predictions = new_state
+        
+        # Если отключаем - очищаем все призрачные объекты
+        if not new_state:
+            self.prediction_manager.clear_predictions()
+            # Скрываем preview spore если существует
+            if self.preview_manager.preview_spore:
+                self.preview_manager.preview_spore.visible = False
+        else:
+            # Если включаем - показываем preview spore обратно
+            if self.preview_manager.preview_spore:
+                self.preview_manager.preview_spore.visible = True
+        
+        # Информативный вывод
+        state_name = "включена" if new_state else "отключена"
+        print(f"👻 Призрачная система {state_name}")
+        
+        return new_state
+
     def _destroy_preview(self) -> None:
         """Уничтожает предсказания и их линки."""
         self.prediction_manager.clear_predictions()

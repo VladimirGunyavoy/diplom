@@ -73,191 +73,6 @@ class InputManager:
             self.dt_manager.subscribe_on_change(self._on_dt_changed)
             print("[IM] subscribed to DTManager.on_change")
 
-        # 🆕 v16: Командная система
-        self._setup_command_system()
-
-    def _setup_command_system(self):
-        """Настраивает централизованную командную систему."""
-        self.commands = {
-            # === СПОРЫ ===
-            'f': {
-                'description': 'новая спора от последней (эволюция)',
-                'handler': self._handle_spore_creation,
-                'category': 'споры',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            'g': {
-                'description': 'активировать случайную кандидатскую спору', 
-                'handler': self._handle_candidate_activation,
-                'category': 'споры',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            'v': {
-                'description': 'развить всех кандидатов до завершения',
-                'handler': self._handle_evolve_all,
-                'category': 'споры', 
-                'enabled': lambda: self.spore_manager is not None
-            },
-            
-            # === ZOOM ===
-            'e': {
-                'description': 'приблизить камеру',
-                'handler': self._handle_zoom_in,
-                'category': 'зум',
-                'enabled': lambda: self.zoom_manager is not None
-            },
-            't': {
-                'description': 'отдалить камеру',
-                'handler': self._handle_zoom_out,
-                'category': 'зум',
-                'enabled': lambda: self.zoom_manager is not None
-            },
-            'r': {
-                'description': 'сброс всех трансформаций зума',
-                'handler': self._handle_zoom_reset,
-                'category': 'зум',
-                'enabled': lambda: self.zoom_manager is not None
-            },
-            '1': {
-                'description': 'уменьшить масштаб спор',
-                'handler': self._handle_spores_scale_down,
-                'category': 'зум',
-                'enabled': lambda: self.zoom_manager is not None
-            },
-            '2': {
-                'description': 'увеличить масштаб спор',
-                'handler': self._handle_spores_scale_up,
-                'category': 'зум',
-                'enabled': lambda: self.zoom_manager is not None
-            },
-            
-            # === КАНДИДАТЫ ===
-            '5': {
-                'description': 'уменьшить радиус генерации кандидатов',
-                'handler': self._handle_candidates_radius_down,
-                'category': 'кандидаты',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            '6': {
-                'description': 'увеличить радиус генерации кандидатов',
-                'handler': self._handle_candidates_radius_up,
-                'category': 'кандидаты',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            
-            # === ВИЗУАЛИЗАЦИЯ ===
-            'y': {
-                'description': 'включить/выключить ангелов',
-                'handler': self._handle_toggle_angels,
-                'category': 'визуализация',
-                'enabled': lambda: self.angel_manager is not None
-            },
-            'u': {
-                'description': 'переключить видимость системы координат',
-                'handler': self._handle_toggle_frame,
-                'category': 'визуализация',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            
-            # === DT & ВРЕМЯ ===
-            'm': {
-                'description': 'сбросить dt к исходному значению',
-                'handler': self._handle_dt_reset,
-                'category': 'время',
-                'enabled': lambda: self.dt_manager is not None
-            },
-            'j': {
-                'description': 'показать статистику dt',
-                'handler': self._handle_dt_stats,
-                'category': 'время',
-                'enabled': lambda: self.dt_manager is not None
-            },
-            
-            # === ОПТИМИЗАЦИЯ ===
-            'p': {
-                'description': 'применить оптимальные пары к призрачному дереву',
-                'handler': self._handle_optimal_pairs,
-                'category': 'оптимизация',
-                'enabled': lambda: self.manual_spore_manager is not None
-            },
-            
-            # === ДЕРЕВЬЯ ===  
-            'k': {
-                'description': 'переключить режим создания (споры/деревья)',
-                'handler': self._handle_toggle_creation_mode,
-                'category': 'деревья',
-                'enabled': lambda: self.manual_spore_manager is not None
-            },
-            '7': {
-                'description': 'глубина дерева = 1',
-                'handler': self._handle_tree_depth_1,
-                'category': 'деревья',
-                'enabled': lambda: self._is_tree_mode()
-            },
-            '8': {
-                'description': 'глубина дерева = 2',
-                'handler': self._handle_tree_depth_2,
-                'category': 'деревья',
-                'enabled': lambda: self._is_tree_mode()
-            },
-            
-            # === ПРИЗРАКИ ===
-            ':': {
-                'description': 'включить/выключить призрачную систему', 
-                'handler': self._handle_toggle_ghosts,
-                'category': 'призраки',
-                'enabled': lambda: self.manual_spore_manager is not None
-            },
-            
-            # === ОТЛАДКА ===
-            'h': {
-                'description': 'переключить детальную отладку призрачного дерева',
-                'handler': self._handle_debug_toggle,
-                'category': 'отладка',
-                'enabled': lambda: True
-            }
-        }
-        
-        print(f"✅ Командная система настроена: {len(self.commands)} команд")
-
-    def get_commands_by_category(self) -> dict:
-        """Группирует команды по категориям для генерации справки."""
-        categories = {}
-        for key, cmd_info in self.commands.items():
-            category = cmd_info['category']
-            if category not in categories:
-                categories[category] = []
-            categories[category].append((key, cmd_info['description']))
-        return categories
-
-    def print_commands_help(self):
-        """Выводит справку по всем доступным командам."""
-        print("\n📋 СПРАВКА ПО КОМАНДАМ:")
-        print("=" * 50)
-        
-        categories = self.get_commands_by_category()
-        for category, commands in categories.items():
-            print(f"\n🎯 {category.upper()}:")
-            for key, desc in commands:
-                enabled = self.commands[key]['enabled']()
-                status = "✅" if enabled else "❌" 
-                print(f"   {status} {key.upper()}: {desc}")
-                
-        print("\n💡 Легенда: ✅ - доступно, ❌ - менеджер отключен")
-        print("=" * 50)
-
-    def get_free_keys(self) -> list:
-        """Возвращает список свободных клавиш."""
-        all_keys = set('abcdefghijklmnopqrstuvwxyz1234567890')
-        used_keys = set(self.commands.keys())
-        return sorted(list(all_keys - used_keys))
-
-    def _is_tree_mode(self) -> bool:
-        """Проверяет активен ли режим дерева."""
-        return (self.manual_spore_manager is not None and 
-                hasattr(self.manual_spore_manager, 'creation_mode') and
-                self.manual_spore_manager.creation_mode == 'tree')
-
     def update(self) -> None:
         """
         Этот метод должен вызываться каждый кадр для обработки непрерывного ввода.
@@ -285,179 +100,425 @@ class InputManager:
             # Сбрасываем таймер если клавиша не нажата
             self.f_key_down_time = 0
 
-    # === ОБРАБОТЧИКИ КОМАНД ===
-    
-    def _handle_spore_creation(self):
-        """Обработчик создания новой споры (F)."""
-        if self.spore_manager:
-            self.spore_manager.generate_new_spore()
-        # Запускаем таймеры для возможной непрерывной генерации
-        now = time.time()
-        self.f_key_down_time = now
-        self.next_spawn_time = now + self.long_press_threshold
-
-    def _handle_candidate_activation(self):
-        """Обработчик активации кандидата (G)."""
-        if self.spore_manager:
-            self.spore_manager.activate_random_candidate()
-
-    def _handle_evolve_all(self):
-        """Обработчик эволюции всех кандидатов (V)."""
-        if self.spore_manager:
-            self.spore_manager.evolve_all_candidates_to_completion()
-
-    def _handle_zoom_in(self):
-        """Обработчик приближения камеры (E)."""
-        if self.zoom_manager:
-            self.zoom_manager.zoom_in()
-
-    def _handle_zoom_out(self):
-        """Обработчик отдаления камеры (T)."""
-        if self.zoom_manager:
-            self.zoom_manager.zoom_out()
-
-    def _handle_zoom_reset(self):
-        """Обработчик сброса зума (R)."""
-        if self.zoom_manager:
-            self.zoom_manager.reset_zoom()
-
-    def _handle_spores_scale_down(self):
-        """Обработчик уменьшения масштаба спор (1)."""
-        if self.zoom_manager:
-            self.zoom_manager.decrease_spores_scale()
-
-    def _handle_spores_scale_up(self):
-        """Обработчик увеличения масштаба спор (2)."""
-        if self.zoom_manager:
-            self.zoom_manager.increase_spores_scale()
-
-    def _handle_candidates_radius_down(self):
-        """Обработчик уменьшения радиуса кандидатов (5)."""
-        if self.spore_manager:
-            self.spore_manager.adjust_min_radius(1/1.2)
-
-    def _handle_candidates_radius_up(self):
-        """Обработчик увеличения радиуса кандидатов (6)."""
-        if self.spore_manager:
-            self.spore_manager.adjust_min_radius(1.2)
-
-    def _handle_toggle_angels(self):
-        """Обработчик переключения ангелов (Y)."""
-        if self.angel_manager:
-            self.angel_manager.toggle_angels()
-
-    def _handle_toggle_frame(self):
-        """Обработчик переключения системы координат (U)."""
-        if self.scene_setup and hasattr(self.scene_setup, 'frame'):
-            self.scene_setup.frame.toggle_visibility()
-
-    def _handle_dt_reset(self):
-        """Обработчик сброса dt (M).""" 
-        # Комплексный сброс как в оригинале
-        if self.dt_manager:
-            self.dt_manager.reset_dt()
-        
-        if self.manual_spore_manager:
-            # Получаем текущий dt после сброса  
-            current_dt = self.dt_manager.get_dt() if self.dt_manager else 0.001
-            factor = 0.05
-            if hasattr(self.manual_spore_manager, 'deps'):
-                factor = self.manual_spore_manager.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
-            
-            # Формируем стандартный dt_vector
-            dt_children = np.array([+current_dt, -current_dt, +current_dt, -current_dt], dtype=float)
-            base_gc = current_dt * factor
-            dt_grandchildren = np.array([
-                +base_gc, -base_gc, +base_gc, -base_gc,
-                +base_gc, -base_gc, +base_gc, -base_gc
-            ], dtype=float)
-            
-            standard_dt_vector = np.concatenate([dt_children, dt_grandchildren])
-            self.manual_spore_manager.ghost_tree_dt_vector = standard_dt_vector
-            
-            # Обновляем предсказания
-            if hasattr(self.manual_spore_manager, 'prediction_manager'):
-                self.manual_spore_manager.prediction_manager.clear_predictions()
-                self.manual_spore_manager._update_predictions()
-            
-            print(f"🔄 Все dt сброшены к стандартным значениям")
-
-    def _handle_dt_stats(self):
-        """Обработчик статистики dt (J)."""
-        if self.dt_manager:
-            self.dt_manager.print_stats()
-
-    def _handle_optimal_pairs(self):
-        """Обработчик оптимальных пар (P)."""
-        if self.manual_spore_manager:
-            self._apply_optimal_pairs_to_ghost_tree()
-
-    def _handle_toggle_creation_mode(self):
-        """Обработчик переключения режима создания (K)."""
-        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'toggle_creation_mode'):
-            self.manual_spore_manager.toggle_creation_mode()
-
-    def _handle_tree_depth_1(self):
-        """Обработчик установки глубины дерева = 1 (7)."""
-        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'set_tree_depth'):
-            self.manual_spore_manager.set_tree_depth(1)
-
-    def _handle_tree_depth_2(self):
-        """Обработчик установки глубины дерева = 2 (8).""" 
-        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'set_tree_depth'):
-            self.manual_spore_manager.set_tree_depth(2)
-
-    def _handle_toggle_ghosts(self):
-        """🆕 Обработчик переключения призрачной системы (:)."""
-        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'toggle_ghost_system'):
-            new_state = self.manual_spore_manager.toggle_ghost_system()
-            if new_state:
-                print("   💡 Подсказка: призраки снова следуют за курсором")
-            else:
-                print("   💡 Подсказка: теперь виден только чистый курсор")
-        else:
-            print("⚠️ ManualSporeManager или метод toggle_ghost_system не найден")
-
-    def _handle_debug_toggle(self):
-        """Обработчик переключения отладки (H)."""
-        self.debug_ghost_tree = not self.debug_ghost_tree
-        status = "ВКЛЮЧЕНА" if self.debug_ghost_tree else "ОТКЛЮЧЕНА"
-        print(f"🔍 Детальная отладка призрачного дерева: {status}")
-
     def handle_input(self, key: str) -> None:
         """
-        Новый централизованный обработчик команд через командную систему.
+        Основной метод-обработчик. Вызывается из главного цикла приложения.
         """
-        # Проверяем есть ли команда для данной клавиши
-        if key in self.commands:
-            cmd_info = self.commands[key]
-            
-            # Проверяем доступность команды
-            if cmd_info['enabled']():
-                try:
-                    cmd_info['handler']()
-                except Exception as e:
-                    print(f"❌ Ошибка выполнения команды '{key}': {e}")
-            else:
-                print(f"⚠️ Команда '{key}' недоступна (отключен {cmd_info['category']} менеджер)")
-            return
-        
-        # Обработка специальной команды Ctrl+C через held_keys (совместимость)
-        elif held_keys['c'] and held_keys['left control'] and self.spore_manager:  # type: ignore
-            # Вызываем обработчик из словаря
-            if 'ctrl+c' in self.commands:
-                self.commands['ctrl+c']['handler']()
-            return
-        
-        # Свободные клавиши
-        elif key in ['z', 'x', 'c', 'i']:
-            print(f"🔓 Клавиша '{key}' свободна")
-            return
-            
-        # Неизвестная команда
-        else:
-            print(f"❓ Неизвестная команда: '{key}'. Нажмите 'N' для справки")
+        # Отладка: выводим полученную клавишу и состояние курсора
+        # print(f"[InputManager] handle_input called with key: '{key}'. Cursor locked: {self.scene_setup.cursor_locked if self.scene_setup else 'N/A'}")
 
+        # Базовое управление (выход) было перенесено на глобальный уровень
+        # в main_demo.py, чтобы работать независимо от заморозки ввода.
+        # if key == 'q' or key == 'escape':
+        #     application.quit()
+        #     return
+
+        # Остальные команды работают только когда курсор свободен
+        # if self.scene_setup and self.scene_setup.cursor_locked:
+        #     # Отладка: выводим, почему мы прерываем выполнение
+        #     print(f"[InputManager] Aborting: Cursor is locked.")
+        #     return
+        
+        # Этот принт был в файле, но я его оставлю для дополнительной отладки
+        # print(f"[InputManager] Passed lock check. Processing key '{key}'...")
+        # # 1. UI команды (самый высокий приоритет)
+        # if self.ui_setup:
+        #     # Отладка: что возвращает обработчик UI?
+        #     print(f"[InputManager] Calling ui_setup.handle_demo_commands('{key}')...")
+        #     processed = self.ui_setup.handle_demo_commands(key)
+        #     print(f"[InputManager] ...ui_setup.handle_demo_commands returned: {processed}")
+        #     # handle_demo_commands вернет True, если команда была обработана
+        #     if processed:
+        #         return
+
+        # 2. Управление спорами
+        if key == 'f':
+            if self.spore_manager:
+                self.spore_manager.generate_new_spore()
+            # Запускаем таймеры для возможной непрерывной генерации
+            now = time.time()
+            self.f_key_down_time = now
+            self.next_spawn_time = now + self.long_press_threshold
+            return
+        
+        if key == 'g':
+            if self.spore_manager:
+                self.spore_manager.activate_random_candidate()
+            return
+        
+        if key == 'v':
+            if self.spore_manager:
+                self.spore_manager.evolve_all_candidates_to_completion()
+            return
+        
+        if key == 'p':
+            # Применить оптимальные пары к призрачному дереву под курсором
+            if self.manual_spore_manager:
+                self._apply_optimal_pairs_to_ghost_tree()
+            return
+        
+        if key == 'u':
+            if self.scene_setup and hasattr(self.scene_setup, 'frame'):
+                self.scene_setup.frame.toggle_visibility()  # type: ignore
+            return
+            
+        # 3. Управление масштабированием
+        if self.zoom_manager:
+            ctrl_pressed = held_keys['left control'] or held_keys['right control']  # type: ignore
+
+            if ctrl_pressed:
+                # Ctrl + колесико = управление dt
+                changed = False
+                if (key == 'e' or key == 'scroll up') and self.dt_manager:
+                    self.dt_manager.increase_dt()
+                    changed = True
+                elif (key == 't' or key == 'scroll down') and self.dt_manager:
+                    self.dt_manager.decrease_dt()
+                    changed = True
+
+                if changed:
+                    # 🔧 форсируем пересчёт даже если подписка потерялась
+                    if hasattr(self, "_on_dt_changed"):
+                        print("[IM] Ctrl+Wheel: forcing _on_dt_changed()")
+                        try:
+                            self._on_dt_changed()
+                        except Exception as ex:
+                            print(f"[IM] Ctrl+Wheel: _on_dt_changed() error: {ex}")
+                    # Не даём провалиться в обычный зум
+                    return
+            else:
+                # Обычное колесико = зум
+                if key == 'e' or key == 'scroll up':
+                    self.zoom_manager.zoom_in()
+                elif key == 't' or key == 'scroll down':
+                    self.zoom_manager.zoom_out()
+
+        # Остальные команды зума
+        if key == 'r': 
+            self.zoom_manager.reset_zoom()
+        elif key == '1': 
+            self.zoom_manager.increase_spores_scale()
+        elif key == '2': 
+            self.zoom_manager.decrease_spores_scale()
+
+        if key == 'm':  # Reset dt to original
+            if self.dt_manager:
+                self.dt_manager.reset_dt()
+            return
+
+        if key == '[':  # Reset all dt to standard mode
+            # 1. Сбрасываем общий dt через dt_manager (как клавиша M)
+            if self.dt_manager:
+                self.dt_manager.reset_dt()
+            
+            # 2. Сбрасываем ghost_tree_dt_vector к стандартным значениям
+            if self.manual_spore_manager:
+                # Получаем текущий dt после сброса
+                current_dt = self.dt_manager.get_dt() if self.dt_manager else 0.001
+                
+                # Получаем фактор для внуков из конфигурации
+                factor = 0.05  # дефолтное значение
+                if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'deps'):
+                    factor = self.manual_spore_manager.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
+                
+                # Формируем стандартный dt_vector: 4 детей + 8 внуков
+                dt_children = np.array([+current_dt, -current_dt, +current_dt, -current_dt], dtype=float)
+                base_gc = current_dt * factor
+                dt_grandchildren = np.array([
+                    +base_gc, -base_gc, +base_gc, -base_gc,
+                    +base_gc, -base_gc, +base_gc, -base_gc
+                ], dtype=float)
+                
+                standard_dt_vector = np.concatenate([dt_children, dt_grandchildren])
+                
+                # Устанавливаем стандартный вектор
+                self.manual_spore_manager.ghost_tree_dt_vector = standard_dt_vector
+                
+                # Обновляем предсказания
+                if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                    self.manual_spore_manager.prediction_manager.clear_predictions()
+                    self.manual_spore_manager._update_predictions()
+                
+                print(f"🔄 Все dt сброшены к стандартным значениям:")
+                print(f"   📊 Общий dt: {current_dt}")
+                print(f"   📊 dt детей: {dt_children}")
+                print(f"   📊 dt внуков (factor={factor}): {dt_grandchildren}")
+                print(f"   📊 Полный dt_vector: {standard_dt_vector}")
+            
+            return
+
+        # 4. Показ статистики dt
+        if key == 'j':  # Show dt info
+            if self.dt_manager:
+                self.dt_manager.print_stats()
+            return
+
+        
+        # 4. Очистка объектов (v13_manual)
+        if  held_keys['c'] and self.spore_manager and held_keys['left control']:  # type: ignore
+            print("🧹 Клавиша C: Полная очистка всех спор и объектов")
+            
+            # 🆕 ДИАГНОСТИКА: Проверяем есть ли manual_spore_manager
+            if self.manual_spore_manager:
+                print(f"   🔍 ManualSporeManager найден: {type(self.manual_spore_manager)}")
+                if hasattr(self.manual_spore_manager, 'clear_all'):
+                    print(f"   🔍 Метод clear_all найден")
+                    print(f"   📊 created_links до очистки: {len(self.manual_spore_manager.created_links)}")
+                    self.manual_spore_manager.clear_all()  
+                else:
+                    print(f"   ❌ Метод clear_all НЕ найден!")
+            else:
+                print(f"   ❌ ManualSporeManager НЕ найден!")
+            
+            self.spore_manager.clear_all_manual()
+            
+        # 5. Управление параметром
+        # if self.param_manager:
+        #     if key == 'z': 
+        #         self.param_manager.increase()
+        #     elif key == 'x': 
+        #         self.param_manager.decrease()
+
+
+        if key == 'z' or key == 'backspace':
+            if self.manual_spore_manager:
+                print("🗑️ Клавиша удаления: Удаление последней группы спор")
+                success = self.manual_spore_manager.delete_last_spore_group()
+                if success:
+                    print("   ✅ Последняя группа спор успешно удалена")
+                else:
+                    print("   ❌ Не удалось удалить группу (возможно, нет групп для удаления)")
+            else:
+                print("   ❌ ManualSporeManager не найден!")
+            return
+
+        # 5. Управление областью спавна
+        if self.spawn_area_manager:
+            if key == '3' or key == 'arrow_up': 
+                self.spawn_area_manager.decrease_eccentricity()
+            elif key == '4' or key == 'arrow_down': 
+                self.spawn_area_manager.increase_eccentricity()
+        
+        # 6. Управление радиусом кандидатов
+        if self.spore_manager:
+            if key == '5':
+                self.spore_manager.adjust_min_radius(1/1.2)  # Уменьшить радиус (÷1.2)
+            elif key == '6':
+                self.spore_manager.adjust_min_radius(1.2)    # Увеличить радиус (×1.2)
+        
+        # 7. Переключение ангелов
+        if key == 'y':
+            if self.angel_manager:
+                self.angel_manager.toggle_angels()
+            else:
+                always_print("⚠️ Angel Manager не найден")
+        
+        # Команды деревьев
+        if key == 'k':
+            if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'toggle_creation_mode'):
+                self.manual_spore_manager.toggle_creation_mode()
+            return
+
+        # Глубина дерева (только в режиме дерева)
+        if self.manual_spore_manager and hasattr(self.manual_spore_manager, 'creation_mode'):
+            if self.manual_spore_manager.creation_mode == 'tree':
+                if key == '7' and hasattr(self.manual_spore_manager, 'set_tree_depth'):
+                    self.manual_spore_manager.set_tree_depth(1)
+                    return
+                if key == '8' and hasattr(self.manual_spore_manager, 'set_tree_depth'):
+                    self.manual_spore_manager.set_tree_depth(2)
+                    return
+
+        # Оптимизация дерева
+        if key == 'o' or key == 'O':
+            print(f"[IM][O] Клавиша O нажата! key='{key}'")
+            try:
+                print("[IM][O] Запуск оптимизации площади...")
+
+                # ==== Достаём зависимости ====
+                # pendulum находится в deps
+                pendulum = getattr(self.manual_spore_manager, "deps", None)
+                if pendulum:
+                    pendulum = getattr(pendulum, "pendulum", None)
+
+                # dt-manager
+                dt_manager = self.dt_manager
+
+                print(f"[IM][O] Диагностика зависимостей:")
+                print(f"   pendulum: {pendulum is not None} ({type(pendulum) if pendulum else 'None'})")
+                print(f"   dt_manager: {dt_manager is not None} ({type(dt_manager) if dt_manager else 'None'})")
+
+                if pendulum is None:
+                    raise RuntimeError("Не найден объект pendulum в manual_spore_manager.deps.pendulum")
+                if dt_manager is None:
+                    raise RuntimeError("Не найден dt_manager")
+
+                # ==== Создаём временное дерево и пары ====
+                print("[IM][O] Создание временного дерева для оптимизации...")
+                
+                # Получаем позицию курсора
+                mouse_pos = self.manual_spore_manager.get_mouse_world_position()
+                if mouse_pos is None:
+                    raise RuntimeError("Не удалось получить позицию курсора")
+                
+                cursor_position_2d = np.array([mouse_pos[0], mouse_pos[1]])
+                print(f"[IM][O] Позиция курсора: {cursor_position_2d}")
+                
+                # Импортируем нужные классы
+                from ..logic.tree.spore_tree import SporeTree
+                from ..logic.tree.spore_tree_config import SporeTreeConfig
+                from ..logic.tree.pairs.find_optimal_pairs import find_optimal_pairs
+                
+                # Загружаем конфигурацию спаривания
+                from ..logic.tree.tree_area_bridge import _load_pairing_config
+                pairing_config = _load_pairing_config()
+                
+                # Получаем текущий dt из системы
+                dt = dt_manager.get_dt() if dt_manager else 0.05
+                
+                # Создаем временное дерево для поиска пар
+                tree_config = SporeTreeConfig(
+                    initial_position=cursor_position_2d,
+                    dt_base=dt,
+                    dt_grandchildren_factor=pairing_config.get('dt_grandchildren_factor', 0.2),
+                    show_debug=pairing_config.get('show_debug', True)
+                )
+                
+                temp_tree = SporeTree(
+                    pendulum=pendulum,
+                    config=tree_config,
+                    auto_create=True  # Создает полное дерево автоматически
+                )
+                
+                print(f"[IM][O] Временное дерево создано: {len(temp_tree.children)} детей, {len(temp_tree.grandchildren)} внуков")
+                
+                # Ищем оптимальные пары
+                pairs = find_optimal_pairs(temp_tree, show=True)
+                
+                if pairs is None:
+                    raise RuntimeError("Не удалось найти пары")
+                
+                print(f"[IM][O] Найдено {len(pairs)} оптимальных пар")
+
+                # ==== Вызов оптимизации ====
+                # Параметры загружаются из config/json/config.json
+                result = run_area_optimization(
+                    tree=temp_tree,
+                    pairs=pairs,
+                    pendulum=pendulum,
+                    dt_manager=dt_manager,
+                    # dt_bounds, optimization_method, max_iterations загружаются из конфига
+                )
+
+                # ==== Красивые логи (научная нотация) ====
+                if result is None:
+                    print(f"[IM][O] ❌ Оптимизация вернула None - возможно, произошла ошибка")
+                    return
+                    
+                try:
+                    start_area = result.get("start_area", result.get("initial_area", None))
+                    best_area  = result.get("best_area",  result.get("optimized_area", None))
+                    if start_area is not None and best_area is not None:
+                        delta = best_area - start_area
+                        rel = (delta / max(abs(start_area), 1e-12)) * 100.0
+                        print(f"[IM][O] Готово. Площадь: {start_area:.6e} → {best_area:.6e}  "
+                              f"(Δ={delta:.3e}, {rel:+.2f}%)")
+                    else:
+                        print(f"[IM][O] Оптимизация завершена. result-ключи: {list(result.keys())}")
+                        
+                    # Дополнительная информация о результатах
+                    success = result.get("success", False)
+                    if success:
+                        print(f"[IM][O] ✅ Оптимизация успешно завершена!")
+                        
+                        # Показываем улучшение
+                        improvement = result.get("improvement", None)
+                        improvement_percent = result.get("improvement_percent", None)
+                        if improvement is not None:
+                            print(f"[IM][O] 🎯 Улучшение площади: {improvement:.6e}")
+                        if improvement_percent is not None:
+                            print(f"[IM][O] 📊 Процентное улучшение: {improvement_percent:+.2f}%")
+                        
+                        # Показываем оптимизированные dt
+                        optimized_dt_vector = result.get("optimized_dt_vector", None)
+                        if optimized_dt_vector is not None:
+                            print(f"[IM][O] ⏱️  Оптимизированные dt:")
+                            print(f"   Дети: {optimized_dt_vector[:4]}")
+                            print(f"   Внуки: {optimized_dt_vector[4:12]}")
+                        
+                        # Показываем статистику констрейнтов
+                        constraint_violations = result.get("constraint_violations", {})
+                        if constraint_violations:
+                            violations = constraint_violations.get("violations", [])
+                            if violations:
+                                max_violation = max(violations)
+                                print(f"[IM][O] ⚠️  Максимальное нарушение констрейнта: {max_violation:.6e}")
+                            else:
+                                print(f"[IM][O] ✅ Все констрейнты соблюдены")
+                        
+                        # Показываем дистанции по парам
+                        constraint_violations = result.get("constraint_violations", {})
+                        if constraint_violations:
+                            print(f"[IM][O] 📏 Дистанции по парам:")
+                            pair_distances = []
+                            for i in range(len(constraint_violations)):
+                                if isinstance(constraint_violations.get(i), dict):
+                                    distance = constraint_violations[i].get('distance', None)
+                                    if distance is not None:
+                                        pair_distances.append(distance)
+                                        print(f"   Пара {i+1}: {distance:.6e}")
+                            
+                            if pair_distances:
+                                min_distance = min(pair_distances)
+                                max_distance = max(pair_distances)
+                                print(f"[IM][O] 📊 Минимальная дистанция: {min_distance:.6e}")
+                                print(f"[IM][O] 📊 Максимальная дистанция: {max_distance:.6e}")
+                                print(f"[IM][O] 📊 Средняя дистанция: {sum(pair_distances)/len(pair_distances):.6e}")
+                            else:
+                                print(f"[IM][O] 📏 Дистанции по парам: не найдены в constraint_violations")
+                        else:
+                            print(f"[IM][O] 📏 Дистанции по парам: constraint_violations пуст")
+                        
+                                                # 🔧 ПРИМЕНЯЕМ ОПТИМИЗИРОВАННЫЕ DT К ПРИЗРАЧНОМУ ДЕРЕВУ
+                        optimized_dt_vector = result.get("optimized_dt_vector", None)
+                        if optimized_dt_vector is not None and self.manual_spore_manager:
+                            # 🔍 ИСПРАВЛЕНИЕ ЗНАКОВ: используем тот же подход, что и в методе 'P'
+                            # Дети должны иметь те же знаки, что и исходные dt детей
+                            dt_children_original = np.array([child['dt'] for child in temp_tree.children])
+                            dt_grandchildren_original = np.array([gc['dt'] for gc in temp_tree.grandchildren])
+                            
+                            # Исправляем знаки детей (должны быть как в исходном дереве)
+                            optimized_dt_vector[:4] = np.sign(dt_children_original) * np.abs(optimized_dt_vector[:4])
+                            
+                            # Исправляем знаки внуков (должны быть как в исходном дереве)
+                            optimized_dt_vector[4:12] = np.sign(dt_grandchildren_original) * np.abs(optimized_dt_vector[4:12])
+                            
+                            # Применяем dt_vector к призрачному дереву (как в методе 'P')
+                            self.manual_spore_manager.ghost_tree_dt_vector = optimized_dt_vector
+                            
+                            # Обновляем baseline для масштабирования (как в методе 'P')
+                            if self.dt_manager:
+                                self.manual_spore_manager.ghost_dt_baseline = self.dt_manager.get_dt()
+                            
+                            # Принудительно обновляем призрачное дерево (как в методе 'P')
+                            if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                                self.manual_spore_manager.prediction_manager.clear_predictions()
+                                self.manual_spore_manager._update_predictions()
+                                print(f"[IM][O] ✅ Призрачное дерево обновлено с оптимизированными dt!")
+                            else:
+                                print(f"[IM][O] ⚠️  PredictionManager не найден, не удалось обновить призрачное дерево")
+                        else:
+                            print(f"[IM][O] ⚠️  Оптимизированные dt не найдены или ManualSporeManager недоступен")
+                    else:
+                        print(f"[IM][O] ❌ Оптимизация не удалась")
+                        
+                except Exception as e:
+                    print(f"[IM][O] Оптимизация завершена, но не смог распечатать метрики: {e}")
+
+            except Exception as e:
+                print(f"[IM][O] Ошибка оптимизации площади: {e}")
+            return
+        
         # 🔍 Переключение детальной отладки призрачного дерева
         if key == 'h':
             self.debug_ghost_tree = not self.debug_ghost_tree
