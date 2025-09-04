@@ -262,13 +262,13 @@ class InputManager:
                 'enabled': lambda: self.scene_setup is not None
             },
             
-            # === КУРСОР ===
-            'alt': {
-                'description': 'переключить захват курсора',
-                'handler': self._handle_toggle_cursor,
-                'category': 'курсор',
-                'enabled': lambda: self.scene_setup is not None
-            },
+                                            # === КУРСОР ===
+                'alt': {
+                    'description': 'переключить захват курсора (обрабатывается в SceneSetup)',
+                    'handler': self._handle_toggle_cursor,
+                    'category': 'курсор',
+                    'enabled': lambda: self.scene_setup is not None
+                },
             
             # === КОЛЕСИКО МЫШИ ===
             'scroll up': {
@@ -569,9 +569,9 @@ class InputManager:
 
     def _handle_toggle_cursor(self):
         """Обработчик переключения захвата курсора (Alt)."""
-        print(f"[InputManager] Alt обработан в InputManager")
-        if self.scene_setup:
-            self.scene_setup.toggle_freeze()
+        # Alt обрабатывается в SceneSetup.toggle_freeze() через глобальную функцию input()
+        # Этот обработчик не используется, но команда добавлена для справки
+        pass
 
     def _handle_scroll_up(self):
         """Обработчик колесика мыши вверх (приближение)."""

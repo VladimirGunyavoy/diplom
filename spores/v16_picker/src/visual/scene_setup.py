@@ -112,14 +112,14 @@ class SceneSetup:
         if self.input_manager_mode:
             return
             
-        # Эта проверка должна выполняться только если НЕ включен режим InputManager
-        if held_keys['alt'] and not hasattr(self, 'alt_timer'):
-            self.alt_timer = time.time()
-        
-        if not held_keys['alt'] and hasattr(self, 'alt_timer'):
-            if time.time() - self.alt_timer < 0.5:
-                self.toggle_freeze()
-            delattr(self, 'alt_timer')
+        # Обработка Alt отключена в режиме InputManager (обрабатывается в main_demo.py)
+        # if held_keys['alt'] and not hasattr(self, 'alt_timer'):
+        #     self.alt_timer = time.time()
+        # 
+        # if not held_keys['alt'] and hasattr(self, 'alt_timer'):
+        #     if time.time() - self.alt_timer < 0.5:
+        #         self.toggle_freeze()
+        #     delattr(self, 'alt_timer')
             
         # Если ввод заморожен, остальную логику (движение) не выполняем
         if self.input_frozen:
@@ -152,8 +152,11 @@ class SceneSetup:
         self.input_manager_mode = enabled
         print(f"[SceneSetup] InputManager режим {'включен' if enabled else 'выключен'}")
         
+        # Принудительно устанавливаем правильное состояние курсора
+        self._update_cursor_state()
+        
         # Если включаем режим InputManager, отключаем обработку движения в FirstPersonController
-        if enabled:
-            self.player.enabled = False
-        else:
-            self.player.enabled = True
+        # но НЕ отключаем самого игрока, чтобы курсор работал
+        # self.player.enabled = False  # Убираем эту строку
+        # else:
+        #     self.player.enabled = True  # И эту тоже

@@ -321,6 +321,9 @@ input_manager = InputManager(
 # Включаем режим InputManager для централизованной обработки ввода
 scene_setup.enable_input_manager_mode(True)
 
+# Принудительно устанавливаем курсор в захваченное состояние при запуске
+scene_setup._update_cursor_state()
+
 # Дублирующая явная подписка — чтобы исключить рассинхронизацию
 dt_manager.subscribe_on_change(input_manager._on_dt_changed)
 print(f"[MAIN] subscribed InputManager._on_dt_changed to DTManager id={id(dt_manager)}")
@@ -440,9 +443,10 @@ def input(key):
         application.quit()
         return
 
-    # Отладка для Alt
+    # Обработка Alt для переключения курсора (работает независимо от фокуса окна)
     if key == 'alt':
-        print(f"[MAIN] Alt получен в глобальной функции input")
+        scene_setup.toggle_freeze()
+        return
 
     # Передаем управление в централизованный InputManager
     input_manager.handle_input(key)
