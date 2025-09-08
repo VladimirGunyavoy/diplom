@@ -203,47 +203,100 @@ class SporeTreeVisual:
             # Присваиваем уникальный ID
             grandchild_spore.id = self._get_next_spore_id()
             
-            # Цвет внука
-            grandchild_spore.color = self.color_manager.get_color('spore', 'default')
+            # НОВОЕ: Проверяем, является ли это объединенной спорой
+            if 'merged_from' in gc_data:
+                # Это объединенная спора - делаем ее визуально отличной
+                grandchild_spore.color = self.color_manager.get_color('spore', 'merged')  # Новый цвет
+                grandchild_spore.scale *= 1.2  # Немного больше размер
+                
+                # Сохраняем информацию об объединении
+                grandchild_spore._is_merged = True
+                grandchild_spore._merged_from = gc_data['merged_from']
+                grandchild_spore._original_positions = gc_data['original_positions']
+                
+                # Убираем спам сообщений
+            else:
+                # Обычная спора
+                grandchild_spore.color = self.color_manager.get_color('spore', 'default')
+                grandchild_spore._is_merged = False
+            
             # Регистрируем
             self.grandchild_spores.append(grandchild_spore)
             
-            # Создаем стрелку внука
+            # Создаем стрелку(и) для внука
             self._create_grandchild_link_visual(i, gc_data)
             
     def _create_grandchild_link_visual(self, gc_idx: int, gc_data: dict):
-        """Создает стрелку для внука."""
+        """Создает стрелку(и) для внука. Для объединенных спор создает множественные стрелки."""
         grandchild_spore = self.grandchild_spores[gc_idx]
-        parent_spore = self.child_spores[gc_data['parent_idx']]
         
-        # Направление по знаку dt (читаем из логики)
-        if gc_data['dt'] > 0:  # forward: родитель → внук
-            parent_link = parent_spore
-            child_link = grandchild_spore
-        else:  # backward: внук → родитель
-            parent_link = grandchild_spore  
-            child_link = parent_spore
-            
-        # Создаем линк
-        link = Link(
-            parent_spore=parent_link,
-            child_spore=child_link,
-            color_manager=self.color_manager,
-            zoom_manager=self.zoom_manager,
-            config=self.config
-        )
-        
-        # Присваиваем уникальный ID
-        link.id = self._get_next_link_id()
-        
-        if gc_data['control'] > 0:
-            link.color = self.color_manager.get_color('link', 'ghost_max')
+        # НОВОЕ: Если это объединенная спора, создаем линки к обоим родителям
+        if 'merged_from' in gc_data and len(gc_data['original_dts']) > 1:
+            # Создаем множественные линки для объединенной споры
+            for orig_idx, orig_dt in enumerate(gc_data['original_dts']):
+                parent_spore = self.child_spores[gc_data['parent_idx']]
+                
+                # Определяем направление по оригинальному dt
+                if orig_dt > 0:  # forward: родитель → внук
+                    parent_link = parent_spore
+                    child_link = grandchild_spore
+                else:  # backward: внук → родитель
+                    parent_link = grandchild_spore  
+                    child_link = parent_spore
+                
+                # Создаем линк
+                link = Link(
+                    parent_spore=parent_link,
+                    child_spore=child_link,
+                    color_manager=self.color_manager,
+                    zoom_manager=self.zoom_manager,
+                    config=self.config
+                )
+                
+                link.id = self._get_next_link_id()
+                
+                # Особый цвет для линков объединенных спор
+                if gc_data['control'] > 0:
+                    link.color = self.color_manager.get_color('link', 'merged_max')  # Новый цвет
+                else:
+                    link.color = self.color_manager.get_color('link', 'merged_min')  # Новый цвет
+                
+                # Делаем линк немного толще для визуального выделения
+                if hasattr(link, 'thickness'):
+                    link.thickness *= 1.3
+                    
+                link.update_geometry()
+                self.grandchild_links.append(link)
+                
+                # Убираем спам сообщений
         else:
-            link.color = self.color_manager.get_color('link', 'ghost_min')
+            # Обычная логика для необъединенных спор (существующий код)
+            parent_spore = self.child_spores[gc_data['parent_idx']]
+            
+            if gc_data['dt'] > 0:  # forward: родитель → внук
+                parent_link = parent_spore
+                child_link = grandchild_spore
+            else:  # backward: внук → родитель
+                parent_link = grandchild_spore  
+                child_link = parent_spore
+                
+            link = Link(
+                parent_spore=parent_link,
+                child_spore=child_link,
+                color_manager=self.color_manager,
+                zoom_manager=self.zoom_manager,
+                config=self.config
+            )
+            
+            link.id = self._get_next_link_id()
+            
+            if gc_data['control'] > 0:
+                link.color = self.color_manager.get_color('link', 'ghost_max')
+            else:
+                link.color = self.color_manager.get_color('link', 'ghost_min')
 
-        # Регистрируем
-        link.update_geometry()
-        self.grandchild_links.append(link)
+            link.update_geometry()
+            self.grandchild_links.append(link)
         
     def sync_with_logic(self) -> None:
         """

@@ -127,7 +127,21 @@ class TreeCreationManager:
                 
                 # Создаем внуков если нужна глубина 2
                 if depth >= 2:
-                    tree_logic.create_grandchildren()
+                    grandchildren = tree_logic.create_grandchildren(show=False)
+                    
+                    # НОВОЕ: Объединяем близких внуков
+                    merge_result = tree_logic.merge_close_grandchildren(
+                        distance_threshold=self.deps.config.get('tree', {}).get('merge_threshold', 1e-4)
+                    )
+                    
+                    if merge_result['total_merged'] > 0:
+                        print(f"🔗 Объединено {merge_result['total_merged']} пар внуков")
+                        print(f"📊 Внуков в дереве: {merge_result['remaining_grandchildren']}")
+                        
+                        # Обновляем статистику для UI
+                        tree_logic._merge_stats = merge_result
+                    else:
+                        print("📊 Внуки не требуют объединения")
             else:
                 # Создаем обычное дерево ТОЧНО как в превью: явные dt + единый пересчет
                 print(f"🌲 Создаем дерево без паринга (dt как в превью)")
@@ -152,7 +166,21 @@ class TreeCreationManager:
                 # Создаем детей/внуков ровно один раз и с явными массивами
                 tree_logic.create_children(dt_children=dt_children_abs)
                 if depth >= 2:
-                    tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren_abs)
+                    grandchildren = tree_logic.create_grandchildren(dt_grandchildren=dt_grandchildren_abs, show=False)
+                    
+                    # НОВОЕ: Объединяем близких внуков
+                    merge_result = tree_logic.merge_close_grandchildren(
+                        distance_threshold=self.deps.config.get('tree', {}).get('merge_threshold', 1e-4)
+                    )
+                    
+                    if merge_result['total_merged'] > 0:
+                        print(f"🔗 Объединено {merge_result['total_merged']} пар внуков")
+                        print(f"📊 Внуков в дереве: {merge_result['remaining_grandchildren']}")
+                        
+                        # Обновляем статистику для UI
+                        tree_logic._merge_stats = merge_result
+                    else:
+                        print("📊 Внуки не требуют объединения")
 
                 # Синтетический подписанный вектор (как в превью)
                 dt_children_signed = np.array([+dt, -dt, +dt, -dt], dtype=float)

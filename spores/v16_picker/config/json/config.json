@@ -64,6 +64,8 @@
   },
   "tree": {
     "dt_grandchildren_factor": 0.1,
+    "merge_threshold": 1e-4,
+    "show_merge_stats": true,
     "area_optimization": {
       "enabled": true,
       "constraint_distance": 1e-3,
