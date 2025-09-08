@@ -237,8 +237,32 @@ class InputManager:
                 'category': 'справка',
                 'enabled': lambda: True
             },
+            '[': {
+                'description': 'полный сброс к стандартным dt (внуки << детей)',
+                'handler': self._handle_standard_reset,
+                'category': 'dt',
+                'enabled': lambda: self.manual_spore_manager is not None and self.dt_manager is not None
+            },
             
-            # === ДВИЖЕНИЕ КАМЕРЫ ===
+            # === УДАЛЕНИЕ СПОР ===
+            'ctrl+c': {
+                'description': 'полная очистка всех спор',
+                'handler': self._handle_clear_all,
+                'category': 'удаление',
+                'enabled': lambda: self.manual_spore_manager is not None
+            },
+            'z': {
+                'description': 'удалить последнюю группу спор',
+                'handler': self._handle_delete_last_group,
+                'category': 'удаление',
+                'enabled': lambda: self.manual_spore_manager is not None
+            },
+            'i': {
+                'description': 'статистика истории групп',
+                'handler': self._handle_groups_stats,
+                'category': 'статистика',
+                'enabled': lambda: self.manual_spore_manager is not None
+            },
             # Команды движения камеры (w, a, s, d, space, shift) обрабатываются в first person controller
             
                                             # === КУРСОР ===
@@ -470,6 +494,54 @@ class InputManager:
             
             print(f"🔄 Все dt сброшены к стандартным значениям")
 
+    def _handle_standard_reset(self):
+        """Обработчик полного сброса к стандартным dt ([)."""
+        print(f"[IM][[]] Полный сброс к стандартному режиму...")
+        
+        # 1. Сбрасываем общий dt через dt_manager (как клавиша M)
+        if self.dt_manager:
+            self.dt_manager.reset_dt()
+        
+        # 2. Сбрасываем ghost_tree_dt_vector к стандартным значениям
+        if self.manual_spore_manager:
+            # Получаем текущий dt после сброса
+            current_dt = self.dt_manager.get_dt() if self.dt_manager else 0.001
+            
+            # Получаем фактор для внуков из конфигурации
+            factor = 0.05  # дефолтное значение (внуки в 20 раз меньше)
+            if hasattr(self.manual_spore_manager, 'deps'):
+                factor = self.manual_spore_manager.deps.config.get('tree', {}).get('dt_grandchildren_factor', 0.05)
+            
+            # Формируем стандартный dt_vector: 4 детей + 8 внуков
+            dt_children = np.array([+current_dt, -current_dt, +current_dt, -current_dt], dtype=float)
+            base_gc = current_dt * factor
+            dt_grandchildren = np.array([
+                +base_gc, -base_gc, +base_gc, -base_gc,
+                +base_gc, -base_gc, +base_gc, -base_gc
+            ], dtype=float)
+            
+            standard_dt_vector = np.concatenate([dt_children, dt_grandchildren])
+            
+            # Устанавливаем стандартный вектор
+            self.manual_spore_manager.ghost_tree_dt_vector = standard_dt_vector
+            
+            # Сбрасываем baseline для корректного масштабирования
+            self.manual_spore_manager.ghost_dt_baseline = current_dt
+            
+            # Обновляем предсказания
+            if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                self.manual_spore_manager.prediction_manager.clear_predictions()
+                self.manual_spore_manager._update_predictions()
+            
+            print(f"🔄 Все dt сброшены к стандартным значениям:")
+            print(f"   📊 Общий dt: {current_dt}")
+            print(f"   📊 Фактор внуков: {factor}")
+            print(f"   📊 dt детей: {dt_children}")
+            print(f"   📊 dt внуков: {dt_grandchildren}")
+            print(f"   💡 Теперь внуки в {1/factor:.0f} раз меньше детей")
+        else:
+            print(f"⚠️ Manual spore manager не найден")
+
     def _handle_dt_stats(self):
         """Обработчик статистики dt (J)."""
         if self.dt_manager:
@@ -695,6 +767,70 @@ class InputManager:
         if self.zoom_manager:
             self.zoom_manager.zoom_out()
 
+    def _handle_clear_all(self):
+        """Обработчик полной очистки всех спор (Ctrl+C)."""
+        print("🧹 Клавиша Ctrl+C: Полная очистка всех спор и объектов")
+        
+        # Диагностика: Проверяем есть ли manual_spore_manager
+        if self.manual_spore_manager:
+            print(f"   🔍 ManualSporeManager найден: {type(self.manual_spore_manager)}")
+            if hasattr(self.manual_spore_manager, 'clear_all'):
+                print(f"   🔍 Метод clear_all найден")
+                # Показываем статистику до очистки
+                if hasattr(self.manual_spore_manager, 'created_links'):
+                    print(f"   📊 created_links до очистки: {len(self.manual_spore_manager.created_links)}")
+                if hasattr(self.manual_spore_manager, 'spore_groups_history'):
+                    print(f"   📚 групп в истории: {len(self.manual_spore_manager.spore_groups_history)}")
+                
+                self.manual_spore_manager.clear_all()
+            else:
+                print(f"   ❌ Метод clear_all НЕ найден!")
+        else:
+            print(f"   ❌ ManualSporeManager НЕ найден!")
+        
+        # Очищаем через SporeManager
+        if self.spore_manager:
+            self.spore_manager.clear_all_manual()
+
+    def _handle_delete_last_group(self):
+        """Обработчик удаления последней группы спор (Z)."""
+        if self.manual_spore_manager:
+            print("🗑️ Клавиша Z: Удаление последней группы спор")
+            success = self.manual_spore_manager.delete_last_spore_group()
+            if success:
+                print("   ✅ Последняя группа спор успешно удалена")
+            else:
+                print("   ❌ Не удалось удалить группу (возможно, нет групп для удаления)")
+        else:
+            print("   ❌ ManualSporeManager не найден!")
+
+    def _handle_groups_stats(self):
+        """Обработчик статистики истории групп (I)."""
+        if self.manual_spore_manager:
+            if hasattr(self.manual_spore_manager, 'get_groups_history_stats'):
+                stats = self.manual_spore_manager.get_groups_history_stats()
+                print("📊 Статистика истории групп:")
+                print(f"   📚 Всего групп создано: {stats.get('total_groups', 0)}")
+                print(f"   🔗 Всего линков создано: {stats.get('total_links', 0)}")
+                print(f"   📋 Групп в истории: {len(self.manual_spore_manager.spore_groups_history)}")
+                
+                # Показываем последние несколько групп
+                history = getattr(self.manual_spore_manager, 'spore_groups_history', [])
+                if history:
+                    print(f"   📖 Последние группы:")
+                    for i, group in enumerate(history[-3:], start=len(history)-2):
+                        if i > 0:
+                            print(f"      Группа #{i}: {len(group)} спор")
+            else:
+                # Fallback статистика
+                history = getattr(self.manual_spore_manager, 'spore_groups_history', [])
+                links = getattr(self.manual_spore_manager, 'created_links', [])
+                print("📊 Статистика истории групп:")
+                print(f"   📚 Групп в истории: {len(history)}")
+                print(f"   🔗 Активных линков: {len(links)}")
+        else:
+            print("   ❌ ManualSporeManager не найден!")
+
     def handle_input(self, key: str) -> None:
         """
         Новый централизованный обработчик команд через командную систему.
@@ -742,7 +878,7 @@ class InputManager:
             return
         
         # Свободные клавиши
-        elif key in ['z', 'x', 'c', 'i']:
+        elif key in ['x']:  # Убираем z, c, i из свободных
             print(f"🔓 Клавиша '{key}' свободна")
             return
             

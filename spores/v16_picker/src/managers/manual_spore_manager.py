@@ -169,15 +169,23 @@ class ManualSporeManager:
         else:
             depth = 1  # "spores" режим = дерево глубины 1
         
+        # Запоминаем количество объектов до создания
+        links_before = len(self.tree_creation_manager.created_links)
+        
         # Используем TreeCreationManager для всех случаев
         created_spores = self.tree_creation_manager.create_tree_at_cursor(preview_position_2d, depth)
         
         if created_spores:
-            # Сохраняем в историю (логика остается прежней)
-            created_links = []  # TreeCreationManager уже обработал линки
+            # Получаем созданные линки из TreeCreationManager
+            links_after = len(self.tree_creation_manager.created_links)
+            created_links = self.tree_creation_manager.created_links[links_before:links_after]
+            
+            print(f"   🔗 Получено {len(created_links)} линков из TreeCreationManager")
+            
+            # Сохраняем в историю ПРАВИЛЬНО
             self.spore_groups_history.append(created_spores.copy())
-            self.group_links_history.append(created_links.copy())
-            print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена в истории")
+            self.group_links_history.append(created_links.copy())  # ✅ Теперь реальные линки!
+            print(f"   📚 Группа #{len(self.spore_groups_history)} сохранена: {len(created_spores)} спор + {len(created_links)} линков")
             
         return created_spores
 
