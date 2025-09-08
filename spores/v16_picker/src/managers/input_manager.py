@@ -524,9 +524,38 @@ class InputManager:
         """
         Новый централизованный обработчик команд через командную систему.
         """
+        # === ОТЛАДКА: показываем все события ===
+        if 'scroll' in key.lower() or 'wheel' in key.lower():
+            ctrl_pressed = held_keys['left control'] or held_keys['right control']
+            print(f"🔍 [DEBUG] Scroll event: '{key}', Ctrl: {ctrl_pressed}")
+        # Показываем все события для отладки
+        if key in ['e', 't', 'scroll up', 'scroll down', 'wheel up', 'wheel down']:
+            ctrl_pressed = held_keys['left control'] or held_keys['right control']
+            print(f"🔍 [DEBUG] Key event: '{key}', Ctrl: {ctrl_pressed}")
+        # === КОНЕЦ ОТЛАДКИ ===
+        
         # Фильтруем события типа 'left alt up', 'right shift down', 'control' и т.д.
         if (' ' in key and any(direction in key.lower() for direction in ['up', 'down', 'left', 'right'])) or key == 'control':
             return  # Игнорируем события нажатия/отпускания модификаторов
+        
+        # === ОБРАБОТКА CTRL КОМБИНАЦИЙ ===
+        ctrl_pressed = held_keys['left control'] or held_keys['right control']
+        
+        if ctrl_pressed and self.dt_manager:
+            # Ctrl + E/T или Ctrl + Scroll = управление dt
+            handled = False
+            
+            if key == 'e' or key in ['scroll up', 'wheel up', 'mouse wheel up']:
+                self.dt_manager.increase_dt()
+                handled = True
+            elif key == 't' or key in ['scroll down', 'wheel down', 'mouse wheel down']:
+                self.dt_manager.decrease_dt()
+                handled = True
+            
+            if handled:
+                print(f"✅ [DEBUG] DT command executed: {key}")
+                return  # Не даём провалиться в обычный зум
+        # === КОНЕЦ ОБРАБОТКИ CTRL КОМБИНАЦИЙ ===
         
         # Проверяем есть ли команда для данной клавиши
         if key in self.commands:
