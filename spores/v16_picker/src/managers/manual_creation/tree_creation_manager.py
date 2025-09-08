@@ -19,9 +19,10 @@ class TreeCreationManager:
     - Интеграция с SporeTree логикой
     """
 
-    def __init__(self, deps: SharedDependencies, spore_manager: SporeManager):
+    def __init__(self, deps: SharedDependencies, spore_manager: SporeManager, manual_spore_manager=None):
         self.deps = deps
         self.spore_manager = spore_manager
+        self.manual_spore_manager = manual_spore_manager  # НОВОЕ: прямая ссылка
 
         # Настройки создания
         self.creation_mode = 'spores'  # 'spores' или 'tree'
@@ -296,12 +297,17 @@ class TreeCreationManager:
             tree_visual.visual_created = False
 
             tree_visual = None
-            tree_logic = None
-
+            
+            # НОВОЕ: Сохраняем ссылку на дерево для отладки ПЕРЕД обнулением
+            if self.manual_spore_manager:
+                self.manual_spore_manager._last_tree_logic = tree_logic
+            
             print(f"🌲 Дерево создано в ({preview_position_2d[0]:.3f}, {preview_position_2d[1]:.3f})")
             print(f"   📊 Глубина: {self.tree_depth}, dt: {dt:.4f}")
             print(f"   🎯 Создано: {len(created_spores)} спор + {len(created_links)} линков")
+            print(f"💡 Нажмите L для построения графика дерева")
 
+            tree_logic = None
             return created_spores
 
         except Exception as e:

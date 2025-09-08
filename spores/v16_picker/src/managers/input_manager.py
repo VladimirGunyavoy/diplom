@@ -229,6 +229,12 @@ class InputManager:
                 'category': 'отладка',
                 'enabled': lambda: True
             },
+            'l': {
+                'description': 'построить график последнего созданного дерева (debug)',
+                'handler': self._handle_debug_plot_tree,
+                'category': 'отладка',
+                'enabled': lambda: self.manual_spore_manager is not None
+            },
             
             # === СПРАВКА ===
             'n': {
@@ -583,6 +589,34 @@ class InputManager:
         self.debug_ghost_tree = not self.debug_ghost_tree
         status = "ВКЛЮЧЕНА" if self.debug_ghost_tree else "ОТКЛЮЧЕНА"
         print(f"🔍 Детальная отладка призрачного дерева: {status}")
+
+    def _handle_debug_plot_tree(self):
+        """Обработчик отладочного графика дерева (L)."""
+        if not self.manual_spore_manager:
+            print("❌ Manual spore manager не найден")
+            return
+            
+        try:
+            # Пытаемся получить последнее созданное дерево
+            tree_creation_manager = self.manual_spore_manager.tree_creation_manager
+            
+            # Проверяем есть ли у manual_spore_manager сохраненное дерево логики
+            if hasattr(self.manual_spore_manager, '_last_tree_logic') and self.manual_spore_manager._last_tree_logic:
+                tree_logic = self.manual_spore_manager._last_tree_logic
+                print(f"🎯 Строим график последнего дерева...")
+                
+                # Вызываем debug метод
+                save_path = tree_logic.debug_plot_tree()
+                print(f"✅ График дерева сохранен: {save_path}")
+                
+            else:
+                print("❌ Нет сохраненного дерева для отладки")
+                print("💡 Создайте дерево через ЛКМ, затем нажмите L")
+                
+        except Exception as e:
+            print(f"❌ Ошибка создания графика дерева: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _handle_help(self):
         """Обработчик вывода справки (N)."""

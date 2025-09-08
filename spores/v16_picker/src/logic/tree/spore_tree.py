@@ -731,6 +731,62 @@ class SporeTree:
 
 
     # Также можно добавить к классу:
+    def debug_plot_tree(self, save_path: Optional[str] = None) -> str:
+        """
+        Создает отладочный график дерева и сохраняет его в файл.
+        
+        Args:
+            save_path: путь для сохранения файла. Если None, генерируется автоматически.
+            
+        Returns:
+            str: путь к сохраненному файлу
+        """
+        try:
+            from .visualize_spore_tree import visualize_spore_tree
+            import matplotlib.pyplot as plt
+            import os
+            from datetime import datetime
+            
+            # Генерируем путь если не задан
+            if save_path is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                buffer_dir = "buffer"
+                if not os.path.exists(buffer_dir):
+                    os.makedirs(buffer_dir)
+                save_path = os.path.join(buffer_dir, f"tree_debug_{timestamp}.png")
+            
+            # Создаем график
+            fig, ax = plt.subplots(1, 1, figsize=(16, 12))
+            
+            # Используем существующую функцию визуализации
+            visualize_spore_tree(self, title=f"Отладочный график дерева", ax=ax, show_legend=True)
+            
+            # Добавляем информацию об объединениях
+            if hasattr(self, '_grandchildren_modified') and self._grandchildren_modified:
+                ax.text(0.02, 0.98, "🔗 Внуки объединены", transform=ax.transAxes, 
+                       fontsize=12, verticalalignment='top', 
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7))
+            
+            # Сохраняем
+            plt.tight_layout()
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            print(f"📊 График дерева сохранен: {save_path}")
+            print(f"   📍 Корень: {self.root['position']}")
+            print(f"   👶 Детей: {len(self.children)}")
+            print(f"   👶 Внуков: {len(self.grandchildren)}")
+            if hasattr(self, '_grandchildren_modified') and self._grandchildren_modified:
+                print(f"   🔗 Объединения: активны")
+            
+            return save_path
+            
+        except Exception as e:
+            print(f"❌ Ошибка создания графика дерева: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
+    
     def reset_for_optimization(self):
         """Быстрый сброс перед оптимизацией - убираем только необходимое."""
         # НЕ пересоздаем массивы, только обнуляем флаги

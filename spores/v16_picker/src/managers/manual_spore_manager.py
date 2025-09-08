@@ -44,7 +44,7 @@ class ManualSporeManager:
         # Создаем подкомпоненты с общими зависимостями
         self.preview_manager = PreviewManager(self.deps)
         self.prediction_manager = PredictionManager(self.deps) 
-        self.tree_creation_manager = TreeCreationManager(self.deps, spore_manager)
+        self.tree_creation_manager = TreeCreationManager(self.deps, spore_manager, self)  # НОВОЕ: передаем self
         
         # Синхронизируем ghost_tree_dt_vector
         # self.tree_creation_manager.ghost_tree_dt_vector = self._ghost_tree_dt_vector
@@ -68,6 +68,9 @@ class ManualSporeManager:
         # Собственные поля состояния (без синхронизации)
         self.creation_mode = 'spores'  # Только в ManualSporeManager
         self.tree_depth = 2           # Только в ManualSporeManager
+        
+        # НОВОЕ: Для отладочного графика
+        self._last_tree_logic = None
 
         print(f"   ✓ Manual Spore Manager создан (управление: {self.prediction_manager.min_control} .. {self.prediction_manager.max_control})")
         print(f"   📚 История групп инициализирована")
