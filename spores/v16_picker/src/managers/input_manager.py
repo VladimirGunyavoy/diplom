@@ -225,42 +225,7 @@ class InputManager:
             },
             
             # === ДВИЖЕНИЕ КАМЕРЫ ===
-            'w': {
-                'description': 'движение камеры вперед',
-                'handler': self._handle_move_forward,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            's': {
-                'description': 'движение камеры назад',
-                'handler': self._handle_move_backward,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            'a': {
-                'description': 'движение камеры влево',
-                'handler': self._handle_move_left,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            'd': {
-                'description': 'движение камеры вправо',
-                'handler': self._handle_move_right,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            'space': {
-                'description': 'движение камеры вверх',
-                'handler': self._handle_move_up,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
-            'shift': {
-                'description': 'движение камеры вниз',
-                'handler': self._handle_move_down,
-                'category': 'движение',
-                'enabled': lambda: self.scene_setup is not None
-            },
+            # Команды движения камеры (w, a, s, d, space, shift) обрабатываются в first person controller
             
                                             # === КУРСОР ===
                 'alt': {
@@ -381,6 +346,18 @@ class InputManager:
         else:
             # Сбрасываем таймер если клавиша не нажата
             self.f_key_down_time = 0
+        
+        # Обработка движения камеры через held_keys
+        if self.scene_setup and self.scene_setup.player:
+            step = self.scene_setup.base_speed * 0.016  # Примерно 60 FPS
+            
+            # Движение вверх (Space)
+            if held_keys['space']:  # type: ignore
+                self.scene_setup.player.y += step
+            
+            # Движение вниз (Shift)
+            if held_keys['shift']:  # type: ignore
+                self.scene_setup.player.y -= step
 
     # === ОБРАБОТЧИКИ КОМАНД ===
     
@@ -525,47 +502,7 @@ class InputManager:
         """Обработчик вывода справки (N)."""
         self.print_commands_help()
 
-    def _handle_move_forward(self):
-        """Обработчик движения вперед (W)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['w']:  # type: ignore
-                self.scene_setup.player.y += self.scene_setup.base_speed * 0.016  # Примерно 60 FPS
-
-    def _handle_move_backward(self):
-        """Обработчик движения назад (S)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['s']:  # type: ignore
-                self.scene_setup.player.y -= self.scene_setup.base_speed * 0.016
-
-    def _handle_move_left(self):
-        """Обработчик движения влево (A)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['a']:  # type: ignore
-                self.scene_setup.player.x -= self.scene_setup.base_speed * 0.016
-
-    def _handle_move_right(self):
-        """Обработчик движения вправо (D)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['d']:  # type: ignore
-                self.scene_setup.player.x += self.scene_setup.base_speed * 0.016
-
-    def _handle_move_up(self):
-        """Обработчик движения вверх (Space)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['space']:  # type: ignore
-                self.scene_setup.player.y += self.scene_setup.base_speed * 0.016
-
-    def _handle_move_down(self):
-        """Обработчик движения вниз (Shift)."""
-        if self.scene_setup and self.scene_setup.player:
-            from ursina import held_keys
-            if held_keys['shift']:  # type: ignore
-                self.scene_setup.player.y -= self.scene_setup.base_speed * 0.016
+    # Методы движения камеры удалены - обрабатываются в first person controller
 
     def _handle_toggle_cursor(self):
         """Обработчик переключения захвата курсора (Alt)."""
@@ -605,6 +542,8 @@ class InputManager:
                 print(f"⚠️ Команда '{key}' недоступна (отключен {cmd_info['category']} менеджер)")
             return
         
+        # Команды движения камеры (space hold, shift hold и т.д.) обрабатываются в first person controller
+        
         # Обработка специальной команды Ctrl+C через held_keys (совместимость)
         elif held_keys['c'] and held_keys['left control'] and self.spore_manager:  # type: ignore
             # Вызываем обработчик из словаря
@@ -617,9 +556,9 @@ class InputManager:
             print(f"🔓 Клавиша '{key}' свободна")
             return
             
-        # Неизвестная команда
+        # Неизвестная команда - игнорируем
         else:
-            print(f"❓ Неизвестная команда: '{key}'. Нажмите 'N' для справки")
+            pass  # Игнорируем неизвестные команды
 
     def _apply_optimal_pairs_to_ghost_tree(self) -> None:
         """
