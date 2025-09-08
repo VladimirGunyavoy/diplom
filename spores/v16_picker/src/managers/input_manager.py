@@ -74,6 +74,14 @@ class InputManager:
 
         # 🆕 v16: Командная система
         self._setup_command_system()
+        
+        # === ОТЛАДКА ИНИЦИАЛИЗАЦИИ ===
+        print(f"🔧 [DEBUG] InputManager инициализирован:")
+        print(f"   📹 zoom_manager: {self.zoom_manager}")
+        print(f"   📹 zoom_manager is None: {self.zoom_manager is None}")
+        print(f"   🎮 scene_setup: {self.scene_setup}")
+        print(f"   🌱 spore_manager: {self.spore_manager}")
+        # === КОНЕЦ ОТЛАДКИ ===
 
     def _setup_command_system(self):
         """Настраивает централизованную командную систему."""
@@ -173,6 +181,12 @@ class InputManager:
             },
             
             # === ОПТИМИЗАЦИЯ ===
+            'o': {
+                'description': 'запуск оптимизации дерева',
+                'handler': self._handle_optimization,
+                'category': 'оптимизация',
+                'enabled': lambda: self.manual_spore_manager is not None and self.dt_manager is not None
+            },
             'p': {
                 'description': 'применить оптимальные пары к призрачному дереву',
                 'handler': self._handle_optimal_pairs,
@@ -502,6 +516,55 @@ class InputManager:
         """Обработчик вывода справки (N)."""
         self.print_commands_help()
 
+    def _handle_optimization(self):
+        """Обработчик оптимизации дерева (O)."""
+        print(f"[IM][O] Клавиша O нажата!")
+        try:
+            print("[IM][O] Запуск оптимизации площади...")
+
+            # ==== Достаём зависимости ====
+            # pendulum находится в deps
+            pendulum = getattr(self.manual_spore_manager, "deps", None)
+            if pendulum:
+                pendulum = getattr(pendulum, "pendulum", None)
+
+            # dt-manager
+            dt_manager = self.dt_manager
+
+            print(f"[IM][O] Диагностика зависимостей:")
+            print(f"   pendulum: {pendulum is not None} ({type(pendulum) if pendulum else 'None'})")
+            print(f"   dt_manager: {dt_manager is not None} ({type(dt_manager) if dt_manager else 'None'})")
+
+            if pendulum is None:
+                raise RuntimeError("Не найден объект pendulum в manual_spore_manager.deps.pendulum")
+            if dt_manager is None:
+                raise RuntimeError("Не найден dt_manager")
+
+            # ==== Создаём временное дерево и пары ====
+            print("[IM][O] Создание временного дерева для оптимизации...")
+            
+            # Получаем позицию курсора
+            mouse_pos = self.manual_spore_manager.get_mouse_world_position()
+            if mouse_pos is None:
+                raise RuntimeError("Не удалось получить позицию курсора")
+            
+            cursor_position_2d = np.array([mouse_pos[0], mouse_pos[1]])
+            
+            # Вызываем оптимизацию из старого кода (импорт уже есть)
+            result = run_area_optimization(
+                cursor_position_2d=cursor_position_2d,
+                pendulum=pendulum,
+                dt_manager=dt_manager,
+                manual_spore_manager=self.manual_spore_manager
+            )
+            
+            print(f"[IM][O] Оптимизация завершена: {result}")
+            
+        except Exception as e:
+            print(f"❌ [IM][O] Ошибка при оптимизации: {e}")
+            import traceback
+            traceback.print_exc()
+
     # Методы движения камеры удалены - обрабатываются в first person controller
 
     def _handle_toggle_cursor(self):
@@ -524,37 +587,23 @@ class InputManager:
         """
         Новый централизованный обработчик команд через командную систему.
         """
-        # === ОТЛАДКА: показываем все события ===
-        if 'scroll' in key.lower() or 'wheel' in key.lower():
-            ctrl_pressed = held_keys['left control'] or held_keys['right control']
-            print(f"🔍 [DEBUG] Scroll event: '{key}', Ctrl: {ctrl_pressed}")
-        # Показываем все события для отладки
-        if key in ['e', 't', 'scroll up', 'scroll down', 'wheel up', 'wheel down']:
-            ctrl_pressed = held_keys['left control'] or held_keys['right control']
-            print(f"🔍 [DEBUG] Key event: '{key}', Ctrl: {ctrl_pressed}")
-        # === КОНЕЦ ОТЛАДКИ ===
         
         # Фильтруем события типа 'left alt up', 'right shift down', 'control' и т.д.
-        if (' ' in key and any(direction in key.lower() for direction in ['up', 'down', 'left', 'right'])) or key == 'control':
+        # НО НЕ фильтруем scroll события
+        if key == 'control' or (' ' in key and any(direction in key.lower() for direction in ['up', 'down', 'left', 'right']) and not key.startswith('scroll')):
             return  # Игнорируем события нажатия/отпускания модификаторов
         
         # === ОБРАБОТКА CTRL КОМБИНАЦИЙ ===
         ctrl_pressed = held_keys['left control'] or held_keys['right control']
         
         if ctrl_pressed and self.dt_manager:
-            # Ctrl + E/T или Ctrl + Scroll = управление dt
-            handled = False
-            
             if key == 'e' or key in ['scroll up', 'wheel up', 'mouse wheel up']:
                 self.dt_manager.increase_dt()
-                handled = True
+                return  # Не даём провалиться в обычный зум
             elif key == 't' or key in ['scroll down', 'wheel down', 'mouse wheel down']:
                 self.dt_manager.decrease_dt()
-                handled = True
-            
-            if handled:
-                print(f"✅ [DEBUG] DT command executed: {key}")
                 return  # Не даём провалиться в обычный зум
+        
         # === КОНЕЦ ОБРАБОТКИ CTRL КОМБИНАЦИЙ ===
         
         # Проверяем есть ли команда для данной клавиши
@@ -568,7 +617,7 @@ class InputManager:
                 except Exception as e:
                     print(f"❌ Ошибка выполнения команды '{key}': {e}")
             else:
-                print(f"⚠️ Команда '{key}' недоступна (отключен {cmd_info['category']} менеджер)")
+                print(f"⚠️ Команда '{key}' недоступна (enabled вернул False)")
             return
         
         # Команды движения камеры (space hold, shift hold и т.д.) обрабатываются в first person controller
