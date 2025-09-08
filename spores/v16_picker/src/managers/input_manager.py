@@ -549,16 +549,128 @@ class InputManager:
                 raise RuntimeError("Не удалось получить позицию курсора")
             
             cursor_position_2d = np.array([mouse_pos[0], mouse_pos[1]])
+            print(f"[IM][O] Позиция курсора: {cursor_position_2d}")
+                
+            # Импортируем нужные классы
+            from ..logic.tree.spore_tree import SporeTree
+            from ..logic.tree.spore_tree_config import SporeTreeConfig
+            from ..logic.tree.pairs.find_optimal_pairs import find_optimal_pairs
             
-            # Вызываем оптимизацию из старого кода (импорт уже есть)
-            result = run_area_optimization(
-                cursor_position_2d=cursor_position_2d,
-                pendulum=pendulum,
-                dt_manager=dt_manager,
-                manual_spore_manager=self.manual_spore_manager
+            # Загружаем конфигурацию спаривания
+            from ..logic.tree.tree_area_bridge import _load_pairing_config
+            pairing_config = _load_pairing_config()
+            
+            # Получаем текущий dt из системы
+            dt = dt_manager.get_dt() if dt_manager else 0.05
+            
+            # Создаем временное дерево для поиска пар
+            tree_config = SporeTreeConfig(
+                initial_position=cursor_position_2d,
+                dt_base=dt,
+                dt_grandchildren_factor=pairing_config.get('dt_grandchildren_factor', 0.2),
+                show_debug=pairing_config.get('show_debug', True)
             )
             
+            temp_tree = SporeTree(
+                pendulum=pendulum,
+                config=tree_config,
+                auto_create=True  # Создает полное дерево автоматически
+            )
+            
+            print(f"[IM][O] Временное дерево создано: {len(temp_tree.children)} детей, {len(temp_tree.grandchildren)} внуков")
+            
+            # Ищем оптимальные пары
+            pairs = find_optimal_pairs(temp_tree, show=True)
+            
+            if pairs is None:
+                raise RuntimeError("Не удалось найти пары")
+            
+            print(f"[IM][O] Найдено {len(pairs)} оптимальных пар")
+
+            # ==== Вызов оптимизации ====
+            # Параметры загружаются из config/json/config.json
+            result = run_area_optimization(
+                tree=temp_tree,
+                pairs=pairs,
+                pendulum=pendulum,
+                dt_manager=dt_manager,
+                # dt_bounds, optimization_method, max_iterations загружаются из конфига
+            )
+
+            # ==== Красивые логи (научная нотация) ====
+            if result is None:
+                print(f"[IM][O] ❌ Оптимизация вернула None - возможно, произошла ошибка")
+                return
+                
+            try:
+                start_area = result.get("start_area", result.get("initial_area", None))
+                best_area  = result.get("best_area",  result.get("optimized_area", None))
+                if start_area is not None and best_area is not None:
+                    delta = best_area - start_area
+                    rel = (delta / max(abs(start_area), 1e-12)) * 100.0
+                    print(f"[IM][O] Готово. Площадь: {start_area:.6e} → {best_area:.6e} (Δ={delta:+.6e}, {rel:+.3f}%)")
+                else:
+                    print(f"[IM][O] Результат получен, но площади не найдены в result")
+            except Exception as log_error:
+                print(f"[IM][O] Ошибка в логах результата: {log_error}")
+                
             print(f"[IM][O] Оптимизация завершена: {result}")
+            
+            # ==== ПРИМЕНЕНИЕ РЕЗУЛЬТАТОВ К ПРИЗРАЧНОМУ ДЕРЕВУ ====
+            if result and result.get('success', False):
+                try:
+                    # Используем тот же алгоритм что и в _apply_optimal_pairs_to_ghost_tree()
+                    print(f"[IM][O] Применяем оптимизированные dt к призрачному дереву...")
+                    
+                    # Получаем optimized_tree из результата
+                    optimized_tree = result.get('optimized_tree')
+                    if optimized_tree is None:
+                        print(f"[IM][O] ⚠️ optimized_tree не найдено в результате")
+                        return
+                    
+                    # Извлекаем dt из оптимизированного дерева (аналогично P)
+                    # Инициализируем массивы исходными значениями
+                    dt_children = np.array([child['dt'] for child in optimized_tree.children])
+                    dt_grandchildren = np.array([gc['dt'] for gc in optimized_tree.grandchildren])
+                    
+                    print(f"[IM][O] Оптимизированные dt из дерева:")
+                    print(f"   Дети: {dt_children}")
+                    print(f"   Внуки: {dt_grandchildren}")
+                    
+                    # 🔍 ВАЖНО: Дети НЕ ОПТИМИЗИРУЮТСЯ - их dt остаются стандартными!
+                    print(f"[IM][O] ⚠️  ВНИМАНИЕ: dt детей НЕ изменяются алгоритмом оптимизации!")
+                    print(f"   Дети используют стандартные dt: {dt_children}")
+                    print(f"   Только внуки получают оптимизированные dt")
+                    
+                    # Формируем финальный dt_vector из 12 элементов
+                    # Первые 4 - dt детей, следующие 8 - dt внуков
+                    dt_vector = np.concatenate([dt_children, dt_grandchildren])
+                    
+                    print(f"[IM][O] 🎯 Сформированный dt_vector:")
+                    print(f"   dt_children (0:4): {dt_vector[:4]}")  
+                    print(f"   dt_grandchildren (4:12): {dt_vector[4:12]}")
+                    
+                    # Подставляем в призрачное дерево
+                    self.manual_spore_manager.ghost_tree_dt_vector = dt_vector
+
+                    # Запомним базовый dt на момент оптимизации — нужен для масштабирования
+                    if self.dt_manager:
+                        self.manual_spore_manager.ghost_dt_baseline = self.dt_manager.get_dt()
+                    
+                    # Обновляем предсказания с новыми dt
+                    if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                        self.manual_spore_manager.prediction_manager.clear_predictions()
+                        self.manual_spore_manager._update_predictions()
+                        print(f"[IM][O] ✅ Призрачное дерево обновлено с оптимизированными dt!")
+                    else:
+                        print(f"[IM][O] ⚠️ prediction_manager не найден")
+                        
+                except Exception as apply_error:
+                    print(f"[IM][O] ❌ Ошибка применения результатов: {apply_error}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"[IM][O] ⚠️ Оптимизация не удалась, результаты не применяются")
             
         except Exception as e:
             print(f"❌ [IM][O] Ошибка при оптимизации: {e}")
