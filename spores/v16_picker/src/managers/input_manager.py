@@ -167,11 +167,17 @@ class InputManager:
             },
             
             # === DT & ВРЕМЯ ===
-            'm': {
+            ',': {
                 'description': 'сбросить dt к исходному значению',
                 'handler': self._handle_dt_reset,
                 'category': 'время',
                 'enabled': lambda: self.dt_manager is not None
+            },
+            'm': {
+                'description': 'объединить близких внуков + сохранить картинку',
+                'handler': self._handle_merge_grandchildren,
+                'category': 'merge',
+                'enabled': lambda: self.manual_spore_manager is not None
             },
             'j': {
                 'description': 'показать статистику dt',
@@ -1290,3 +1296,63 @@ class InputManager:
 
         except Exception as e:
             print(f"[InputManager] _on_dt_changed error: {e}")
+
+    def _handle_merge_grandchildren(self):
+        """Обработчик объединения внуков + debug картинка (M)."""
+        if not self.manual_spore_manager:
+            print("❌ Manual spore manager не найден")
+            return
+            
+        try:
+            print(f"🔗 Запуск объединения внуков в призрачном дереве...")
+            
+            # Проверяем есть ли сохраненное призрачное дерево
+            if not hasattr(self.manual_spore_manager, '_last_tree_logic') or not self.manual_spore_manager._last_tree_logic:
+                print("❌ Нет призрачного дерева для объединения")
+                print("💡 Наведите мышь на область для создания призрачного дерева, затем нажмите M")
+                return
+                
+            tree_logic = self.manual_spore_manager._last_tree_logic
+            
+            # Проверяем созданы ли внуки в дереве
+            if not hasattr(tree_logic, '_grandchildren_created') or not tree_logic._grandchildren_created:
+                print("❌ В призрачном дереве нет внуков")
+                print("💡 Создайте дерево с глубиной >= 2")
+                return
+                
+            if not hasattr(tree_logic, 'grandchildren') or len(tree_logic.grandchildren) == 0:
+                print("❌ Список внуков пуст")
+                return
+                
+            # Показываем состояние ДО объединения
+            print(f"📊 ДО объединения: {len(tree_logic.grandchildren)} внуков")
+            
+            # Вызываем объединение с трешхолдом чуть больше constraint_distance
+            # Используем 1e-3 вместо 1e-4 чтобы гарантированно захватить оптимизированные пары
+            merge_result = tree_logic.merge_close_grandchildren(distance_threshold=1e-3)
+            
+            if merge_result['total_merged'] > 0:
+                print(f"✅ Объединено {merge_result['total_merged']} пар внуков")
+                print(f"📊 ПОСЛЕ объединения: {merge_result['remaining_grandchildren']} внуков")
+                
+                # Обновляем визуализацию призрачного дерева если возможно
+                if hasattr(self.manual_spore_manager, 'prediction_manager'):
+                    self.manual_spore_manager.prediction_manager.clear_predictions()
+                    if hasattr(self.manual_spore_manager, '_update_predictions'):
+                        self.manual_spore_manager._update_predictions()
+                    print(f"🔄 Призрачные предсказания обновлены")
+            else:
+                print(f"📊 Объединение не требуется - все внуки достаточно далеко (> 1e-3)")
+            
+            # Автоматически сохраняем debug картинку
+            if hasattr(tree_logic, 'debug_plot_tree'):
+                save_path = tree_logic.debug_plot_tree()
+                print(f"💾 Debug картинка автоматически сохранена: {save_path}")
+                print(f"🖼️ Откройте файл для просмотра структуры и объединений")
+            else:
+                print(f"⚠️ Метод debug_plot_tree не найден в дереве логики")
+                
+        except Exception as e:
+            print(f"❌ Ошибка объединения внуков: {e}")
+            import traceback
+            traceback.print_exc()

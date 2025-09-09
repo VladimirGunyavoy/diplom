@@ -20,8 +20,9 @@ class PredictionManager:
     - Очистка всех предсказаний
     """
 
-    def __init__(self, deps: SharedDependencies):
+    def __init__(self, deps: SharedDependencies, manual_spore_manager=None):
         self.deps = deps
+        self.manual_spore_manager = manual_spore_manager  # Ссылка на ManualSporeManager
 
         # Предсказания min/max управления
         self.prediction_visualizers: List[PredictionVisualizer] = []
@@ -247,6 +248,10 @@ class PredictionManager:
 
             # Конвертируем в призрачные предсказания
             self._create_ghost_tree_from_logic(tree_logic, preview_spore)
+            
+            # Сохраняем ссылку на призрачное дерево для merge и debug
+            if self.manual_spore_manager:
+                self.manual_spore_manager._last_tree_logic = tree_logic
 
         except Exception as e:
             print(f"Ошибка создания призрачного дерева: {e}")

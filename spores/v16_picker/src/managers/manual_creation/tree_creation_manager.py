@@ -130,19 +130,10 @@ class TreeCreationManager:
                 if depth >= 2:
                     grandchildren = tree_logic.create_grandchildren(show=False)
                     
-                    # НОВОЕ: Объединяем близких внуков
-                    merge_result = tree_logic.merge_close_grandchildren(
-                        distance_threshold=self.deps.config.get('tree', {}).get('merge_threshold', 1e-4)
-                    )
-                    
-                    if merge_result['total_merged'] > 0:
-                        print(f"🔗 Объединено {merge_result['total_merged']} пар внуков")
-                        print(f"📊 Внуков в дереве: {merge_result['remaining_grandchildren']}")
-                        
-                        # Обновляем статистику для UI
-                        tree_logic._merge_stats = merge_result
-                    else:
-                        print("📊 Внуки не требуют объединения")
+                    # Автоматическое объединение отключено - только ручное по M
+                    # merge_result = tree_logic.merge_close_grandchildren(
+                    #     distance_threshold=self.deps.config.get('tree', {}).get('merge_threshold', 1e-4)
+                    # )
             else:
                 # Создаем обычное дерево ТОЧНО как в превью: явные dt + единый пересчет
                 print(f"🌲 Создаем дерево без паринга (dt как в превью)")

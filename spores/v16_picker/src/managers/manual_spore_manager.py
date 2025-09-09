@@ -43,7 +43,7 @@ class ManualSporeManager:
 
         # Создаем подкомпоненты с общими зависимостями
         self.preview_manager = PreviewManager(self.deps)
-        self.prediction_manager = PredictionManager(self.deps) 
+        self.prediction_manager = PredictionManager(self.deps, self)  # Передаем self для доступа к _last_tree_logic
         self.tree_creation_manager = TreeCreationManager(self.deps, spore_manager, self)  # НОВОЕ: передаем self
         
         # Синхронизируем ghost_tree_dt_vector

@@ -288,11 +288,11 @@ class SporeTree:
             print(f"\n✅ Создано {len(self.grandchildren)} внуков с ОБРАТНЫМ управлением")
             print(f"   Структура: от каждого родителя по 2 внука (forward/backward)")
         
-        # НОВОЕ: Автоматически объединяем близких внуков (только для реальных деревьев)
-        if not getattr(self.config, 'skip_auto_merge', False):
-            merge_result = self.merge_close_grandchildren(distance_threshold=1e-3)
-            if merge_result['total_merged'] > 0:
-                print(f"🔗 Автоматически объединено {merge_result['total_merged']} пар внуков")
+        # НОВОЕ: Автоматическое объединение отключено - только ручное по M
+        # if not getattr(self.config, 'skip_auto_merge', False):
+        #     merge_result = self.merge_close_grandchildren(distance_threshold=1e-3)
+        #     if merge_result['total_merged'] > 0:
+        #         print(f"🔗 Автоматически объединено {merge_result['total_merged']} пар внуков")
         
         return self.grandchildren
 
@@ -309,12 +309,23 @@ class SporeTree:
         if not self._grandchildren_created:
             return {'merged_pairs': [], 'error': 'Внуки не созданы'}
             
-        # Проверяем, не были ли внуки уже объединены
-        if hasattr(self, '_grandchildren_modified') and self._grandchildren_modified:
-            return {'merged_pairs': [], 'error': 'Внуки уже были объединены'}
-            
         merged_pairs = []
         grandchildren_to_remove = set()
+        
+        print(f"🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ОБЪЕДИНЕНИЯ ВНУКОВ")
+        print(f"   📏 Трешхолд: {distance_threshold}")
+        print(f"   📊 Внуков для проверки: {len(self.grandchildren)}")
+        print(f"   📍 Позиции всех внуков:")
+        
+        # Показываем все позиции внуков для диагностики
+        for i, gc in enumerate(self.grandchildren):
+            pos = gc['position']
+            print(f"      GC{i}: ({pos[0]:.6f}, {pos[1]:.6f}) | dt={gc['dt']:+.6f} | control={gc['control']:+.1f}")
+        
+        print(f"\n🔍 ПРОВЕРКА ВСЕХ ПАР:")
+        
+        # Собираем статистику всех расстояний
+        all_distances = []
         
         # Проверяем все пары внуков
         for i in range(len(self.grandchildren)):
@@ -332,8 +343,15 @@ class SporeTree:
                 pos_i = np.array(gc_i['position'])
                 pos_j = np.array(gc_j['position'])
                 distance = np.linalg.norm(pos_i - pos_j)
+                all_distances.append(distance)
                 
-                if distance < distance_threshold:
+                # Подробная диагностика каждой пары
+                meets_threshold = distance < distance_threshold
+                threshold_status = "✅ БЛИЗКО" if meets_threshold else "❌ ДАЛЕКО"
+                
+                print(f"   GC{i} ↔ GC{j}: {distance:.8f} {threshold_status} (порог: {distance_threshold:.8f})")
+                
+                if meets_threshold:
                     # Объединяем: создаем новую точку в середине
                     merged_position = (pos_i + pos_j) / 2
                     merged_dt = (abs(gc_i['dt']) + abs(gc_j['dt'])) / 2
@@ -346,7 +364,7 @@ class SporeTree:
                         'parent_idx': gc_i['parent_idx'],
                         'global_idx': gc_i['global_idx'],
                         'merged_from': [gc_i['global_idx'], gc_j['global_idx']],  # НОВОЕ: список исходных внуков
-                        'original_positions': [pos_i, pos_j],  # НОВОЕ: исходные позиции
+                        'original_positions': [pos_i.copy(), pos_j.copy()],  # НОВОЕ: исходные позиции
                         'original_dts': [gc_i['dt'], gc_j['dt']]  # НОВОЕ: исходные dt
                     }
                     
@@ -364,23 +382,50 @@ class SporeTree:
                         'original_indices': [gc_i['global_idx'], gc_j['global_idx']]
                     })
                     
-                    # Убираем детальные сообщения - они спамят
+                    print(f"      🔗 ОБЪЕДИНЯЕМ! Внуки {gc_i['global_idx']} и {gc_j['global_idx']}")
+                    print(f"         📏 Дистанция: {distance:.8f} < {distance_threshold:.8f}")
+                    print(f"         📍 Новая позиция: ({merged_position[0]:.6f}, {merged_position[1]:.6f})")
                     break  # Один внук может объединиться только с одним другим
+        
+        # Статистика расстояний
+        if all_distances:
+            min_dist = min(all_distances)
+            max_dist = max(all_distances)
+            avg_dist = sum(all_distances) / len(all_distances)
+            
+            print(f"\n📊 СТАТИСТИКА РАССТОЯНИЙ:")
+            print(f"   📏 Минимальное: {min_dist:.8f}")
+            print(f"   📏 Максимальное: {max_dist:.8f}")
+            print(f"   📏 Среднее: {avg_dist:.8f}")
+            print(f"   📏 Трешхолд: {distance_threshold:.8f}")
+            print(f"   📊 Пар ближе трешхолда: {len([d for d in all_distances if d < distance_threshold])}/{len(all_distances)}")
         
         # Удаляем помеченные внуки (в обратном порядке индексов)
         for idx in sorted(grandchildren_to_remove, reverse=True):
+            print(f"🗑️ Удаляем внука {idx}")
             self.grandchildren.pop(idx)
         
         # Обновляем флаг, если были изменения
         if merged_pairs:
             self._grandchildren_modified = True
-            print(f"✅ Объединено {len(merged_pairs)} пар внуков")
-            print(f"📊 Внуков осталось: {len(self.grandchildren)} из {len(self.grandchildren) + len(grandchildren_to_remove)}")
+            print(f"\n✅ РЕЗУЛЬТАТ ОБЪЕДИНЕНИЯ:")
+            print(f"   🔗 Объединено пар: {len(merged_pairs)}")
+            print(f"   📊 Внуков осталось: {len(self.grandchildren)}")
+            print(f"   📊 Внуков было: {len(self.grandchildren) + len(grandchildren_to_remove)}")
+        else:
+            print(f"\n❌ ОБЪЕДИНЕНИЕ НЕ ПРОИЗОШЛО:")
+            print(f"   📊 Все {len(all_distances)} расстояний больше трешхолда {distance_threshold:.8f}")
+            if all_distances:
+                print(f"   📏 Минимальное расстояние: {min(all_distances):.8f}")
+                print(f"   💡 Попробуйте увеличить трешхолд до {min(all_distances) * 1.1:.8f}")
         
         return {
             'merged_pairs': merged_pairs,
             'total_merged': len(merged_pairs),
-            'remaining_grandchildren': len(self.grandchildren)
+            'remaining_grandchildren': len(self.grandchildren),
+            'all_distances': all_distances,
+            'min_distance': min(all_distances) if all_distances else None,
+            'threshold_used': distance_threshold
         }
     
     def _create_pairing_candidate_map(self, show: bool = None):
@@ -751,15 +796,13 @@ class SporeTree:
             from .visualize_spore_tree import visualize_spore_tree
             import matplotlib.pyplot as plt
             import os
-            from datetime import datetime
             
-            # Генерируем путь если не задан
+            # Генерируем путь если не задан - всегда одно имя файла
             if save_path is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 buffer_dir = "buffer"
                 if not os.path.exists(buffer_dir):
                     os.makedirs(buffer_dir)
-                save_path = os.path.join(buffer_dir, f"tree_debug_{timestamp}.png")
+                save_path = os.path.join(buffer_dir, "tree_debug.png")
             
             # Создаем график
             fig, ax = plt.subplots(1, 1, figsize=(16, 12))
