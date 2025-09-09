@@ -81,9 +81,20 @@ class TreeCreationManager:
             # Правильная позиция для дерева
             tree_position = np.array([preview_position_2d[0], preview_position_2d[1]])
 
+            # 🔍 ДИАГНОСТИКА: Выбор пути создания дерева
+            print(f"🔍 ДИАГНОСТИКА выбора пути:")
+            print(f"   depth: {depth}")
+            print(f"   self.ghost_tree_dt_vector is None: {self.ghost_tree_dt_vector is None}")
+            if self.ghost_tree_dt_vector is not None:
+                print(f"   self.ghost_tree_dt_vector length: {len(self.ghost_tree_dt_vector)}")
+                print(f"   condition check: {self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12}")
+            else:
+                print(f"   self.ghost_tree_dt_vector: None")
+
             # Создаем логику дерева с учетом глубины
             if depth == 1:
                 # Для глубины 1: используем dt из dt_manager для всех детей
+                print(f"🛤️ ПУТЬ: Глубина 1 (только дети)")
                 print(f"🌲 Создаем дерево глубины 1 с единым dt")
                 
                 tree_config = SporeTreeConfig(
@@ -102,43 +113,77 @@ class TreeCreationManager:
                 tree_logic.create_children(dt_children=dt_children_uniform)
                 
             elif self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
-                # Берем абсолютные значения, т.к. SporeTree ожидает положительные dt
-                dt_children_abs = np.abs(self.ghost_tree_dt_vector[:4])
-                dt_grandchildren_abs = np.abs(self.ghost_tree_dt_vector[4:])
-
-                print(f"🌲 Используем dt из призрачного дерева")
-                print(f"   📊 dt_children: {dt_children_abs}")
-                print(f"   📊 dt_grandchildren: {dt_grandchildren_abs}")
-
-                tree_config = SporeTreeConfig(
-                    initial_position=tree_position,
-                    dt_base=dt
-                )
-
-                tree_logic = SporeTree(
-                    pendulum=self.deps.pendulum,
-                    config=tree_config,
-                    dt_children=dt_children_abs,
-                    dt_grandchildren=dt_grandchildren_abs,
-                    auto_create=False
-                )
+                print(f"🛤️ ПУТЬ: Призрачное дерево (с объединением)")
                 
-                # Создаем детей (всегда)
-                tree_logic.create_children()
-                
-                # Создаем внуков если нужна глубина 2
-                if depth >= 2:
-                    grandchildren = tree_logic.create_grandchildren(show=False)
+                # Получаем готовое призрачное дерево
+                if hasattr(self.manual_spore_manager, '_last_tree_logic') and self.manual_spore_manager._last_tree_logic:
+                    print(f"🔄 Используем готовое призрачное дерево (уже объединенное)")
+                    tree_logic = self.manual_spore_manager._last_tree_logic
                     
-                    # Применяем объединение для призрачных деревьев
-                    merge_result = tree_logic.merge_close_grandchildren(
-                        distance_threshold=2e-3  # Увеличенный threshold для оптимизированных пар
+                    # Обновляем позицию корня на позицию курсора
+                    tree_logic.root['position'] = tree_position.copy()
+                    
+                    # Проверяем что дерево уже объединено
+                    grandchildren_count = len(tree_logic.grandchildren) if hasattr(tree_logic, 'grandchildren') else 0
+                    print(f"📊 Призрачное дерево содержит: {grandchildren_count} внуков")
+                    
+                    if hasattr(tree_logic, '_grandchildren_modified') and tree_logic._grandchildren_modified:
+                        print(f"✅ Призрачное дерево уже объединено - используем как есть")
+                    else:
+                        print(f"⚠️ Призрачное дерево не объединено - применяем объединение")
+                        if depth >= 2 and grandchildren_count > 0:
+                            merge_result = tree_logic.merge_close_grandchildren(distance_threshold=2e-3)
+                            if merge_result['total_merged'] > 0:
+                                print(f"🔗 Дополнительно объединено {merge_result['total_merged']} пар")
+                else:
+                    print(f"❌ Призрачное дерево не найдено - создаем новое")
+                    # Fallback: создаем как раньше
+                    dt_children_abs = np.abs(self.ghost_tree_dt_vector[:4])
+                    dt_grandchildren_abs = np.abs(self.ghost_tree_dt_vector[4:])
+
+                    print(f"🌲 Используем dt из призрачного дерева")
+                    print(f"   📊 dt_children: {dt_children_abs}")
+                    print(f"   📊 dt_grandchildren: {dt_grandchildren_abs}")
+
+                    tree_config = SporeTreeConfig(
+                        initial_position=tree_position,
+                        dt_base=dt
                     )
 
-                    if merge_result['total_merged'] > 0:
-                        print(f"🔗 Объединено {merge_result['total_merged']} пар внуков в реальном дереве")
-                        print(f"📊 Внуков в реальном дереве: {merge_result['remaining_grandchildren']}")
+                    tree_logic = SporeTree(
+                        pendulum=self.deps.pendulum,
+                        config=tree_config,
+                        dt_children=dt_children_abs,
+                        dt_grandchildren=dt_grandchildren_abs,
+                        auto_create=False
+                    )
+                    
+                    # Создаем детей (всегда)
+                    tree_logic.create_children()
+                    
+                    # Создаем внуков если нужна глубина 2
+                    print(f"🔍 ДИАГНОСТИКА создания внуков: depth={depth}, depth >= 2: {depth >= 2}")
+                    if depth >= 2:
+                        print(f"🔍 Вызываем tree_logic.create_grandchildren()")
+                        grandchildren = tree_logic.create_grandchildren(show=False)
+                        print(f"🔍 Создано внуков: {len(grandchildren) if grandchildren else 0}")
+                        
+                        print(f"🔍 Вызываем merge_close_grandchildren с threshold=2e-3")
+                        # Применяем объединение для призрачных деревьев
+                        merge_result = tree_logic.merge_close_grandchildren(
+                            distance_threshold=2e-3  # Увеличенный threshold для оптимизированных пар
+                        )
+                        print(f"🔍 Результат объединения: {merge_result}")
+
+                        if merge_result['total_merged'] > 0:
+                            print(f"🔗 Объединено {merge_result['total_merged']} пар внуков в реальном дереве")
+                            print(f"📊 Внуков в реальном дереве: {merge_result['remaining_grandchildren']}")
+                        else:
+                            print(f"📊 Объединение в реальном дереве не требуется: все внуки далеко")
+                    else:
+                        print(f"❌ Внуки не создаются: depth={depth} < 2")
             else:
+                print(f"🛤️ ПУТЬ: Обычное дерево (fallback)")
                 # Создаем обычное дерево ТОЧНО как в превью: явные dt + единый пересчет
                 print(f"🌲 Создаем дерево без паринга (dt как в превью)")
 
