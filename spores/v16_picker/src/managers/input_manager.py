@@ -176,10 +176,10 @@ class InputManager:
                 'enabled': lambda: self.dt_manager is not None
             },
             'm': {
-                'description': 'объединить близких внуков + сохранить картинку',
-                'handler': self._handle_merge_grandchildren,
-                'category': 'merge',
-                'enabled': lambda: self.manual_spore_manager is not None
+                'description': 'генерация всех отладочных изображений',
+                'handler': self._handle_generate_debug_images,
+                'category': 'изображения',
+                'enabled': lambda: True
             },
             'j': {
                 'description': 'показать статистику dt',
@@ -264,10 +264,10 @@ class InputManager:
                 'enabled': lambda: True
             },
             '[': {
-                'description': 'полный сброс к стандартным dt (внуки << детей)',
-                'handler': self._handle_standard_reset,
-                'category': 'dt',
-                'enabled': lambda: self.manual_spore_manager is not None and self.dt_manager is not None
+                'description': 'сбросить dt к исходному значению',
+                'handler': self._handle_dt_reset,
+                'category': 'время',
+                'enabled': lambda: self.dt_manager is not None
             },
             
             # === УДАЛЕНИЕ СПОР ===
@@ -519,6 +519,74 @@ class InputManager:
                 self.manual_spore_manager._update_predictions()
             
             print(f"🔄 Все dt сброшены к стандартным значениям")
+
+    def _handle_generate_debug_images(self):
+        """Обработчик генерации отладочных изображений (M)."""
+        print("\n🖼️ ГЕНЕРАЦИЯ ОТЛАДОЧНЫХ ИЗОБРАЖЕНИЙ ПО КНОПКЕ M")
+        print("="*60)
+        
+        try:
+            images_generated = 0
+            
+            # 1. Генерируем полный реальный граф
+            if self.spore_manager and hasattr(self.spore_manager, 'graph'):
+                real_graph = self.spore_manager.graph
+                real_viz_path = real_graph.create_debug_visualization("full_real_graph_m_key")
+                if real_viz_path:
+                    print(f"✅ 1. Полный реальный граф: {real_viz_path}")
+                    images_generated += 1
+                else:
+                    print("❌ 1. Не удалось создать полный реальный граф")
+            else:
+                print("⚠️ 1. Реальный граф недоступен")
+                
+            # 2. Генерируем призрачный граф (исправленный корень)
+            if (self.manual_spore_manager and 
+                hasattr(self.manual_spore_manager, 'prediction_manager') and
+                hasattr(self.manual_spore_manager.prediction_manager, 
+                        'ghost_graph')):
+                
+                prediction_manager = self.manual_spore_manager.prediction_manager
+                ghost_viz_path = prediction_manager.ghost_graph.create_debug_visualization(
+                    "ghost_graph_debug")
+                if ghost_viz_path:
+                    print(f"✅ 2. Призрачный граф (исправленный): {ghost_viz_path}")
+                    images_generated += 1
+                else:
+                    print("❌ 2. Не удалось создать призрачный граф")
+            else:
+                print("⚠️ 2. Призрачный граф недоступен")
+                
+            # 3. Генерируем tree_debug.png (исправленные линки)
+            if (self.manual_spore_manager and 
+                hasattr(self.manual_spore_manager, '_last_tree_logic') and 
+                self.manual_spore_manager._last_tree_logic):
+                
+                tree_logic = self.manual_spore_manager._last_tree_logic
+                tree_debug_path = tree_logic.debug_plot_tree()
+                if tree_debug_path:
+                    print(f"✅ 3. Дерево (все линки): {tree_debug_path}")
+                    images_generated += 1
+                else:
+                    print("❌ 3. Не удалось создать график дерева")
+            else:
+                print("⚠️ 3. Последнее дерево недоступно (создайте дерево через ЛКМ)")
+                
+            # 4. Статистика
+            print("\n📊 СТАТИСТИКА ГЕНЕРАЦИИ:")
+            if images_generated > 0:
+                print(f"✅ Успешно создано: {images_generated} изображений")
+                print("📁 Все файлы сохранены в папке 'buffer/'")
+            else:
+                print("❌ Не создано ни одного изображения")
+                
+            print("="*60)
+            print("🖼️ ГЕНЕРАЦИЯ ЗАВЕРШЕНА")
+            
+        except Exception as e:
+            print(f"❌ Ошибка генерации изображений: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _handle_standard_reset(self):
         """Обработчик полного сброса к стандартным dt ([)."""

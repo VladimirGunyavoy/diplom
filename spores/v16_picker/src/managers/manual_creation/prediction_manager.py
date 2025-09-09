@@ -339,6 +339,23 @@ class PredictionManager:
                 print(f"🔍 Создаем призраков из tree_logic: {total_count} внуков ({merged_count} объединенных)")
                 self._ghost_creation_logged = True
         
+        # Создаем призрачную спору корня
+        ghost_root_viz = self._create_ghost_spore_from_data(
+            {'position': tree_logic.root['position']}, 
+            "root", 
+            0.5
+        )
+        
+        # Устанавливаем правильный ID для призрачной споры корня
+        if ghost_root_viz and ghost_root_viz.ghost_spore:
+            if preview_spore and hasattr(preview_spore, 'calc_2d_pos'):
+                preview_pos = preview_spore.calc_2d_pos()
+                ghost_root_viz.ghost_spore.id = (
+                    f"ghost_root_{preview_pos[0]:.4f}_{preview_pos[1]:.4f}")
+            else:
+                ghost_root_viz.ghost_spore.id = (
+                    f"ghost_root_{id(ghost_root_viz.ghost_spore)}")
+        
         # Создаем призрачные споры для детей
         child_ghosts = []
         for i, child_data in enumerate(tree_logic.children):

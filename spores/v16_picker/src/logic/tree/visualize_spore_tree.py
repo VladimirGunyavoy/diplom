@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
-import numpy as np
 
-def visualize_spore_tree(tree_data, title="Дерево спор", ax=None, figsize=None, show_legend=True):
+def visualize_spore_tree(tree_data, title="Дерево спор", ax=None,
+                         figsize=None, show_legend=True):
     """
     Упрощенная визуализация: только точки спор + линии четырехугольника.
     
@@ -34,7 +34,17 @@ def visualize_spore_tree(tree_data, title="Дерево спор", ax=None, figs
         grandchildren = tree_data.grandchildren
         _children_created = tree_data._children_created
         _grandchildren_created = tree_data._grandchildren_created
-        grandchildren_to_show = tree_data.sorted_grandchildren if tree_data._grandchildren_sorted else tree_data.grandchildren
+        # 🔧 ИСПРАВЛЕНИЕ: Всегда показываем ВСЕ внуков для полного графа
+        grandchildren_to_show = tree_data.grandchildren  # Всегда все внуки!
+        
+        # Добавляем информацию для отладки
+        if (hasattr(tree_data, '_grandchildren_sorted') and
+                tree_data._grandchildren_sorted):
+            sorted_count = (len(tree_data.sorted_grandchildren)
+                           if hasattr(tree_data, 'sorted_grandchildren') else 0)
+            total_count = len(tree_data.grandchildren)
+            print(f"🔍 tree_debug.png: Показываем ВСЕ {total_count} внуков "
+                  f"(было бы {sorted_count} отсортированных)")
 
 
     # === ТОЧКИ ===
@@ -77,35 +87,62 @@ def visualize_spore_tree(tree_data, title="Дерево спор", ax=None, figs
             '#FF9800', '#795548', '#E91E63', '#607D8B'
         ]
         
-        for gc in grandchildren_to_show:
-            gc_color = grandchild_colors[gc['global_idx']]
-            ax.scatter(gc['position'][0], gc['position'][1],
-                      c=gc_color, s=400, alpha=1, zorder=3) # Еще крупнее
-            
-            # Добавляем номер внука прямо на точку
-            ax.text(gc['position'][0], gc['position'][1], str(gc['global_idx']),
-                    color='white', ha='center', va='center',
-                    fontweight='bold', fontsize=12)
+        # 🔧 УЛУЧШЕНИЕ: Показываем все линки с улучшенной визуализацией
+        grandchild_info = {}  # для отслеживания дублирующихся позиций
 
+        for i, gc in enumerate(grandchildren_to_show):
+            gc_color = grandchild_colors[gc['global_idx'] % len(grandchild_colors)]
+            
+            # Проверяем на дублирующиеся позиции
+            pos_key = f"{gc['position'][0]:.6f}_{gc['position'][1]:.6f}"
+            if pos_key in grandchild_info:
+                # Смещаем дублированную позицию для видимости
+                offset = len(grandchild_info[pos_key]) * 0.001
+                display_pos = (gc['position'][0] + offset,
+                              gc['position'][1] + offset)
+                grandchild_info[pos_key].append(gc['global_idx'])
+                print(f"⚠️ Дубликат позиции найден для внука "
+                      f"{gc['global_idx']}, смещение на {offset}")
+            else:
+                display_pos = gc['position']
+                grandchild_info[pos_key] = [gc['global_idx']]
+            
+            ax.scatter(display_pos[0], display_pos[1],
+                      c=gc_color, s=400, alpha=1, zorder=3)
+            
+            # Показываем ID внука на точке
+            ax.text(display_pos[0], display_pos[1], str(gc['global_idx']),
+                    color='white', ha='center', va='center',
+                    fontweight='bold', fontsize=10)
+
+            # Создаем стрелку к родителю
             parent = children[gc['parent_idx']]
             
             if gc['dt'] > 0:
-                arrow_start, arrow_end = parent['position'], gc['position']
+                arrow_start, arrow_end = parent['position'], display_pos
             else:
-                arrow_start, arrow_end = gc['position'], parent['position']
+                arrow_start, arrow_end = display_pos, parent['position']
             
+            # Цвет стрелки по управлению + увеличенная толщина
             arrow_color = '#FF6B6B' if gc['control'] > 0 else '#1ABC9C'
             
             arrow = FancyArrowPatch(
                 arrow_start, arrow_end, arrowstyle='->', 
-                mutation_scale=25, color=arrow_color, alpha=0.6, linewidth=3) # Стрелки жирнее
+                mutation_scale=25, color=arrow_color,
+                linewidth=4, alpha=0.8  # Увеличенная толщина и прозрачность
+            )
             ax.add_patch(arrow)
     
     # === НАСТРОЙКИ ГРАФИКА ===
     
     ax.set_xlabel('θ (угол, рад)')
     ax.set_ylabel('θ̇ (скорость, рад/с)')
-    ax.set_title(title)
+    
+    # Добавляем статистику в заголовок
+    total_links = len(children) + len(grandchildren_to_show)
+    ax.set_title(f"{title} - Всего линков: {total_links} "
+                 f"(дети: {len(children)}, внуки: {len(grandchildren_to_show)})")
+    
     ax.grid(True, alpha=0.3)
     
     # Легенда больше не нужна

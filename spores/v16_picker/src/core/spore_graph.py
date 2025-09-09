@@ -37,10 +37,21 @@ class EdgeInfo:
         """Получает правильный ID споры, исправляя bound method"""
         spore_id = spore.id
         if hasattr(spore_id, '__call__'):  # Если это bound method
+            # Генерируем правильный ID на основе позиции и типа споры
             if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                spore_id = f"tree_ghost_root"
+                # Для призрачных спор используем позицию для уникальности
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"ghost_{id(spore)}"
             else:
-                spore_id = f"spore_{id(spore)}"
+                # Для реальных спор также используем позицию
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"spore_{id(spore)}"
         return str(spore_id)
 
     def __repr__(self):
@@ -81,11 +92,21 @@ class SporeGraph:
         # 🔧 ИСПРАВЛЕНИЕ: Проверяем и исправляем bound method ID
         spore_id = spore.id
         if hasattr(spore_id, '__call__'):  # Если это bound method
-            # Генерируем правильный ID для призрачных спор
+            # Генерируем правильный ID на основе позиции и типа споры
             if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                spore_id = f"tree_ghost_root"
+                # Для призрачных спор используем позицию для уникальности
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"ghost_{id(spore)}"
             else:
-                spore_id = f"spore_{id(spore)}"  # Используем id объекта как fallback
+                # Для реальных спор также используем позицию
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"spore_{id(spore)}"
 
         self.nodes[spore_id] = spore
         if spore_id not in self.outgoing:
@@ -135,10 +156,21 @@ class SporeGraph:
         """Получает правильный ID споры, исправляя bound method"""
         spore_id = spore.id
         if hasattr(spore_id, '__call__'):  # Если это bound method
+            # Генерируем правильный ID на основе позиции и типа споры
             if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                spore_id = f"tree_ghost_root"
+                # Для призрачных спор используем позицию для уникальности
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"ghost_{id(spore)}"
             else:
-                spore_id = f"spore_{id(spore)}"
+                # Для реальных спор также используем позицию
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos = spore.calc_2d_pos()
+                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
+                else:
+                    spore_id = f"spore_{id(spore)}"
         return str(spore_id)
 
     def remove_edge(self, parent_id: str, child_id: str) -> bool:

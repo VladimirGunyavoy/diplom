@@ -370,6 +370,43 @@ class TreeCreationManager:
             print(f"   🎯 Создано: {len(created_spores)} спор + {len(created_links)} линков")
             print(f"💡 Нажмите L для построения графика дерева")
 
+            # 🖱️ АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ ПОЛНОГО РЕАЛЬНОГО ГРАФА ПО ЛКМ
+            print("\n🖱️ ГЕНЕРАЦИЯ ПОЛНОГО РЕАЛЬНОГО ГРАФА ПО ЛКМ:")
+            try:
+                if (hasattr(self.spore_manager, 'graph') and
+                        self.spore_manager.graph):
+                    real_graph = self.spore_manager.graph
+                    
+                    # Создаем визуализацию полного реального графа
+                    full_graph_path = real_graph.create_debug_visualization(
+                        "full_real_graph_lmb")
+                    if full_graph_path:
+                        print(f"🖼️ Полный реальный граф сохранен: "
+                              f"{full_graph_path}")
+                        
+                        # Выводим полную статистику
+                        print("📊 ПОЛНАЯ СТАТИСТИКА ПО ЛКМ:")
+                        print(f"   🔴 Всего спор: {len(real_graph.nodes)}")
+                        print(f"   🔗 Всего связей: {len(real_graph.edges)}")
+                        
+                        # Статистика по типам связей
+                        link_types = {}
+                        for edge_info in real_graph.edges.values():
+                            link_type = edge_info.link_type
+                            link_types[link_type] = (
+                                link_types.get(link_type, 0) + 1)
+                        for link_type, count in link_types.items():
+                            print(f"   🎨 {link_type}: {count}")
+                    else:
+                        print("❌ Не удалось создать визуализацию полного графа")
+                else:
+                    print("❌ Реальный граф недоступен")
+                    
+            except Exception as e:
+                print(f"❌ Ошибка генерации полного графа: {e}")
+                import traceback
+                traceback.print_exc()
+
             # 🔍 СОЗДАНИЕ ОТЛАДОЧНОЙ ВИЗУАЛИЗАЦИИ РЕАЛЬНОГО ГРАФА
             print(f"\n🔍 СОЗДАНИЕ ОТЛАДОЧНОЙ ВИЗУАЛИЗАЦИИ РЕАЛЬНОГО ГРАФА:")
             try:
