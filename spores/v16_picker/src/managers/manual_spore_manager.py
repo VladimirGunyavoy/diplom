@@ -40,6 +40,9 @@ class ManualSporeManager:
             pendulum=pendulum,
             config=config
         )
+        
+        # Устанавливаем spore_manager в deps для доступа из других компонентов
+        self.deps.spore_manager = spore_manager
 
         # Создаем подкомпоненты с общими зависимостями
         self.preview_manager = PreviewManager(self.deps)

@@ -27,6 +27,9 @@ class SharedDependencies:
         self.min_control = float(control_bounds[0])
         self.max_control = float(control_bounds[1])
         
+        # Добавляем spore_manager (будет установлен в ManualSporeManager)
+        self.spore_manager = None
+        
     def get_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
         return self.config.get('pendulum', {}).get('dt', 0.1)

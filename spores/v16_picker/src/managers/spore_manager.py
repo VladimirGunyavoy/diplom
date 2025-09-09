@@ -749,9 +749,9 @@ class SporeManager:
                            zoom_manager=self.zoom_manager,
                            config=self.config)
             # Выделяем особым цветом связи между существующими спорами
-            link_color = self.color_manager.get_color('link', 'active')
+            link_color = self.color_manager.get_color('link', 'default')
             new_link.color = link_color
-            trajectory_print(f"      🎨 Цвет связи: {link_color} (активная связь объединения)")
+            trajectory_print(f"      🎨 Цвет связи: {link_color} (связь объединения)")
             
             self.links.append(new_link)
             
@@ -759,7 +759,7 @@ class SporeManager:
             self.graph.add_edge(
                 parent_spore=from_spore,
                 child_spore=to_spore,
-                link_type='active',
+                link_type='default',
                 link_object=new_link
             )
             

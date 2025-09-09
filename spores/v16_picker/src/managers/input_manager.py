@@ -1363,14 +1363,33 @@ class InputManager:
                 print(f"✅ Объединено {merge_result['total_merged']} пар внуков")
                 print(f"📊 ПОСЛЕ объединения: {merge_result['remaining_grandchildren']} внуков")
                 
-                # НОВОЕ: Копируем призрачную структуру в реальный граф
-                if (hasattr(prediction_manager, 'copy_ghost_structure_to_real') and 
-                    self.spore_manager and hasattr(self.spore_manager, 'graph')):
+                # НОВОЕ: Отладочная визуализация призрачного графа
+                if (hasattr(prediction_manager, 'ghost_graph') and 
+                    hasattr(prediction_manager.ghost_graph, 'create_debug_visualization')):
                     
-                    print("\n🔄 КОПИРОВАНИЕ ПРИЗРАЧНОЙ СТРУКТУРЫ:")
-                    prediction_manager.copy_ghost_structure_to_real(self.spore_manager.graph)
+                    print("\n🔍 СОЗДАНИЕ ОТЛАДОЧНОЙ ВИЗУАЛИЗАЦИИ ПРИЗРАЧНОГО ГРАФА:")
+                    ghost_viz_path = prediction_manager.ghost_graph.create_debug_visualization("ghost_graph_debug")
+                    
+                    if ghost_viz_path:
+                        print(f"👁️ Откройте файл для анализа: {ghost_viz_path}")
+                    
+                    # Выводим структуру призрачного графа в консоль
+                    if hasattr(prediction_manager.ghost_graph, 'print_graph_structure'):
+                        prediction_manager.ghost_graph.print_graph_structure()
+                    
+                    # Также создаем визуализацию реального графа для сравнения
+                    if (self.spore_manager and hasattr(self.spore_manager, 'graph') and
+                        hasattr(self.spore_manager.graph, 'create_debug_visualization')):
+                        real_viz_path = self.spore_manager.graph.create_debug_visualization("real_graph_debug")
+                        if real_viz_path:
+                            print(f"👁️ Реальный граф для сравнения: {real_viz_path}")
+                            
+                        # Выводим структуру реального графа
+                        if hasattr(self.spore_manager.graph, 'print_graph_structure'):
+                            self.spore_manager.graph.print_graph_structure()
+                    
                 else:
-                    print("⚠️ Методы копирования графа не найдены")
+                    print("❌ Призрачный граф или метод визуализации не найдены")
                 
                 # Обновляем призрачные предсказания
                 if hasattr(prediction_manager, 'clear_predictions'):
