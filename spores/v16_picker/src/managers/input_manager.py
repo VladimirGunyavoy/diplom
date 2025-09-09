@@ -3,6 +3,8 @@ import time
 import numpy as np
 from typing import Optional
 
+# hi, claude
+
 # Предварительное объявление классов для аннотаций типов
 # Это позволяет избежать циклических импортов
 from ..visual.scene_setup import SceneSetup
