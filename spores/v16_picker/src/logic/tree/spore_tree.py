@@ -361,6 +361,7 @@ class SporeTree:
                         'position': merged_position,
                         'dt': merged_dt,
                         'control': gc_i['control'],  # Берем control от первого
+                        'color': gc_i.get('color', 'default'),  # Исходный цвет первой споры
                         'parent_idx': gc_i['parent_idx'],
                         'global_idx': gc_i['global_idx'],
                         'merged_from': [gc_i['global_idx'], gc_j['global_idx']],  # НОВОЕ: список исходных внуков
@@ -883,6 +884,7 @@ class SporeTree:
                         'position': merged_position,
                         'dt': merged_dt,
                         'control': gc_i['control'],  # Берем control от первого
+                        'color': gc_i.get('color', 'default'),  # Исходный цвет первой споры
                         'parent_idx': gc_i['parent_idx'],
                         'global_idx': gc_i['global_idx'],
                         'merged_from': [gc_i['global_idx'], gc_j['global_idx']],  # НОВОЕ: список исходных внуков
