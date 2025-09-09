@@ -370,6 +370,61 @@ class TreeCreationManager:
             print(f"   🎯 Создано: {len(created_spores)} спор + {len(created_links)} линков")
             print(f"💡 Нажмите L для построения графика дерева")
 
+            # 🔍 СОЗДАНИЕ ОТЛАДОЧНОЙ ВИЗУАЛИЗАЦИИ РЕАЛЬНОГО ГРАФА
+            print(f"\n🔍 СОЗДАНИЕ ОТЛАДОЧНОЙ ВИЗУАЛИЗАЦИИ РЕАЛЬНОГО ГРАФА:")
+            try:
+                if hasattr(self.spore_manager, 'graph') and self.spore_manager.graph:
+                    real_graph = self.spore_manager.graph
+                    
+                    # Создаем debug картинку реального графа
+                    from ...core.spore_graph import create_debug_visualization
+                    
+                    buffer_dir = "buffer"
+                    import os
+                    if not os.path.exists(buffer_dir):
+                        os.makedirs(buffer_dir)
+                        
+                    real_graph_path = os.path.join(buffer_dir, "real_graph_debug_after_creation.png")
+                    
+                    # Анализируем граф перед созданием картинки
+                    print(f"🔍 АНАЛИЗ REAL ГРАФА ПОСЛЕ СОЗДАНИЯ:")
+                    print(f"   📊 Узлов в графе: {len(real_graph.nodes)}")
+                    print(f"   📊 Ребер в графе: {len(real_graph.edges)}")
+                    
+                    # Подсчитываем узлы с позициями
+                    nodes_with_positions = 0
+                    for spore_obj in real_graph.nodes.values():
+                        if hasattr(spore_obj, 'logic') and hasattr(spore_obj.logic, 'position_2d'):
+                            nodes_with_positions += 1
+                    print(f"   📊 Узлов с позициями: {nodes_with_positions}")
+                    
+                    # Статистика типов связей
+                    link_types = {}
+                    for edge_info in real_graph.edges.values():
+                        link_type = edge_info.link_type
+                        link_types[link_type] = link_types.get(link_type, 0) + 1
+                    print(f"📊 СТАТИСТИКА ТИПОВ СВЯЗЕЙ:")
+                    for link_type, count in link_types.items():
+                        print(f"   🎨 {link_type}: {count}")
+                    
+                    # Создаем визуализацию
+                    create_debug_visualization(
+                        real_graph, 
+                        save_path=real_graph_path,
+                        title="REAL ГРАФ - Отладочная визуализация"
+                    )
+                    
+                    print(f"💾 График real графа после создания сохранен: {real_graph_path}")
+                    print(f"👁️ Откройте файл для проверки: {real_graph_path}")
+                    
+                else:
+                    print("⚠️ Реальный граф недоступен для визуализации")
+                    
+            except Exception as e:
+                print(f"❌ Ошибка создания визуализации реального графа: {e}")
+                import traceback
+                traceback.print_exc()
+
             tree_logic = None
             return created_spores
 

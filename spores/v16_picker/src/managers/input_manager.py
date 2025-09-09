@@ -1363,6 +1363,19 @@ class InputManager:
                 print(f"✅ Объединено {merge_result['total_merged']} пар внуков")
                 print(f"📊 ПОСЛЕ объединения: {merge_result['remaining_grandchildren']} внуков")
                 
+                # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересинхронизируем призрачный граф
+                print("\n🔄 СИНХРОНИЗАЦИЯ ПРИЗРАЧНОГО ГРАФА С ОБЪЕДИНЕНИЯМИ:")
+                if hasattr(prediction_manager, 'clear_predictions'):
+                    prediction_manager.clear_predictions()
+                    print("   🧹 Очищены старые призрачные предсказания")
+
+                # Пересоздаем призрачные предсказания с объединенной структурой
+                if hasattr(self.manual_spore_manager, '_update_predictions'):
+                    self.manual_spore_manager._update_predictions()
+                    print("   🔄 Пересозданы призрачные предсказания с объединениями")
+                else:
+                    print("   ⚠️ Метод _update_predictions не найден")
+                
                 # НОВОЕ: Отладочная визуализация призрачного графа
                 if (hasattr(prediction_manager, 'ghost_graph') and 
                     hasattr(prediction_manager.ghost_graph, 'create_debug_visualization')):
@@ -1391,47 +1404,58 @@ class InputManager:
                 else:
                     print("❌ Призрачный граф или метод визуализации не найдены")
                 
-                # Обновляем призрачные предсказания
+                # 🔧 ПРИНУДИТЕЛЬНАЯ ОЧИСТКА И ПЕРЕСОЗДАНИЕ ПРИЗРАЧНОГО ГРАФА
+                print("\n🔧 ПРИНУДИТЕЛЬНАЯ ОЧИСТКА ПРИЗРАЧНОГО ГРАФА:")
+                if hasattr(prediction_manager, 'ghost_graph') and prediction_manager.ghost_graph:
+                    old_nodes = len(prediction_manager.ghost_graph.nodes)
+                    prediction_manager.ghost_graph.clear()
+                    print(f"   🧹 Очищен призрачный граф: {old_nodes} узлов удалено")
+
+                # Очищаем визуальные предсказания
                 if hasattr(prediction_manager, 'clear_predictions'):
                     prediction_manager.clear_predictions()
+                    print("   🧹 Очищены визуальные предсказания")
+
+                # Принудительно пересоздаем призрачные предсказания с объединенной структурой
                 if hasattr(self.manual_spore_manager, '_update_predictions'):
+                    print("   🔄 Пересоздаем призрачные предсказания...")
                     self.manual_spore_manager._update_predictions()
-                print("🔄 Призрачные предсказания обновлены")
+                    
+                    # Проверяем результат
+                    if hasattr(prediction_manager, 'ghost_graph') and prediction_manager.ghost_graph:
+                        new_nodes = len(prediction_manager.ghost_graph.nodes)
+                        print(f"   ✅ Новый призрачный граф: {new_nodes} узлов")
+                        # Ожидаем: 1 корень + 4 ребенка + 4 объединенных внука = 9 узлов
+                        expected = 9
+                        if new_nodes == expected:
+                            print(f"   ✅ Количество узлов корректно (ожидалось {expected})")
+                        else:
+                            print(f"   ⚠️ Неожиданное количество узлов: {new_nodes} (ожидалось {expected})")
+                    else:
+                        print("   ❌ Призрачный граф не был пересоздан")
+                else:
+                    print("   ❌ Метод _update_predictions не найден")
+
+                print("🔄 Призрачные предсказания принудительно обновлены")
                 
             else:
                 print("📊 Объединение не требуется - все внуки достаточно далеко (> 1e-2)")
                 
-            # 🔍 ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА дублирований
+            # 🔍 ПРОВЕРКА ДУБЛИРОВАНИЙ В ПРИЗРАЧНОМ ГРАФЕ:
             print("\n🔍 ПРОВЕРКА ДУБЛИРОВАНИЙ В ПРИЗРАЧНОМ ГРАФЕ:")
             if hasattr(prediction_manager, 'ghost_graph') and prediction_manager.ghost_graph:
-                # Проверяем уникальность узлов
-                unique_positions = set()
-                duplicate_positions = []
+                node_count = len(prediction_manager.ghost_graph.nodes)
+                edge_count = len(prediction_manager.ghost_graph.edges)
+                print(f"📊 Узлов в призрачном графе: {node_count}")
+                print(f"📊 Связей в призрачном графе: {edge_count}")
                 
-                for node_id in prediction_manager.ghost_graph.nodes:
-                    # Получаем позицию узла (если есть)
-                    node_info = prediction_manager.ghost_graph.nodes.get(node_id, {})
-                    if 'position' in node_info:
-                        pos_key = (round(node_info['position'][0], 6), round(node_info['position'][1], 6))
-                        if pos_key in unique_positions:
-                            duplicate_positions.append((node_id, pos_key))
-                        else:
-                            unique_positions.add(pos_key)
-                
-                if duplicate_positions:
-                    print(f"⚠️ Найдено {len(duplicate_positions)} дублирований позиций:")
-                    for node_id, pos in duplicate_positions:
-                        print(f"   Узел {node_id}: позиция {pos}")
+                # Ожидаемое количество после объединения: 1 корень + 4 ребенка + 4 внука = 9
+                expected_nodes = 9  
+                if node_count == expected_nodes:
+                    print(f"✅ Количество узлов корректно: {node_count} (ожидалось {expected_nodes})")
                 else:
-                    print("✅ Дублирований позиций не найдено")
-                    
-                # Проверяем уникальность ID
-                node_ids = list(prediction_manager.ghost_graph.nodes.keys())
-                unique_ids = set(node_ids)
-                if len(node_ids) != len(unique_ids):
-                    print(f"⚠️ Найдены дублирующиеся ID узлов")
-                else:
-                    print("✅ Все ID узлов уникальны")
+                    print(f"⚠️ Неожиданное количество узлов: {node_count} (ожидалось {expected_nodes})")
+                    print(f"   Возможные дублирования: {node_count - expected_nodes}")
             else:
                 print("❌ Призрачный граф недоступен для проверки")
                 

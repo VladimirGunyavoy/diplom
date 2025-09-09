@@ -28,10 +28,25 @@ class EdgeInfo:
 
     def get_direction_tuple(self) -> Tuple[str, str]:
         """Возвращает кортеж (parent_id, child_id) для идентификации ребра"""
-        return (self.parent_spore.id, self.child_spore.id)
+        # 🔧 ИСПРАВЛЕНИЕ: Получаем правильные ID
+        parent_id = self._get_spore_id(self.parent_spore)
+        child_id = self._get_spore_id(self.child_spore)
+        return (parent_id, child_id)
+    
+    def _get_spore_id(self, spore: Spore) -> str:
+        """Получает правильный ID споры, исправляя bound method"""
+        spore_id = spore.id
+        if hasattr(spore_id, '__call__'):  # Если это bound method
+            if hasattr(spore, 'is_ghost') and spore.is_ghost:
+                spore_id = f"tree_ghost_root"
+            else:
+                spore_id = f"spore_{id(spore)}"
+        return str(spore_id)
 
     def __repr__(self):
-        return (f"EdgeInfo({self.parent_spore.id} -> {self.child_spore.id}, "
+        parent_id = self._get_spore_id(self.parent_spore)
+        child_id = self._get_spore_id(self.child_spore)
+        return (f"EdgeInfo({parent_id} -> {child_id}, "
                 f"type={self.link_type})")
 
 
@@ -63,11 +78,20 @@ class SporeGraph:
         if not hasattr(spore, 'id') or spore.id is None:
             raise ValueError(f"Spore должна иметь уникальный id: {spore}")
 
-        self.nodes[spore.id] = spore
-        if spore.id not in self.outgoing:
-            self.outgoing[spore.id] = set()
-        if spore.id not in self.incoming:
-            self.incoming[spore.id] = set()
+        # 🔧 ИСПРАВЛЕНИЕ: Проверяем и исправляем bound method ID
+        spore_id = spore.id
+        if hasattr(spore_id, '__call__'):  # Если это bound method
+            # Генерируем правильный ID для призрачных спор
+            if hasattr(spore, 'is_ghost') and spore.is_ghost:
+                spore_id = f"tree_ghost_root"
+            else:
+                spore_id = f"spore_{id(spore)}"  # Используем id объекта как fallback
+
+        self.nodes[spore_id] = spore
+        if spore_id not in self.outgoing:
+            self.outgoing[spore_id] = set()
+        if spore_id not in self.incoming:
+            self.incoming[spore_id] = set()
 
     def add_edge(self,
                  parent_spore: Spore,
@@ -100,10 +124,22 @@ class SporeGraph:
         self.edges[edge_key] = edge_info
 
         # Обновляем индексы
-        self.outgoing[parent_spore.id].add(child_spore.id)
-        self.incoming[child_spore.id].add(parent_spore.id)
+        parent_id = self._get_spore_id(parent_spore)
+        child_id = self._get_spore_id(child_spore)
+        self.outgoing[parent_id].add(child_id)
+        self.incoming[child_id].add(parent_id)
 
         return edge_info
+    
+    def _get_spore_id(self, spore: Spore) -> str:
+        """Получает правильный ID споры, исправляя bound method"""
+        spore_id = spore.id
+        if hasattr(spore_id, '__call__'):  # Если это bound method
+            if hasattr(spore, 'is_ghost') and spore.is_ghost:
+                spore_id = f"tree_ghost_root"
+            else:
+                spore_id = f"spore_{id(spore)}"
+        return str(spore_id)
 
     def remove_edge(self, parent_id: str, child_id: str) -> bool:
         """
