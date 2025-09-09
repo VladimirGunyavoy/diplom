@@ -376,46 +376,32 @@ class TreeCreationManager:
                 if hasattr(self.spore_manager, 'graph') and self.spore_manager.graph:
                     real_graph = self.spore_manager.graph
                     
-                    # Создаем debug картинку реального графа
-                    from ...core.spore_graph import create_debug_visualization
-                    
-                    buffer_dir = "buffer"
-                    import os
-                    if not os.path.exists(buffer_dir):
-                        os.makedirs(buffer_dir)
-                        
-                    real_graph_path = os.path.join(buffer_dir, "real_graph_debug_after_creation.png")
-                    
-                    # Анализируем граф перед созданием картинки
-                    print(f"🔍 АНАЛИЗ REAL ГРАФА ПОСЛЕ СОЗДАНИЯ:")
-                    print(f"   📊 Узлов в графе: {len(real_graph.nodes)}")
-                    print(f"   📊 Ребер в графе: {len(real_graph.edges)}")
-                    
-                    # Подсчитываем узлы с позициями
-                    nodes_with_positions = 0
-                    for spore_obj in real_graph.nodes.values():
+                    # Используем встроенный метод debug из SporeGraph
+                    print(f"📋 СТРУКТУРА РЕАЛЬНОГО ГРАФА ПОСЛЕ СОЗДАНИЯ:")
+                    real_graph.debug_print()
+
+                    # Создаем простую статистику
+                    print(f"\n📊 ПОДРОБНАЯ СТАТИСТИКА РЕАЛЬНОГО ГРАФА:")
+                    for node_id, spore_obj in real_graph.nodes.items():
                         if hasattr(spore_obj, 'logic') and hasattr(spore_obj.logic, 'position_2d'):
-                            nodes_with_positions += 1
-                    print(f"   📊 Узлов с позициями: {nodes_with_positions}")
-                    
-                    # Статистика типов связей
-                    link_types = {}
-                    for edge_info in real_graph.edges.values():
-                        link_type = edge_info.link_type
-                        link_types[link_type] = link_types.get(link_type, 0) + 1
-                    print(f"📊 СТАТИСТИКА ТИПОВ СВЯЗЕЙ:")
-                    for link_type, count in link_types.items():
-                        print(f"   🎨 {link_type}: {count}")
-                    
-                    # Создаем визуализацию
-                    create_debug_visualization(
-                        real_graph, 
-                        save_path=real_graph_path,
-                        title="REAL ГРАФ - Отладочная визуализация"
-                    )
-                    
-                    print(f"💾 График real графа после создания сохранен: {real_graph_path}")
-                    print(f"👁️ Откройте файл для проверки: {real_graph_path}")
+                            pos_2d = spore_obj.logic.position_2d
+                            is_ghost = getattr(spore_obj, 'is_ghost', False)
+                            print(f"   • {node_id}: pos=({pos_2d[0]:.4f}, {pos_2d[1]:.4f}), is_ghost={is_ghost}")
+                        else:
+                            print(f"   • {node_id}: позиция недоступна")
+
+                    print(f"\n📊 СВЯЗИ РЕАЛЬНОГО ГРАФА:")
+                    for edge_key, edge_info in real_graph.edges.items():
+                        print(f"   {edge_info}")
+
+                    # Сравнение с ожидаемыми значениями
+                    expected_spores = 9  # 1 корень + 4 ребенка + 4 объединенных внука  
+                    actual_spores = len(created_spores)
+                    if actual_spores == expected_spores:
+                        print(f"✅ Количество созданных спор корректно: {actual_spores}")
+                    else:
+                        print(f"⚠️ Неожиданное количество спор: {actual_spores} (ожидалось {expected_spores})")
+                        print(f"   Возможная проблема: объединения не учтены при создании")
                     
                 else:
                     print("⚠️ Реальный граф недоступен для визуализации")

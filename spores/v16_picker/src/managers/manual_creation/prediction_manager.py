@@ -329,7 +329,16 @@ class PredictionManager:
 
     def _create_ghost_tree_from_logic(self, tree_logic, preview_spore):
         """Создает призрачные споры и линки из логики дерева."""
-
+        
+        # 🔍 ПРОВЕРКА: Учитываем ли объединения?
+        if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+            merged_count = sum(1 for gc in tree_logic.grandchildren if 'merged_from' in gc)
+            total_count = len(tree_logic.grandchildren)
+            # Печатаем только если есть объединения или это первый раз
+            if merged_count > 0 or not hasattr(self, '_ghost_creation_logged'):
+                print(f"🔍 Создаем призраков из tree_logic: {total_count} внуков ({merged_count} объединенных)")
+                self._ghost_creation_logged = True
+        
         # Создаем призрачные споры для детей
         child_ghosts = []
         for i, child_data in enumerate(tree_logic.children):
@@ -354,15 +363,31 @@ class PredictionManager:
         # Создаем призрачные споры для внуков (если есть)
         grandchild_ghosts = []
         if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
+            # Печатаем только если есть объединения или это первый раз
+            if merged_count > 0 or not hasattr(self, '_grandchild_creation_logged'):
+                print(f"🔍 Создаем призрачных внуков: {len(tree_logic.grandchildren)} (после объединений)")
+                self._grandchild_creation_logged = True
+            
             for i, grandchild_data in enumerate(tree_logic.grandchildren):
-                # 🔍 ДИАГНОСТИКА: Показываем данные внука перед созданием призрака (если включена отладка)
-                if self.debug_ghost_tree:
-                    print(f"   🔍 Создаем призрак внука {i}:")
-                    print(f"      Исходные данные: dt={grandchild_data['dt']:+.6f}, pos={grandchild_data['position']}")
+                # 🔍 ДИАГНОСТИКА: Проверяем объединен ли внук
+                is_merged = 'merged_from' in grandchild_data
+                if is_merged:
+                    original_indices = grandchild_data['merged_from']
+                    print(f"   🔗 Внук {i} объединен из {original_indices}")
                 
+                # Создаем призрачного внука (объединенного или обычного)
                 ghost_viz = self._create_ghost_spore_from_data(grandchild_data, f"grandchild_{i}", 0.3)
                 if ghost_viz and ghost_viz.ghost_spore:
                     grandchild_ghosts.append(ghost_viz.ghost_spore)
+                    
+                    # Добавляем в граф с правильным ID
+                    if hasattr(self, 'ghost_graph'):
+                        spore_id = f"tree_ghost_grandchild_{i}"
+                        if is_merged:
+                            spore_id += f"_merged_{len(original_indices)}"
+                        # Устанавливаем правильный ID для споры
+                        ghost_viz.ghost_spore.id = spore_id
+                        self.ghost_graph.add_spore(ghost_viz.ghost_spore)
 
         # Создаем призрачные линки от корня к детям
         for i, child_ghost in enumerate(child_ghosts):
