@@ -330,6 +330,12 @@ class PredictionManager:
     def _create_ghost_tree_from_logic(self, tree_logic, preview_spore):
         """Создает призрачные споры и линки из логики дерева."""
         
+        # 🔧 ИСПРАВЛЕНИЕ: Принудительно очищаем призрачный граф перед созданием
+        if not hasattr(self, '_cleanup_logged'):
+            print(f"🧹 Очистка призрачного графа перед созданием (было {len(self.ghost_graph.nodes)} узлов)")
+            self._cleanup_logged = True
+        self.ghost_graph.clear()
+        
         # 🔍 ПРОВЕРКА: Учитываем ли объединения?
         if hasattr(tree_logic, 'grandchildren') and tree_logic.grandchildren:
             merged_count = sum(1 for gc in tree_logic.grandchildren if 'merged_from' in gc)
@@ -346,15 +352,23 @@ class PredictionManager:
             0.5
         )
         
-        # Устанавливаем правильный ID для призрачной споры корня
-        if ghost_root_viz and ghost_root_viz.ghost_spore:
-            if preview_spore and hasattr(preview_spore, 'calc_2d_pos'):
-                preview_pos = preview_spore.calc_2d_pos()
-                ghost_root_viz.ghost_spore.id = (
-                    f"ghost_root_{preview_pos[0]:.4f}_{preview_pos[1]:.4f}")
-            else:
-                ghost_root_viz.ghost_spore.id = (
-                    f"ghost_root_{id(ghost_root_viz.ghost_spore)}")
+        # 🔧 ИСПРАВЛЕНИЕ: Уникальный ID корня без дублирования  
+        root_id = f"ghost_root_tree"
+        if hasattr(preview_spore, 'calc_2d_pos'):
+            preview_pos = preview_spore.calc_2d_pos()
+            root_id = f"ghost_root_{preview_pos[0]:.4f}_{preview_pos[1]:.4f}"
+            
+        # Проверяем что корень еще не добавлен
+        if root_id not in self.ghost_graph.nodes:
+            ghost_root_viz.ghost_spore.id = root_id
+            self.ghost_graph.add_spore(ghost_root_viz.ghost_spore)
+            if not hasattr(self, '_root_logged'):
+                print(f"✅ Корень добавлен в призрачный граф: {root_id}")
+                self._root_logged = True
+        else:
+            if not hasattr(self, '_root_duplicate_logged'):
+                print(f"⚠️ Корень уже существует в призрачном графе: {root_id}")
+                self._root_duplicate_logged = True
         
         # Создаем призрачные споры для детей
         child_ghosts = []
@@ -545,8 +559,17 @@ class PredictionManager:
 
     def clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
-        # Очищаем призрачный граф
-        self.ghost_graph.clear()
+        # Очищаем призрачный граф связей ПРАВИЛЬНО
+        if hasattr(self, 'ghost_graph') and self.ghost_graph:
+            self.ghost_graph.clear()
+            if not hasattr(self, '_clear_logged'):
+                print("🧹 Призрачный граф очищен (clear)")
+                self._clear_logged = True
+        else:
+            self.ghost_graph = SporeGraph(graph_type='ghost')
+            if not hasattr(self, '_create_logged'):
+                print("🆕 Призрачный граф создан заново")
+                self._create_logged = True
         
         if DEBUG_PM_SPAM: print(f"[PM] clear_predictions: removing {len(self.prediction_visualizers)} ghosts, {len(self.prediction_links)} links")
 

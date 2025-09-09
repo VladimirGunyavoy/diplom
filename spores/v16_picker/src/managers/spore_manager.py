@@ -266,6 +266,33 @@ class SporeManager:
         if not getattr(spore, 'is_ghost', False):
             self.objects.append(spore)
 
+        # 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем спору в граф
+        # add_spore_manual должен работать так же как add_spore, но без оптимизации и призраков
+        self.graph.add_spore(spore)
+
+        # Добавляем отладочную информацию
+        spore_type = ""
+        if hasattr(spore, 'is_goal') and spore.is_goal:
+            spore_type = "🎯 ЦЕЛЬ"
+        elif hasattr(spore, 'is_candidate') and spore.is_candidate:
+            spore_type = "⚪ КАНДИДАТ"
+        elif hasattr(spore, 'is_ghost') and spore.is_ghost:
+            spore_type = "👻 ПРИЗРАК"
+        else:
+            spore_type = "🔸 РУЧНАЯ"
+
+        # Выводим информацию только для первых нескольких спор чтобы избежать спама
+        if not hasattr(self, '_manual_spore_count'):
+            self._manual_spore_count = 0
+        self._manual_spore_count += 1
+        
+        if self._manual_spore_count <= 3:  # Показываем только первые 3 споры
+            print(f"➕ {spore_type} спора {spore.id} добавлена в граф (manual)")
+            print(f"   📍 Позиция: {spore.calc_2d_pos()}")
+            print(f"   📊 Граф теперь содержит: {len(self.graph.nodes)} узлов")
+        elif self._manual_spore_count == 4:
+            print(f"➕ ... и еще {len(self.graph.nodes) - 3} спор добавлено в граф (manual)")
+
         # НЕ вызываем:
         # - self.angel_manager.on_spore_created(spore)
         # - self.sample_ghost_spores()

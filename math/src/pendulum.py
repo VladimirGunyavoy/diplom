@@ -31,7 +31,10 @@ class Pendulum:
     def get_state(self):
         return self.state
     
-    def get_phase_acceleration_vector(self):
+    
+    def get_phase_acceleration_vector(self, state=None):
         """Возвращает вектор фазового ускорения маятника"""
-        return phase_acceleration_vector(self.state, self.length, self.damping, self.gravity)
+        if state is None:
+            state = self.state
+        return phase_acceleration_vector(state, self.length, self.damping, self.gravity)
     

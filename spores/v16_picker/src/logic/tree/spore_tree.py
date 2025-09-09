@@ -715,6 +715,12 @@ class SporeTree:
         Returns:
             dict: информация об объединениях
         """
+        # 🔧 СОХРАНЯЕМ ОРИГИНАЛЬНЫХ ВНУКОВ ДЛЯ ОТЛАДКИ
+        if not hasattr(self, '_original_grandchildren'):
+            import copy
+            self._original_grandchildren = copy.deepcopy(self.grandchildren)
+            print(f"💾 Сохранены оригинальные внуки для отладки: {len(self._original_grandchildren)}")
+        
         if not self._grandchildren_created:
             return {'merged_pairs': [], 'error': 'Внуки не созданы'}
             

@@ -34,17 +34,15 @@ def visualize_spore_tree(tree_data, title="Дерево спор", ax=None,
         grandchildren = tree_data.grandchildren
         _children_created = tree_data._children_created
         _grandchildren_created = tree_data._grandchildren_created
-        # 🔧 ИСПРАВЛЕНИЕ: Всегда показываем ВСЕ внуков для полного графа
-        grandchildren_to_show = tree_data.grandchildren  # Всегда все внуки!
         
-        # Добавляем информацию для отладки
-        if (hasattr(tree_data, '_grandchildren_sorted') and
-                tree_data._grandchildren_sorted):
-            sorted_count = (len(tree_data.sorted_grandchildren)
-                           if hasattr(tree_data, 'sorted_grandchildren') else 0)
-            total_count = len(tree_data.grandchildren)
-            print(f"🔍 tree_debug.png: Показываем ВСЕ {total_count} внуков "
-                  f"(было бы {sorted_count} отсортированных)")
+        # 🔧 ИСПРАВЛЕНИЕ: Показываем ВСЕ внуков для отладки
+        # Проверяем есть ли оригинальные внуки до объединения
+        if hasattr(tree_data, '_original_grandchildren') and tree_data._original_grandchildren:
+            grandchildren_to_show = tree_data._original_grandchildren
+            print(f"🔍 tree_debug: Показываем {len(grandchildren_to_show)} оригинальных внуков")
+        else:
+            grandchildren_to_show = tree_data.grandchildren
+            print(f"🔍 tree_debug: Показываем {len(grandchildren_to_show)} текущих внуков")
 
 
     # === ТОЧКИ ===
@@ -140,8 +138,7 @@ def visualize_spore_tree(tree_data, title="Дерево спор", ax=None,
     
     # Добавляем статистику в заголовок
     total_links = len(children) + len(grandchildren_to_show)
-    ax.set_title(f"{title} - Всего линков: {total_links} "
-                 f"(дети: {len(children)}, внуки: {len(grandchildren_to_show)})")
+    ax.set_title(f"{title} - Всего линков: {total_links} (дети: {len(children)}, внуки: {len(grandchildren_to_show)})")
     
     ax.grid(True, alpha=0.3)
     

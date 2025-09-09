@@ -335,6 +335,62 @@ class TreeCreationManager:
             if depth >= 2:
                 created_links.extend(tree_visual.grandchild_links)
 
+            # 🔗 ДОБАВЛЯЕМ СВЯЗИ ДЕРЕВА В РЕАЛЬНЫЙ ГРАФ
+            if not hasattr(self, '_tree_links_logged'):
+                print(f"\n🔗 ДОБАВЛЕНИЕ СВЯЗЕЙ ДЕРЕВА В РЕАЛЬНЫЙ ГРАФ:")
+                self._tree_links_logged = True
+            try:
+                # Добавляем связи детей к корню
+                if tree_visual.root_spore and tree_visual.child_spores:
+                    for i, child_spore in enumerate(tree_visual.child_spores):
+                        if child_spore and i < len(tree_visual.child_links):
+                            child_link = tree_visual.child_links[i]
+                            child_data = tree_logic.children[i]
+                            
+                            # Определяем тип связи по управлению
+                            link_type = 'tree_max' if child_data['control'] > 0 else 'tree_min'
+                            
+                            # Добавляем в граф
+                            self.spore_manager.graph.add_edge(
+                                parent_spore=tree_visual.root_spore,
+                                child_spore=child_spore,
+                                link_type=link_type,
+                                link_object=child_link
+                            )
+                            if i < 2:  # Показываем только первые 2 связи
+                                print(f"   ✅ Связь корень → ребенок {i} ({link_type})")
+                
+                # Добавляем связи внуков к детям (если есть)
+                if depth >= 2 and tree_visual.grandchild_spores:
+                    for i, grandchild_spore in enumerate(tree_visual.grandchild_spores):
+                        if grandchild_spore and i < len(tree_visual.grandchild_links):
+                            grandchild_link = tree_visual.grandchild_links[i]
+                            grandchild_data = tree_logic.grandchildren[i]
+                            parent_idx = grandchild_data['parent_idx']
+                            
+                            if parent_idx < len(tree_visual.child_spores):
+                                parent_spore = tree_visual.child_spores[parent_idx]
+                                
+                                # Определяем тип связи по управлению
+                                link_type = 'tree_max' if grandchild_data['control'] > 0 else 'tree_min'
+                                
+                                # Добавляем в граф
+                                self.spore_manager.graph.add_edge(
+                                    parent_spore=parent_spore,
+                                    child_spore=grandchild_spore,
+                                    link_type=link_type,
+                                    link_object=grandchild_link
+                                )
+                                if i < 2:  # Показываем только первые 2 связи внуков
+                                    print(f"   ✅ Связь ребенок {parent_idx} → внук {i} ({link_type})")
+                
+                print(f"📊 Граф после добавления связей: {len(self.spore_manager.graph.nodes)} узлов, {len(self.spore_manager.graph.edges)} связей")
+                
+            except Exception as e:
+                print(f"❌ Ошибка добавления связей в граф: {e}")
+                import traceback
+                traceback.print_exc()
+
             # 3. Регистрируем линки в zoom_manager (используем уже присвоенные ID)
             link_keys = []
             for link in created_links:
