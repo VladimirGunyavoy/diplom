@@ -288,6 +288,12 @@ class SporeTree:
             print(f"\n✅ Создано {len(self.grandchildren)} внуков с ОБРАТНЫМ управлением")
             print(f"   Структура: от каждого родителя по 2 внука (forward/backward)")
         
+        # НОВОЕ: Автоматически объединяем близких внуков (только для реальных деревьев)
+        if not getattr(self.config, 'skip_auto_merge', False):
+            merge_result = self.merge_close_grandchildren(distance_threshold=1e-3)
+            if merge_result['total_merged'] > 0:
+                print(f"🔗 Автоматически объединено {merge_result['total_merged']} пар внуков")
+        
         return self.grandchildren
 
     def merge_close_grandchildren(self, distance_threshold=1e-4):
@@ -786,6 +792,95 @@ class SporeTree:
             import traceback
             traceback.print_exc()
             return ""
+    
+    def merge_close_grandchildren(self, distance_threshold=1e-4):
+        """
+        Объединяет внуков, находящихся ближе трешхолда.
+        
+        Args:
+            distance_threshold: максимальная дистанция для объединения
+            
+        Returns:
+            dict: информация об объединениях
+        """
+        if not self._grandchildren_created:
+            return {'merged_pairs': [], 'error': 'Внуки не созданы'}
+            
+        # Проверяем, не были ли внуки уже объединены
+        if hasattr(self, '_grandchildren_modified') and self._grandchildren_modified:
+            return {'merged_pairs': [], 'error': 'Внуки уже были объединены'}
+            
+        merged_pairs = []
+        grandchildren_to_remove = set()
+        
+        # Проверяем все пары внуков
+        for i in range(len(self.grandchildren)):
+            if i in grandchildren_to_remove:
+                continue
+                
+            for j in range(i + 1, len(self.grandchildren)):
+                if j in grandchildren_to_remove:
+                    continue
+                    
+                gc_i = self.grandchildren[i]
+                gc_j = self.grandchildren[j]
+                
+                # Вычисляем дистанцию
+                pos_i = np.array(gc_i['position'])
+                pos_j = np.array(gc_j['position'])
+                distance = np.linalg.norm(pos_i - pos_j)
+                
+                if distance < distance_threshold:
+                    # Объединяем: создаем новую точку в середине
+                    merged_position = (pos_i + pos_j) / 2
+                    merged_dt = (abs(gc_i['dt']) + abs(gc_j['dt'])) / 2
+                    
+                    # Сохраняем информацию об исходных внуках для наследования линков
+                    merged_gc = {
+                        'position': merged_position,
+                        'dt': merged_dt,
+                        'control': gc_i['control'],  # Берем control от первого
+                        'parent_idx': gc_i['parent_idx'],
+                        'global_idx': gc_i['global_idx'],
+                        'merged_from': [gc_i['global_idx'], gc_j['global_idx']],  # НОВОЕ: список исходных внуков
+                        'original_positions': [pos_i.copy(), pos_j.copy()],  # НОВОЕ: исходные позиции
+                        'original_dts': [gc_i['dt'], gc_j['dt']]  # НОВОЕ: исходные dt
+                    }
+                    
+                    # Заменяем первого внука объединенным
+                    self.grandchildren[i] = merged_gc
+                    
+                    # Помечаем второго для удаления
+                    grandchildren_to_remove.add(j)
+                    
+                    merged_pairs.append({
+                        'merged_idx': i,
+                        'removed_idx': j,
+                        'distance': distance,
+                        'merged_position': merged_position,
+                        'original_indices': [gc_i['global_idx'], gc_j['global_idx']]
+                    })
+                    
+                    print(f"🔗 Объединены внуки {gc_i['global_idx']} и {gc_j['global_idx']}")
+                    print(f"   📏 Дистанция: {distance:.6e} < {distance_threshold:.6e}")
+                    print(f"   📍 Новая позиция: ({merged_position[0]:.4f}, {merged_position[1]:.4f})")
+                    break  # Один внук может объединиться только с одним другим
+        
+        # Удаляем помеченные внуки (в обратном порядке индексов)
+        for idx in sorted(grandchildren_to_remove, reverse=True):
+            self.grandchildren.pop(idx)
+        
+        # Обновляем флаг, если были изменения
+        if merged_pairs:
+            self._grandchildren_modified = True
+            print(f"✅ Объединено {len(merged_pairs)} пар внуков")
+            print(f"📊 Внуков осталось: {len(self.grandchildren)} из {len(self.grandchildren) + len(grandchildren_to_remove)}")
+        
+        return {
+            'merged_pairs': merged_pairs,
+            'total_merged': len(merged_pairs),
+            'remaining_grandchildren': len(self.grandchildren)
+        }
     
     def reset_for_optimization(self):
         """Быстрый сброс перед оптимизацией - убираем только необходимое."""

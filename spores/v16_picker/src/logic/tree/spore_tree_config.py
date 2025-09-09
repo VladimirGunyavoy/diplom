@@ -28,6 +28,7 @@ class SporeTreeConfig:
     child_size: int = 80
     grandchild_size: int = 40
     show_debug: bool = False  # отладочная информация по умолчанию
+    skip_auto_merge: bool = False  # пропускать автоматическое объединение внуков
     
     def __post_init__(self):
         """Устанавливает дефолтное начальное положение если не задано."""

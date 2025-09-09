@@ -1021,7 +1021,8 @@ class InputManager:
                 initial_position=cursor_position_2d,
                 dt_base=dt,
                 dt_grandchildren_factor=pairing_config.get('dt_grandchildren_factor', 0.2),
-                show_debug=pairing_config.get('show_debug', True)
+                show_debug=pairing_config.get('show_debug', True),
+                skip_auto_merge=True  # НОВОЕ: отключаем автоматическое объединение для временных деревьев
             )
             
             temp_tree = SporeTree(

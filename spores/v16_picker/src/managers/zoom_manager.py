@@ -98,11 +98,6 @@ class ZoomManager:
         if ghost_count > 0:
             print(f"   👻 Призрачных объектов: {ghost_count}")
         
-        # Показываем имена всех объектов
-        print(f"   📋 Все объекты:")
-        for n in self.objects.keys():
-            print(f"      - {n}")
-        
         print()  # Пустая строка для читаемости
     
     def enable_auto_print(self) -> None:
