@@ -372,6 +372,38 @@ class ManualSporeManager:
                 except Exception as e:
                     print(f"   ❌ Ошибка удаления споры {i+1}: {e}")
 
+            # НОВОЕ: Синхронизируем граф - удаляем связи 
+            if hasattr(self.spore_manager, 'graph'):
+                print("   🔄 Синхронизация графа связей...")
+                removed_edges = 0
+                
+                # Удаляем все связи, связанные с удаляемыми спорами
+                for spore in last_spores:
+                    if hasattr(spore, 'id') and spore.id:
+                        # Удаляем все исходящие связи
+                        children = self.spore_manager.graph.get_children(spore.id)
+                        for child in children:
+                            if self.spore_manager.graph.remove_edge(spore.id, child.id):
+                                removed_edges += 1
+                                
+                        # Удаляем все входящие связи  
+                        parents = self.spore_manager.graph.get_parents(spore.id)
+                        for parent in parents:
+                            if self.spore_manager.graph.remove_edge(parent.id, spore.id):
+                                removed_edges += 1
+                                
+                        # Удаляем спору из графа
+                        if spore.id in self.spore_manager.graph.nodes:
+                            del self.spore_manager.graph.nodes[spore.id]
+                            if spore.id in self.spore_manager.graph.outgoing:
+                                del self.spore_manager.graph.outgoing[spore.id]
+                            if spore.id in self.spore_manager.graph.incoming:
+                                del self.spore_manager.graph.incoming[spore.id]
+                
+                print(f"   🗑️ Удалено из графа: {removed_edges} связей")
+            else:
+                print("   ⚠️ Граф связей не найден")
+
             # 4. ИТОГОВАЯ СТАТИСТИКА
             print(f"   🎯 УДАЛЕНИЕ ЗАВЕРШЕНО:")
             print(f"      📊 Спор удалено: {deleted_spores}/{len(last_spores)}")
@@ -427,3 +459,59 @@ class ManualSporeManager:
     def _get_current_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
         return self.deps.config.get('pendulum', {}).get('dt', 0.1)
+
+    def clear_all_graphs(self) -> None:
+        """Очищает все графы связей (реальный и призрачный)."""
+        try:
+            # Очищаем реальный граф
+            if hasattr(self.spore_manager, 'graph'):
+                self.spore_manager.graph.clear()
+                print("🧹 Реальный граф очищен")
+            
+            # Очищаем призрачный граф
+            if hasattr(self.prediction_manager, 'ghost_graph'):
+                self.prediction_manager.ghost_graph.clear()
+                print("🧹 Призрачный граф очищен")
+                
+            print("✅ Все графы связей очищены")
+            
+        except Exception as e:
+            print(f"❌ Ошибка очистки графов: {e}")
+
+    def debug_graph_consistency(self) -> None:
+        """Проверяет консистентность между графами и менеджерами."""
+        try:
+            print("\n🔍 ПРОВЕРКА КОНСИСТЕНТНОСТИ ГРАФОВ:")
+            
+            # Проверяем реальный граф
+            if hasattr(self.spore_manager, 'graph'):
+                real_graph = self.spore_manager.graph
+                print(f"📊 Реальный граф: {len(real_graph.nodes)} узлов, {len(real_graph.edges)} связей")
+                print(f"📊 SporeManager: {len(self.spore_manager.objects)} спор, {len(self.spore_manager.links)} линков")
+                
+                # Проверяем есть ли узлы без соответствующих спор
+                orphaned_nodes = 0
+                for spore_id in real_graph.nodes:
+                    found = any(spore.id == spore_id for spore in self.spore_manager.objects)
+                    if not found:
+                        orphaned_nodes += 1
+                        
+                if orphaned_nodes > 0:
+                    print(f"⚠️ Найдено {orphaned_nodes} узлов-сирот в реальном графе")
+                else:
+                    print("✅ Реальный граф консистентен")
+            
+            # Проверяем призрачный граф  
+            if hasattr(self.prediction_manager, 'ghost_graph'):
+                ghost_graph = self.prediction_manager.ghost_graph
+                print(f"📊 Призрачный граф: {len(ghost_graph.nodes)} узлов, {len(ghost_graph.edges)} связей")
+                if hasattr(self.prediction_manager, 'prediction_links'):
+                    print(f"📊 PredictionManager: {len(self.prediction_manager.prediction_links)} линков")
+                
+                if len(ghost_graph.edges) == len(getattr(self.prediction_manager, 'prediction_links', [])):
+                    print("✅ Призрачный граф консистентен")
+                else:
+                    print("⚠️ Призрачный граф может быть несинхронизирован")
+                    
+        except Exception as e:
+            print(f"❌ Ошибка проверки консистентности: {e}")

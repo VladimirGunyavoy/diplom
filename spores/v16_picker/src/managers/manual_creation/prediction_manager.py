@@ -5,6 +5,7 @@ from ursina import destroy
 from .shared_dependencies import SharedDependencies
 from ...visual.prediction_visualizer import PredictionVisualizer
 from ...visual.link import Link
+from ...core.spore_graph import SporeGraph
 
 # Флаг для управления частыми логами PredictionManager
 DEBUG_PM_SPAM = False  # выключаем частые логи PredictionManager
@@ -28,6 +29,10 @@ class PredictionManager:
         self.prediction_visualizers: List[PredictionVisualizer] = []
         self.prediction_links: List[Link] = []  # Линки от превью споры к призракам
         self.show_predictions = True
+
+        # Призрачный граф связей  
+        self.ghost_graph = SporeGraph(graph_type='ghost')
+        print("   ✓ Ghost SporeGraph инициализирован")
 
         # Используем кэшированные значения из SharedDependencies
         self.min_control = deps.min_control
@@ -472,6 +477,15 @@ class PredictionManager:
 
             # Добавляем в список для очистки
             self.prediction_links.append(ghost_link)
+            
+            # Добавляем призрачную связь в граф
+            self.ghost_graph.add_edge(
+                parent_spore=parent_spore,
+                child_spore=child_spore,
+                link_type=color_name,  # ghost_max или ghost_min
+                link_object=ghost_link
+            )
+            
             if DEBUG_PM_SPAM: print(f"[PM] +ghost_link {link_suffix}")
 
         except Exception as e:
@@ -479,6 +493,9 @@ class PredictionManager:
 
     def clear_predictions(self) -> None:
         """Очищает все предсказания и их линки."""
+        # Очищаем призрачный граф
+        self.ghost_graph.clear()
+        
         if DEBUG_PM_SPAM: print(f"[PM] clear_predictions: removing {len(self.prediction_visualizers)} ghosts, {len(self.prediction_links)} links")
 
         # Призрачные споры больше не регистрируются в ZoomManager, просто уничтожаем визуализаторы
@@ -575,3 +592,31 @@ class PredictionManager:
             print("🔄 Призрачное дерево пересоздано после рескейла dt")
         except Exception as ex:
             print(f"[PM.rebuild_ghost_tree] error: {ex}")
+
+    def get_ghost_graph_stats(self) -> None:
+        """Выводит статистику призрачного графа"""
+        print("\n👻 ПРИЗРАЧНЫЙ ГРАФ:")
+        if self.ghost_graph:
+            self.ghost_graph.debug_print()
+        else:
+            print("   ❌ Призрачный граф не инициализирован")
+            
+    def copy_ghost_structure_to_real(self, real_graph) -> None:
+        """
+        Копирует структуру призрачного графа в реальный граф.
+        
+        Args:
+            real_graph: SporeGraph куда копировать (обычно spore_manager.graph)
+        """
+        if not self.ghost_graph or not real_graph:
+            print("❌ Один из графов не инициализирован")
+            return
+            
+        print("\n🔄 КОПИРОВАНИЕ ПРИЗРАЧНОЙ СТРУКТУРЫ В РЕАЛЬНУЮ")
+        print(f"   📤 Источник: {len(self.ghost_graph.edges)} призрачных связей")
+        
+        # Копируем структуру (без визуальных объектов Link)
+        real_graph.copy_structure_from(self.ghost_graph)
+        
+        print(f"   📥 Результат: {len(real_graph.edges)} реальных связей")
+        print("   ✅ Структура скопирована")

@@ -237,9 +237,21 @@ class InputManager:
                 'category': 'отладка',
                 'enabled': lambda: True
             },
+            # 'l': {
+            #     'description': 'построить график последнего созданного дерева (debug)',
+            #     'handler': self._handle_debug_plot_tree,
+            #     'category': 'отладка',
+            #     'enabled': lambda: self.manual_spore_manager is not None
+            # },
             'l': {
-                'description': 'построить график последнего созданного дерева (debug)',
-                'handler': self._handle_debug_plot_tree,
+                'description': 'показать статистику всех графов связей',
+                'handler': self._handle_all_graph_stats,
+                'category': 'отладка',
+                'enabled': lambda: self.spore_manager is not None
+            },
+            'shift+l': {
+                'description': 'очистить все графы связей',  
+                'handler': self._handle_clear_all_graphs,
                 'category': 'отладка',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
@@ -1300,26 +1312,41 @@ class InputManager:
             print(f"[InputManager] _on_dt_changed error: {e}")
 
     def _handle_merge_grandchildren(self):
-        """Обработчик объединения внуков + debug картинка (M)."""
-        if not self.manual_spore_manager:
-            print("❌ Manual spore manager не найден")
-            return
-            
+        """Обработчик объединения внуков и копирования призрачной структуры (M)."""
         try:
-            print(f"🔗 Запуск объединения внуков в призрачном дереве...")
+            print("\n" + "="*60)
+            print("🔄 ЗАПУСК ОПЕРАЦИИ МЕРДЖА С ИСПОЛЬЗОВАНИЕМ ГРАФОВ")
+            print("="*60)
             
-            # Проверяем есть ли сохраненное призрачное дерево
-            if not hasattr(self.manual_spore_manager, '_last_tree_logic') or not self.manual_spore_manager._last_tree_logic:
-                print("❌ Нет призрачного дерева для объединения")
-                print("💡 Наведите мышь на область для создания призрачного дерева, затем нажмите M")
+            if not self.manual_spore_manager:
+                print("❌ ManualSporeManager не найден")
                 return
                 
-            tree_logic = self.manual_spore_manager._last_tree_logic
+            # Получаем призрачный граф из PredictionManager
+            prediction_manager = getattr(self.manual_spore_manager, 'prediction_manager', None)
+            if not prediction_manager:
+                print("❌ PredictionManager не найден")
+                return
+                
+            # Показываем статистику ДО операции
+            print("📊 СТАТИСТИКА ДО МЕРДЖА:")
+            if hasattr(prediction_manager, 'get_ghost_graph_stats'):
+                prediction_manager.get_ghost_graph_stats()
+            if self.spore_manager and hasattr(self.spore_manager, 'get_graph_stats'):
+                self.spore_manager.get_graph_stats()
+                
+            # Выполняем объединение внуков (существующая логика)
+            tree_creation_manager = getattr(self.manual_spore_manager, 'tree_creation_manager', None)
+            if not tree_creation_manager:
+                print("❌ TreeCreationManager не найден")
+                return
+                
+            # Получаем логику дерева
+            tree_logic = getattr(tree_creation_manager, '_last_tree_logic', None) or \
+                        getattr(self.manual_spore_manager, '_last_tree_logic', None)
             
-            # Проверяем созданы ли внуки в дереве
-            if not hasattr(tree_logic, '_grandchildren_created') or not tree_logic._grandchildren_created:
-                print("❌ В призрачном дереве нет внуков")
-                print("💡 Создайте дерево с глубиной >= 2")
+            if not tree_logic:
+                print("❌ Логика дерева не найдена. Создайте дерево призраков сначала.")
                 return
                 
             if not hasattr(tree_logic, 'grandchildren') or len(tree_logic.grandchildren) == 0:
@@ -1329,32 +1356,101 @@ class InputManager:
             # Показываем состояние ДО объединения
             print(f"📊 ДО объединения: {len(tree_logic.grandchildren)} внуков")
             
-            # Вызываем объединение с трешхолдом чуть больше constraint_distance
-            # Используем 1e-2 вместо 1e-3 чтобы гарантированно захватить оптимизированные пары
+            # Вызываем объединение
             merge_result = tree_logic.merge_close_grandchildren(distance_threshold=1e-2)
             
             if merge_result['total_merged'] > 0:
                 print(f"✅ Объединено {merge_result['total_merged']} пар внуков")
                 print(f"📊 ПОСЛЕ объединения: {merge_result['remaining_grandchildren']} внуков")
                 
-                # Обновляем визуализацию призрачного дерева если возможно
-                if hasattr(self.manual_spore_manager, 'prediction_manager'):
-                    self.manual_spore_manager.prediction_manager.clear_predictions()
-                    if hasattr(self.manual_spore_manager, '_update_predictions'):
-                        self.manual_spore_manager._update_predictions()
-                    print(f"🔄 Призрачные предсказания обновлены")
+                # НОВОЕ: Копируем призрачную структуру в реальный граф
+                if (hasattr(prediction_manager, 'copy_ghost_structure_to_real') and 
+                    self.spore_manager and hasattr(self.spore_manager, 'graph')):
+                    
+                    print("\n🔄 КОПИРОВАНИЕ ПРИЗРАЧНОЙ СТРУКТУРЫ:")
+                    prediction_manager.copy_ghost_structure_to_real(self.spore_manager.graph)
+                else:
+                    print("⚠️ Методы копирования графа не найдены")
+                
+                # Обновляем призрачные предсказания
+                if hasattr(prediction_manager, 'clear_predictions'):
+                    prediction_manager.clear_predictions()
+                if hasattr(self.manual_spore_manager, '_update_predictions'):
+                    self.manual_spore_manager._update_predictions()
+                print("🔄 Призрачные предсказания обновлены")
+                
             else:
-                print(f"📊 Объединение не требуется - все внуки достаточно далеко (> 1e-2)")
-            
+                print("📊 Объединение не требуется - все внуки достаточно далеко (> 1e-2)")
+                
+            # Показываем статистику ПОСЛЕ операции  
+            print("\n📊 СТАТИСТИКА ПОСЛЕ МЕРДЖА:")
+            if hasattr(prediction_manager, 'get_ghost_graph_stats'):
+                prediction_manager.get_ghost_graph_stats()
+            if self.spore_manager and hasattr(self.spore_manager, 'get_graph_stats'):
+                self.spore_manager.get_graph_stats()
+                
             # Автоматически сохраняем debug картинку
             if hasattr(tree_logic, 'debug_plot_tree'):
                 save_path = tree_logic.debug_plot_tree()
-                print(f"💾 Debug картинка автоматически сохранена: {save_path}")
-                print(f"🖼️ Откройте файл для просмотра структуры и объединений")
+                print(f"💾 Debug картинка сохранена: {save_path}")
             else:
-                print(f"⚠️ Метод debug_plot_tree не найден в дереве логики")
+                print("⚠️ Метод debug_plot_tree не найден")
+                
+            print("="*60)
+            print("✅ ОПЕРАЦИЯ МЕРДЖА ЗАВЕРШЕНА")
+            print("="*60)
                 
         except Exception as e:
-            print(f"❌ Ошибка объединения внуков: {e}")
+            print(f"❌ Ошибка операции мерджа: {e}")
             import traceback
             traceback.print_exc()
+
+    def _handle_all_graph_stats(self):
+        """Обработчик статистики всех графов связей (L)."""
+        try:
+            print("\n" + "="*60)
+            print("📊 ПОЛНАЯ СТАТИСТИКА ГРАФОВ СВЯЗЕЙ")
+            print("="*60)
+            
+            # Реальный граф
+            if self.spore_manager and hasattr(self.spore_manager, 'graph'):
+                self.spore_manager.get_graph_stats()
+            else:
+                print("❌ Реальный граф не найден")
+                
+            # Призрачный граф
+            if (self.manual_spore_manager and 
+                hasattr(self.manual_spore_manager, 'prediction_manager') and
+                hasattr(self.manual_spore_manager.prediction_manager, 'get_ghost_graph_stats')):
+                self.manual_spore_manager.prediction_manager.get_ghost_graph_stats()
+            else:
+                print("❌ Призрачный граф не найден")
+                
+            # Сравнение с менеджерами
+            print(f"\n📋 СРАВНЕНИЕ С МЕНЕДЖЕРАМИ:")
+            if self.spore_manager:
+                print(f"   🔸 Спор в SporeManager: {len(self.spore_manager.objects)}")
+                print(f"   🔗 Линков в SporeManager: {len(self.spore_manager.links)}")
+            if (self.manual_spore_manager and 
+                hasattr(self.manual_spore_manager, 'prediction_manager')):
+                pm = self.manual_spore_manager.prediction_manager
+                if hasattr(pm, 'prediction_links'):
+                    print(f"   👻 Призрачных линков: {len(pm.prediction_links)}")
+                    
+            print("="*60)
+            
+        except Exception as e:
+            print(f"❌ Ошибка получения статистики графов: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _handle_clear_all_graphs(self):
+        """Обработчик очистки всех графов (Shift+L)."""
+        try:
+            if self.manual_spore_manager:
+                print("\n🧹 ОЧИСТКА ВСЕХ ГРАФОВ СВЯЗЕЙ")
+                self.manual_spore_manager.clear_all_graphs()
+            else:
+                print("❌ ManualSporeManager не найден")
+        except Exception as e:
+            print(f"❌ Ошибка очистки графов: {e}")

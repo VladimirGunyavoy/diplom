@@ -98,7 +98,27 @@ class SporeTreeVisual:
         
         spore_count = 1 + len(self.child_spores) + len(self.grandchild_spores)
         link_count = len(self.child_links) + len(self.grandchild_links)
+        
         print(f"🎨 Визуализация создана: {spore_count} спор, {link_count} стрелок")
+        
+        # Сравнение с призрачным деревом (если доступно)
+        if hasattr(self.tree_logic, 'ghost_tree') and self.tree_logic.ghost_tree:
+            try:
+                ghost_links_count = len(self.tree_logic.ghost_tree.grandchild_links)
+                real_links_count = len(self.grandchild_links)
+                
+                print("📊 Сравнение линков:")
+                print(f"   Призрачное дерево: {ghost_links_count} линков") 
+                print(f"   Реальное дерево: {real_links_count} линков")
+                print(f"   Соответствие: {'✅' if ghost_links_count == real_links_count else '❌'}")
+                
+                if ghost_links_count != real_links_count:
+                    print("⚠️  ПРОБЛЕМА: Количество линков не совпадает!")
+                    print(f"   Разница: {abs(ghost_links_count - real_links_count)} линков")
+            except Exception as e:
+                print(f"⚠️  Не удалось сравнить с призрачным деревом: {e}")
+        else:
+            print("📊 Призрачное дерево недоступно для сравнения")
         
     def _create_root_visual(self, goal_position: List[float], spore_config: dict):
         """Создает визуальный корень."""
@@ -188,6 +208,16 @@ class SporeTreeVisual:
         self.grandchild_spores.clear()
         self.grandchild_links.clear()
         
+        print("🔗 Начинаем создание линков для внуков")
+        print(f"   Всего внуков для обработки: {len(self.tree_logic.grandchildren)}")
+        
+        # Диагностика структуры данных
+        merged_count = sum(1 for gc in self.tree_logic.grandchildren if 'merged_from' in gc)
+        regular_count = len(self.tree_logic.grandchildren) - merged_count
+        print(f"   📊 Структура: {regular_count} обычных + {merged_count} объединенных спор")
+        
+        created_links_count = 0
+        
         for i, gc_data in enumerate(self.tree_logic.grandchildren):
             # Создаем спору внука
             grandchild_spore = Spore(
@@ -211,10 +241,18 @@ class SporeTreeVisual:
             
             # Создаем стрелку(и) для внука
             self._create_grandchild_link_visual(i, gc_data)
+            created_links_count += 1
+            
+        print(f"🔗 Итого создано линков: {created_links_count}")
+        return created_links_count
             
     def _create_grandchild_link_visual(self, gc_idx: int, gc_data: dict):
         """Создает стрелку для внука. Для объединенных спор использует стандартную логику."""
         grandchild_spore = self.grandchild_spores[gc_idx]
+        
+        # Логирование для диагностики
+        is_merged = 'merged_from' in gc_data
+        print(f"🔗 Обрабатываем внука {gc_idx}: merged={is_merged}, parent_idx={gc_data['parent_idx']}")
         
         # Для объединенных спор используем стандартную логику (как для обычных)
         parent_spore = self.child_spores[gc_data['parent_idx']]
@@ -223,9 +261,13 @@ class SporeTreeVisual:
         if gc_data['dt'] > 0:  # forward: родитель → внук
             parent_link = parent_spore
             child_link = grandchild_spore
+            direction = "parent → child"
         else:  # backward: внук → родитель
             parent_link = grandchild_spore  
             child_link = parent_spore
+            direction = "child → parent"
+
+        print(f"   📍 Направление: {direction} (dt={gc_data['dt']})")
 
         # Создаем ОДИН стандартный линк
         link = Link(
@@ -241,11 +283,17 @@ class SporeTreeVisual:
         # Стандартный цвет по управлению
         if gc_data['control'] > 0:
             link.color = self.color_manager.get_color('link', 'ghost_max')
+            control_color = "ghost_max"
         else:
             link.color = self.color_manager.get_color('link', 'ghost_min')
+            control_color = "ghost_min"
             
+        print(f"   🎨 Цвет: {control_color} (control={gc_data['control']})")
+        
         link.update_geometry()
         self.grandchild_links.append(link)
+        
+        print(f"   ✅ Создан линк #{len(self.grandchild_links)}")
         
     def sync_with_logic(self) -> None:
         """

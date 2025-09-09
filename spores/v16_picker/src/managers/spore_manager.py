@@ -3,6 +3,7 @@ import numpy as np
 from typing import List, Optional, Dict, TYPE_CHECKING
 
 from ..core.spore import Spore
+from ..core.spore_graph import SporeGraph
 from ..logic.pendulum import PendulumSystem
 from ..visual.link import Link
 from ..managers.color_manager import ColorManager
@@ -47,6 +48,10 @@ class SporeManager:
         self.ghost_link: Optional[Link] = None
         self.optimal_ghost_spore: Optional[Spore] = None  # Ссылка на оптимальную призрачную спору
         self.links: List[Link] = []
+        
+        # Граф связей (централизованное хранилище структуры)
+        self.graph = SporeGraph(graph_type='real')
+        print("   ✓ SporeGraph инициализирован (real)")
         
         # Инициализируем ID Manager
         self.id_manager = IDManager()
@@ -220,6 +225,9 @@ class SporeManager:
 
         self.sample_ghost_spores() # Обновляем призраков с фиксированными управлениями
         self.update_ghost_link()      # Обновляем призрачную связь
+        
+        # Добавляем спору в граф
+        self.graph.add_spore(spore)
 
     def add_spore_manual(self, spore: Spore) -> None:
         """Добавляет спору БЕЗ автоматических призраков и обновлений (для v13_manual)."""
@@ -384,6 +392,15 @@ class SporeManager:
                             zoom_manager=self.zoom_manager,
                             config=self.config)
             self.links.append(new_link)
+            
+            # Добавляем связь в граф
+            self.graph.add_edge(
+                parent_spore=parent_spore,
+                child_spore=new_spore,
+                link_type='default',
+                link_object=new_link
+            )
+            
             link_id = self.zoom_manager.get_unique_link_id()
             self.zoom_manager.register_object(new_link, link_id)
             new_link._zoom_manager_key = link_id  # Сохраняем для удаления
@@ -737,6 +754,15 @@ class SporeManager:
             trajectory_print(f"      🎨 Цвет связи: {link_color} (активная связь объединения)")
             
             self.links.append(new_link)
+            
+            # Добавляем связь объединения в граф  
+            self.graph.add_edge(
+                parent_spore=from_spore,
+                child_spore=to_spore,
+                link_type='active',
+                link_object=new_link
+            )
+            
             link_id = self.zoom_manager.get_unique_link_id()
             self.zoom_manager.register_object(new_link, link_id)
             new_link._zoom_manager_key = link_id  # Сохраняем для удаления
@@ -916,6 +942,19 @@ class SporeManager:
     def get_id_stats(self) -> dict:
         """Возвращает статистику по выданным ID."""
         return self.id_manager.get_stats()
+
+    def get_graph_stats(self) -> None:
+        """Выводит статистику графа связей"""
+        if self.graph:
+            self.graph.debug_print()
+        else:
+            print("📊 Граф не инициализирован")
+            
+    def clear_graph(self) -> None:
+        """Очищает граф связей"""
+        if self.graph:
+            self.graph.clear()
+            print("🧹 Граф связей очищен")
 
 
 
