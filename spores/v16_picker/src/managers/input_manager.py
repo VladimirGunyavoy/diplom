@@ -1401,6 +1401,40 @@ class InputManager:
             else:
                 print("📊 Объединение не требуется - все внуки достаточно далеко (> 1e-2)")
                 
+            # 🔍 ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА дублирований
+            print("\n🔍 ПРОВЕРКА ДУБЛИРОВАНИЙ В ПРИЗРАЧНОМ ГРАФЕ:")
+            if hasattr(prediction_manager, 'ghost_graph') and prediction_manager.ghost_graph:
+                # Проверяем уникальность узлов
+                unique_positions = set()
+                duplicate_positions = []
+                
+                for node_id in prediction_manager.ghost_graph.nodes:
+                    # Получаем позицию узла (если есть)
+                    node_info = prediction_manager.ghost_graph.nodes.get(node_id, {})
+                    if 'position' in node_info:
+                        pos_key = (round(node_info['position'][0], 6), round(node_info['position'][1], 6))
+                        if pos_key in unique_positions:
+                            duplicate_positions.append((node_id, pos_key))
+                        else:
+                            unique_positions.add(pos_key)
+                
+                if duplicate_positions:
+                    print(f"⚠️ Найдено {len(duplicate_positions)} дублирований позиций:")
+                    for node_id, pos in duplicate_positions:
+                        print(f"   Узел {node_id}: позиция {pos}")
+                else:
+                    print("✅ Дублирований позиций не найдено")
+                    
+                # Проверяем уникальность ID
+                node_ids = list(prediction_manager.ghost_graph.nodes.keys())
+                unique_ids = set(node_ids)
+                if len(node_ids) != len(unique_ids):
+                    print(f"⚠️ Найдены дублирующиеся ID узлов")
+                else:
+                    print("✅ Все ID узлов уникальны")
+            else:
+                print("❌ Призрачный граф недоступен для проверки")
+                
             # Показываем статистику ПОСЛЕ операции  
             print("\n📊 СТАТИСТИКА ПОСЛЕ МЕРДЖА:")
             if hasattr(prediction_manager, 'get_ghost_graph_stats'):

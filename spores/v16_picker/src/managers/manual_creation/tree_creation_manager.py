@@ -239,6 +239,29 @@ class TreeCreationManager:
             if self.ghost_tree_dt_vector is not None and len(self.ghost_tree_dt_vector) == 12:
                 self._recalculate_positions_with_new_dt(tree_logic, self.ghost_tree_dt_vector, tree_position)
 
+            # 🔍 ПРОВЕРКА ПОЛНОТЫ ДЕРЕВА ПЕРЕД ВИЗУАЛИЗАЦИЕЙ
+            print(f"\n🔍 ПРОВЕРКА ПОЛНОТЫ ДЕРЕВА:")
+            print(f"   📊 Корень: {tree_logic.root}")
+            print(f"   📊 Детей: {len(tree_logic.children)}")
+            if hasattr(tree_logic, 'grandchildren'):
+                print(f"   📊 Внуков: {len(tree_logic.grandchildren)}")
+                # Проверяем объединенные внуки
+                merged_count = sum(1 for gc in tree_logic.grandchildren if 'merged_from' in gc)
+                print(f"   🔗 Объединенных внуков: {merged_count}")
+                if merged_count > 0:
+                    print(f"   📍 Детали объединений:")
+                    for i, gc in enumerate(tree_logic.grandchildren):
+                        if 'merged_from' in gc:
+                            print(f"      Внук {i}: объединен из {gc['merged_from']}")
+            else:
+                print(f"   📊 Внуков: нет")
+
+            # Проверяем согласованность с призрачным деревом
+            if hasattr(self.manual_spore_manager, '_last_tree_logic') and self.manual_spore_manager._last_tree_logic == tree_logic:
+                print(f"   ✅ Используется то же самое дерево что и в призрачном режиме")
+            else:
+                print(f"   ⚠️ Используется другое дерево (возможна потеря объединений)")
+                
             # Создаем визуализацию дерева
             goal_position = self.deps.config.get('spore', {}).get('goal_position', [0, 0])
             

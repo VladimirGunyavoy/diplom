@@ -256,6 +256,16 @@ class PredictionManager:
             
             # Сохраняем ссылку на призрачное дерево для merge и debug
             if self.manual_spore_manager:
+                # Проверяем был ли предыдущий tree_logic объединен
+                old_tree_logic = getattr(self.manual_spore_manager, '_last_tree_logic', None)
+                was_modified = (old_tree_logic and 
+                               hasattr(old_tree_logic, '_grandchildren_modified') and 
+                               old_tree_logic._grandchildren_modified)
+                
+                # Если предыдущее дерево было объединено, копируем флаг в новое
+                if was_modified:
+                    tree_logic._grandchildren_modified = True
+                
                 self.manual_spore_manager._last_tree_logic = tree_logic
 
         except Exception as e:
