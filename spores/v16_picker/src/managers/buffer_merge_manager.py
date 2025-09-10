@@ -3,7 +3,7 @@ BufferMergeManager - компонент для мерджа спор по кла
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple
 import json
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -23,6 +23,11 @@ class BufferMergeManager:
     4. Добавляет спору ИЛИ создает соответствие к существующей
     5. Сохраняет картинку результата
     """
+    
+    @staticmethod
+    def safe_str_replace(value, old, new):
+        """Безопасная замена с конверсией в строку."""
+        return str(value).replace(old, new)
 
     def __init__(self, distance_threshold: float = 1.5e-3):
         self.distance_threshold = distance_threshold
@@ -598,7 +603,7 @@ class BufferMergeManager:
             )
 
             # Подпись
-            label = f"{buffer_id.replace('buffer_', '')}\n({ghost_count})"
+            label = f"{self.safe_str_replace(buffer_id, 'buffer_', '')}\n({ghost_count})"  # 🔧 ИСПРАВЛЕНИЕ: Используем безопасную замену
             ax.annotate(
                 label, (position[0], position[1]),
                 xytext=(5, 5), textcoords='offset points',
@@ -943,6 +948,13 @@ class BufferMergeManager:
         """Создает реальные связи из буферных связей."""
         print(f"\n   🔗 СОЗДАНИЕ РЕАЛЬНЫХ СВЯЗЕЙ:")
         
+        # 🔍 ОТЛАДКА ТИПОВ ДАННЫХ
+        print(f"   🔍 ОТЛАДКА: Проверяем типы данных в buffer_links:")
+        for i, link in enumerate(self.buffer_links):
+            print(f"      Link {i}: link_type type={type(link['link_type'])}, value={link['link_type']}")
+            if i >= 3:  # Показываем только первые 3
+                break
+        
         # Импортируем Link
         from ..visual.link import Link
         
@@ -956,7 +968,7 @@ class BufferMergeManager:
             try:
                 parent_buffer_id = link['parent_id']
                 child_buffer_id = link['child_id']
-                link_type = link['link_type']
+                link_type = str(link['link_type'])  # 🔧 ИСПРАВЛЕНИЕ: Принудительно конвертируем в строку
                 
                 # Получаем реальные споры
                 parent_spore = real_spores_map.get(parent_buffer_id)
@@ -998,7 +1010,7 @@ class BufferMergeManager:
                 spore_manager.graph.add_edge(
                     parent_spore=parent_spore,
                     child_spore=child_spore,
-                    link_type=link_type.replace('buffer_', 'real_'),  # buffer_max → real_max
+                    link_type=self.safe_str_replace(link_type, 'buffer_', 'real_'),  # buffer_max → real_max
                     link_object=visual_link
                 )
                 
@@ -1077,7 +1089,7 @@ class BufferMergeManager:
                 
                 # Подпись
                 spore_id = getattr(spore, 'id', 'unknown')
-                label = spore_id.replace('real_buffer_', '')
+                label = self.safe_str_replace(spore_id, 'real_buffer_', '')  # 🔧 ИСПРАВЛЕНИЕ: Используем безопасную замену
                 ax.annotate(label, (pos[0], pos[1]),
                            xytext=(5, 5), textcoords='offset points',
                            fontsize=9, ha='left', weight='bold')
