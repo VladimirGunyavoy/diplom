@@ -822,3 +822,337 @@ class BufferMergeManager:
         """Возвращает карты соответствий."""
         return (self.ghost_to_buffer.copy(),
                 self.buffer_to_ghosts.copy())
+
+    def materialize_buffer_to_real(self, spore_manager, zoom_manager, color_manager, pendulum, config) -> Dict:
+        """
+        Материализует буферный граф в реальные споры и связи.
+        
+        Args:
+            spore_manager: SporeManager для создания реальных спор и связей
+            zoom_manager: ZoomManager для регистрации объектов
+            color_manager: ColorManager для цветов
+            pendulum: PendulumSystem для физики
+            config: конфиг для настроек спор
+            
+        Returns:
+            dict: результат материализации
+        """
+        print(f"\n🎨 МАТЕРИАЛИЗАЦИЯ БУФЕРНОГО ГРАФА В РЕАЛЬНЫЙ")
+        
+        if not self.buffer_positions:
+            return self._get_error_result("Буферный граф пуст - нечего материализовать")
+            
+        try:
+            # Статистика материализации
+            materialize_stats = {
+                'spores_created': 0,
+                'links_created': 0,
+                'errors': []
+            }
+            
+            # 1. Создаем реальные споры
+            real_spores_map = self._create_real_spores(
+                spore_manager, zoom_manager, color_manager, pendulum, config, materialize_stats)
+            
+            # 2. Создаем реальные связи
+            self._create_real_links(spore_manager, real_spores_map, materialize_stats)
+            
+            # 3. Создаем визуализацию реального графа  
+            visualization_path = self._create_real_graph_visualization(spore_manager)
+            if visualization_path:
+                materialize_stats['visualization_path'] = visualization_path
+            
+            # 4. Выводим статистику
+            self._print_materialize_stats(materialize_stats)
+            
+            # 5. Обновляем трансформации
+            zoom_manager.update_transform()
+            
+            return {
+                'success': True,
+                'stats': materialize_stats
+            }
+            
+        except Exception as e:
+            error_msg = f"Ошибка материализации: {e}"
+            print(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return self._get_error_result(error_msg)
+
+    def _create_real_spores(self, spore_manager, zoom_manager, color_manager, pendulum, config, stats) -> Dict[str, any]:
+        """Создает реальные споры из буферного графа."""
+        print(f"\n   🌟 СОЗДАНИЕ РЕАЛЬНЫХ СПОР:")
+        
+        # Импортируем Spore
+        from ..core.spore import Spore
+        
+        real_spores_map = {}  # buffer_id -> real_spore
+        spore_config = config.get('spore', {})
+        goal_position = spore_config.get('goal_position', [0, 0])
+        
+        for buffer_id, position in self.buffer_positions.items():
+            try:
+                # Позиция в 3D (Y=0)
+                position_3d = (float(position[0]), 0, float(position[1]))
+                
+                # Определяем является ли спора целевой
+                is_goal = buffer_id == "buffer_root"
+                
+                # Создаем реальную спору
+                real_spore = Spore(
+                    pendulum=pendulum,
+                    dt=spore_config.get('dt', 0.05),
+                    scale=spore_config.get('scale', 0.1),
+                    position=position_3d,
+                    goal_position=goal_position,
+                    is_goal=is_goal,
+                    color_manager=color_manager,
+                    config=spore_config
+                )
+                
+                # Устанавливаем уникальный ID
+                real_spore.id = f"real_{buffer_id}"
+                
+                # Добавляем в SporeManager
+                spore_manager.add_spore_manual(real_spore)
+                
+                # Регистрируем в ZoomManager
+                zoom_key = f"real_{buffer_id}"
+                zoom_manager.register_object(real_spore, zoom_key)
+                
+                # Сохраняем в карте
+                real_spores_map[buffer_id] = real_spore
+                stats['spores_created'] += 1
+                
+                # Информация об объединенных спорах
+                ghost_count = len(self.buffer_to_ghosts.get(buffer_id, []))
+                merge_info = f" (объединяет {ghost_count})" if ghost_count > 1 else ""
+                
+                print(f"      ✅ {buffer_id} → real_spore{merge_info}")
+                
+            except Exception as e:
+                error_msg = f"Ошибка создания споры {buffer_id}: {e}"
+                print(f"      ❌ {error_msg}")
+                stats['errors'].append(error_msg)
+        
+        return real_spores_map
+
+    def _create_real_links(self, spore_manager, real_spores_map, stats):
+        """Создает реальные связи из буферных связей."""
+        print(f"\n   🔗 СОЗДАНИЕ РЕАЛЬНЫХ СВЯЗЕЙ:")
+        
+        # Импортируем Link
+        from ..visual.link import Link
+        
+        # Цвета для разных типов связей
+        link_colors = {
+            'buffer_max': 'link_max',    # Красный для u_max
+            'buffer_min': 'link_min'     # Синий для u_min
+        }
+        
+        for link in self.buffer_links:
+            try:
+                parent_buffer_id = link['parent_id']
+                child_buffer_id = link['child_id']
+                link_type = link['link_type']
+                
+                # Получаем реальные споры
+                parent_spore = real_spores_map.get(parent_buffer_id)
+                child_spore = real_spores_map.get(child_buffer_id)
+                
+                if not parent_spore or not child_spore:
+                    error_msg = f"Не найдены споры для связи {parent_buffer_id} → {child_buffer_id}"
+                    print(f"      ❌ {error_msg}")
+                    stats['errors'].append(error_msg)
+                    continue
+                
+                # Определяем цвет связи
+                color_key = link_colors.get(link_type, 'link_default')
+                
+                # Создаем визуальную связь
+                visual_link = Link(
+                    parent_spore=parent_spore,
+                    child_spore=child_spore,
+                    color_manager=spore_manager.color_manager,
+                    color_key=color_key,
+                    thickness=spore_manager.config.get('spore', {}).get('link_thickness', 1)
+                )
+                
+                # Устанавливаем ID
+                visual_link.id = f"real_link_{parent_buffer_id}_to_{child_buffer_id}"
+                
+                # Добавляем в SporeManager
+                spore_manager.add_link_manual(visual_link)
+                
+                # Добавляем связь в граф
+                spore_manager.graph.add_edge(
+                    parent_spore=parent_spore,
+                    child_spore=child_spore,
+                    link_type=link_type.replace('buffer_', 'real_'),  # buffer_max → real_max
+                    link_object=visual_link
+                )
+                
+                stats['links_created'] += 1
+                
+                print(f"      ✅ {parent_buffer_id} → {child_buffer_id} ({link_type})")
+                
+            except Exception as e:
+                error_msg = f"Ошибка создания связи {link.get('source_info', 'unknown')}: {e}"
+                print(f"      ❌ {error_msg}")
+                stats['errors'].append(error_msg)
+
+    def _create_real_graph_visualization(self, spore_manager) -> str:
+        """Создает визуализацию реального графа."""
+        try:
+            print(f"\n   🖼️ СОЗДАНИЕ ВИЗУАЛИЗАЦИИ РЕАЛЬНОГО ГРАФА:")
+            
+            # Создаем директорию если нужно
+            buffer_dir = "buffer"
+            if not os.path.exists(buffer_dir):
+                os.makedirs(buffer_dir)
+            
+            save_path = os.path.join(buffer_dir, "real_graph_result.png")
+            
+            # Создаем график
+            fig, ax = plt.subplots(1, 1, figsize=(14, 12))
+            
+            # Собираем данные о реальных спорах
+            real_spores = spore_manager.objects
+            real_links = spore_manager.links
+            
+            # 1. Рисуем связи первыми
+            self._draw_real_links(ax, real_links)
+            
+            # 2. Рисуем споры поверх
+            self._draw_real_spores(ax, real_spores)
+            
+            # 3. Настройки графика
+            ax.set_title(f"Реальный граф после материализации\n"
+                        f"Споры: {len(real_spores)}, "
+                        f"Связи: {len(real_links)}")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y") 
+            ax.grid(True, alpha=0.3)
+            ax.axis('equal')
+            
+            # 4. Легенда для реального графа
+            self._add_real_graph_legend(ax)
+            
+            plt.tight_layout()
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            print(f"      ✅ Визуализация реального графа: {save_path}")
+            return save_path
+            
+        except Exception as e:
+            print(f"      ❌ Ошибка визуализации: {e}")
+            return ""
+
+    def _draw_real_spores(self, ax, real_spores):
+        """Рисует реальные споры."""
+        for spore in real_spores:
+            if hasattr(spore, 'calc_2d_pos'):
+                pos = spore.calc_2d_pos()
+                
+                # Цвет: зеленый для реальных спор
+                color = 'lightgreen'
+                edge_color = 'darkgreen'
+                
+                # Размер зависит от типа
+                marker_size = 120 if getattr(spore, 'is_goal', False) else 80
+                
+                ax.scatter(pos[0], pos[1], s=marker_size, c=color,
+                          alpha=0.8, edgecolors=edge_color, linewidth=2)
+                
+                # Подпись
+                spore_id = getattr(spore, 'id', 'unknown')
+                label = spore_id.replace('real_buffer_', '')
+                ax.annotate(label, (pos[0], pos[1]),
+                           xytext=(5, 5), textcoords='offset points',
+                           fontsize=9, ha='left', weight='bold')
+
+    def _draw_real_links(self, ax, real_links):
+        """Рисует реальные связи."""
+        # Цвета для разных типов связей
+        link_colors = {
+            'real_max': 'red',      # u_max - красный
+            'real_min': 'blue'      # u_min - синий  
+        }
+        
+        for link in real_links:
+            try:
+                # Получаем позиции спор
+                parent_pos = link.parent_spore.calc_2d_pos() if hasattr(link.parent_spore, 'calc_2d_pos') else None
+                child_pos = link.child_spore.calc_2d_pos() if hasattr(link.child_spore, 'calc_2d_pos') else None
+                
+                if parent_pos is None or child_pos is None:
+                    continue
+                
+                # Определяем цвет по типу связи (из реального графа)
+                link_type = 'real_max'  # По умолчанию
+                if hasattr(link, 'color_key'):
+                    if 'min' in str(link.color_key):
+                        link_type = 'real_min'
+                
+                color = link_colors.get(link_type, 'gray')
+                
+                # Рисуем стрелку
+                dx = child_pos[0] - parent_pos[0]
+                dy = child_pos[1] - parent_pos[1]
+                
+                # Смещение от центра спор
+                length = np.sqrt(dx*dx + dy*dy)
+                if length > 0:
+                    offset = 0.02
+                    start_offset = offset / length
+                    end_offset = offset / length
+                    
+                    start_x = parent_pos[0] + dx * start_offset
+                    start_y = parent_pos[1] + dy * start_offset
+                    arrow_dx = dx * (1 - 2*end_offset)
+                    arrow_dy = dy * (1 - 2*end_offset)
+                    
+                    ax.arrow(start_x, start_y, arrow_dx, arrow_dy,
+                            head_width=0.01, head_length=0.01,
+                            fc=color, ec=color, alpha=0.8, linewidth=2)
+                            
+            except Exception as e:
+                print(f"Ошибка отрисовки связи: {e}")
+
+    def _add_real_graph_legend(self, ax):
+        """Добавляет легенду для реального графа."""
+        from matplotlib.lines import Line2D
+        
+        legend_elements = [
+            # Споры
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='lightgreen',
+                   markeredgecolor='darkgreen', markersize=10, label='Реальная спора'),
+            
+            # Связи
+            Line2D([0], [0], color='red', linewidth=3, label='real_max (u_max)'),
+            Line2D([0], [0], color='blue', linewidth=3, label='real_min (u_min)')
+        ]
+        
+        ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
+
+    def _print_materialize_stats(self, stats):
+        """Выводит статистику материализации."""
+        print(f"\n📊 СТАТИСТИКА МАТЕРИАЛИЗАЦИИ:")
+        print(f"   🌟 Создано спор: {stats['spores_created']}")
+        print(f"   🔗 Создано связей: {stats['links_created']}")
+        
+        if stats['errors']:
+            print(f"   ❌ Ошибок: {len(stats['errors'])}")
+            for error in stats['errors'][:3]:  # Показываем первые 3
+                print(f"      • {error}")
+        else:
+            print(f"   ✅ Ошибок нет")
+            
+        if 'visualization_path' in stats:
+            print(f"   🖼️ Визуализация: {stats['visualization_path']}")
+
+    def has_buffer_data(self) -> bool:
+        """Проверяет есть ли данные в буферном графе."""
+        return bool(getattr(self, 'buffer_positions', {}))

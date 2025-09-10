@@ -392,14 +392,38 @@ class InputManager:
         """
         Этот метод должен вызываться каждый кадр для обработки непрерывного ввода.
         """
-        # v13_manual: обработка кликов мыши для создания спор
+        # 🔄 v16: обработка кликов мыши для материализации буферного графа
         if self.manual_spore_manager:
             current_mouse_left = mouse.left
             # Обнаруживаем нажатие ЛКМ (переход с False на True)
             if current_mouse_left and not self.previous_mouse_left:
-                created_spores = self.manual_spore_manager.create_spore_at_cursor()
-                if created_spores:
-                    print(f"   🖱️ ЛКМ: Создано {len(created_spores)} спор (1 родитель + 2 ребёнка + 2 линка)")
+                
+                # Проверяем есть ли данные в буферном графе
+                if self.buffer_merge_manager.has_buffer_data():
+                    print(f"   🖱️ ЛКМ: Материализация буферного графа в реальный...")
+                    
+                    # Материализуем буферный граф
+                    result = self.buffer_merge_manager.materialize_buffer_to_real(
+                        spore_manager=self.spore_manager,
+                        zoom_manager=self.zoom_manager,
+                        color_manager=self.spore_manager.color_manager if self.spore_manager else None,
+                        pendulum=self.manual_spore_manager.deps.pendulum if hasattr(self.manual_spore_manager, 'deps') else None,
+                        config=self.manual_spore_manager.deps.config if hasattr(self.manual_spore_manager, 'deps') else {}
+                    )
+                    
+                    if result['success']:
+                        stats = result['stats']
+                        print(f"   ✅ Материализация завершена: {stats['spores_created']} спор, {stats['links_created']} связей")
+                    else:
+                        print(f"   ❌ Ошибка материализации: {result.get('error', 'Неизвестная ошибка')}")
+                        
+                else:
+                    # Fallback: создаем споры как раньше
+                    print(f"   🖱️ ЛКМ: Буферный граф пуст, создание спор...")
+                    created_spores = self.manual_spore_manager.create_spore_at_cursor()
+                    if created_spores:
+                        print(f"   ✅ Создано {len(created_spores)} спор (1 родитель + 2 ребёнка + 2 линка)")
+                        
             self.previous_mouse_left = current_mouse_left
         
         # Логика для непрерывной генерации спор при удержании 'f'
