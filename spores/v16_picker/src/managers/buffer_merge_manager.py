@@ -1157,6 +1157,10 @@ class BufferMergeManager:
 
     def _draw_real_links(self, ax, real_links):
         """Рисует реальные связи."""
+        # Получаем ссылку на spore_manager для доступа к графу
+        spore_manager = getattr(self, '_spore_manager_ref', None)
+        if spore_manager:
+            self.spore_manager = spore_manager
         # Цвета для разных типов связей
         link_colors = {
             'real_max': 'red',      # u_max - красный
@@ -1172,12 +1176,38 @@ class BufferMergeManager:
                 if parent_pos is None or child_pos is None:
                     continue
                 
-                # Определяем цвет по типу связи (из реального графа)
+                # Получаем правильный тип связи из реального графа
                 link_type = 'real_max'  # По умолчанию
-                if hasattr(link, 'color_key'):
-                    if 'min' in str(link.color_key):
-                        link_type = 'real_min'
-                
+                try:
+                    # Ищем связь в графе между родительской и дочерней спорой
+                    parent_id = link.parent_spore.id if hasattr(link.parent_spore, 'id') else None
+                    child_id = link.child_spore.id if hasattr(link.child_spore, 'id') else None
+                    
+                    if parent_id and child_id:
+                        # Пытаемся найти связь в обоих направлениях (граф может быть направленным)
+                        edge_info = None
+                        if hasattr(self, 'spore_manager') and hasattr(self.spore_manager, 'graph'):
+                            edge_info = self.spore_manager.graph.get_edge_info(parent_id, child_id)
+                            if not edge_info:
+                                edge_info = self.spore_manager.graph.get_edge_info(child_id, parent_id)
+                        
+                        if edge_info and hasattr(edge_info, 'link_type'):
+                            link_type = edge_info.link_type
+                        else:
+                            # Если не нашли в графе, пытаемся определить по визуальному линку
+                            if hasattr(link, 'color'):
+                                # Определяем по цвету (красный = max, синий = min)
+                                color_str = str(link.color).lower()
+                                if 'red' in color_str or '#ff' in color_str:
+                                    link_type = 'real_max'
+                                elif 'blue' in color_str or '#00' in color_str:
+                                    link_type = 'real_min'
+                                    
+                except Exception as e:
+                    # При любой ошибке используем значение по умолчанию
+                    print(f"   ⚠️ Не удалось определить тип связи: {e}")
+                    link_type = 'real_max'
+
                 color = link_colors.get(link_type, 'gray')
                 
                 # Рисуем стрелку
