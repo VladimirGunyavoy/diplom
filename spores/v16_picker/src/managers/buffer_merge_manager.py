@@ -3,7 +3,9 @@ BufferMergeManager - компонент для мерджа спор по кла
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
+import json
+from datetime import datetime
 import matplotlib.pyplot as plt
 import os
 from ..core.spore_graph import SporeGraph
@@ -32,6 +34,10 @@ class BufferMergeManager:
         # Буферный граф для объединенных спор
         self.buffer_graph = SporeGraph('buffer')
 
+        # 🔗 Буферный список связей для мерджа
+        # [{'parent_id': str, 'child_id': str, 'link_type': str}]
+        self.buffer_links: List[Dict] = []
+
         # Двусторонняя карта соответствий
         self.ghost_to_buffer: Dict[str, str] = {}  # ghost_id -> buffer_id
         # buffer_id -> [ghost_ids]
@@ -59,6 +65,11 @@ class BufferMergeManager:
             dict: статистика мерджа
         """
         print("\n🔄 НАЧАЛО МЕРДЖА ПРИЗРАЧНОГО ДЕРЕВА")
+        
+        # 🔍 ДИАГНОСТИКА: Проверяем состояние буфера до очистки
+        if hasattr(self, 'buffer_positions') and self.buffer_positions:
+            print(f"⚠️ ВНИМАНИЕ: В буфере найдены старые данные ({len(self.buffer_positions)} позиций)")
+            print(f"   Будет выполнена полная очистка...")
 
         # Очищаем предыдущие результаты
         self._reset()
@@ -83,12 +94,20 @@ class BufferMergeManager:
             # 3. Обрабатываем внуков
             self._process_grandchildren(tree_logic)
 
-            # 4. Сохраняем результат
+            # 4. 🔗 НОВОЕ: Обрабатываем связи
+            self._process_links(tree_logic)
+
+            # 5. Сохраняем результат
             if save_image:
                 image_path = self._save_buffer_image()
                 self.stats['image_path'] = image_path
 
-            # 5. Выводим итоговую статистику
+            # 6. 💾 Экспортируем буферный граф в JSON
+            export_path = self.export_buffer_graph()
+            if export_path:
+                self.stats['export_path'] = export_path
+
+            # 7. Выводим итоговую статистику
             self._print_final_stats()
 
             return self._get_success_result()
@@ -101,15 +120,35 @@ class BufferMergeManager:
 
     def _reset(self):
         """Очищает состояние для нового мерджа."""
+        print(f"🧹 Очистка буферного графа перед новым мерджем...")
+        
+        # Очищаем основные структуры
         self.buffer_graph.clear()
         self.ghost_to_buffer.clear()
         self.buffer_to_ghosts.clear()
+        if hasattr(self, 'buffer_links'):
+            self.buffer_links.clear()
+        
+        # 🔧 ИСПРАВЛЕНИЕ: Очищаем buffer_positions
+        if hasattr(self, 'buffer_positions'):
+            old_count = len(self.buffer_positions)
+            self.buffer_positions.clear()
+            if old_count > 0:
+                print(f"   🗑️ Удалено {old_count} старых позиций из буфера")
+        else:
+            self.buffer_positions = {}
+        
+        # Сбрасываем статистику
         self.stats = {
             'total_processed': 0,
             'added_to_buffer': 0,
             'merged_to_existing': 0,
-            'processing_order': []
+            'processing_order': [],
+            'total_links': 0,
+            'merged_links': 0
         }
+        
+        print(f"   ✅ Буферный граф полностью очищен")
 
     def _validate_tree_logic(self, tree_logic) -> bool:
         """Проверяет что tree_logic готов к обработке."""
@@ -294,6 +333,153 @@ class BufferMergeManager:
 
             self.stats['total_processed'] += 1
 
+    def _process_links(self, tree_logic):
+        """Обрабатывает связи между спорами дерева."""
+        print(f"\n🔗 ОБРАБОТКА СВЯЗЕЙ")
+        
+        # 1. Создаем связи корень ↔ дети
+        self._create_root_child_links(tree_logic)
+        
+        # 2. Создаем связи дети ↔ внуки
+        self._create_child_grandchild_links(tree_logic)
+        
+        # 3. Выводим итоговую статистику связей
+        self._print_links_stats()
+
+    def _create_root_child_links(self, tree_logic):
+        """Создает связи между корнем и детьми."""
+        if not hasattr(tree_logic, 'children') or not tree_logic.children:
+            return
+            
+        print(f"\n   🔗 СВЯЗИ КОРЕНЬ ↔ ДЕТИ:")
+        root_buffer_id = "buffer_root"
+        
+        for i, child_data in enumerate(tree_logic.children):
+            child_ghost_id = f"ghost_child_{i}"
+            child_buffer_id = self.ghost_to_buffer.get(child_ghost_id)
+            
+            if not child_buffer_id:
+                print(f"      ❌ Не найден buffer_id для {child_ghost_id}")
+                continue
+                
+            # Определяем тип связи по control
+            control = child_data.get('control', 0)
+            link_type = 'buffer_max' if control > 0 else 'buffer_min'
+            
+            # Определяем направление по dt
+            dt = child_data.get('dt', 0)
+            if dt > 0:
+                # dt > 0: корень → ребенок
+                parent_id, child_id = root_buffer_id, child_buffer_id
+                direction = "→"
+            else:
+                # dt < 0: ребенок → корень  
+                parent_id, child_id = child_buffer_id, root_buffer_id
+                direction = "←"
+            
+            # Создаем связь
+            link = {
+                'parent_id': parent_id,
+                'child_id': child_id, 
+                'link_type': link_type,
+                'source_info': f"root-child_{i}(dt={dt:.3f},u={control})"
+            }
+            self.buffer_links.append(link)
+            self.stats['total_links'] += 1
+            
+            print(f"      ✅ {parent_id} {direction} {child_buffer_id} ({link_type})")
+
+    def _create_child_grandchild_links(self, tree_logic):
+        """Создает связи между детьми и внуками.""" 
+        if not hasattr(tree_logic, 'grandchildren') or not tree_logic.grandchildren:
+            return
+            
+        print(f"\n   🔗 СВЯЗИ ДЕТИ ↔ ВНУКИ:")
+        
+        for i, grandchild_data in enumerate(tree_logic.grandchildren):
+            grandchild_ghost_id = f"ghost_grandchild_{i}"
+            grandchild_buffer_id = self.ghost_to_buffer.get(grandchild_ghost_id)
+            
+            if not grandchild_buffer_id:
+                print(f"      ❌ Не найден buffer_id для {grandchild_ghost_id}")
+                continue
+                
+            # Получаем parent_idx - номер ребенка-родителя
+            parent_idx = grandchild_data.get('parent_idx')
+            if parent_idx is None:
+                print(f"      ❌ Нет parent_idx для внука {i}")
+                continue
+                
+            # Находим buffer_id родителя-ребенка
+            parent_ghost_id = f"ghost_child_{parent_idx}"
+            parent_buffer_id = self.ghost_to_ghosts.get(parent_ghost_id) if False else self.ghost_to_buffer.get(parent_ghost_id)
+            
+            if not parent_buffer_id:
+                print(f"      ❌ Не найден buffer_id для родителя {parent_ghost_id}")
+                continue
+            
+            # Определяем тип связи по control
+            control = grandchild_data.get('control', 0)
+            link_type = 'buffer_max' if control > 0 else 'buffer_min'
+            
+            # Определяем направление по dt
+            dt = grandchild_data.get('dt', 0)
+            if dt > 0:
+                # dt > 0: ребенок → внук
+                parent_id, child_id = parent_buffer_id, grandchild_buffer_id
+                direction = "→"
+            else:
+                # dt < 0: внук → ребенок
+                parent_id, child_id = grandchild_buffer_id, parent_buffer_id
+                direction = "←"
+            
+            # Проверяем на дублирование связи (может быть при объединении)
+            existing_link = self._find_existing_link(parent_id, child_id, link_type)
+            if existing_link:
+                print(f"      🔗 Связь уже существует: {parent_id} {direction} {child_id} ({link_type})")
+                self.stats['merged_links'] += 1
+                continue
+            
+            # Создаем связь
+            link = {
+                'parent_id': parent_id,
+                'child_id': child_id,
+                'link_type': link_type,
+                'source_info': f"child_{parent_idx}-grandchild_{i}(dt={dt:.3f},u={control})"
+            }
+            self.buffer_links.append(link)
+            self.stats['total_links'] += 1
+            
+            print(f"      ✅ {parent_buffer_id} {direction} {grandchild_buffer_id} ({link_type})")
+
+    def _find_existing_link(self, parent_id: str, child_id: str, link_type: str) -> bool:
+        """Проверяет существует ли уже такая связь."""
+        for link in self.buffer_links:
+            if (link['parent_id'] == parent_id and 
+                link['child_id'] == child_id and 
+                link['link_type'] == link_type):
+                return True
+        return False
+
+    def _print_links_stats(self):
+        """Выводит статистику связей."""
+        print(f"\n📊 СТАТИСТИКА СВЯЗЕЙ:")
+        print(f"   🔗 Всего связей создано: {len(self.buffer_links)}")
+        print(f"   🔗 Объединено дублирующихся: {self.stats['merged_links']}")
+        
+        # Группируем по типам
+        link_types = {}
+        for link in self.buffer_links:
+            link_type = link['link_type']
+            link_types[link_type] = link_types.get(link_type, 0) + 1
+        
+        print(f"   🎨 По типам: {link_types}")
+        
+        # Показываем несколько примеров связей
+        print(f"\n📝 ПРИМЕРЫ СВЯЗЕЙ:")
+        for i, link in enumerate(self.buffer_links[:4]):  # Показываем первые 4
+            print(f"   {i+1}. {link['parent_id']} → {link['child_id']} ({link['link_type']})")
+
     def _find_closest_in_buffer(self, position: np.ndarray) -> Tuple[Optional[str], float]:
         """
         Находит ближайшую спору в буферном графе.
@@ -329,6 +515,11 @@ class BufferMergeManager:
         self.buffer_to_ghosts[buffer_id].append(ghost_id)
 
         print(f"      ✅ Добавлен в буфер: {ghost_id} → {buffer_id}")
+        
+        # 🔍 ОТЛАДКА: Проверяем что позиция действительно сохранена
+        if buffer_id in self.buffer_positions:
+            saved_pos = self.buffer_positions[buffer_id]
+            print(f"         📍 Позиция сохранена: ({saved_pos[0]:.4f}, {saved_pos[1]:.4f})")
 
     def _merge_to_existing(self, ghost_id: str, buffer_id: str, distance: float):
         """Объединяет призрачную спору с существующей в буфере."""
@@ -343,55 +534,38 @@ class BufferMergeManager:
               f"{self.distance_threshold:.2e}")
 
     def _save_buffer_image(self) -> str:
-        """Сохраняет картинку буферного графа."""
+        """Сохраняет картинку буферного графа со связями."""
         try:
             # Создаем директорию если нужно
             buffer_dir = "buffer"
             if not os.path.exists(buffer_dir):
                 os.makedirs(buffer_dir)
 
-            save_path = os.path.join(buffer_dir, "buffer_merge_result.png")
+            save_path = os.path.join(buffer_dir, "buffer_merge_latest.png")
 
             # Создаем график
-            fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+            fig, ax = plt.subplots(1, 1, figsize=(14, 12))
 
-            # Рисуем споры буферного графа
-            for buffer_id, position in getattr(self, 'buffer_positions', {}).items():
-                ghost_count = len(self.buffer_to_ghosts.get(buffer_id, []))
+            # 1. Рисуем связи первыми (под спорами)
+            self._draw_buffer_links(ax)
 
-                # Размер маркера зависит от количества объединенных спор
-                marker_size = 50 + 30 * (ghost_count - 1)
+            # 2. Рисуем споры поверх
+            self._draw_buffer_spores(ax)
 
-                # Цвет: синий для одиночных, красный для объединенных
-                color = 'blue' if ghost_count == 1 else 'red'
-
-                ax.scatter(position[0], position[1], s=marker_size, c=color,
-                          alpha=0.7, edgecolors='black', linewidth=1)
-
-                # Подпись
-                label = f"{buffer_id}\n({ghost_count} спор)"
-                ax.annotate(label, (position[0], position[1]),
-                           xytext=(5, 5), textcoords='offset points',
-                           fontsize=8, ha='left')
-
-            ax.set_title(f"Буферный граф после мерджа\n"
-                        f"Обработано: {self.stats['total_processed']}, "
-                        f"В буфере: {self.stats['added_to_buffer']}, "
-                        f"Объединено: {self.stats['merged_to_existing']}")
+            # 3. Настройки графика
+            ax.set_title(
+                f"Буферный граф после мерджа\n"
+                f"Споры: {len(getattr(self, 'buffer_positions', {}))}, "
+                f"Связи: {len(getattr(self, 'buffer_links', []))}, "
+                f"Объединено: {self.stats['merged_to_existing']}"
+            )
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
             ax.grid(True, alpha=0.3)
             ax.axis('equal')
 
-            # Легенда
-            from matplotlib.lines import Line2D
-            legend_elements = [
-                Line2D([0], [0], marker='o', color='w', markerfacecolor='blue',
-                       markersize=8, label='Одиночная спора'),
-                Line2D([0], [0], marker='o', color='w', markerfacecolor='red',
-                       markersize=10, label='Объединенная спора')
-            ]
-            ax.legend(handles=legend_elements, loc='upper right')
+            # 4. Легенда
+            self._add_legend(ax)
 
             plt.tight_layout()
             plt.savefig(save_path, dpi=150, bbox_inches='tight')
@@ -402,7 +576,200 @@ class BufferMergeManager:
 
         except Exception as e:
             print(f"❌ Ошибка сохранения картинки: {e}")
+            import traceback
+            traceback.print_exc()
             return ""
+
+    def _draw_buffer_spores(self, ax):
+        """Рисует споры буферного графа."""
+        for buffer_id, position in getattr(self, 'buffer_positions', {}).items():
+            ghost_count = len(self.buffer_to_ghosts.get(buffer_id, []))
+
+            # Размер маркера зависит от количества объединенных спор
+            marker_size = 80 + 40 * (ghost_count - 1)
+
+            # Цвет: синий для одиночных, красный для объединенных
+            color = 'lightblue' if ghost_count == 1 else 'lightcoral'
+            edge_color = 'blue' if ghost_count == 1 else 'red'
+
+            ax.scatter(
+                position[0], position[1], s=marker_size, c=color,
+                alpha=0.8, edgecolors=edge_color, linewidth=2
+            )
+
+            # Подпись
+            label = f"{buffer_id.replace('buffer_', '')}\n({ghost_count})"
+            ax.annotate(
+                label, (position[0], position[1]),
+                xytext=(5, 5), textcoords='offset points',
+                fontsize=9, ha='left', weight='bold'
+            )
+
+    def _draw_buffer_links(self, ax):
+        """Рисует связи буферного графа как стрелки."""
+        if not hasattr(self, 'buffer_positions'):
+            return
+
+        # Цвета для разных типов связей
+        link_colors = {
+            'buffer_max': 'red',      # u_max - красный
+            'buffer_min': 'blue'      # u_min - синий
+        }
+
+        for link in getattr(self, 'buffer_links', []):
+            parent_id = link['parent_id']
+            child_id = link['child_id']
+            link_type = link['link_type']
+
+            # Получаем позиции
+            parent_pos = self.buffer_positions.get(parent_id)
+            child_pos = self.buffer_positions.get(child_id)
+
+            if parent_pos is None or child_pos is None:
+                continue
+
+            # Цвет стрелки
+            color = link_colors.get(link_type, 'gray')
+
+            # Рисуем стрелку от parent к child
+            dx = child_pos[0] - parent_pos[0]
+            dy = child_pos[1] - parent_pos[1]
+
+            # Смещаем начало и конец стрелки чтобы они не перекрывали споры
+            length = np.sqrt(dx * dx + dy * dy)
+            if length > 0:
+                offset = 0.015  # Отступ от центра споры
+                start_offset = offset / length
+                end_offset = offset / length
+
+                start_x = parent_pos[0] + dx * start_offset
+                start_y = parent_pos[1] + dy * start_offset
+                arrow_dx = dx * (1 - 2 * end_offset)
+                arrow_dy = dy * (1 - 2 * end_offset)
+
+                # Настраиваем ширину стрелки в зависимости от длины
+                # Минимальная ширина 0.5, максимальная 3.0
+                # Ширина = 1/10 от длины, но в разумных пределах
+                arrow_width = max(0.5, min(3.0, length * 0.1))
+                head_width = max(0.004, min(0.012, length * 0.05))
+                head_length = max(0.004, min(0.012, length * 0.05))
+
+                ax.arrow(
+                    start_x, start_y, arrow_dx, arrow_dy,
+                    head_width=head_width, head_length=head_length,
+                    fc=color, ec=color, alpha=0.7, linewidth=arrow_width
+                )
+
+    def _add_legend(self, ax):
+        """Добавляет легенду к графику."""
+        from matplotlib.lines import Line2D
+
+        legend_elements = [
+            # Споры
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='lightblue',
+                   markeredgecolor='blue', markersize=10, label='Одиночная спора'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='lightcoral',
+                   markeredgecolor='red', markersize=12, label='Объединенная спора'),
+
+            # Связи
+            Line2D([0], [0], color='red', linewidth=3, label='buffer_max (u_max)'),
+            Line2D([0], [0], color='blue', linewidth=3, label='buffer_min (u_min)')
+        ]
+
+        ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
+
+    def export_buffer_graph(self, filename: str = None) -> str:
+        """
+        Экспортирует буферный граф в JSON файл.
+        
+        Args:
+            filename: имя файла (если None, генерируется автоматически)
+            
+        Returns:
+            путь к сохраненному файлу
+        """
+        try:
+            # Создаем директорию если нужно
+            buffer_dir = "buffer"
+            if not os.path.exists(buffer_dir):
+                os.makedirs(buffer_dir)
+
+            # Генерируем имя файла если не задано
+            if filename is None:
+                filename = "buffer_graph_latest.json"
+
+            save_path = os.path.join(buffer_dir, filename)
+
+            # Формируем структуру данных для экспорта
+            export_data = {
+                'metadata': {
+                    'export_time': datetime.now().isoformat(),
+                    'algorithm_version': 'BufferMergeManager_v1.0',
+                    'distance_threshold': self.distance_threshold
+                },
+                
+                'stats': self.stats.copy(),
+                
+                'spores': self._export_spores_data(),
+                
+                'links': self._export_links_data(),
+                
+                'correspondence_maps': {
+                    'ghost_to_buffer': self.ghost_to_buffer.copy(),
+                    'buffer_to_ghosts': self.buffer_to_ghosts.copy()
+                }
+            }
+            
+            # Сохраняем в JSON
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"\n💾 Буферный граф экспортирован: {save_path}")
+            print(f"   📊 Спор: {len(export_data['spores'])}")
+            print(f"   🔗 Связей: {len(export_data['links'])}")
+            
+            return save_path
+            
+        except Exception as e:
+            print(f"❌ Ошибка экспорта буферного графа: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
+
+    def _export_spores_data(self) -> List[Dict]:
+        """Формирует данные спор для экспорта."""
+        spores_data = []
+        
+        for buffer_id, position in getattr(self, 'buffer_positions', {}).items():
+            ghost_list = self.buffer_to_ghosts.get(buffer_id, [])
+            
+            spore_data = {
+                'buffer_id': buffer_id,
+                'position': [float(position[0]), float(position[1])],
+                'merged_ghosts': ghost_list.copy(),
+                'ghost_count': len(ghost_list),
+                'is_merged': len(ghost_list) > 1
+            }
+            
+            spores_data.append(spore_data)
+        
+        return spores_data
+
+    def _export_links_data(self) -> List[Dict]:
+        """Формирует данные связей для экспорта."""
+        links_data = []
+        
+        for link in getattr(self, 'buffer_links', []):
+            link_data = {
+                'parent_id': link['parent_id'],
+                'child_id': link['child_id'],
+                'link_type': link['link_type'],
+                'source_info': link.get('source_info', 'unknown')
+            }
+            
+            links_data.append(link_data)
+        
+        return links_data
 
     def _print_final_stats(self):
         """Выводит итоговую статистику мерджа."""
@@ -413,6 +780,15 @@ class BufferMergeManager:
         compression_ratio = (self.stats['merged_to_existing'] /
                                 max(self.stats['total_processed'], 1))
         print(f"   📉 Коэффициент сжатия: {compression_ratio:.1%}")
+        print(f"   🔗 Связей создано: {len(getattr(self, 'buffer_links', []))}")
+        if self.stats.get('merged_links', 0) > 0:
+            print(f"   🔗 Связей объединено: {self.stats['merged_links']}")
+
+        # Информация о сохраненных файлах
+        if 'image_path' in self.stats:
+            print(f"   🖼️ Визуализация: {self.stats['image_path']}")
+        if 'export_path' in self.stats:
+            print(f"   💾 JSON экспорт: {self.stats['export_path']}")
 
         print("\n🗺️ КАРТА СООТВЕТСТВИЙ:")
         for buffer_id, ghost_list in self.buffer_to_ghosts.items():
