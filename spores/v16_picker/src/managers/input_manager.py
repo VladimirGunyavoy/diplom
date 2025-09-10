@@ -14,6 +14,7 @@ from ..managers.spawn_area_manager import SpawnAreaManager
 from ..managers.param_manager import ParamManager
 from ..visual.ui_setup import UI_setup
 from ..logic.tree import run_area_optimization
+from .buffer_merge_manager import BufferMergeManager
 
 # Forward declaration для ManualSporeManager
 from typing import TYPE_CHECKING
@@ -54,6 +55,9 @@ class InputManager:
         self.cost_visualizer: Optional['CostVisualizer'] = cost_visualizer
         self.manual_spore_manager: Optional["ManualSporeManager"] = manual_spore_manager
         self.dt_manager: Optional['DTManager'] = dt_manager
+
+        # 🔄 v16: BufferMergeManager для клавиши M
+        self.buffer_merge_manager = BufferMergeManager(distance_threshold=1.5e-3)
 
         print(f"[IM] constructed, dt_manager id={id(self.dt_manager) if self.dt_manager else None}")
 
@@ -176,10 +180,10 @@ class InputManager:
                 'enabled': lambda: self.dt_manager is not None
             },
             'm': {
-                'description': 'генерация всех отладочных изображений',
-                'handler': self._handle_generate_debug_images,
-                'category': 'изображения',
-                'enabled': lambda: True
+                'description': 'мердж призрачного дерева в буферный граф',
+                'handler': self._handle_merge_optimization,
+                'category': 'мердж',
+                'enabled': lambda: self.manual_spore_manager is not None
             },
             'j': {
                 'description': 'показать статистику dt',
@@ -520,71 +524,52 @@ class InputManager:
             
             print(f"🔄 Все dt сброшены к стандартным значениям")
 
-    def _handle_generate_debug_images(self):
-        """Обработчик генерации отладочных изображений (M)."""
-        print("\n🖼️ ГЕНЕРАЦИЯ ОТЛАДОЧНЫХ ИЗОБРАЖЕНИЙ ПО КНОПКЕ M")
-        print("="*60)
+    def _handle_merge_optimization(self):
+        """Обработчик мерджа призрачного дерева (M)."""
+        print("[IM][M] Клавиша M нажата - запуск нового алгоритма мерджа!")
         
         try:
-            images_generated = 0
+            # Получаем tree_logic из manual_spore_manager
+            if not self.manual_spore_manager:
+                print("❌ Manual spore manager не найден")
+                return
+                
+            # Получаем последнее созданное дерево
+            tree_logic = getattr(self.manual_spore_manager, '_last_tree_logic', None)
+            if not tree_logic:
+                print("❌ Призрачное дерево не найдено")
+                print("   💡 Создайте дерево призраков сначала (наведите курсор на область)")
+                return
+                
+            print("✅ Найдено призрачное дерево:")
+            print(f"   📍 Корень: {tree_logic.root['position'] if tree_logic.root else 'нет'}")
+            print(f"   👶 Детей: {len(tree_logic.children) if hasattr(tree_logic, 'children') else 0}")
+            grandchildren_count = (len(tree_logic.grandchildren) 
+                                 if hasattr(tree_logic, 'grandchildren') else 0)
+            print(f"   👶👶 Внуков: {grandchildren_count}")
             
-            # 1. Генерируем полный реальный граф
-            if self.spore_manager and hasattr(self.spore_manager, 'graph'):
-                real_graph = self.spore_manager.graph
-                real_viz_path = real_graph.create_debug_visualization("full_real_graph_m_key")
-                if real_viz_path:
-                    print(f"✅ 1. Полный реальный граф: {real_viz_path}")
-                    images_generated += 1
-                else:
-                    print("❌ 1. Не удалось создать полный реальный граф")
-            else:
-                print("⚠️ 1. Реальный граф недоступен")
-                
-            # 2. Генерируем призрачный граф (исправленный корень)
-            if (self.manual_spore_manager and 
-                hasattr(self.manual_spore_manager, 'prediction_manager') and
-                hasattr(self.manual_spore_manager.prediction_manager, 
-                        'ghost_graph')):
-                
-                prediction_manager = self.manual_spore_manager.prediction_manager
-                ghost_viz_path = prediction_manager.ghost_graph.create_debug_visualization(
-                    "ghost_graph_debug")
-                if ghost_viz_path:
-                    print(f"✅ 2. Призрачный граф (исправленный): {ghost_viz_path}")
-                    images_generated += 1
-                else:
-                    print("❌ 2. Не удалось создать призрачный граф")
-            else:
-                print("⚠️ 2. Призрачный граф недоступен")
-                
-            # 3. Генерируем tree_debug.png (исправленные линки)
-            if (self.manual_spore_manager and 
-                hasattr(self.manual_spore_manager, '_last_tree_logic') and 
-                self.manual_spore_manager._last_tree_logic):
-                
-                tree_logic = self.manual_spore_manager._last_tree_logic
-                tree_debug_path = tree_logic.debug_plot_tree()
-                if tree_debug_path:
-                    print(f"✅ 3. Дерево (все линки): {tree_debug_path}")
-                    images_generated += 1
-                else:
-                    print("❌ 3. Не удалось создать график дерева")
-            else:
-                print("⚠️ 3. Последнее дерево недоступно (создайте дерево через ЛКМ)")
-                
-            # 4. Статистика
-            print("\n📊 СТАТИСТИКА ГЕНЕРАЦИИ:")
-            if images_generated > 0:
-                print(f"✅ Успешно создано: {images_generated} изображений")
-                print("📁 Все файлы сохранены в папке 'buffer/'")
-            else:
-                print("❌ Не создано ни одного изображения")
-                
-            print("="*60)
-            print("🖼️ ГЕНЕРАЦИЯ ЗАВЕРШЕНА")
+            # Передаем ссылку на manual_spore_manager для исследования
+            self.buffer_merge_manager._manual_spore_manager_ref = self.manual_spore_manager
             
+            # Запускаем новый алгоритм мерджа
+            result = self.buffer_merge_manager.merge_ghost_tree(tree_logic, save_image=True)
+            
+            if result['success']:
+                print("✅ Мердж успешно завершен!")
+                
+                # Выводим краткую статистику
+                stats = result['stats']
+                print(f"📊 Результат: {stats['added_to_buffer']} спор в буфере, "
+                      f"{stats['merged_to_existing']} объединений")
+                
+                if 'image_path' in stats:
+                    print(f"🖼️ Картинка сохранена: {stats['image_path']}")
+                    
+            else:
+                print(f"❌ Ошибка мерджа: {result.get('error', 'Неизвестная ошибка')}")
+                
         except Exception as e:
-            print(f"❌ Ошибка генерации изображений: {e}")
+            print(f"❌ Исключение при мердже: {e}")
             import traceback
             traceback.print_exc()
 
