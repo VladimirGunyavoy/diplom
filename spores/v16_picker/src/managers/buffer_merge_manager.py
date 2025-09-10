@@ -1100,7 +1100,7 @@ class BufferMergeManager:
             real_links = spore_manager.links
             
             # 1. Рисуем связи первыми
-            self._draw_real_links(ax, real_links)
+            self._draw_real_links(ax, real_links, spore_manager)
             
             # 2. Рисуем споры поверх
             self._draw_real_spores(ax, real_spores)
@@ -1155,12 +1155,9 @@ class BufferMergeManager:
                            xytext=(5, 5), textcoords='offset points',
                            fontsize=9, ha='left', weight='bold')
 
-    def _draw_real_links(self, ax, real_links):
+    def _draw_real_links(self, ax, real_links, spore_manager):
         """Рисует реальные связи."""
-        # Получаем ссылку на spore_manager для доступа к графу
-        spore_manager = getattr(self, '_spore_manager_ref', None)
-        if spore_manager:
-            self.spore_manager = spore_manager
+        # spore_manager передается как параметр
         # Цвета для разных типов связей
         link_colors = {
             'real_max': 'red',      # u_max - красный
@@ -1186,10 +1183,10 @@ class BufferMergeManager:
                     if parent_id and child_id:
                         # Пытаемся найти связь в обоих направлениях (граф может быть направленным)
                         edge_info = None
-                        if hasattr(self, 'spore_manager') and hasattr(self.spore_manager, 'graph'):
-                            edge_info = self.spore_manager.graph.get_edge_info(parent_id, child_id)
+                        if spore_manager and hasattr(spore_manager, 'graph'):
+                            edge_info = spore_manager.graph.get_edge_info(parent_id, child_id)
                             if not edge_info:
-                                edge_info = self.spore_manager.graph.get_edge_info(child_id, parent_id)
+                                edge_info = spore_manager.graph.get_edge_info(child_id, parent_id)
                         
                         if edge_info and hasattr(edge_info, 'link_type'):
                             link_type = edge_info.link_type
