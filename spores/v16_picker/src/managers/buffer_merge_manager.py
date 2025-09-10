@@ -1144,16 +1144,18 @@ class BufferMergeManager:
                 ax.scatter(pos[0], pos[1], s=marker_size, c=color,
                           alpha=0.8, edgecolors=edge_color, linewidth=2)
                 
-                # Подпись
-                spore_id = getattr(spore, 'id', 'unknown')
-                # 🔧 ИСПРАВЛЕНИЕ: Безопасное получение строкового ID
-                if isinstance(spore_id, int):
-                    label = f"id_{spore_id}"
-                else:
-                    label = str(spore_id).replace('real_buffer_', '')
+                # Подпись: простые номера для читаемости
+                # Используем индекс в списке + 1 для нумерации от 1
+                spore_index = next((i for i, s in enumerate(real_spores) if s is spore), 0)
+                label = str(spore_index + 1)
+
+                # Добавляем символ цели для целевых спор
+                if getattr(spore, 'is_goal', False):
+                    label += "🎯"
+
                 ax.annotate(label, (pos[0], pos[1]),
                            xytext=(5, 5), textcoords='offset points',
-                           fontsize=9, ha='left', weight='bold')
+                           fontsize=10, ha='left', weight='bold')
 
     def _draw_real_links(self, ax, real_links, spore_manager):
         """Рисует реальные связи."""
