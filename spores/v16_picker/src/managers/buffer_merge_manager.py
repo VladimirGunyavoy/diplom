@@ -855,7 +855,7 @@ class BufferMergeManager:
                 spore_manager, zoom_manager, color_manager, pendulum, config, materialize_stats)
             
             # 2. Создаем реальные связи
-            self._create_real_links(spore_manager, real_spores_map, materialize_stats)
+            self._create_real_links(spore_manager, real_spores_map, materialize_stats, zoom_manager, config)
             
             # 3. Создаем визуализацию реального графа  
             visualization_path = self._create_real_graph_visualization(spore_manager)
@@ -920,6 +920,7 @@ class BufferMergeManager:
                 # Регистрируем в ZoomManager
                 zoom_key = f"real_{buffer_id}"
                 zoom_manager.register_object(real_spore, zoom_key)
+                real_spore._zoom_manager_key = zoom_key  # Сохраняем для удаления
                 
                 # Сохраняем в карте
                 real_spores_map[buffer_id] = real_spore
@@ -938,17 +939,17 @@ class BufferMergeManager:
         
         return real_spores_map
 
-    def _create_real_links(self, spore_manager, real_spores_map, stats):
+    def _create_real_links(self, spore_manager, real_spores_map, stats, zoom_manager, config):
         """Создает реальные связи из буферных связей."""
         print(f"\n   🔗 СОЗДАНИЕ РЕАЛЬНЫХ СВЯЗЕЙ:")
         
         # Импортируем Link
         from ..visual.link import Link
         
-        # Цвета для разных типов связей
+        # Цвета для разных типов связей  
         link_colors = {
-            'buffer_max': 'link_max',    # Красный для u_max
-            'buffer_min': 'link_min'     # Синий для u_min
+            'buffer_max': 'ghost_max',    # Красный для u_max
+            'buffer_min': 'ghost_min'     # Синий для u_min
         }
         
         for link in self.buffer_links:
@@ -974,16 +975,24 @@ class BufferMergeManager:
                 visual_link = Link(
                     parent_spore=parent_spore,
                     child_spore=child_spore,
+                    zoom_manager=zoom_manager,
                     color_manager=spore_manager.color_manager,
-                    color_key=color_key,
-                    thickness=spore_manager.config.get('spore', {}).get('link_thickness', 1)
+                    config=spore_manager.config
                 )
+                
+                # Устанавливаем цвет после создания
+                visual_link.color = spore_manager.color_manager.get_color('link', color_key)
                 
                 # Устанавливаем ID
                 visual_link.id = f"real_link_{parent_buffer_id}_to_{child_buffer_id}"
                 
-                # Добавляем в SporeManager
-                spore_manager.add_link_manual(visual_link)
+                # Добавляем в SporeManager (правильная последовательность)
+                spore_manager.links.append(visual_link)
+                
+                # Регистрируем в ZoomManager
+                link_id = zoom_manager.get_unique_link_id()
+                zoom_manager.register_object(visual_link, link_id)
+                visual_link._zoom_manager_key = link_id  # Сохраняем для удаления
                 
                 # Добавляем связь в граф
                 spore_manager.graph.add_edge(
