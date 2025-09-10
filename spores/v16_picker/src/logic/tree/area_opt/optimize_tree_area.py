@@ -40,7 +40,7 @@ def optimize_tree_area(tree, pairs, pendulum, constraint_distance=1e-5,
     
     try:
         if show:
-            print("ОПТИМИЗАЦИЯ ПЛОЩАДИ ДЕРЕВА С КОНСТРЕЙНТАМИ ПАР")
+            print("🔧 Оптимизация площади дерева...")
             print("="*60)
         
         # ================================================================
@@ -233,10 +233,7 @@ def optimize_tree_area(tree, pairs, pendulum, constraint_distance=1e-5,
         improvement = optimized_area - original_area
         
         if show:
-            print(f"\nРезультаты оптимизации:")
-            print(f"  Исходная площадь: {original_area:.6f}")
-            print(f"  Оптимизированная площадь: {optimized_area:.6f}")
-            print(f"  Улучшение: {improvement:.6f} ({improvement/original_area*100:.2f}%)")
+            print(f"✅ Оптимизация завершена: площадь {original_area:.3e} → {optimized_area:.3e}")
         
         # ================================================================
         # СОЗДАНИЕ ОПТИМИЗИРОВАННОГО ДЕРЕВА

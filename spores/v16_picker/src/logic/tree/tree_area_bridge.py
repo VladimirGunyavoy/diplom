@@ -107,18 +107,11 @@ def run_area_optimization(*,
     
     optimizer = _find_optimizer()
 
-    # Логи в научной нотации для дебага
-    print(f"[AreaOpt] 📋 Конфигурация из config.json:")
-    print(f"   constraint_distance: {constraint_distance:.2e}")
-    print(f"   dt_bounds: [{dt_bounds[0]:.3f}, {dt_bounds[1]:.3f}]")
-    print(f"   method: {optimization_method}")
-    print(f"   max_iterations: {max_iterations}")
-    print(f"[AreaOpt] 📋 Параметры спаривания:")
-    print(f"   show_debug: {show_pairing_debug}")
-    print(f"   dt_grandchildren_factor: {dt_grandchildren_factor}")
-    print(f"   max_pairs: {max_pairs}")
-    print(f"[AreaOpt] max_dt из dt-manager = {max_dt_from_manager:.3e}")
-    print(f"[AreaOpt] dt_bounds скорректированные = [{dt_lo:.3e}, {dt_hi:.3e}]")
+    # Сокращенный дебаг - только результаты
+    if show:
+        print(f"[AreaOpt] 🔧 Оптимизация площади дерева...")
+        print(f"   Метод: {optimization_method}, Итераций: {max_iterations}")
+        print(f"   Пар для оптимизации: {len(pairs)}")
 
     # Пробуем гибкий интерфейс — большинство твоих функций принимали именно такие аргументы
     kwargs = dict(

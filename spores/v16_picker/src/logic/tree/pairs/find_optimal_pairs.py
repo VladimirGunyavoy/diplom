@@ -214,7 +214,7 @@ def find_optimal_pairs(tree, show=False):
         pendulum = tree.pendulum
         
         if show:
-            print("ЗАПУСК ПАЙПЛАЙНА ПОИСКА ОПТИМАЛЬНЫХ ПАР...")
+            print("🔍 Поиск оптимальных пар...")
             print("="*60)
             
     except Exception as e:

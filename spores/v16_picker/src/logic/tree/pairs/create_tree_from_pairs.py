@@ -32,7 +32,7 @@ def create_tree_from_pairs(tree, pendulum, config, show=False):
     
     try:
         if show:
-            print("СОЗДАНИЕ ДЕРЕВА ИЗ НАЙДЕННЫХ ПАР")
+            print("🔧 Создание дерева из найденных пар...")
             print("="*50)
         
         # ================================================================
@@ -218,13 +218,7 @@ def create_tree_from_pairs(tree, pendulum, config, show=False):
         
         if show:
             print(f"\n" + "="*50)
-            print(f"ДЕРЕВО ИЗ ПАР СОЗДАНО УСПЕШНО!")
-            print(f"="*50)
-            print(f"Статистика:")
-            print(f"  Найдено пар: {stats_summary['pairs_found']}")
-            print(f"  Спарено внуков: {stats_summary['paired_grandchildren']}/{stats_summary['total_grandchildren']}")
-            print(f"  Изменено времен: {stats_summary['times_changed']}")
-            print(f"  Готово к дальнейшей оптимизации площади")
+            print(f"✅ Дерево создано: {stats_summary['paired_grandchildren']}/{stats_summary['total_grandchildren']} внуков спарено")
         
         return {
             'success': True,
