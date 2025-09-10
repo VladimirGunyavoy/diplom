@@ -121,65 +121,189 @@ class SporeManager:
                 except Exception as e:
                     print(f"   ⚠️ Ошибка удаления {key}: {e}")
         
-        # Стандартная очистка
+        # 🔧 БЕЗОПАСНОЕ УДАЛЕНИЕ СПОР
+        print(f"   🔍 Удаление {len(self.objects)} спор...")
         spores_to_remove = []
-        for spore in self.objects:
-            if not (hasattr(spore, 'is_goal') and spore.is_goal):
+
+        for i, spore in enumerate(self.objects):
+            try:
+                # 🔧 ИСПРАВЛЕНИЕ: НЕ удаляем целевую спору
+                if hasattr(spore, 'is_goal') and spore.is_goal:
+                    print(f"   💚 Целевая спора {i+1} сохранена (не удаляется)")
+                    continue
+                
+                # Проверяем что объект еще существует
+                if hasattr(spore, 'enabled') and hasattr(spore, 'visible'):
+                    # Сначала отключаем объект
+                    spore.enabled = False
+                    spore.visible = False
+                    
+                    # Проверяем что NodePath не пустой
+                    if hasattr(spore, 'parent') and spore.parent is not None:
+                        spore.parent = None
+                    
+                    # Удаляем из ZoomManager ПЕРЕД destroy
+                    if (hasattr(spore, '_zoom_manager_key') and 
+                        hasattr(self.zoom_manager, 'unregister_object')):
+                        try:
+                            self.zoom_manager.unregister_object(spore._zoom_manager_key)
+                            print(f"   ✓ Удалена из ZoomManager: {spore._zoom_manager_key}")
+                        except Exception as e:
+                            print(f"   ⚠️ Ошибка удаления из ZoomManager: {e}")
+                    
+                    # Безопасное уничтожение
+                    if hasattr(spore, 'destroy'):
+                        spore.destroy()
+                    
+                    spores_to_remove.append(spore)
+                    
+                else:
+                    print(f"   ⚠️ Спора {i} уже невалидна, пропускаем")
+                    spores_to_remove.append(spore)
+                    
+            except Exception as e:
+                print(f"   ❌ Ошибка удаления споры {i}: {e}")
                 spores_to_remove.append(spore)
-        
+
+        # 🔧 ИСПРАВЛЕНИЕ: Очищаем список ТОЛЬКО от удаленных спор, сохраняем целевые
         for spore in spores_to_remove:
-            self.objects.remove(spore)
-            destroy(spore)
-            print(f"   ✓ Удалена обычная спора: {getattr(spore, 'id', 'unknown')}")
+            if spore in self.objects:
+                self.objects.remove(spore)
         
-        # 2. Удаляем все связи
-        for link in self.links:
-            destroy(link)
-        self.links = []
-        print(f"   ✓ Удалено связей: {len(self.links)}")
+        # Подсчитываем сколько спор осталось (должны быть только целевые)
+        remaining_spores = len(self.objects)
+        print(f"   ✅ Безопасно удалено {len(spores_to_remove)} спор")
+        print(f"   💚 Целевых спор сохранено: {remaining_spores}")
+
+        # 🔧 БЕЗОПАСНОЕ УДАЛЕНИЕ СВЯЗЕЙ
+        print(f"   🔍 Удаление {len(self.links)} связей...")
+        links_to_remove = []
+
+        for i, link in enumerate(self.links):
+            try:
+                # Проверяем что связь еще существует
+                if hasattr(link, 'enabled') and hasattr(link, 'visible'):
+                    # Сначала отключаем
+                    link.enabled = False
+                    link.visible = False
+                    
+                    # Отвязываем от родителя
+                    if hasattr(link, 'parent') and link.parent is not None:
+                        link.parent = None
+                    
+                    # Удаляем из ZoomManager ПЕРЕД destroy
+                    if (hasattr(link, '_zoom_manager_key') and 
+                        hasattr(self.zoom_manager, 'unregister_object')):
+                        try:
+                            self.zoom_manager.unregister_object(link._zoom_manager_key)
+                            print(f"   ✓ Удалена связь из ZoomManager: {link._zoom_manager_key}")
+                        except Exception as e:
+                            print(f"   ⚠️ Ошибка удаления связи из ZoomManager: {e}")
+                    
+                    # Безопасное уничтожение
+                    if hasattr(link, 'destroy'):
+                        link.destroy()
+                        
+                    links_to_remove.append(link)
+                    
+                else:
+                    print(f"   ⚠️ Связь {i} уже невалидна, пропускаем")
+                    links_to_remove.append(link)
+                    
+            except Exception as e:
+                print(f"   ❌ Ошибка удаления связи {i}: {e}")
+                links_to_remove.append(link)
+
+        # Очищаем список
+        self.links.clear()
+        print(f"   ✅ Безопасно удалено {len(links_to_remove)} связей")
         
-        # 3. Удаляем ghost_link
+        # 3. Безопасно удаляем ghost_link
         if self.ghost_link:
-            destroy(self.ghost_link)
-            self.ghost_link = None
-            print("   ✓ Удалена призрачная связь")
+            try:
+                if hasattr(self.ghost_link, 'enabled'):
+                    self.ghost_link.enabled = False
+                if hasattr(self.ghost_link, 'visible'):
+                    self.ghost_link.visible = False
+                if hasattr(self.ghost_link, 'parent') and self.ghost_link.parent is not None:
+                    self.ghost_link.parent = None
+                if hasattr(self.ghost_link, 'destroy'):
+                    self.ghost_link.destroy()
+                print("   ✓ Удалена призрачная связь")
+            except Exception as e:
+                print(f"   ⚠️ Ошибка удаления ghost_link: {e}")
+            finally:
+                self.ghost_link = None
         
-        # 4. Удаляем prediction visualizers
-        for visualizer in self.prediction_visualizers:
-            visualizer.destroy()
+        # 4. Безопасно удаляем prediction visualizers
+        print(f"   🔍 Удаление {len(self.prediction_visualizers)} visualizers...")
+        for i, visualizer in enumerate(self.prediction_visualizers):
+            try:
+                if hasattr(visualizer, 'destroy'):
+                    visualizer.destroy()
+            except Exception as e:
+                print(f"   ⚠️ Ошибка удаления visualizer {i}: {e}")
         self.prediction_visualizers = []
-        print(f"   ✓ Удалено visualizers: {len(self.prediction_visualizers)}")
+        print(f"   ✅ Удалено visualizers: {len(self.prediction_visualizers)}")
         
         # 5. Сбрасываем optimal_ghost_spore
         self.optimal_ghost_spore = None
-
-        # клод - лентяй!
         
-        # 6. Очищаем кандидатские споры
-        for candidate in self.candidate_spores:
-            # Удаляем из zoom_manager перед удалением объекта
-            if hasattr(candidate, 'id'):
-                try:
-                    self.zoom_manager.unregister_object(candidate.id)
-                except:
-                    pass
-            destroy(candidate)
+        # 6. Безопасно очищаем кандидатские споры
+        print(f"   🔍 Удаление {len(self.candidate_spores)} кандидатов...")
+        for i, candidate in enumerate(self.candidate_spores):
+            try:
+                # Удаляем из zoom_manager перед удалением объекта
+                if hasattr(candidate, 'id'):
+                    try:
+                        self.zoom_manager.unregister_object(candidate.id)
+                    except:
+                        pass
+                
+                # Безопасное удаление
+                if hasattr(candidate, 'enabled'):
+                    candidate.enabled = False
+                if hasattr(candidate, 'visible'):
+                    candidate.visible = False
+                if hasattr(candidate, 'parent') and candidate.parent is not None:
+                    candidate.parent = None
+                if hasattr(candidate, 'destroy'):
+                    candidate.destroy()
+                    
+            except Exception as e:
+                print(f"   ⚠️ Ошибка удаления кандидата {i}: {e}")
+        
         self.candidate_spores = []
         self.candidate_count = 0
-        print(f"   ✓ Удалено кандидатов: {len(self.candidate_spores)}")
+        print(f"   ✅ Удалено кандидатов: {len(self.candidate_spores)}")
         
         # 7. Очищаем angel_manager (если есть)
         if self.angel_manager:
-            self.angel_manager.clear_ghosts()
-            print("   ✓ Очищены ангелы")
+            try:
+                self.angel_manager.clear_ghosts()
+                print("   ✓ Очищены ангелы")
+            except Exception as e:
+                print(f"   ⚠️ Ошибка очистки ангелов: {e}")
         
-        # 8. Подсчитываем что осталось
-        remaining_spores = [s for s in self.objects if hasattr(s, 'is_goal') and s.is_goal]
-        print(f"   💚 Сохранено целевых спор: {len(remaining_spores)}")
+        # 8. Подсчитываем что осталось (должны быть только целевые споры)
+        goal_spores = [s for s in self.objects if hasattr(s, 'is_goal') and s.is_goal]
+        print(f"   💚 Сохранено целевых спор: {len(goal_spores)}")
         
         # Сбрасываем счетчики ID
         self.id_manager.reset_counters()
         print(f"   ✓ Счетчики ID сброшены")
+        
+        # 🔧 Принудительная очистка памяти и обновление сцены
+        try:
+            import gc
+            gc.collect()  # Принудительная сборка мусора
+            
+            # Обновляем ZoomManager
+            if hasattr(self.zoom_manager, 'update_transform'):
+                self.zoom_manager.update_transform()
+                
+        except Exception as e:
+            print(f"   ⚠️ Ошибка финальной очистки: {e}")
         
         print("🧹 Полная очистка завершена (целевые споры сохранены)")
 

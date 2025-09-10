@@ -330,6 +330,11 @@ class ManualSporeManager:
                     if link in self.created_links:
                         self.created_links.remove(link)
 
+                    # 🔧 ИСПРАВЛЕНИЕ: Удаляем из SporeManager.links для синхронизации с PNG
+                    if hasattr(self.spore_manager, 'links') and link in self.spore_manager.links:
+                        self.spore_manager.links.remove(link)
+                        print(f"   🔄 Линк {i+1} удален из SporeManager.links")
+                    
                     # Уничтожаем объект Ursina
                     destroy(link)
                     deleted_links += 1
@@ -415,6 +420,31 @@ class ManualSporeManager:
 
             # Проверяем что удаление было успешным
             if deleted_spores == len(last_spores) and deleted_links == len(last_links):
+                # 🔧 ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ: Обновляем PNG после удаления
+                try:
+                    # Импорт для доступа к buffer_merge_manager через input_manager
+                    if (hasattr(self.spore_manager, '_manual_spore_manager_ref') and 
+                        hasattr(self.spore_manager._manual_spore_manager_ref, '_input_manager_ref')):
+                        
+                        input_manager = self.spore_manager._manual_spore_manager_ref._input_manager_ref
+                        if (hasattr(input_manager, 'buffer_merge_manager') and
+                            hasattr(input_manager.buffer_merge_manager, '_create_real_graph_visualization')):
+                            
+                            print("   🖼️ Обновление PNG после удаления...")
+                            viz_path = input_manager.buffer_merge_manager._create_real_graph_visualization(self.spore_manager)
+                            if viz_path:
+                                print(f"   ✅ PNG обновлен: {viz_path}")
+                            else:
+                                print("   ⚠️ Не удалось обновить PNG")
+                        else:
+                            print("   ⚠️ BufferMergeManager не найден для обновления PNG")
+                    else:
+                        print("   ⚠️ Не удалось найти InputManager для обновления PNG")
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Ошибка обновления PNG: {e}")
+                    # Не критично - продолжаем
+                
                 print(f"   ✅ Группа успешно удалена!")
                 return True
             else:

@@ -414,6 +414,9 @@ class InputManager:
                     if result['success']:
                         stats = result['stats']
                         print(f"   ✅ Материализация завершена: {stats['spores_created']} спор, {stats['links_created']} связей")
+                        
+                        # ✅ Материализация работает, добавление в историю происходит в BufferMergeManager
+                        print(f"   📚 Материализованные споры автоматически добавлены в историю групп")
                     else:
                         print(f"   ❌ Ошибка материализации: {result.get('error', 'Неизвестная ошибка')}")
                         
@@ -922,6 +925,18 @@ class InputManager:
         # Очищаем через SporeManager
         if self.spore_manager:
             self.spore_manager.clear_all_manual()
+        
+        # 🧹 Очищаем буферный граф при полной очистке
+        if hasattr(self, 'buffer_merge_manager'):
+            clear_result = self.buffer_merge_manager.clear_buffer_graph()
+            if clear_result['success']:
+                print(f"   🧹 Буферный граф очищен: {clear_result['cleared_spores']} спор")
+
+        # 🔄 Обновляем визуализацию (пустой граф)
+        if hasattr(self.buffer_merge_manager, '_create_real_graph_visualization') and self.spore_manager:
+            viz_path = self.buffer_merge_manager._create_real_graph_visualization(self.spore_manager)
+            if viz_path:
+                print(f"   🖼️ Обновлена визуализация: {viz_path}")
 
     def _handle_delete_last_group(self):
         """Обработчик удаления последней группы спор (Z)."""
@@ -930,6 +945,29 @@ class InputManager:
             success = self.manual_spore_manager.delete_last_spore_group()
             if success:
                 print("   ✅ Последняя группа спор успешно удалена")
+                
+                # 🔧 ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ PNG ПОСЛЕ УДАЛЕНИЯ
+                try:
+                    print("   🖼️ Принудительное обновление PNG...")
+                    
+                    # Добавляем задержку для завершения всех операций удаления
+                    import time
+                    time.sleep(0.1)
+                    
+                    # Обновляем визуализацию
+                    if hasattr(self.buffer_merge_manager, '_create_real_graph_visualization') and self.spore_manager:
+                        viz_path = self.buffer_merge_manager._create_real_graph_visualization(self.spore_manager)
+                        if viz_path:
+                            print(f"   ✅ PNG обновлен после удаления: {viz_path}")
+                        else:
+                            print("   ⚠️ Не удалось обновить PNG")
+                    
+                    # Диагностика: показываем сколько связей осталось
+                    remaining_links = len(self.spore_manager.links) if self.spore_manager else 0
+                    print(f"   📊 Связей осталось в SporeManager: {remaining_links}")
+                    
+                except Exception as e:
+                    print(f"   ⚠️ Ошибка принудительного обновления PNG: {e}")
             else:
                 print("   ❌ Не удалось удалить группу (возможно, нет групп для удаления)")
         else:

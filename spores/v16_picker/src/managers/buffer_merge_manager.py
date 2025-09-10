@@ -53,6 +53,9 @@ class BufferMergeManager:
 
         print(f"🔄 BufferMergeManager создан (трешхолд: {distance_threshold})")
 
+        # Счетчик материализаций для уникальных ключей ZoomManager
+        self._materialization_counter = 0
+
     def merge_ghost_tree(self, tree_logic, save_image: bool = True) -> Dict:
         """
         Основной метод: мерджит призрачное дерево в буферный граф.
@@ -850,6 +853,14 @@ class BufferMergeManager:
                 'errors': []
             }
             
+            # 📊 ДИАГНОСТИКА: Показываем количество целевых спор ДО материализации
+            existing_goals = [s for s in spore_manager.objects if hasattr(s, 'is_goal') and s.is_goal]
+            print(f"   📊 Целевых спор до материализации: {len(existing_goals)}")
+            
+            # Увеличиваем счетчик материализаций для уникальных ключей
+            self._materialization_counter += 1
+            print(f"🎨 Материализация #{self._materialization_counter}")
+            
             # 1. Создаем реальные споры
             real_spores_map = self._create_real_spores(
                 spore_manager, zoom_manager, color_manager, pendulum, config, materialize_stats)
@@ -867,6 +878,52 @@ class BufferMergeManager:
             
             # 5. Обновляем трансформации
             zoom_manager.update_transform()
+            
+            # 6. Добавляем материализованные споры в историю групп ManualSporeManager
+            if hasattr(self, '_manual_spore_manager_ref') and self._manual_spore_manager_ref:
+                print(f"\n📚 ДОБАВЛЕНИЕ В ИСТОРИЮ ГРУПП:")
+                
+                # Собираем все созданные споры
+                materialized_spores = list(real_spores_map.values())
+                materialized_links = []
+                
+                # Собираем все созданные связи
+                for link in self.buffer_links:
+                    parent_buffer_id = link['parent_id']
+                    child_buffer_id = link['child_id']
+                    
+                    # Ищем соответствующую связь в SporeManager
+                    for visual_link in spore_manager.links:
+                        if (hasattr(visual_link, '_zoom_manager_key') and 
+                            f"{parent_buffer_id}_to_{child_buffer_id}_m{self._materialization_counter}" in visual_link._zoom_manager_key):
+                            materialized_links.append(visual_link)
+                            break
+                
+                # Добавляем в историю групп как одну группу
+                if materialized_spores:
+                    self._manual_spore_manager_ref.spore_groups_history.append(materialized_spores)
+                    self._manual_spore_manager_ref.group_links_history.append(materialized_links)
+                    
+                    print(f"   ✅ Добавлено в историю: {len(materialized_spores)} спор, {len(materialized_links)} связей")
+                    print(f"   📖 Всего групп в истории: {len(self._manual_spore_manager_ref.spore_groups_history)}")
+                else:
+                    print(f"   ⚠️ Нет спор для добавления в историю")
+            else:
+                print(f"   ⚠️ ManualSporeManager reference не найден - споры не будут доступны для удаления через Z")
+            
+            # 7. Очищаем буферный граф после успешной материализации
+            clear_result = self.clear_buffer_graph()
+            if clear_result['success']:
+                print(f"   🧹 Буферный граф очищен: {clear_result['cleared_spores']} спор")
+            
+            # 📊 ДИАГНОСТИКА: Показываем количество целевых спор ПОСЛЕ материализации  
+            final_goals = [s for s in spore_manager.objects if hasattr(s, 'is_goal') and s.is_goal]
+            print(f"   📊 Целевых спор после материализации: {len(final_goals)}")
+            if len(final_goals) > 1:
+                print(f"   ⚠️ ВНИМАНИЕ: Обнаружено {len(final_goals)} целевых спор - должна быть только 1!")
+                for i, goal in enumerate(final_goals):
+                    pos = goal.calc_2d_pos() if hasattr(goal, 'calc_2d_pos') else 'unknown'
+                    print(f"      Goal #{i+1}: ID={getattr(goal, 'id', 'unknown')}, pos={pos}")
             
             return {
                 'success': True,
@@ -897,7 +954,15 @@ class BufferMergeManager:
                 position_3d = (float(position[0]), 0, float(position[1]))
                 
                 # Определяем является ли спора целевой
-                is_goal = buffer_id == "buffer_root"
+                # 🔧 ИСПРАВЛЕНИЕ: Только ОДНА спора должна быть целевой - корень дерева
+                is_goal = (buffer_id == "buffer_root" and 
+                           not any(spore.is_goal for spore in spore_manager.objects if hasattr(spore, 'is_goal')))
+
+                # 📊 ОТЛАДКА: Показываем информацию о целевых спорах
+                if is_goal:
+                    print(f"      🎯 Создается ЦЕЛЕВАЯ спора: {buffer_id}")
+                else:
+                    print(f"      🔸 Создается обычная спора: {buffer_id}")
                 
                 # Создаем реальную спору
                 real_spore = Spore(
@@ -916,9 +981,13 @@ class BufferMergeManager:
                 
                 # Добавляем в SporeManager
                 spore_manager.add_spore_manual(real_spore)
-                
-                # Регистрируем в ZoomManager
-                zoom_key = f"real_{buffer_id}"
+
+                # 🔧 ИСПРАВЛЕНИЕ: Принудительно устанавливаем строковый ID ПОСЛЕ add_spore_manual
+                # потому что add_spore_manual может перезаписать его на число
+                real_spore.id = f"real_{buffer_id}"
+
+                # Регистрируем в ZoomManager с уникальным ключом
+                zoom_key = f"real_{buffer_id}_m{self._materialization_counter}"
                 zoom_manager.register_object(real_spore, zoom_key)
                 real_spore._zoom_manager_key = zoom_key  # Сохраняем для удаления
                 
@@ -989,8 +1058,8 @@ class BufferMergeManager:
                 # Добавляем в SporeManager (правильная последовательность)
                 spore_manager.links.append(visual_link)
                 
-                # Регистрируем в ZoomManager
-                link_id = zoom_manager.get_unique_link_id()
+                # Регистрируем в ZoomManager с уникальным ключом
+                link_id = f"real_link_{parent_buffer_id}_to_{child_buffer_id}_m{self._materialization_counter}"
                 zoom_manager.register_object(visual_link, link_id)
                 visual_link._zoom_manager_key = link_id  # Сохраняем для удаления
                 
@@ -1077,7 +1146,11 @@ class BufferMergeManager:
                 
                 # Подпись
                 spore_id = getattr(spore, 'id', 'unknown')
-                label = spore_id.replace('real_buffer_', '')
+                # 🔧 ИСПРАВЛЕНИЕ: Безопасное получение строкового ID
+                if isinstance(spore_id, int):
+                    label = f"id_{spore_id}"
+                else:
+                    label = str(spore_id).replace('real_buffer_', '')
                 ax.annotate(label, (pos[0], pos[1]),
                            xytext=(5, 5), textcoords='offset points',
                            fontsize=9, ha='left', weight='bold')
@@ -1161,6 +1234,49 @@ class BufferMergeManager:
             
         if 'visualization_path' in stats:
             print(f"   🖼️ Визуализация: {stats['visualization_path']}")
+
+    def clear_buffer_graph(self) -> Dict:
+        """
+        Очищает буферный граф после материализации.
+        
+        Returns:
+            dict: результат очистки
+        """
+        print(f"\n🧹 ОЧИСТКА БУФЕРНОГО ГРАФА")
+        
+        try:
+            cleared_spores = len(getattr(self, 'buffer_positions', {}))
+            cleared_links = len(getattr(self, 'buffer_links', []))
+            
+            # Очищаем все данные буферного графа
+            self.buffer_graph.clear()
+            self.buffer_links.clear()
+            self.ghost_to_buffer.clear()
+            self.buffer_to_ghosts.clear()
+            
+            if hasattr(self, 'buffer_positions'):
+                self.buffer_positions.clear()
+            
+            # Сбрасываем статистику
+            self.stats = {
+                'total_processed': 0,
+                'added_to_buffer': 0,
+                'merged_to_existing': 0,
+                'processing_order': []
+            }
+            
+            print(f"   ✅ Очищено: {cleared_spores} спор, {cleared_links} связей")
+            
+            return {
+                'success': True,
+                'cleared_spores': cleared_spores,
+                'cleared_links': cleared_links
+            }
+            
+        except Exception as e:
+            error_msg = f"Ошибка очистки буферного графа: {e}"
+            print(f"   ❌ {error_msg}")
+            return self._get_error_result(error_msg)
 
     def has_buffer_data(self) -> bool:
         """Проверяет есть ли данные в буферном графе."""
