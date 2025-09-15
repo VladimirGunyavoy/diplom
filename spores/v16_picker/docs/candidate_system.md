@@ -151,14 +151,6 @@ Candidates: XX
 Min radius: 0.XX
 ```
 
-### Инструкции управления
-**Позиция:** `CANDIDATE_CONTROLS = (0.29, 0.38)`
-**Содержание:**
-```
-G - activate candidate
-5/6 - adjust radius
-```
-
 ### Система обновления данных
 Используется колбэк `get_candidate_info`:
 ```python

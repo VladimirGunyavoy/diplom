@@ -154,13 +154,6 @@ class UI_setup:
                 position=UI_POSITIONS.CANDIDATE_INFO,
                 style='normal'
             )
-            
-            # Добавляем инструкции по управлению
-            self.ui_elements['candidate_controls'] = self.ui_manager.create_instructions(
-                'candidate_controls',
-                'G - activate candidate\n5/6 - adjust radius',
-                position=UI_POSITIONS.CANDIDATE_CONTROLS
-            )
             print("   ✓ Информация о кандидатах")
 
         if 'get_dt_info' in self.data_providers:

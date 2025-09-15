@@ -374,11 +374,9 @@ class BufferMergeManager:
             if dt > 0:
                 # dt > 0: корень → ребенок
                 parent_id, child_id = root_buffer_id, child_buffer_id
-                direction = "→"
             else:
                 # dt < 0: ребенок → корень  
                 parent_id, child_id = child_buffer_id, root_buffer_id
-                direction = "←"
             
             # Создаем связь
             link = {
@@ -390,7 +388,27 @@ class BufferMergeManager:
             self.buffer_links.append(link)
             self.stats['total_links'] += 1
             
-            print(f"      ✅ {parent_id} {direction} {child_buffer_id} ({link_type})")
+            # Правильное отображение направления стрелки
+            if child_data['dt'] > 0:  # forward
+                arrow_display = f"{parent_id} → {child_id}"
+                direction_info = "forward"
+            else:  # backward  
+                arrow_display = f"{child_id} ← {parent_id}"
+                direction_info = "backward"
+
+            print(f"      ✅ Связь {i}: {arrow_display} "
+                  f"({link_type}, dt={child_data['dt']:+.3f}, u={child_data['control']:+.1f}, {direction_info})")
+        
+        # Краткий вывод связей
+        print(f"   🔗 СВЯЗИ КОРЕНЬ ↔ ДЕТИ:")
+        for i, child_data in enumerate(tree_logic.children):
+            child_ghost_id = f"ghost_child_{i}"
+            child_buffer_id = self.ghost_to_buffer.get(child_ghost_id)
+            
+            if child_data['dt'] > 0:  # forward: корень → ребенок  
+                print(f"      ✅ buffer_root → {child_buffer_id} ({self._get_link_type(child_data)})")
+            else:  # backward: ребенок → корень
+                print(f"      ✅ {child_buffer_id} → buffer_root ({self._get_link_type(child_data)})")
 
     def _create_child_grandchild_links(self, tree_logic):
         """Создает связи между детьми и внуками.""" 
@@ -430,16 +448,15 @@ class BufferMergeManager:
             if dt > 0:
                 # dt > 0: ребенок → внук
                 parent_id, child_id = parent_buffer_id, grandchild_buffer_id
-                direction = "→"
             else:
                 # dt < 0: внук → ребенок
                 parent_id, child_id = grandchild_buffer_id, parent_buffer_id
-                direction = "←"
             
             # Проверяем на дублирование связи (может быть при объединении)
             existing_link = self._find_existing_link(parent_id, child_id, link_type)
             if existing_link:
-                print(f"      🔗 Связь уже существует: {parent_id} {direction} {child_id} ({link_type})")
+                direction_symbol = "→" if dt > 0 else "←"
+                print(f"      🔗 Связь уже существует: {parent_id} {direction_symbol} {child_id} ({link_type})")
                 self.stats['merged_links'] += 1
                 continue
             
@@ -453,7 +470,20 @@ class BufferMergeManager:
             self.buffer_links.append(link)
             self.stats['total_links'] += 1
             
-            print(f"      ✅ {parent_buffer_id} {direction} {grandchild_buffer_id} ({link_type})")
+            # Правильное отображение направления стрелки
+            if grandchild_data['dt'] > 0:  # forward
+                arrow_display = f"{parent_id} → {child_id}"
+                direction_info = "forward"
+            else:  # backward
+                arrow_display = f"{child_id} ← {parent_id}" 
+                direction_info = "backward"
+
+            print(f"      ✅ Связь {i}: {arrow_display} "
+                  f"({link_type}, dt={grandchild_data['dt']:+.3f}, u={grandchild_data['control']:+.1f}, {direction_info})")
+
+    def _get_link_type(self, spore_data):
+        """Определяет тип связи по управлению."""
+        return 'buffer_max' if spore_data['control'] > 0 else 'buffer_min'
 
     def _find_existing_link(self, parent_id: str, child_id: str, link_type: str) -> bool:
         """Проверяет существует ли уже такая связь."""
@@ -609,7 +639,7 @@ class BufferMergeManager:
             )
 
     def _draw_buffer_links(self, ax):
-        """Рисует связи буферного графа как стрелки."""
+        """Рисует связи буферного графа как стрелки с отладкой."""
         if not hasattr(self, 'buffer_positions'):
             return
 
@@ -619,7 +649,9 @@ class BufferMergeManager:
             'buffer_min': 'blue'      # u_min - синий
         }
 
-        for link in getattr(self, 'buffer_links', []):
+        print(f"🎨 ОТЛАДКА ВИЗУАЛИЗАЦИИ: Рисование {len(getattr(self, 'buffer_links', []))} связей")
+
+        for i, link in enumerate(getattr(self, 'buffer_links', [])):
             parent_id = link['parent_id']
             child_id = link['child_id']
             link_type = link['link_type']
@@ -629,26 +661,62 @@ class BufferMergeManager:
             child_pos = self.buffer_positions.get(child_id)
 
             if parent_pos is None or child_pos is None:
+                print(f"   ❌ Связь {i}: позиции не найдены ({parent_id}, {child_id})")
                 continue
 
-            # Цвет стрелки
-            color = link_colors.get(link_type, 'gray')
+            # ОТЛАДКА: выводим что именно рисуем
+            print(f"   🎨 Связь {i}: {parent_id} → {child_id}")
+            print(f"      📍 Начало ({parent_id}): ({parent_pos[0]:.4f}, {parent_pos[1]:.4f})")  
+            print(f"      📍 Конец ({child_id}):  ({child_pos[0]:.4f}, {child_pos[1]:.4f})")
+            print(f"      🎨 Цвет: {link_colors.get(link_type, 'gray')} ({link_type})")
+            
+            # Проверяем соответствие ID и позиций
+            actual_parent_pos = self.buffer_positions.get(parent_id)
+            actual_child_pos = self.buffer_positions.get(child_id)
+            print(f"      🔍 Проверка: parent_pos == actual_parent_pos: {np.allclose(parent_pos, actual_parent_pos)}")
+            print(f"      🔍 Проверка: child_pos == actual_child_pos: {np.allclose(child_pos, actual_child_pos)}")
+            
+            # Анализируем source_info для понимания направления
+            if 'source_info' in link:
+                source_info = link['source_info']
+                print(f"      📋 Source info: {source_info}")
+                
+                # Извлекаем dt из source_info
+                import re
+                dt_match = re.search(r'dt=([+-]?\d+\.?\d*)', source_info)
+                if dt_match:
+                    dt_value = float(dt_match.group(1))
+                    expected_direction = "forward" if dt_value > 0 else "backward"
+                    print(f"      📐 DT: {dt_value:.3f} → ожидаемое направление: {expected_direction}")
 
-            # Рисуем стрелку от parent к child
+            # JSON уже содержит правильное направление в parent_id и child_id
+            # Просто рисуем стрелку от parent_id к child_id как указано в JSON
             dx = child_pos[0] - parent_pos[0]
             dy = child_pos[1] - parent_pos[1]
+            
+            print(f"      🎯 Направление из JSON: {parent_id} → {child_id}")
 
-            # Смещаем начало и конец стрелки чтобы они не перекрывали споры
+            # Расчет с уменьшением длины стрелки на 20%
             length = np.sqrt(dx * dx + dy * dy)
             if length > 0:
-                offset = 0.015  # Отступ от центра споры
-                start_offset = offset / length
-                end_offset = offset / length
-
-                start_x = parent_pos[0] + dx * start_offset
-                start_y = parent_pos[1] + dy * start_offset
-                arrow_dx = dx * (1 - 2 * end_offset)
-                arrow_dy = dy * (1 - 2 * end_offset)
+                # Уменьшаем длину стрелки на 30% (оставляем 70%)
+                reduction_factor = 0.7
+                
+                # Начало стрелки остается в parent_pos
+                start_x = parent_pos[0]
+                start_y = parent_pos[1]
+                
+                # Вектор стрелки уменьшен на 20%
+                arrow_dx = dx * reduction_factor
+                arrow_dy = dy * reduction_factor
+                
+                print(f"      🔧 Расчет с уменьшением на 30%:")
+                print(f"         Parent: ({parent_pos[0]:.4f}, {parent_pos[1]:.4f})")
+                print(f"         Child:  ({child_pos[0]:.4f}, {child_pos[1]:.4f})")
+                print(f"         Start:  ({start_x:.4f}, {start_y:.4f})")
+                print(f"         Оригинальная длина: {length:.4f}")
+                print(f"         Новая длина: {length * reduction_factor:.4f}")
+                print(f"         Arrow:  dx={arrow_dx:.4f}, dy={arrow_dy:.4f}")
 
                 # Настраиваем ширину стрелки в зависимости от длины
                 # Минимальная ширина 0.5, максимальная 3.0
@@ -657,11 +725,29 @@ class BufferMergeManager:
                 head_width = max(0.004, min(0.012, length * 0.05))
                 head_length = max(0.004, min(0.012, length * 0.05))
 
+                color = link_colors.get(link_type, 'gray')
+
                 ax.arrow(
                     start_x, start_y, arrow_dx, arrow_dy,
                     head_width=head_width, head_length=head_length,
                     fc=color, ec=color, alpha=0.7, linewidth=arrow_width
                 )
+                
+                print(f"      ✅ Стрелка нарисована: {start_x:.4f},{start_y:.4f} → {start_x+arrow_dx:.4f},{start_y+arrow_dy:.4f}")
+                print(f"      📐 Вектор: dx={dx:.4f}, dy={dy:.4f}, длина={length:.4f}")
+                print(f"      📐 Arrow vector: dx={arrow_dx:.4f}, dy={arrow_dy:.4f}")
+                
+                # Проверяем правильность направления стрелки
+                end_x = start_x + arrow_dx
+                end_y = start_y + arrow_dy
+                print(f"      🎯 Проверка направления:")
+                print(f"         Начало стрелки: ({start_x:.4f}, {start_y:.4f})")
+                print(f"         Конец стрелки:  ({end_x:.4f}, {end_y:.4f})")
+                print(f"         JSON направление: {parent_id} → {child_id}")
+                print(f"         Arrow вектор: dx={arrow_dx:.4f}, dy={arrow_dy:.4f}")
+
+            else:
+                print(f"   ⚠️ Связь {i}: нулевая длина!")
 
     def _add_legend(self, ax):
         """Добавляет легенду к графику."""
@@ -1209,25 +1295,32 @@ class BufferMergeManager:
 
                 color = link_colors.get(link_type, 'gray')
                 
-                # Рисуем стрелку
+                # Рисуем стрелку с правильным направлением (как в буферном графе)
                 dx = child_pos[0] - parent_pos[0]
                 dy = child_pos[1] - parent_pos[1]
                 
-                # Смещение от центра спор
+                # Расчет с уменьшением длины стрелки на 30%
                 length = np.sqrt(dx*dx + dy*dy)
                 if length > 0:
-                    offset = 0.02
-                    start_offset = offset / length
-                    end_offset = offset / length
+                    # Уменьшаем длину стрелки на 30% (оставляем 70%)
+                    reduction_factor = 0.7
                     
-                    start_x = parent_pos[0] + dx * start_offset
-                    start_y = parent_pos[1] + dy * start_offset
-                    arrow_dx = dx * (1 - 2*end_offset)
-                    arrow_dy = dy * (1 - 2*end_offset)
+                    # Начало стрелки остается в parent_pos
+                    start_x = parent_pos[0]
+                    start_y = parent_pos[1]
+                    
+                    # Вектор стрелки уменьшен на 30%
+                    arrow_dx = dx * reduction_factor
+                    arrow_dy = dy * reduction_factor
+                    
+                    # Настраиваем размеры стрелки
+                    arrow_width = max(0.5, min(3.0, length * 0.1))
+                    head_width = max(0.004, min(0.012, length * 0.05))
+                    head_length = max(0.004, min(0.012, length * 0.05))
                     
                     ax.arrow(start_x, start_y, arrow_dx, arrow_dy,
-                            head_width=0.01, head_length=0.01,
-                            fc=color, ec=color, alpha=0.8, linewidth=2)
+                            head_width=head_width, head_length=head_length,
+                            fc=color, ec=color, alpha=0.7, linewidth=arrow_width)
                             
             except Exception as e:
                 print(f"Ошибка отрисовки связи: {e}")
@@ -1237,7 +1330,7 @@ class BufferMergeManager:
         from matplotlib.lines import Line2D
         
         legend_elements = [
-            # Споры
+            # Споры (убираем emoji)
             Line2D([0], [0], marker='o', color='w', markerfacecolor='lightgreen',
                    markeredgecolor='darkgreen', markersize=10, label='Реальная спора'),
             
@@ -1306,6 +1399,37 @@ class BufferMergeManager:
             error_msg = f"Ошибка очистки буферного графа: {e}"
             print(f"   ❌ {error_msg}")
             return self._get_error_result(error_msg)
+
+    def create_debug_diagram(self):
+        """Создает упрощенную схему направлений для проверки."""
+        if not hasattr(self, 'buffer_links'):
+            print("❌ Нет связей для отладки")
+            return
+            
+        print(f"\n📋 СХЕМА НАПРАВЛЕНИЙ СВЯЗЕЙ:")
+        print(f"="*50)
+        
+        for i, link in enumerate(self.buffer_links):
+            parent_id = link['parent_id']
+            child_id = link['child_id']
+            link_type = link['link_type']
+            
+            # Упрощенные ID для читаемости
+            parent_short = parent_id.replace('buffer_', '')
+            child_short = child_id.replace('buffer_', '')
+            
+            # Символ для типа связи
+            symbol = '🔴' if link_type == 'buffer_max' else '🔵'
+            
+            print(f"{i+1:2d}. {parent_short} ──{symbol}──> {child_short}")
+            
+            # Дополнительная информация если есть
+            if 'source_info' in link:
+                source = link['source_info']
+                print(f"     ({source})")
+        
+        print(f"="*50)
+        print(f"🔴 = buffer_max (u=+2.0)   🔵 = buffer_min (u=-2.0)")
 
     def has_buffer_data(self) -> bool:
         """Проверяет есть ли данные в буферном графе."""

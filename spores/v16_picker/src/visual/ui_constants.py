@@ -14,7 +14,7 @@ class UI_POSITIONS:
         'GAME_CONTROLS': Vec2(-0.76, 0.46),
         'SPORE_INSTRUCTION': Vec2(-0.76, 0.19),
         'SPORE_COUNTER': Vec2(-0.76, 0.13),
-        'DT_INFO': Vec2(-0.76, 0.07), 
+        'DT_INFO': Vec2(-0.76, 0.07),
         
         # --- Правая сторона экрана ---
         'SPAWN_AREA_INFO': Vec2(0.5, 0.27),
@@ -22,7 +22,6 @@ class UI_POSITIONS:
         'LOOK_POINT_DEBUG': Vec2(0.5, 0.47),
         'PARAM_VALUE': Vec2(0.57, -0.31),
         'CANDIDATE_INFO': Vec2(0.29, 0.47),
-        'CANDIDATE_CONTROLS': Vec2(0.5, 0.34),
         
         # --- Низ/Центр экрана ---
         'POSITION_INFO': Vec2(0.5, -0.44),
@@ -98,4 +97,4 @@ class UI_POSITIONS:
             setattr(cls, key, pos)
 
 # Инициализируем позиции при импорте
-UI_POSITIONS._init_positions() 
+UI_POSITIONS._init_positions()
