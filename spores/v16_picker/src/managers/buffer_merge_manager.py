@@ -369,16 +369,11 @@ class BufferMergeManager:
             control = child_data.get('control', 0)
             link_type = 'buffer_max' if control > 0 else 'buffer_min'
             
-            # Определяем направление по dt
+            # Стрелка всегда показывает: откуда → куда ведет управление
+            # Для корень-ребенок: всегда корень → ребенок (независимо от dt)
             dt = child_data.get('dt', 0)
-            if dt > 0:
-                # dt > 0: корень → ребенок
-                parent_id, child_id = root_buffer_id, child_buffer_id
-                direction = "→"
-            else:
-                # dt < 0: ребенок → корень  
-                parent_id, child_id = child_buffer_id, root_buffer_id
-                direction = "←"
+            parent_id, child_id = root_buffer_id, child_buffer_id
+            direction = "→"
             
             # Создаем связь
             link = {
@@ -425,16 +420,11 @@ class BufferMergeManager:
             control = grandchild_data.get('control', 0)
             link_type = 'buffer_max' if control > 0 else 'buffer_min'
             
-            # Определяем направление по dt
-            dt = grandchild_data.get('dt', 0)
-            if dt > 0:
-                # dt > 0: ребенок → внук
-                parent_id, child_id = parent_buffer_id, grandchild_buffer_id
-                direction = "→"
-            else:
-                # dt < 0: внук → ребенок
-                parent_id, child_id = grandchild_buffer_id, parent_buffer_id
-                direction = "←"
+            # Направление стрелки всегда показывает логическую связь:
+            # ребенок (решение) → внук (результат управления)
+            dt = grandchild_data.get('dt', 0)  # Получаем dt для source_info
+            parent_id, child_id = parent_buffer_id, grandchild_buffer_id
+            direction = "→"
             
             # Проверяем на дублирование связи (может быть при объединении)
             existing_link = self._find_existing_link(parent_id, child_id, link_type)
@@ -1048,6 +1038,22 @@ class BufferMergeManager:
                     color_manager=spore_manager.color_manager,
                     config=spore_manager.config
                 )
+                
+                # 🔍 ДИАГНОСТИКА СОЗДАНИЯ РЕАЛЬНОЙ СВЯЗИ
+                print(f"      🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА:")
+                print(f"         Буферная связь: {parent_buffer_id} → {child_buffer_id} ({link_type})")
+                print(f"         parent_spore: {parent_spore.id} в позиции {parent_spore.calc_2d_pos()}")
+                print(f"         child_spore: {child_spore.id} в позиции {child_spore.calc_2d_pos()}")
+                print(f"         Созданный Link:")
+                print(f"           link.parent_spore.id = {visual_link.parent_spore.id}")
+                print(f"           link.child_spore.id = {visual_link.child_spore.id}")
+                
+                # Проверим что направление Link соответствует ожиданию
+                expected_direction = f"{parent_buffer_id} → {child_buffer_id}"
+                actual_direction = f"{visual_link.parent_spore.id} → {visual_link.child_spore.id}"
+                match = "✅" if expected_direction.replace("buffer_", "real_") == actual_direction else "❌"
+                print(f"         {match} Ожидали: {expected_direction}")
+                print(f"         {match} Получили: {actual_direction}")
                 
                 # Устанавливаем цвет после создания
                 visual_link.color = spore_manager.color_manager.get_color('link', color_key)
