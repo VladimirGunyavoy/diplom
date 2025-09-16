@@ -354,10 +354,14 @@ class SporeGraph:
             
             fig, ax = plt.subplots(figsize=(12, 8))
             
-            # Собираем информацию о узлах
+            # Собираем информацию о узлах (исключая целевую спору)
             nodes_info = []
             for spore_id, spore in self.nodes.items():
                 try:
+                    # Пропускаем целевую спору
+                    if getattr(spore, 'is_goal', False):
+                        continue
+                        
                     if hasattr(spore, 'calc_2d_pos'):
                         pos_2d = spore.calc_2d_pos()
                         is_ghost = getattr(spore, 'is_ghost', False)
@@ -387,10 +391,15 @@ class SporeGraph:
                 ax.annotate(f"{node['id']}", (pos[0], pos[1]), 
                            xytext=(5, 5), textcoords='offset points', fontsize=8)
             
-            # Рисуем ребра
+            # Рисуем ребра (исключая связи с целевой спорой)
             edge_count_by_type = {}
             for edge_key, edge_info in self.edges.items():
                 try:
+                    # Пропускаем связи, где одна из спор является целевой
+                    if (getattr(edge_info.parent_spore, 'is_goal', False) or 
+                        getattr(edge_info.child_spore, 'is_goal', False)):
+                        continue
+                        
                     parent_pos = edge_info.parent_spore.calc_2d_pos()
                     child_pos = edge_info.child_spore.calc_2d_pos()
                     

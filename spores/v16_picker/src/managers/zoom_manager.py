@@ -1,6 +1,6 @@
 from ursina import *
 import numpy as np
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List, Callable
 
 from ..core.spore import Spore
 from ..utils.scalable import Scalable
@@ -46,6 +46,9 @@ class ZoomManager:
         
         # Флаг для отключения автоматического вывода
         self.auto_print_enabled = True
+        
+        # Система подписок на изменения look_point
+        self.look_point_subscribers: List[Callable[[float, float], None]] = []
 
     def register_object(self, obj: Scalable, name: Optional[str] = None) -> None:
         if name is None:
@@ -294,6 +297,42 @@ class ZoomManager:
         
         print()  # Пустая строка для читаемости
     
+    def subscribe_look_point_change(self, callback: Callable[[float, float], None]) -> None:
+        """
+        Подписывается на изменения look_point.
+        
+        Args:
+            callback: Функция, которая будет вызываться при изменении look_point
+                     с параметрами (x, z) - координаты точки взгляда
+        """
+        self.look_point_subscribers.append(callback)
+        print(f"🎯 Подписчик добавлен к look_point (всего: {len(self.look_point_subscribers)})")
+    
+    def unsubscribe_look_point_change(self, callback: Callable[[float, float], None]) -> None:
+        """
+        Отписывается от изменений look_point.
+        
+        Args:
+            callback: Функция для отписки
+        """
+        if callback in self.look_point_subscribers:
+            self.look_point_subscribers.remove(callback)
+            print(f"🎯 Подписчик удален от look_point (осталось: {len(self.look_point_subscribers)})")
+    
+    def _notify_look_point_change(self, x: float, z: float) -> None:
+        """
+        Уведомляет всех подписчиков об изменении look_point.
+        
+        Args:
+            x: X координата точки взгляда
+            z: Z координата точки взгляда
+        """
+        for callback in self.look_point_subscribers:
+            try:
+                callback(x, z)
+            except Exception as e:
+                print(f"⚠️ Ошибка в подписчике look_point: {e}")
+    
     def unregister_object(self, name: str) -> None:
         """Удаляет объект из менеджера масштабирования."""
         if name in self.objects:
@@ -333,6 +372,9 @@ class ZoomManager:
 
         x_0 = self.scene_setup.player.camera_pivot.world_position.x + dx
         z_0 = self.scene_setup.player.camera_pivot.world_position.z + dy
+
+        # Уведомляем подписчиков об изменении look_point
+        self._notify_look_point_change(x_0, z_0)
 
         # Обновление UI происходит автоматически через ui_manager.update_dynamic_elements()
         return x_0, z_0

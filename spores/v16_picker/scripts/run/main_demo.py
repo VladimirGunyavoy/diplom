@@ -79,6 +79,7 @@ from src.managers.input_manager import InputManager
 from src.managers.update_manager import UpdateManager
 from src.managers.spawn_area_manager import SpawnAreaManager
 from src.managers.manual_spore_manager import ManualSporeManager  # v13_manual: для ручного создания спор
+from src.managers.picker_manager import PickerManager  # v16_picker: для отслеживания близких спор
 from src.utils.debug_output import init_debug_output
 from src.managers.dt_manager import DTManager
 
@@ -303,6 +304,16 @@ spore_manager._manual_spore_manager_ref = manual_spore_manager
 
 dt_manager = DTManager(config, pendulum)
 dt_manager.spore_manager = spore_manager  # 🆕 Связываем с SporeManager
+
+# ===== СОЗДАНИЕ PICKER MANAGER =====
+# v16_picker: менеджер для отслеживания близких спор к точке взгляда
+picker_manager = PickerManager(
+    zoom_manager=zoom_manager,
+    spore_manager=spore_manager,
+    distance_threshold=0.05
+)
+
+print("   ✓ Picker Manager создан")
 
 # ===== СОЗДАНИЕ INPUT MANAGER =====
 input_manager = InputManager(

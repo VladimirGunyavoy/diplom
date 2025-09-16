@@ -42,6 +42,9 @@ class BufferMergeManager:
         self.ghost_to_buffer: Dict[str, str] = {}  # ghost_id -> buffer_id
         # buffer_id -> [ghost_ids]
         self.buffer_to_ghosts: Dict[str, List[str]] = {}
+        
+        # Хранение dt для каждой споры в буферном графе
+        self.buffer_spore_dt: Dict[str, float] = {}  # buffer_id -> dt
 
         # Статистика
         self.stats = {
@@ -254,7 +257,8 @@ class BufferMergeManager:
         ghost_id = "ghost_root"
 
         # Создаем запись в буферном графе (пока без реальной споры)
-        self._add_to_buffer_graph(buffer_id, ghost_id, root_position)
+        # Для корня используем dt = 0 (корень не имеет времени)
+        self._add_to_buffer_graph(buffer_id, ghost_id, root_position, dt=0.0)
 
         self.stats['total_processed'] += 1
         self.stats['added_to_buffer'] += 1
@@ -291,7 +295,8 @@ class BufferMergeManager:
             else:
                 # Добавляем новую
                 buffer_id = f"buffer_child_{i}"
-                self._add_to_buffer_graph(buffer_id, ghost_id, child_position)
+                child_dt = child_data.get('dt', 0.05)  # Получаем dt из данных ребенка
+                self._add_to_buffer_graph(buffer_id, ghost_id, child_position, dt=child_dt)
                 self.stats['added_to_buffer'] += 1
                 self.stats['processing_order'].append(f"child_{i}({ghost_id}→{buffer_id})")
 
@@ -329,7 +334,8 @@ class BufferMergeManager:
             else:
                 # Добавляем новую
                 buffer_id = f"buffer_grandchild_{i}"
-                self._add_to_buffer_graph(buffer_id, ghost_id, grandchild_position)
+                grandchild_dt = grandchild_data.get('dt', 0.05)  # Получаем dt из данных внука
+                self._add_to_buffer_graph(buffer_id, ghost_id, grandchild_position, dt=grandchild_dt)
                 self.stats['added_to_buffer'] += 1
                 self.stats['processing_order'].append(
                     f"grandchild_{i}({ghost_id}→{buffer_id})")
@@ -534,12 +540,15 @@ class BufferMergeManager:
 
         return closest_buffer_id, min_distance
 
-    def _add_to_buffer_graph(self, buffer_id: str, ghost_id: str, position: np.ndarray):
+    def _add_to_buffer_graph(self, buffer_id: str, ghost_id: str, position: np.ndarray, dt: float = 0.05):
         """Добавляет новую спору в буферный граф."""
         # Сохраняем позицию для поиска близости
         if not hasattr(self, 'buffer_positions'):
             self.buffer_positions = {}
         self.buffer_positions[buffer_id] = position.copy()
+        
+        # Сохраняем dt для споры
+        self.buffer_spore_dt[buffer_id] = dt
 
         # Обновляем карты соответствий
         self.ghost_to_buffer[ghost_id] = buffer_id
@@ -549,10 +558,13 @@ class BufferMergeManager:
 
         print(f"      ✅ Добавлен в буфер: {ghost_id} → {buffer_id}")
         
-        # 🔍 ОТЛАДКА: Проверяем что позиция действительно сохранена
+        # 🔍 ОТЛАДКА: Проверяем что позиция и dt действительно сохранены
         if buffer_id in self.buffer_positions:
             saved_pos = self.buffer_positions[buffer_id]
             print(f"         📍 Позиция сохранена: ({saved_pos[0]:.4f}, {saved_pos[1]:.4f})")
+        if buffer_id in self.buffer_spore_dt:
+            saved_dt = self.buffer_spore_dt[buffer_id]
+            print(f"         ⏱️ DT сохранен: {saved_dt:+.6f}")
 
     def _merge_to_existing(self, ghost_id: str, buffer_id: str, distance: float):
         """Объединяет призрачную спору с существующей в буфере."""
@@ -1050,10 +1062,13 @@ class BufferMergeManager:
                 else:
                     print(f"      🔸 Создается обычная спора: {buffer_id}")
                 
+                # Получаем правильное dt из буферного графа
+                spore_dt = self.buffer_spore_dt.get(buffer_id, spore_config.get('dt', 0.05))
+                
                 # Создаем реальную спору
                 real_spore = Spore(
                     pendulum=pendulum,
-                    dt=spore_config.get('dt', 0.05),
+                    dt=spore_dt,
                     scale=spore_config.get('scale', 0.1),
                     position=position_3d,
                     goal_position=goal_position,
@@ -1126,6 +1141,14 @@ class BufferMergeManager:
                 # Определяем цвет связи
                 color_key = link_colors.get(link_type, 'link_default')
                 
+                # Извлекаем dt из source_info
+                dt_value = 0.05  # По умолчанию
+                if 'source_info' in link:
+                    import re
+                    dt_match = re.search(r'dt=([+-]?\d+\.?\d*)', link['source_info'])
+                    if dt_match:
+                        dt_value = float(dt_match.group(1))
+                
                 # Создаем визуальную связь
                 visual_link = Link(
                     parent_spore=parent_spore,
@@ -1134,6 +1157,9 @@ class BufferMergeManager:
                     color_manager=spore_manager.color_manager,
                     config=spore_manager.config
                 )
+                
+                # Сохраняем dt в линке для PickerManager
+                visual_link.dt_value = dt_value
                 
                 # Устанавливаем цвет после создания
                 visual_link.color = spore_manager.color_manager.get_color('link', color_key)
@@ -1215,8 +1241,12 @@ class BufferMergeManager:
             return ""
 
     def _draw_real_spores(self, ax, real_spores):
-        """Рисует реальные споры."""
+        """Рисует реальные споры (исключая целевую спору)."""
         for spore in real_spores:
+            # Пропускаем целевую спору
+            if getattr(spore, 'is_goal', False):
+                continue
+                
             if hasattr(spore, 'calc_2d_pos'):
                 pos = spore.calc_2d_pos()
                 
@@ -1224,8 +1254,8 @@ class BufferMergeManager:
                 color = 'lightgreen'
                 edge_color = 'darkgreen'
                 
-                # Размер зависит от типа
-                marker_size = 120 if getattr(spore, 'is_goal', False) else 80
+                # Размер для обычных спор
+                marker_size = 80
                 
                 ax.scatter(pos[0], pos[1], s=marker_size, c=color,
                           alpha=0.8, edgecolors=edge_color, linewidth=2)
@@ -1235,16 +1265,12 @@ class BufferMergeManager:
                 spore_index = next((i for i, s in enumerate(real_spores) if s is spore), 0)
                 label = str(spore_index + 1)
 
-                # Добавляем символ цели для целевых спор
-                if getattr(spore, 'is_goal', False):
-                    label += "🎯"
-
                 ax.annotate(label, (pos[0], pos[1]),
                            xytext=(5, 5), textcoords='offset points',
                            fontsize=10, ha='left', weight='bold')
 
     def _draw_real_links(self, ax, real_links, spore_manager):
-        """Рисует реальные связи."""
+        """Рисует реальные связи (исключая связи с целевой спорой)."""
         # spore_manager передается как параметр
         # Цвета для разных типов связей
         link_colors = {
@@ -1254,6 +1280,11 @@ class BufferMergeManager:
         
         for link in real_links:
             try:
+                # Пропускаем связи, где одна из спор является целевой
+                if (getattr(link.parent_spore, 'is_goal', False) or 
+                    getattr(link.child_spore, 'is_goal', False)):
+                    continue
+                    
                 # Получаем позиции спор
                 parent_pos = link.parent_spore.calc_2d_pos() if hasattr(link.parent_spore, 'calc_2d_pos') else None
                 child_pos = link.child_spore.calc_2d_pos() if hasattr(link.child_spore, 'calc_2d_pos') else None

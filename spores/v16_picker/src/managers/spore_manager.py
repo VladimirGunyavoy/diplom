@@ -542,6 +542,11 @@ class SporeManager:
                             color_manager=self.color_manager,
                             zoom_manager=self.zoom_manager,
                             config=self.config)
+            
+            # Сохраняем информацию об управлении и dt, которые привели к созданию дочерней споры
+            new_link.control_value = parent_spore.logic.optimal_control
+            new_link.dt_value = current_dt
+            
             self.links.append(new_link)
             
             # Добавляем связь в граф
@@ -899,6 +904,11 @@ class SporeManager:
                            color_manager=self.color_manager,
                            zoom_manager=self.zoom_manager,
                            config=self.config)
+            
+            # Сохраняем информацию об управлении и dt, которые привели к созданию связи
+            new_link.control_value = from_spore.logic.optimal_control
+            new_link.dt_value = from_spore.logic.optimal_dt
+            
             # Выделяем особым цветом связи между существующими спорами
             link_color = self.color_manager.get_color('link', 'default')
             new_link.color = link_color
