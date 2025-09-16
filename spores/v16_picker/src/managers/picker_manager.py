@@ -305,6 +305,35 @@ class PickerManager:
         
         print(f"\n🔗 СОСЕДИ СПОРЫ {visual_id}:")
         
+        # 🔍 ОТЛАДОЧНАЯ ВЕРИФИКАЦИЯ ИСПРАВЛЕНИЙ
+        print(f"🔧 ВЕРИФИКАЦИЯ ИСПРАВЛЕНИЙ:")
+
+        # Проверяем материализованные связи
+        materialized_links = [link for link in self.spore_manager.links if hasattr(link, 'control_value')]
+        buffer_links = [link for link in self.spore_manager.links if hasattr(link, 'dt_value')]
+
+        print(f"   📊 Связей с control_value: {len(materialized_links)}")
+        print(f"   📊 Связей с dt_value: {len(buffer_links)}")
+
+        # Показываем статистику по знакам управления
+        if materialized_links:
+            positive_controls = [link for link in materialized_links if link.control_value > 0]
+            negative_controls = [link for link in materialized_links if link.control_value < 0]
+            zero_controls = [link for link in materialized_links if link.control_value == 0]
+            
+            print(f"   ✅ Связей с управлением +: {len(positive_controls)}")
+            print(f"   ✅ Связей с управлением -: {len(negative_controls)}") 
+            print(f"   ✅ Связей с управлением 0: {len(zero_controls)}")
+            
+            # Показываем несколько примеров
+            print(f"   📝 ПРИМЕРЫ ИСПРАВЛЕННЫХ СВЯЗЕЙ:")
+            for i, link in enumerate(materialized_links[:3]):  # Первые 3
+                dt_val = getattr(link, 'dt_value', 'N/A')
+                control_val = link.control_value
+                print(f"      {i+1}. Управление: {control_val:+.1f}, dt: {dt_val}")
+        else:
+            print(f"   ⚠️ НЕТ СВЯЗЕЙ С control_value - исправление не сработало!")
+        
         # Получаем соседей на расстоянии 1 (прямые связи)
         neighbors_1 = self._get_neighbors_at_distance(graph_spore_id, 1)
         if neighbors_1:
@@ -531,17 +560,33 @@ class PickerManager:
             
             print(f"      🎯 Спора: {visual_target_id} {pos_str} {time_arrow}")
             
-            # Показываем направление времени для маршрута длиной 2
-            if time_direction == 'mixed':
-                direction_text = "смешанное время"
-            elif time_direction == 'forward':
-                direction_text = "прямое время"
-            elif time_direction == 'backward':
-                direction_text = "обратное время"
+            # Анализируем временные направления каждой связи
+            route_analysis = []
+            if len(neighbor_info['edges']) >= 1:
+                dt1 = getattr(neighbor_info['edges'][0].link_object, 'dt_value', 0)
+                route_analysis.append(f"dt1={dt1:+.3f}")
+
+            if len(neighbor_info['edges']) >= 2:
+                dt2 = getattr(neighbor_info['edges'][1].link_object, 'dt_value', 0)
+                route_analysis.append(f"dt2={dt2:+.3f}")
+
+            # Определяем направление маршрута по паттерну временных шагов
+            first_time_forward = (len(neighbor_info['edges']) > 0 and
+                                  getattr(neighbor_info['edges'][0].link_object, 'dt_value', 0) >= 0)
+            second_time_forward = (len(neighbor_info['edges']) > 1 and
+                                   getattr(neighbor_info['edges'][1].link_object, 'dt_value', 0) >= 0)
+
+            if first_time_forward and second_time_forward:
+                route_direction = "⏩"
+                route_description = f"прямое время ({', '.join(route_analysis)})"
+            elif not first_time_forward and not second_time_forward:
+                route_direction = "⏪"
+                route_description = f"обратное время ({', '.join(route_analysis)})"
             else:
-                direction_text = "неизвестно"
-            
-            print(f"         📍 Маршрут длиной 2 ({direction_text})")
+                route_direction = "🔄"
+                route_description = f"смешанное время ({', '.join(route_analysis)})"
+
+            print(f"         📍 Маршрут длиной 2 {route_direction} ({route_description})")
             
             # Выводим информацию о первой связи
             if len(neighbor_info['edges']) > 0:
@@ -576,15 +621,27 @@ class PickerManager:
                         # Обрабатываем массив управления
                         if isinstance(control, np.ndarray):
                             control = control[0] if len(control) > 0 else 'N/A'
-                        
-                        # Форматируем время со знаком
-                        if dt != 'N/A':
-                            dt_str = f"+{dt}" if dt >= 0 else str(dt)
+
+                        # Определяем направление времени и управления
+                        if dt != 'N/A' and control != 'N/A':
+                            # Форматируем управление со знаком
+                            control_str = f"+{control}" if control > 0 else str(control)
+
+                            # Определяем направление времени
+                            if dt >= 0:
+                                time_direction = "прямое время"
+                                dt_str = f"+{dt}"
+                            else:
+                                time_direction = "обратное время"
+                                dt_str = str(dt)
+
+                            print(f"         🔗 Линк 1: управление={control_str}, время={dt_str} "
+                                  f"({time_direction}, источник dt: {dt_source}, источник control: {control_source})")
                         else:
-                            dt_str = 'N/A'
-                            
-                        print(f"         🔗 Линк 1: управление={control}, время={dt_str} "
-                              f"(источник dt: {dt_source}, источник control: {control_source})")
+                            # Резервная логика для случаев без данных
+                            dt_str = f"+{dt}" if dt != 'N/A' and dt >= 0 else str(dt)
+                            print(f"         🔗 Линк 1: управление={control}, время={dt_str} "
+                                  f"(источник dt: {dt_source}, источник control: {control_source})")
                     except Exception as e:
                         print(f"         🔗 Линк 1: ошибка получения данных - {e}")
             
@@ -621,15 +678,27 @@ class PickerManager:
                         # Обрабатываем массив управления
                         if isinstance(control, np.ndarray):
                             control = control[0] if len(control) > 0 else 'N/A'
-                        
-                        # Форматируем время со знаком
-                        if dt != 'N/A':
-                            dt_str = f"+{dt}" if dt >= 0 else str(dt)
+
+                        # Определяем направление времени и управления
+                        if dt != 'N/A' and control != 'N/A':
+                            # Форматируем управление со знаком
+                            control_str = f"+{control}" if control > 0 else str(control)
+
+                            # Определяем направление времени
+                            if dt >= 0:
+                                time_direction = "прямое время"
+                                dt_str = f"+{dt}"
+                            else:
+                                time_direction = "обратное время"
+                                dt_str = str(dt)
+
+                            print(f"         🔗 Линк 2: управление={control_str}, время={dt_str} "
+                                  f"({time_direction}, источник dt: {dt_source}, источник control: {control_source})")
                         else:
-                            dt_str = 'N/A'
-                            
-                        print(f"         🔗 Линк 2: управление={control}, время={dt_str} "
-                              f"(источник dt: {dt_source}, источник control: {control_source})")
+                            # Резервная логика для случаев без данных
+                            dt_str = f"+{dt}" if dt != 'N/A' and dt >= 0 else str(dt)
+                            print(f"         🔗 Линк 2: управление={control}, время={dt_str} "
+                                  f"(источник dt: {dt_source}, источник control: {control_source})")
                     except Exception as e:
                         print(f"         🔗 Линк 2: ошибка получения данных - {e}")
 

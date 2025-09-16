@@ -1161,6 +1161,17 @@ class BufferMergeManager:
                 # Сохраняем dt в линке для PickerManager
                 visual_link.dt_value = dt_value
                 
+                # НОВОЕ: Извлекаем и сохраняем control_value из source_info
+                control_value = 0.0  # По умолчанию
+                if 'source_info' in link:
+                    import re
+                    control_match = re.search(r'u=([+-]?\d+\.?\d*)', link['source_info'])
+                    if control_match:
+                        control_value = float(control_match.group(1))
+
+                # Сохраняем control_value в линке для PickerManager  
+                visual_link.control_value = control_value
+                
                 # Устанавливаем цвет после создания
                 visual_link.color = spore_manager.color_manager.get_color('link', color_key)
                 
