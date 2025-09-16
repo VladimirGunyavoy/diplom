@@ -14,6 +14,7 @@ Picker Manager - Отслеживание близких спор к точке 
 
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
+import os
 from ..managers.zoom_manager import ZoomManager
 from ..managers.spore_manager import SporeManager
 from ..core.spore import Spore
@@ -54,6 +55,13 @@ class PickerManager:
         
         # Предыдущие координаты look_point для проверки изменений
         self.last_look_point: Optional[Tuple[float, float]] = None
+        
+        # 🆕 Кеширование JSON данных
+        self._cached_graph_data: Dict[str, Any] = {}
+        self._last_json_modified_time: float = 0
+        self._json_path: str = os.path.join("buffer", "real_graph_latest.json")
+        
+        print("🎯 PickerManager с поддержкой JSON инициализирован")
         
         # Подписка на изменения look_point
         self._subscribe_to_look_point_changes()
@@ -149,6 +157,9 @@ class PickerManager:
             # Обновляем предыдущие координаты
             self.last_look_point = current_look_point
             
+            # 🆕 Принудительная проверка обновлений JSON перед анализом
+            self._force_json_reload_if_needed()
+
             # Вызываем обновление только при реальном изменении
             self._update_close_spores(corrected_x, corrected_z)
 
@@ -217,8 +228,8 @@ class PickerManager:
                 print(f"   🎯 САМАЯ БЛИЗКАЯ СПОРА: {marker} {visual_id}: "
                       f"({pos[0]:.4f}, {pos[1]:.4f}), dist={dist:.4f}")
                 
-                # Выводим соседей самой близкой споры
-                self._print_closest_spore_neighbors(closest_spore)
+                # Выводим соседей самой близкой споры (по JSON)
+                self._analyze_spore_neighbors(closest_spore)
             else:
                 print("   📭 Спор в графе нет")
 
@@ -387,13 +398,20 @@ class PickerManager:
             child_id = self.spore_manager.graph._get_spore_id(child)
             edge_info = self.spore_manager.graph.get_edge_info(
                 spore_id, child_id)
+
+            # Определяем направление по знаку dt первой связи
+            if edge_info and edge_info.link_object:
+                dt_value = getattr(edge_info.link_object, 'dt_value', 0)
+                time_dir = 'forward' if dt_value >= 0 else 'backward'
+            else:
+                time_dir = 'unknown'
             
             neighbor_info = {
                 'target_spore': child,
                 'target_id': child_id,
                 'path': [spore_id, child_id],
                 'edges': [edge_info] if edge_info else [],
-                'time_direction': 'forward',  # Прямое время
+                'time_direction': time_dir,
                 'can_reach': True
             }
             neighbors.append(neighbor_info)
@@ -405,13 +423,20 @@ class PickerManager:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
             edge_info = self.spore_manager.graph.get_edge_info(
                 parent_id, spore_id)
+
+            # Определяем направление по знаку dt первой связи
+            if edge_info and edge_info.link_object:
+                dt_value = getattr(edge_info.link_object, 'dt_value', 0)
+                time_dir = 'forward' if dt_value >= 0 else 'backward'
+            else:
+                time_dir = 'unknown'
             
             neighbor_info = {
                 'target_spore': parent,
                 'target_id': parent_id,
                 'path': [parent_id, spore_id],
                 'edges': [edge_info] if edge_info else [],
-                'time_direction': 'backward',  # Обратное время
+                'time_direction': time_dir,
                 'can_reach': True
             }
             neighbors.append(neighbor_info)
@@ -627,13 +652,18 @@ class PickerManager:
                             # Форматируем управление со знаком
                             control_str = f"+{control}" if control > 0 else str(control)
 
-                            # Определяем направление времени
-                            if dt >= 0:
+                            # 🔧 ИСПРАВЛЕНО: Правильная интерпретация стрелок
+                            # Стрелка A→B с dt>0: из A в B прямое время
+                            # Стрелка A→B с dt<0: из A в B обратное время
+                            if dt > 0:
                                 time_direction = "прямое время"
                                 dt_str = f"+{dt}"
-                            else:
+                            elif dt < 0:
                                 time_direction = "обратное время"
                                 dt_str = str(dt)
+                            else:
+                                time_direction = "нулевое время"
+                                dt_str = "0.000"
 
                             print(f"         🔗 Линк 1: управление={control_str}, время={dt_str} "
                                   f"({time_direction}, источник dt: {dt_source}, источник control: {control_source})")
@@ -684,13 +714,18 @@ class PickerManager:
                             # Форматируем управление со знаком
                             control_str = f"+{control}" if control > 0 else str(control)
 
-                            # Определяем направление времени
-                            if dt >= 0:
+                            # 🔧 ИСПРАВЛЕНО: Правильная интерпретация стрелок
+                            # Стрелка A→B с dt>0: из A в B прямое время
+                            # Стрелка A→B с dt<0: из A в B обратное время
+                            if dt > 0:
                                 time_direction = "прямое время"
                                 dt_str = f"+{dt}"
-                            else:
+                            elif dt < 0:
                                 time_direction = "обратное время"
                                 dt_str = str(dt)
+                            else:
+                                time_direction = "нулевое время"
+                                dt_str = "0.000"
 
                             print(f"         🔗 Линк 2: управление={control_str}, время={dt_str} "
                                   f"({time_direction}, источник dt: {dt_source}, источник control: {control_source})")
@@ -862,3 +897,142 @@ class PickerManager:
         self.verbose_output = not self.verbose_output
         status = 'включен' if self.verbose_output else 'отключен'
         print(f"🎯 Подробный вывод {status}")
+
+    def _force_json_reload_if_needed(self):
+        """Принудительно проверяет и перезагружает JSON если нужно."""
+        try:
+            if os.path.exists(self._json_path):
+                current_size = os.path.getsize(self._json_path)
+                current_mtime = os.path.getmtime(self._json_path)
+                
+                # Проверяем не только время, но и размер (на случай быстрых обновлений)
+                if current_mtime != self._last_json_modified_time:
+                    print(f"🔄 Обнаружено обновление JSON, перезагружаем...")
+                    self._cached_graph_data.clear()
+        except Exception as e:
+            print(f"⚠️ Ошибка проверки JSON: {e}")
+
+    def _load_real_graph_json(self) -> dict:
+        """Загружает данные реального графа из JSON с кешированием."""
+        try:
+            import json
+            
+            if not os.path.exists(self._json_path):
+                if self._cached_graph_data:
+                    print(f"⚠️ JSON файл исчез, используем кеш")
+                    return self._cached_graph_data
+                print(f"⚠️ JSON файл реального графа не найден: {self._json_path}")
+                return {}
+            
+            # Проверяем время модификации файла
+            current_modified_time = os.path.getmtime(self._json_path)
+            
+            if (current_modified_time != self._last_json_modified_time or 
+                not self._cached_graph_data):
+                
+                # Загружаем новые данные
+                with open(self._json_path, 'r', encoding='utf-8') as f:
+                    self._cached_graph_data = json.load(f)
+                
+                self._last_json_modified_time = current_modified_time
+                
+                spore_count = len(self._cached_graph_data.get('spores', []))
+                link_count = len(self._cached_graph_data.get('links', []))
+                print(f"🔄 JSON обновлен: {spore_count} спор, {link_count} связей")
+            
+            return self._cached_graph_data
+            
+        except Exception as e:
+            print(f"❌ Ошибка загрузки JSON: {e}")
+            return self._cached_graph_data if self._cached_graph_data else {}
+
+    def _analyze_spore_neighbors(self, spore_info: Dict[str, Any]) -> None:
+        """Анализирует соседей споры на основе данных из JSON."""
+        
+        # Загружаем данные из JSON
+        graph_data = self._load_real_graph_json()
+        if not graph_data:
+            print("❌ Нет данных графа для анализа")
+            return
+        
+        target_spore = spore_info['spore']
+        target_visual_id = self._get_visual_spore_id(target_spore)
+        
+        # Находим спору в JSON данных по индексу
+        target_spore_data = None
+        for spore_data in graph_data.get('spores', []):
+            if spore_data['index'] == int(target_visual_id) - 1:
+                target_spore_data = spore_data
+                break
+        
+        if not target_spore_data:
+            print(f"❌ Спора {target_visual_id} не найдена в JSON данных")
+            return
+        
+        print(f"\n🔗 СОСЕДИ СПОРЫ {target_visual_id} (из JSON):")
+        
+        # 🔧 ОТЛАДОЧНАЯ ИНФОРМАЦИЯ О JSON
+        metadata = graph_data.get('metadata', {})
+        export_time = metadata.get('export_time', 'неизвестно')
+        print(f"📋 JSON экспорт от: {export_time}")
+        
+        # Анализируем исходящие связи (out_links) - куда можем попасть
+        out_links = target_spore_data.get('out_links', [])
+        if out_links:
+            print(f"   📍 ИСХОДЯЩИЕ СВЯЗИ (куда можем попасть):")
+            for i, link in enumerate(out_links):
+                to_spore_id = link['to_spore_id']
+                control = link['control']
+                dt = link['dt']
+                dt_sign = link['dt_sign']
+                
+                # Находим целевую спору для получения её визуального ID
+                target_visual_id_out = self._find_visual_id_by_spore_id(to_spore_id, graph_data)
+                
+                # Определяем направление времени
+                if dt_sign > 0:
+                    time_direction = "прямое время"
+                    time_symbol = "⏩"
+                    dt_str = f"+{dt}"
+                else:
+                    time_direction = "обратное время"
+                    time_symbol = "⏪"
+                    dt_str = f"-{dt}"
+                
+                control_str = f"+{control}" if control > 0 else str(control)
+                
+                print(f"      🎯 Спора {target_visual_id_out}: управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
+        
+        # Анализируем входящие связи (in_links) - откуда можем прийти
+        in_links = target_spore_data.get('in_links', [])
+        if in_links:
+            print(f"   📍 ВХОДЯЩИЕ СВЯЗИ (откуда можем прийти):")
+            for i, link in enumerate(in_links):
+                from_spore_id = link['from_spore_id']
+                control = link['control']
+                dt = link['dt']
+                dt_sign = link['dt_sign']
+                
+                # Находим исходную спору для получения её визуального ID
+                source_visual_id = self._find_visual_id_by_spore_id(from_spore_id, graph_data)
+                
+                # Определяем направление времени (ОБРАТНОЕ для входящих связей)
+                if dt_sign > 0:
+                    time_direction = "обратное время"
+                    time_symbol = "⏪"
+                    dt_str = f"-{dt}"
+                else:
+                    time_direction = "прямое время"
+                    time_symbol = "⏩"
+                    dt_str = f"+{dt}"
+                
+                control_str = f"+{control}" if control > 0 else str(control)
+                
+                print(f"      🎯 Спора {source_visual_id}: управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
+
+    def _find_visual_id_by_spore_id(self, spore_id: str, graph_data: dict) -> int:
+        """Находит визуальный ID споры по её spore_id в JSON данных."""
+        for spore_data in graph_data.get('spores', []):
+            if spore_data['spore_id'] == spore_id:
+                return spore_data['index'] + 1
+        return 0

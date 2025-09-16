@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "export_time": "2025-09-16T17:40:40.520808",
+    "export_time": "2025-09-16T22:02:26.004425",
     "algorithm_version": "BufferMergeManager_v1.0",
     "distance_threshold": 0.0015
   },
@@ -31,8 +31,8 @@
     {
       "buffer_id": "buffer_root",
       "position": [
-        -0.03912250254920731,
-        1.3089369783151368
+        -0.08539560235472388,
+        1.2552901866152237
       ],
       "merged_ghosts": [
         "ghost_root"
@@ -43,8 +43,8 @@
     {
       "buffer_id": "buffer_child_0",
       "position": [
-        0.026562843804158857,
-        1.3157782023944873
+        -0.022085423943656868,
+        1.2744880293493346
       ],
       "merged_ghosts": [
         "ghost_child_0"
@@ -55,8 +55,8 @@
     {
       "buffer_id": "buffer_child_1",
       "position": [
-        -0.10396089849837001,
-        1.285902953255493
+        -0.1473520949656994,
+        1.2203699213576436
       ],
       "merged_ghosts": [
         "ghost_child_1"
@@ -67,8 +67,8 @@
     {
       "buffer_id": "buffer_child_2",
       "position": [
-        0.02396859459548312,
-        1.267320773258109
+        -0.02480893992293137,
+        1.2258684235557857
       ],
       "merged_ghosts": [
         "ghost_child_2"
@@ -79,8 +79,8 @@
     {
       "buffer_id": "buffer_child_3",
       "position": [
-        -0.10430619047415705,
-        1.3358366542712714
+        -0.14716370161374936,
+        1.2704647882331264
       ],
       "merged_ghosts": [
         "ghost_child_3"
@@ -91,8 +91,8 @@
     {
       "buffer_id": "buffer_grandchild_0",
       "position": [
-        0.08819501372828592,
-        1.2598810183329352
+        0.0376697934757647,
+        1.2308698743701545
       ],
       "merged_ghosts": [
         "ghost_grandchild_0",
@@ -104,8 +104,8 @@
     {
       "buffer_id": "buffer_grandchild_1",
       "position": [
-        -0.03800864664423431,
-        1.3579635683037046
+        -0.08370654864143935,
+        1.3044945668368628
       ],
       "merged_ghosts": [
         "ghost_grandchild_1",
@@ -117,8 +117,8 @@
     {
       "buffer_id": "buffer_grandchild_2",
       "position": [
-        -0.04026427537600277,
-        1.2594343288053047
+        -0.08663810865062964,
+        1.2057641723706347
       ],
       "merged_ghosts": [
         "ghost_grandchild_2",
@@ -130,8 +130,8 @@
     {
       "buffer_id": "buffer_grandchild_3",
       "position": [
-        -0.16859794258246613,
-        1.2969918583646622
+        -0.20843025705365686,
+        1.2203019201904657
       ],
       "merged_ghosts": [
         "ghost_grandchild_3",
@@ -212,7 +212,7 @@
       "parent_id": "buffer_grandchild_3",
       "child_id": "buffer_child_3",
       "link_type": "buffer_max",
-      "source_info": "child_3-grandchild_7(dt=-0.049,u=2.0)"
+      "source_info": "child_3-grandchild_7(dt=-0.050,u=2.0)"
     }
   ],
   "correspondence_maps": {

@@ -113,6 +113,11 @@ class BufferMergeManager:
             if export_path:
                 self.stats['export_path'] = export_path
 
+            # 🆕 ЭКСПОРТ РЕАЛЬНОГО ГРАФА В JSON
+            real_graph_export_path = self._export_real_graph_json(spore_manager)
+            if real_graph_export_path:
+                materialize_stats['real_graph_export_path'] = real_graph_export_path
+
             # 7. Выводим итоговую статистику
             self._print_final_stats()
 
@@ -1382,6 +1387,125 @@ class BufferMergeManager:
         ]
         
         ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
+
+    def _export_real_graph_json(self, spore_manager) -> str:
+        """Экспортирует реальный граф в JSON для анализа пикером."""
+        try:
+            import json
+            import os
+            from datetime import datetime
+            
+            # Создаем директорию если нужно
+            buffer_dir = "buffer"
+            if not os.path.exists(buffer_dir):
+                os.makedirs(buffer_dir)
+            
+            save_path = os.path.join(buffer_dir, "real_graph_latest.json")
+            
+            # 📊 СОБИРАЕМ ДАННЫЕ О СПОРАХ
+            spores_data = []
+            spore_id_to_index = {}
+            
+            for i, spore in enumerate(spore_manager.objects):
+                # Получаем позицию споры
+                if hasattr(spore, 'calc_2d_pos'):
+                    pos_2d = spore.calc_2d_pos()
+                    position = [float(pos_2d[0]), float(pos_2d[1])]
+                else:
+                    position = [0.0, 0.0]
+                
+                # Определяем тип споры
+                spore_type = "goal" if getattr(spore, 'is_goal', False) else "normal"
+                
+                spore_data = {
+                    'spore_id': str(spore.id) if hasattr(spore, 'id') else f"spore_{i}",
+                    'index': i,
+                    'position': position,
+                    'type': spore_type,
+                    'in_links': [],
+                    'out_links': []
+                }
+                spores_data.append(spore_data)
+                spore_id_to_index[spore_data['spore_id']] = i
+            
+            # 🔗 СОБИРАЕМ ДАННЫЕ О СВЯЗЯХ
+            links_data = []
+            
+            for link in spore_manager.links:
+                if not hasattr(link, 'control_value') or not hasattr(link, 'dt_value'):
+                    continue
+                
+                # Получаем ID спор
+                parent_spore = getattr(link, 'parent_spore', None)
+                child_spore = getattr(link, 'child_spore', None)
+                
+                if not parent_spore or not child_spore:
+                    continue
+                    
+                parent_id = str(parent_spore.id) if hasattr(parent_spore, 'id') else f"spore_{id(parent_spore)}"
+                child_id = str(child_spore.id) if hasattr(child_spore, 'id') else f"spore_{id(child_spore)}"
+                
+                link_data = {
+                    'link_id': f"link_{parent_id}_to_{child_id}",
+                    'from_spore_id': parent_id,
+                    'to_spore_id': child_id,
+                    'control': float(link.control_value),
+                    'dt': abs(float(link.dt_value)),
+                    'dt_sign': 1 if link.dt_value >= 0 else -1,
+                    'raw_dt': float(link.dt_value)
+                }
+                links_data.append(link_data)
+                
+                # Добавляем связь в списки спор
+                parent_idx = spore_id_to_index.get(parent_id)
+                child_idx = spore_id_to_index.get(child_id)
+                
+                if parent_idx is not None:
+                    spores_data[parent_idx]['out_links'].append({
+                        'to_spore_id': child_id,
+                        'control': float(link.control_value),
+                        'dt': abs(float(link.dt_value)),
+                        'dt_sign': 1 if link.dt_value >= 0 else -1
+                    })
+                    
+                if child_idx is not None:
+                    spores_data[child_idx]['in_links'].append({
+                        'from_spore_id': parent_id,
+                        'control': float(link.control_value),
+                        'dt': abs(float(link.dt_value)),
+                        'dt_sign': 1 if link.dt_value >= 0 else -1
+                    })
+            
+            # 📝 ФОРМИРУЕМ ИТОГОВУЮ СТРУКТУРУ JSON
+            export_data = {
+                'metadata': {
+                    'export_time': datetime.now().isoformat(),
+                    'version': 'RealGraphExporter_v1.0',
+                    'description': 'Реальный граф спор после материализации для анализа пикером'
+                },
+                'statistics': {
+                    'total_spores': len(spores_data),
+                    'total_links': len(links_data),
+                    'goal_spores': len([s for s in spores_data if s['type'] == 'goal'])
+                },
+                'spores': spores_data,
+                'links': links_data
+            }
+            
+            # Сохраняем в JSON
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"\n💾 Реальный граф экспортирован: {save_path}")
+            print(f"   📊 Спор: {len(spores_data)}, Связей: {len(links_data)}")
+            
+            return save_path
+            
+        except Exception as e:
+            print(f"❌ Ошибка экспорта реального графа: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
 
     def _print_materialize_stats(self, stats):
         """Выводит статистику материализации."""
