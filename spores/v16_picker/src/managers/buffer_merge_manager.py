@@ -113,11 +113,6 @@ class BufferMergeManager:
             if export_path:
                 self.stats['export_path'] = export_path
 
-            # 🆕 ЭКСПОРТ РЕАЛЬНОГО ГРАФА В JSON
-            real_graph_export_path = self._export_real_graph_json(spore_manager)
-            if real_graph_export_path:
-                materialize_stats['real_graph_export_path'] = real_graph_export_path
-
             # 7. Выводим итоговую статистику
             self._print_final_stats()
 
@@ -982,7 +977,13 @@ class BufferMergeManager:
             # 5. Обновляем трансформации
             zoom_manager.update_transform()
             
-            # 6. Добавляем материализованные споры в историю групп ManualSporeManager
+            # 6. 🆕 ЭКСПОРТ РЕАЛЬНОГО ГРАФА В JSON (после создания спор и связей)
+            real_graph_export_path = self._export_real_graph_json(spore_manager)
+            if real_graph_export_path:
+                materialize_stats['real_graph_export_path'] = real_graph_export_path
+                print(f"   💾 Реальный граф экспортирован: {real_graph_export_path}")
+
+            # 7. Добавляем материализованные споры в историю групп ManualSporeManager
             if hasattr(self, '_manual_spore_manager_ref') and self._manual_spore_manager_ref:
                 print(f"\n📚 ДОБАВЛЕНИЕ В ИСТОРИЮ ГРУПП:")
                 
@@ -1014,7 +1015,7 @@ class BufferMergeManager:
             else:
                 print(f"   ⚠️ ManualSporeManager reference не найден - споры не будут доступны для удаления через Z")
             
-            # 7. Очищаем буферный граф после успешной материализации
+            # 8. Очищаем буферный граф после успешной материализации
             clear_result = self.clear_buffer_graph()
             if clear_result['success']:
                 print(f"   🧹 Буферный граф очищен: {clear_result['cleared_spores']} спор")
@@ -1082,15 +1083,14 @@ class BufferMergeManager:
                     config=spore_config
                 )
                 
-                # Устанавливаем уникальный ID
-                real_spore.id = f"real_{buffer_id}"
-                
-                # Добавляем в SporeManager
+                # НЕ устанавливаем ID здесь - пусть SporeManager сделает это через IDManager
+                # real_spore.id будет автоматически установлен в add_spore_manual
+
+                # Добавляем в SporeManager (ID будет присвоен автоматически)
                 spore_manager.add_spore_manual(real_spore)
 
-                # 🔧 ИСПРАВЛЕНИЕ: Принудительно устанавливаем строковый ID ПОСЛЕ add_spore_manual
-                # потому что add_spore_manual может перезаписать его на число
-                real_spore.id = f"real_{buffer_id}"
+                # Теперь real_spore.id содержит числовой ID от IDManager
+                print(f"      ✅ Создана спора с ID: {real_spore.id}")
 
                 # Регистрируем в ZoomManager с уникальным ключом
                 zoom_key = f"real_{buffer_id}_m{self._materialization_counter}"
@@ -1143,9 +1143,9 @@ class BufferMergeManager:
                     stats['errors'].append(error_msg)
                     continue
                 
-                # Определяем цвет связи
+                # Определяем базовый цвет связи по типу (будет переопределен управлением ниже)
                 color_key = link_colors.get(link_type, 'link_default')
-                
+
                 # Извлекаем dt из source_info
                 dt_value = 0.05  # По умолчанию
                 if 'source_info' in link:
@@ -1166,7 +1166,7 @@ class BufferMergeManager:
                 # Сохраняем dt в линке для PickerManager
                 visual_link.dt_value = dt_value
                 
-                # НОВОЕ: Извлекаем и сохраняем control_value из source_info
+                # ИСПРАВЛЕННОЕ: Извлекаем control_value из source_info
                 control_value = 0.0  # По умолчанию
                 if 'source_info' in link:
                     import re
@@ -1176,12 +1176,33 @@ class BufferMergeManager:
 
                 # Сохраняем control_value в линке для PickerManager  
                 visual_link.control_value = control_value
-                
-                # Устанавливаем цвет после создания
+
+                # ИСПРАВЛЕННОЕ: Определяем цвет на основе знака управления
+                if control_value > 0:
+                    color_key = 'ghost_max'  # Положительное управление = красный
+                    link_type_corrected = 'real_max'
+                elif control_value < 0:
+                    color_key = 'ghost_min'  # Отрицательное управление = синий
+                    link_type_corrected = 'real_min'
+                else:
+                    color_key = 'link_default'  # Нулевое управление = дефолтный цвет
+                    link_type_corrected = 'real_default'
+
+                print(f"      🎨 Управление: {control_value:+.2f} → цвет: {color_key}")
+
+                # Устанавливаем цвет на основе управления
                 visual_link.color = spore_manager.color_manager.get_color('link', color_key)
                 
-                # Устанавливаем ID
-                visual_link.id = f"real_link_{parent_buffer_id}_to_{child_buffer_id}"
+                # Устанавливаем осмысленное имя линка на основе ID спор
+                parent_id = getattr(parent_spore, 'id', 'unknown')
+                child_id = getattr(child_spore, 'id', 'unknown')
+                if hasattr(spore_manager, 'id_manager') and hasattr(spore_manager.id_manager, 'get_next_link_id'):
+                    link_sequential_id = spore_manager.id_manager.get_next_link_id()
+                    visual_link.id = f"link_{link_sequential_id}_{parent_id}_to_{child_id}"
+                else:
+                    # Fallback, если IDManager недоступен
+                    visual_link.id = f"link_{parent_id}_to_{child_id}"
+                print(f"      🔗 Создан линк: {visual_link.id} (dt={dt_value})")
                 
                 # Добавляем в SporeManager (правильная последовательность)
                 spore_manager.links.append(visual_link)
@@ -1191,11 +1212,11 @@ class BufferMergeManager:
                 zoom_manager.register_object(visual_link, link_id)
                 visual_link._zoom_manager_key = link_id  # Сохраняем для удаления
                 
-                # Добавляем связь в граф
+                # Добавляем связь в граф с исправленным типом
                 spore_manager.graph.add_edge(
                     parent_spore=parent_spore,
                     child_spore=child_spore,
-                    link_type=link_type.replace('buffer_', 'real_'),  # buffer_max → real_max
+                    link_type=link_type_corrected,  # Используем тип на основе реального управления
                     link_object=visual_link
                 )
                 
@@ -1308,39 +1329,36 @@ class BufferMergeManager:
                 if parent_pos is None or child_pos is None:
                     continue
                 
-                # Получаем правильный тип связи из реального графа
-                link_type = 'real_max'  # По умолчанию
+                # Пытаемся определить цвет напрямую по управлению, чтобы избежать ошибок сопоставления
+                color = None
                 try:
-                    # Ищем связь в графе между родительской и дочерней спорой
-                    parent_id = link.parent_spore.id if hasattr(link.parent_spore, 'id') else None
-                    child_id = link.child_spore.id if hasattr(link.child_spore, 'id') else None
-                    
-                    if parent_id and child_id:
-                        # Пытаемся найти связь в обоих направлениях (граф может быть направленным)
-                        edge_info = None
-                        if spore_manager and hasattr(spore_manager, 'graph'):
+                    control_value = getattr(link, 'control_value', None)
+                    if control_value is not None:
+                        if control_value > 0:
+                            color = spore_manager.color_manager.get_color('link', 'ghost_max')
+                        elif control_value < 0:
+                            color = spore_manager.color_manager.get_color('link', 'ghost_min')
+                        else:
+                            color = spore_manager.color_manager.get_color('link', 'link_default')
+                except Exception:
+                    color = None
+
+                # Если не удалось определить по управлению, пробуем через тип ребра в графе
+                if color is None:
+                    link_type = 'real_max'  # По умолчанию
+                    try:
+                        parent_id = link.parent_spore.id if hasattr(link.parent_spore, 'id') else None
+                        child_id = link.child_spore.id if hasattr(link.child_spore, 'id') else None
+                        if parent_id and child_id and hasattr(spore_manager, 'graph'):
                             edge_info = spore_manager.graph.get_edge_info(parent_id, child_id)
                             if not edge_info:
                                 edge_info = spore_manager.graph.get_edge_info(child_id, parent_id)
-                        
-                        if edge_info and hasattr(edge_info, 'link_type'):
-                            link_type = edge_info.link_type
-                        else:
-                            # Если не нашли в графе, пытаемся определить по визуальному линку
-                            if hasattr(link, 'color'):
-                                # Определяем по цвету (красный = max, синий = min)
-                                color_str = str(link.color).lower()
-                                if 'red' in color_str or '#ff' in color_str:
-                                    link_type = 'real_max'
-                                elif 'blue' in color_str or '#00' in color_str:
-                                    link_type = 'real_min'
-                                    
-                except Exception as e:
-                    # При любой ошибке используем значение по умолчанию
-                    print(f"   ⚠️ Не удалось определить тип связи: {e}")
-                    link_type = 'real_max'
-
-                color = link_colors.get(link_type, 'gray')
+                            if edge_info and hasattr(edge_info, 'link_type'):
+                                link_type = edge_info.link_type
+                    except Exception as e:
+                        print(f"   ⚠️ Не удалось определить тип связи: {e}")
+                        link_type = 'real_max'
+                    color = link_colors.get(link_type, 'gray')
                 
                 # Рисуем стрелку с правильным направлением (как в буферном графе)
                 dx = child_pos[0] - parent_pos[0]
@@ -1389,7 +1407,7 @@ class BufferMergeManager:
         ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
 
     def _export_real_graph_json(self, spore_manager) -> str:
-        """Экспортирует реальный граф в JSON для анализа пикером."""
+        """Экспортирует реальный граф в JSON с правильными номерами спор и линков."""
         try:
             import json
             import os
@@ -1402,7 +1420,7 @@ class BufferMergeManager:
             
             save_path = os.path.join(buffer_dir, "real_graph_latest.json")
             
-            # 📊 СОБИРАЕМ ДАННЫЕ О СПОРАХ
+            # 📊 СОБИРАЕМ ДАННЫЕ О СПОРАХ с простыми номерами
             spores_data = []
             spore_id_to_index = {}
             
@@ -1418,41 +1436,55 @@ class BufferMergeManager:
                 spore_type = "goal" if getattr(spore, 'is_goal', False) else "normal"
                 
                 spore_data = {
+                    'index': i,  # Визуальный порядковый номер (0, 1, 2...)
                     'spore_id': str(spore.id) if hasattr(spore, 'id') else f"spore_{i}",
-                    'index': i,
                     'position': position,
                     'type': spore_type,
+                    'is_goal': getattr(spore, 'is_goal', False),
+                    'is_alive': spore.is_alive() if hasattr(spore, 'is_alive') else True,
+                    'dt': getattr(spore.logic, 'optimal_dt', 0.0) if hasattr(spore, 'logic') else 0.0,
+                    'cost': getattr(spore.logic, 'cost', 0.0) if hasattr(spore, 'logic') else 0.0,
                     'in_links': [],
                     'out_links': []
                 }
                 spores_data.append(spore_data)
                 spore_id_to_index[spore_data['spore_id']] = i
             
-            # 🔗 СОБИРАЕМ ДАННЫЕ О СВЯЗЯХ
+            # 🔗 СОБИРАЕМ ДАННЫЕ О СВЯЗЯХ с порядковыми номерами
             links_data = []
             
-            for link in spore_manager.links:
-                if not hasattr(link, 'control_value') or not hasattr(link, 'dt_value'):
+            # Используем новые методы поиска линков для получения правильных номеров
+            all_links_info = spore_manager.list_all_links()
+            
+            for link_info in all_links_info:
+                if not link_info['found']:
                     continue
                 
-                # Получаем ID спор
-                parent_spore = getattr(link, 'parent_spore', None)
-                child_spore = getattr(link, 'child_spore', None)
-                
-                if not parent_spore or not child_spore:
+                # Находим объект линка по номеру
+                link_obj = spore_manager.find_link_by_number(link_info['number'])
+                if not link_obj:
                     continue
-                    
-                parent_id = str(parent_spore.id) if hasattr(parent_spore, 'id') else f"spore_{id(parent_spore)}"
-                child_id = str(child_spore.id) if hasattr(child_spore, 'id') else f"spore_{id(child_spore)}"
+                
+                # Получаем ID спор из информации о линке
+                parent_id = link_info['parent_spore_id']
+                child_id = link_info['child_spore_id']
+                
+                # Получаем дополнительные данные из объекта линка
+                control_value = getattr(link_obj, 'control_value', 0.0)
+                dt_value = getattr(link_obj, 'dt_value', 0.0)
+                color = getattr(link_obj, 'color', [1, 1, 0])
                 
                 link_data = {
-                    'link_id': f"link_{parent_id}_to_{child_id}",
-                    'from_spore_id': parent_id,
-                    'to_spore_id': child_id,
-                    'control': float(link.control_value),
-                    'dt': abs(float(link.dt_value)),
-                    'dt_sign': 1 if link.dt_value >= 0 else -1,
-                    'raw_dt': float(link.dt_value)
+                    'link_number': link_info['number'],  # Порядковый номер линка
+                    'link_id': link_info['id'],  # Полный ID линка
+                    'parent_spore_id': parent_id,  # ID родительской споры
+                    'child_spore_id': child_id,  # ID дочерней споры
+                    'control': float(control_value),
+                    'dt': abs(float(dt_value)),
+                    'dt_sign': 1 if dt_value >= 0 else -1,
+                    'raw_dt': float(dt_value),
+                    'direction': 'forward' if dt_value >= 0 else 'backward',
+                    'color': color  # RGB цвет
                 }
                 links_data.append(link_data)
                 
@@ -1463,30 +1495,36 @@ class BufferMergeManager:
                 if parent_idx is not None:
                     spores_data[parent_idx]['out_links'].append({
                         'to_spore_id': child_id,
-                        'control': float(link.control_value),
-                        'dt': abs(float(link.dt_value)),
-                        'dt_sign': 1 if link.dt_value >= 0 else -1
+                        'link_number': link_info['number'],
+                        'control': float(control_value),
+                        'dt': abs(float(dt_value)),
+                        'dt_sign': 1 if dt_value >= 0 else -1
                     })
                     
                 if child_idx is not None:
                     spores_data[child_idx]['in_links'].append({
                         'from_spore_id': parent_id,
-                        'control': float(link.control_value),
-                        'dt': abs(float(link.dt_value)),
-                        'dt_sign': 1 if link.dt_value >= 0 else -1
+                        'link_number': link_info['number'],
+                        'control': float(control_value),
+                        'dt': abs(float(dt_value)),
+                        'dt_sign': 1 if dt_value >= 0 else -1
                     })
+            
+            # Сортируем линки по номеру для консистентности
+            links_data.sort(key=lambda x: x['link_number'])
             
             # 📝 ФОРМИРУЕМ ИТОГОВУЮ СТРУКТУРУ JSON
             export_data = {
                 'metadata': {
                     'export_time': datetime.now().isoformat(),
-                    'version': 'RealGraphExporter_v1.0',
-                    'description': 'Реальный граф спор после материализации для анализа пикером'
+                    'version': 'RealGraphExporter_v2.0',
+                    'description': 'Реальный граф спор с правильными номерами линков для анализа пикером'
                 },
                 'statistics': {
                     'total_spores': len(spores_data),
                     'total_links': len(links_data),
-                    'goal_spores': len([s for s in spores_data if s['type'] == 'goal'])
+                    'goal_spores': len([s for s in spores_data if s['type'] == 'goal']),
+                    'id_manager_stats': spore_manager.get_id_stats()
                 },
                 'spores': spores_data,
                 'links': links_data
@@ -1498,6 +1536,7 @@ class BufferMergeManager:
             
             print(f"\n💾 Реальный граф экспортирован: {save_path}")
             print(f"   📊 Спор: {len(spores_data)}, Связей: {len(links_data)}")
+            print(f"   🔢 Использованы правильные номера линков")
             
             return save_path
             
@@ -1506,6 +1545,110 @@ class BufferMergeManager:
             import traceback
             traceback.print_exc()
             return ""
+
+    def export_graph_to_json(self, spore_manager) -> dict:
+        """
+        Экспортирует граф в JSON с правильными номерами спор и линков.
+        
+        Args:
+            spore_manager: Менеджер спор для экспорта
+            
+        Returns:
+            Словарь с данными графа для JSON сериализации
+        """
+        from datetime import datetime
+        
+        graph_data = {
+            'timestamp': datetime.now().isoformat(),
+            'version': 'v16_picker',
+            'spores': [],
+            'links': [],
+            'stats': {
+                'total_spores': len(spore_manager.objects),
+                'total_links': len(spore_manager.links),
+                'id_manager_stats': spore_manager.get_id_stats()
+            }
+        }
+        
+        # Экспорт спор с простыми номерами
+        for i, spore in enumerate(spore_manager.objects):
+            pos_2d = spore.calc_2d_pos() if hasattr(spore, 'calc_2d_pos') else [0, 0]
+            
+            spore_data = {
+                'index': i,  # Визуальный порядковый номер (0, 1, 2...)
+                'spore_id': str(spore.id),  # Внутренний ID от IDManager
+                'position': pos_2d,
+                'is_goal': getattr(spore, 'is_goal', False),
+                'is_alive': spore.is_alive() if hasattr(spore, 'is_alive') else True,
+                'dt': getattr(spore.logic, 'optimal_dt', 0.0) if hasattr(spore, 'logic') else 0.0,
+                'cost': getattr(spore.logic, 'cost', 0.0) if hasattr(spore, 'logic') else 0.0
+            }
+            
+            graph_data['spores'].append(spore_data)
+        
+        # Экспорт линков с информацией о соединенных спорах
+        all_links_info = spore_manager.list_all_links()
+        
+        for link_info in all_links_info:
+            if not link_info['found']:
+                continue
+            
+            # Находим объект линка по номеру
+            link_obj = spore_manager.find_link_by_number(link_info['number'])
+            if not link_obj:
+                continue
+            
+            link_data = {
+                'link_number': link_info['number'],  # Порядковый номер линка
+                'link_id': link_info['id'],  # Полный ID линка
+                'parent_spore_id': link_info['parent_spore_id'],  # ID родительской споры
+                'child_spore_id': link_info['child_spore_id'],  # ID дочерней споры
+                'dt': getattr(link_obj, 'dt_value', 0.0),
+                'dt_sign': 1 if getattr(link_obj, 'dt_value', 0.0) >= 0 else -1,
+                'direction': 'forward' if getattr(link_obj, 'dt_value', 0.0) >= 0 else 'backward',
+                'color': getattr(link_obj, 'color', [1, 1, 0])  # RGB цвет
+            }
+            
+            graph_data['links'].append(link_data)
+        
+        # Сортируем для консистентности
+        graph_data['links'].sort(key=lambda x: x['link_number'])
+        
+        print(f"📊 Экспорт завершен: {len(graph_data['spores'])} спор, {len(graph_data['links'])} линков")
+        return graph_data
+
+    def save_graph_json(self, spore_manager, filename: str = None) -> str:
+        """
+        Сохраняет граф в JSON файл.
+        
+        Args:
+            spore_manager: Менеджер спор для экспорта
+            filename: Имя файла (опционально)
+        
+        Returns:
+            Путь к сохраненному файлу
+        """
+        import json
+        import os
+        from datetime import datetime
+        
+        if filename is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"graph_export_{timestamp}.json"
+        
+        graph_data = self.export_graph_to_json(spore_manager)
+        
+        # Сохраняем в папку exports (создаем если нет)
+        export_dir = os.path.join(os.getcwd(), 'exports')
+        os.makedirs(export_dir, exist_ok=True)
+        
+        filepath = os.path.join(export_dir, filename)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(graph_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"💾 Граф сохранен в: {filepath}")
+        return filepath
 
     def _print_materialize_stats(self, stats):
         """Выводит статистику материализации."""

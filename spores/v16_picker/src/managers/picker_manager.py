@@ -1016,15 +1016,15 @@ class PickerManager:
                 # Находим исходную спору для получения её визуального ID
                 source_visual_id = self._find_visual_id_by_spore_id(from_spore_id, graph_data)
                 
-                # Определяем направление времени (ОБРАТНОЕ для входящих связей)
+                # Определяем направление времени для входящих связей
                 if dt_sign > 0:
-                    time_direction = "обратное время"
-                    time_symbol = "⏪"
-                    dt_str = f"-{dt}"
-                else:
                     time_direction = "прямое время"
                     time_symbol = "⏩"
                     dt_str = f"+{dt}"
+                else:
+                    time_direction = "обратное время"
+                    time_symbol = "⏪"
+                    dt_str = f"-{dt}"
                 
                 control_str = f"+{control}" if control > 0 else str(control)
                 

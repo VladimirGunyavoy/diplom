@@ -30,6 +30,9 @@ class SharedDependencies:
         # Добавляем spore_manager (будет установлен в ManualSporeManager)
         self.spore_manager = None
         
+        # Добавляем id_manager (будет установлен в ManualSporeManager)
+        self.id_manager = None
+        
     def get_dt(self) -> float:
         """Получает текущий dt из конфигурации."""
         return self.config.get('pendulum', {}).get('dt', 0.1)

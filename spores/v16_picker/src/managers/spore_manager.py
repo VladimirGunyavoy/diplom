@@ -1,6 +1,6 @@
 from ursina import destroy
 import numpy as np
-from typing import List, Optional, Dict, TYPE_CHECKING
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 
 from ..core.spore import Spore
 from ..core.spore_graph import SporeGraph
@@ -1017,7 +1017,8 @@ class SporeManager:
                 zoom_manager=self.zoom_manager,
                 cost_function=self.angel_manager.cost_function if self.angel_manager else None,
                 config=self.config,
-                spore_id=f"ghost_pred_{i}"
+                spore_id=f"ghost_pred_{i}",
+                id_manager=self.id_manager
             )
             self.prediction_visualizers.append(visualizer)
 
@@ -1116,6 +1117,87 @@ class SporeManager:
         if self.graph:
             self.graph.clear()
             print("🧹 Граф связей очищен")
+
+    def find_link_by_id(self, link_id: str) -> Optional[Any]:
+        """
+        Находит линк по полному ID.
+        
+        Args:
+            link_id: Полный ID линка (например, "link_1_1_to_2")
+        
+        Returns:
+            Link объект или None если не найден
+        """
+        for link in self.links:
+            if hasattr(link, 'id') and link.id == link_id:
+                return link
+        return None
+
+    def find_link_by_number(self, link_number: int) -> Optional[Any]:
+        """
+        Находит линк по его порядковому номеру.
+        
+        Args:
+            link_number: Порядковый номер линка (например, 1, 2, 3...)
+        
+        Returns:
+            Link объект или None если не найден
+        """
+        target_prefix = f"link_{link_number}_"
+        for link in self.links:
+            if hasattr(link, 'id') and link.id and link.id.startswith(target_prefix):
+                return link
+        return None
+
+    def get_link_info(self, link_number: int) -> dict:
+        """
+        Получает подробную информацию о линке по номеру.
+        
+        Args:
+            link_number: Порядковый номер линка
+        
+        Returns:
+            Словарь с информацией о линке
+        """
+        link = self.find_link_by_number(link_number)
+        if not link:
+            return {'found': False, 'error': f'Линк #{link_number} не найден'}
+        
+        # Парсим ID для извлечения информации о спорах
+        link_parts = link.id.split('_') if hasattr(link, 'id') else []
+        parent_id = link_parts[2] if len(link_parts) > 2 else 'unknown'
+        child_id = link_parts[4] if len(link_parts) > 4 else 'unknown'
+        
+        return {
+            'found': True,
+            'id': getattr(link, 'id', 'unknown'),
+            'number': link_number,
+            'parent_spore_id': parent_id,
+            'child_spore_id': child_id,
+            'dt_value': getattr(link, 'dt_value', 0.0),
+            'color': getattr(link, 'color', 'unknown'),
+            'position': getattr(link, 'position', 'unknown')
+        }
+
+    def list_all_links(self) -> List[dict]:
+        """
+        Возвращает список всех линков с их информацией.
+        
+        Returns:
+            Список словарей с информацией о каждом линке
+        """
+        links_info = []
+        for link in self.links:
+            if hasattr(link, 'id') and link.id:
+                # Извлекаем номер из ID
+                link_parts = link.id.split('_')
+                link_number = int(link_parts[1]) if len(link_parts) > 1 and link_parts[1].isdigit() else 0
+                
+                info = self.get_link_info(link_number)
+                if info['found']:
+                    links_info.append(info)
+        
+        return sorted(links_info, key=lambda x: x['number'])
 
 
 

@@ -34,24 +34,15 @@ class EdgeInfo:
         return (parent_id, child_id)
     
     def _get_spore_id(self, spore: Spore) -> str:
-        """Получает правильный ID споры, исправляя bound method"""
+        """Получает ID споры (числовой ID от IDManager или fallback)"""
         spore_id = spore.id
-        if hasattr(spore_id, '__call__'):  # Если это bound method
-            # Генерируем правильный ID на основе позиции и типа споры
-            if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                # Для призрачных спор используем позицию для уникальности
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"ghost_{id(spore)}"
-            else:
-                # Для реальных спор также используем позицию
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"spore_{id(spore)}"
+        
+        # Если ID это bound method (старая проблема), исправляем
+        if hasattr(spore_id, '__call__'):
+            print(f"⚠️ Обнаружен bound method ID у споры {spore}, используем object id")
+            spore_id = id(spore)
+        
+        # Преобразуем в строку для консистентности
         return str(spore_id)
 
     def __repr__(self):
@@ -108,6 +99,9 @@ class SporeGraph:
                 else:
                     spore_id = f"spore_{id(spore)}"
 
+        # Приводим к строке для консистентности ключей в графе
+        spore_id = str(spore_id)
+
         self.nodes[spore_id] = spore
         if spore_id not in self.outgoing:
             self.outgoing[spore_id] = set()
@@ -153,24 +147,15 @@ class SporeGraph:
         return edge_info
     
     def _get_spore_id(self, spore: Spore) -> str:
-        """Получает правильный ID споры, исправляя bound method"""
+        """Получает ID споры (числовой ID от IDManager или fallback)"""
         spore_id = spore.id
-        if hasattr(spore_id, '__call__'):  # Если это bound method
-            # Генерируем правильный ID на основе позиции и типа споры
-            if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                # Для призрачных спор используем позицию для уникальности
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"ghost_{id(spore)}"
-            else:
-                # Для реальных спор также используем позицию
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"spore_{id(spore)}"
+        
+        # Если ID это bound method (старая проблема), исправляем
+        if hasattr(spore_id, '__call__'):
+            print(f"⚠️ Обнаружен bound method ID у споры {spore}, используем object id")
+            spore_id = id(spore)
+        
+        # Преобразуем в строку для консистентности
         return str(spore_id)
 
     def remove_edge(self, parent_id: str, child_id: str) -> bool:

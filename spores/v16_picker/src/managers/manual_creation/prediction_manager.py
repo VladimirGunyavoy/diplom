@@ -126,7 +126,8 @@ class PredictionManager:
                         'spore': {'show_ghosts': True},
                         'angel': {'show_angels': False, 'show_pillars': False}
                     },
-                    spore_id=self.deps.zoom_manager.get_unique_spore_id()
+                    spore_id=self.deps.zoom_manager.get_unique_spore_id(),
+                    id_manager=self.deps.id_manager
                 )
 
                 # Обновляем позицию предсказания
@@ -496,7 +497,8 @@ class PredictionManager:
                 'spore': {'show_ghosts': True},
                 'angel': {'show_angels': False, 'show_pillars': False}
             },
-            spore_id=self.deps.zoom_manager.get_unique_spore_id()
+            spore_id=self.deps.zoom_manager.get_unique_spore_id(),
+            id_manager=self.deps.id_manager
         )
 
         # Устанавливаем позицию призрака
@@ -512,8 +514,12 @@ class PredictionManager:
             prediction_viz.update(final_position)
 
             # Призрачные споры больше не регистрируются в ZoomManager - они постоянные
-            # Просто устанавливаем ID
-            prediction_viz.ghost_spore.id = f"tree_ghost_{name_suffix}"
+            # Используем IDManager для получения числового ID
+            if hasattr(self.deps, 'id_manager') and hasattr(self.deps.id_manager, 'get_next_ghost_id'):
+                prediction_viz.ghost_spore.id = self.deps.id_manager.get_next_ghost_id()
+            else:
+                # Fallback на строковый ID если IDManager недоступен
+                prediction_viz.ghost_spore.id = f"tree_ghost_{name_suffix}"
 
         # Добавляем в список предсказаний
         self.prediction_visualizers.append(prediction_viz)

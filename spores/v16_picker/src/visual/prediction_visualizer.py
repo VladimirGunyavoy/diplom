@@ -29,7 +29,8 @@ class PredictionVisualizer:
                  zoom_manager: ZoomManager,
                  cost_function: Optional[CostFunction],
                  config: Dict,
-                 spore_id: str):
+                 spore_id: str,
+                 id_manager=None):
         """
         Инициализирует визуализатор для одного предсказания.
 
@@ -47,6 +48,7 @@ class PredictionVisualizer:
         self.cost_function: Optional[CostFunction] = cost_function
         self.config: Dict = config
         self.id: str = spore_id
+        self.id_manager = id_manager
 
         # Флаги видимости
         self.show_ghost_spore: bool = self.config.get('spore',{}).get('show_ghosts', True)
@@ -79,7 +81,11 @@ class PredictionVisualizer:
                 # Обычный случай - клонируем родительскую спору
                 self.ghost_spore = self.parent_spore.clone()
                 self.ghost_spore.is_ghost = True
-                self.ghost_spore.id = f"prediction_ghost_{self.id}"
+                # Используем числовой ID вместо строкового
+                if hasattr(self, 'id_manager') and hasattr(self.id_manager, 'get_next_ghost_id'):
+                    self.ghost_spore.id = self.id_manager.get_next_ghost_id()
+                else:
+                    self.ghost_spore.id = f"prediction_ghost_{self.id}"
                 self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
                 self.ghost_spore.set_y_coordinate(0.0)
                 # Призрачные споры не регистрируются в ZoomManager - они постоянные
@@ -102,7 +108,11 @@ class PredictionVisualizer:
                     color_manager=self.color_manager,
                     is_ghost=True
                 )
-                self.ghost_spore.id = f"prediction_ghost_{self.id}"
+                # Используем числовой ID вместо строкового
+                if hasattr(self, 'id_manager') and hasattr(self.id_manager, 'get_next_ghost_id'):
+                    self.ghost_spore.id = self.id_manager.get_next_ghost_id()
+                else:
+                    self.ghost_spore.id = f"prediction_ghost_{self.id}"
                 self.ghost_spore.color = self.color_manager.get_color('spore', 'ghost')
                 self.ghost_spore.set_y_coordinate(0.0)
                 # Призрачные споры не регистрируются в ZoomManager - они постоянные

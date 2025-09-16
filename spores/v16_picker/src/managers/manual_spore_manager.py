@@ -43,6 +43,12 @@ class ManualSporeManager:
         
         # Устанавливаем spore_manager в deps для доступа из других компонентов
         self.deps.spore_manager = spore_manager
+        
+        # Получаем id_manager от spore_manager
+        self.id_manager = self.spore_manager.id_manager
+        
+        # Устанавливаем id_manager в deps для доступа из других компонентов
+        self.deps.id_manager = self.id_manager
 
         # Создаем подкомпоненты с общими зависимостями
         self.preview_manager = PreviewManager(self.deps)
@@ -54,9 +60,6 @@ class ManualSporeManager:
 
         # Общие созданные линки
         self.created_links: List[Link] = []
-        
-        # Получаем id_manager от spore_manager
-        self.id_manager = self.spore_manager.id_manager
 
         # Сохранение dt вектора от призрачного дерева
         self._ghost_tree_dt_vector = None

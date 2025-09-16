@@ -18,6 +18,9 @@ class Link(Scalable):
                  **kwargs):
         self.config: Dict[str, Any] = config if config is not None else {}
         
+        # Поле идентификатора устанавливается извне (например, менеджером)
+        self.id = None
+        
         thickness: float
         if link_type == 'angel':
             thickness = self.config.get('angel', {}).get('link_thickness', 1)
