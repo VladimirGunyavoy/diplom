@@ -236,7 +236,8 @@ class SporeGraph:
                             child_spore=real_child,
                             color_manager=spore_manager.color_manager,
                             zoom_manager=spore_manager.zoom_manager,
-                            config=spore_manager.config
+                            config=spore_manager.config,
+                            id_manager=spore_manager.id_manager
                         )
 
                         # Все скопированные связи получают обычный цвет

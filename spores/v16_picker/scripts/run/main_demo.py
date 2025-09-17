@@ -132,9 +132,10 @@ zoom_manager = ZoomManager(scene_setup, color_manager=color_manager)
 cost_enabled = config.get('cost_surface', {}).get('enabled', False)
 angels_enabled = config.get('angel', {}).get('show_angels', False)
 
+# Временно создаем AngelManager без id_manager, обновим его позже
 if cost_enabled or angels_enabled:
     angel_manager = AngelManager(color_manager=color_manager, zoom_manager=zoom_manager, config=config)
-    print("   ✓ Angel Manager создан")
+    print("   ✓ Angel Manager создан (временно без id_manager)")
 else:
     angel_manager = None
     print("   ⏭️ Angel Manager пропущен (cost_surface и angels отключены)")
@@ -211,7 +212,7 @@ spawn_area_config = config['spawn_area']
 if USE_SPAWN_AREA:
     # Создаем логику области спавна
     spawn_area_logic = SpawnAreaLogic(
-        focus1=spore.logic.position_2d,
+        focus1=goal.logic.position_2d,
         focus2=goal.logic.position_2d,
         eccentricity=spawn_area_config['eccentricity']
     )
@@ -238,6 +239,11 @@ spore_manager = SporeManager(
     config=config,
     spawn_area=spawn_area_logic  # Может быть None
 )
+
+# Обновляем AngelManager с id_manager от SporeManager
+if angel_manager:
+    angel_manager.id_manager = spore_manager.id_manager
+    print("   ✓ Angel Manager обновлен с id_manager")
 
 # --- УСЛОВНОЕ СОЗДАНИЕ ПОВЕРХНОСТИ СТОИМОСТИ (Cost) ---
 if cost_enabled:

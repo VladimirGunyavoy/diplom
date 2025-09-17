@@ -1150,8 +1150,19 @@ class SporeManager:
             Link объект или None если не найден
         """
         for link in self.links:
-            if hasattr(link, 'link_id') and str(link.link_id) == str(link_number):
-                return link
+            # Проверяем новую систему link_id
+            if hasattr(link, 'link_id') and link.link_id:
+                # Извлекаем номер из link_id
+                link_parts = str(link.link_id).split('_')
+                if len(link_parts) > 1 and link_parts[1].isdigit():
+                    if int(link_parts[1]) == link_number:
+                        return link
+            # Fallback для старых линков с id
+            elif hasattr(link, 'id') and link.id:
+                link_parts = str(link.id).split('_')
+                if len(link_parts) > 1 and link_parts[1].isdigit():
+                    if int(link_parts[1]) == link_number:
+                        return link
         return None
 
     def get_link_info(self, link_number: int) -> dict:
@@ -1192,11 +1203,33 @@ class SporeManager:
             Список словарей с информацией о каждом линке
         """
         links_info = []
-        for link in self.links:
-            if hasattr(link, 'id') and link.id:
-                # Извлекаем номер из ID
-                link_parts = link.id.split('_')
-                link_number = int(link_parts[1]) if len(link_parts) > 1 and link_parts[1].isdigit() else 0
+        for i, link in enumerate(self.links):
+            # Используем новую систему link_id
+            if hasattr(link, 'link_id') and link.link_id:
+                # Извлекаем номер из link_id
+                link_parts = str(link.link_id).split('_')
+                link_number = int(link_parts[1]) if len(link_parts) > 1 and link_parts[1].isdigit() else i + 1
+                
+                # Получаем информацию о родительской и дочерней спорах
+                parent_id = getattr(link.parent_spore, 'spore_id', 'unknown') if link.parent_spore else 'unknown'
+                child_id = getattr(link.child_spore, 'spore_id', 'unknown') if link.child_spore else 'unknown'
+                
+                info = {
+                    'found': True,
+                    'id': str(link.link_id),
+                    'number': link_number,
+                    'parent_spore_id': parent_id,
+                    'child_spore_id': child_id,
+                    'dt_value': getattr(link, 'dt_value', 0.0),
+                    'control_value': getattr(link, 'control_value', 0.0),
+                    'color': getattr(link, 'color', 'unknown'),
+                    'position': getattr(link, 'position', 'unknown')
+                }
+                links_info.append(info)
+            elif hasattr(link, 'id') and link.id:
+                # Fallback для старых линков с id
+                link_parts = str(link.id).split('_')
+                link_number = int(link_parts[1]) if len(link_parts) > 1 and link_parts[1].isdigit() else i + 1
                 
                 info = self.get_link_info(link_number)
                 if info['found']:

@@ -17,12 +17,14 @@ class AngelManager:
     def __init__(self, 
                  color_manager: Optional[ColorManager] = None, 
                  zoom_manager: Optional[ZoomManager] = None, 
-                 config: Optional[Dict] = None):
+                 config: Optional[Dict] = None,
+                 id_manager=None):
         
         self.color_manager: Optional[ColorManager] = color_manager
         self.zoom_manager: Optional[ZoomManager] = zoom_manager
         self.cost_function: Optional[CostFunction] = None # Будет установлено извне
         self.config: Dict = config if config is not None else {}
+        self.id_manager = id_manager
         
         self.angels: List[Spore] = []
         self.pillars: List[Pillar] = []
@@ -104,7 +106,7 @@ class AngelManager:
                     last_non_goal_angel = a
                     break
             if not angel.is_goal and last_non_goal_angel and self.zoom_manager:
-                new_link = Link(parent_spore=last_non_goal_angel, child_spore=angel, color_manager=self.color_manager, zoom_manager=self.zoom_manager, config=self.config, link_type='angel')
+                new_link = Link(parent_spore=last_non_goal_angel, child_spore=angel, color_manager=self.color_manager, zoom_manager=self.zoom_manager, config=self.config, link_type='angel', id_manager=self.id_manager)
                 new_link.color = self.color_manager.get_color('angel', 'link')
                 new_link.enabled = self.angels_visible  # Устанавливаем видимость согласно флагу
                 self.links.append(new_link)
@@ -131,7 +133,7 @@ class AngelManager:
             self.zoom_manager.register_object(child_angel, "ghost_link_angel_child")
 
             # Создаем связь
-            self.ghost_link_angel = Link(parent_spore=parent_angel, child_spore=child_angel, color_manager=self.color_manager, zoom_manager=self.zoom_manager, config=self.config, link_type='angel')
+            self.ghost_link_angel = Link(parent_spore=parent_angel, child_spore=child_angel, color_manager=self.color_manager, zoom_manager=self.zoom_manager, config=self.config, link_type='angel', id_manager=self.id_manager)
             self.ghost_link_angel.color = self.color_manager.get_color('angel', 'ghost_link')
             self.ghost_link_angel.enabled = self.angels_visible  # Устанавливаем видимость согласно флагу
             child_angel.enabled = self.angels_visible  # И для ангела-ребенка тоже

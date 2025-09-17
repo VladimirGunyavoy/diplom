@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "export_time": "2025-09-17T03:36:43.033101",
+    "export_time": "2025-09-17T03:52:46.293459",
     "version": "RealGraphExporter_v2.0",
     "description": "Реальный граф спор с правильными номерами линков для анализа пикером"
   },
@@ -10,11 +10,11 @@
     "goal_spores": 1,
     "id_manager_stats": {
       "spores_created": 19,
-      "links_created": 5980,
+      "links_created": 2568,
       "angels_created": 0,
       "pillars_created": 0,
-      "ghosts_created": 17772,
-      "total_objects": 23771
+      "ghosts_created": 7873,
+      "total_objects": 10460
     }
   },
   "spores": [
@@ -37,14 +37,14 @@
       "index": 1,
       "spore_id": "3",
       "position": [
-        -0.1718926205876905,
-        1.063997819874684
+        0.200199024908788,
+        0.6371064972233722
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.480123336555006,
+      "cost": 3.0095989030354633,
       "in_links": [],
       "out_links": []
     },
@@ -52,14 +52,14 @@
       "index": 2,
       "spore_id": "5",
       "position": [
-        -0.11753259028154485,
-        1.1080970407839634
+        0.2291769871823989,
+        0.602935113213157
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.442347906629669,
+      "cost": 2.9741688432190023,
       "in_links": [],
       "out_links": []
     },
@@ -67,14 +67,14 @@
       "index": 3,
       "spore_id": "7",
       "position": [
-        -0.22332354547711913,
-        1.0067823262837778
+        0.16947487271224848,
+        0.6652733100843936
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.512300360312707,
+      "cost": 3.045661981731284,
       "in_links": [],
       "out_links": []
     },
@@ -82,14 +82,14 @@
       "index": 4,
       "spore_id": "9",
       "position": [
-        -0.12063067445368428,
-        1.058977107707682
+        0.22950255229172636,
+        0.5521179235418006
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.429798280290253,
+      "cost": 2.963964828501883,
       "in_links": [],
       "out_links": []
     },
@@ -97,14 +97,14 @@
       "index": 5,
       "spore_id": "11",
       "position": [
-        -0.22280467875288948,
-        1.0571256673509564
+        0.16646834468886232,
+        0.7167181983688911
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.526565784299644,
+      "cost": 3.0602342785764676,
       "in_links": [],
       "out_links": []
     },
@@ -112,14 +112,14 @@
       "index": 6,
       "spore_id": "13",
       "position": [
-        -0.06600417268276346,
-        1.0902545910380144
+        0.25703350264742364,
+        0.5104524208516343
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.3878186861028867,
+      "cost": 2.9293732879870835,
       "in_links": [],
       "out_links": []
     },
@@ -127,14 +127,14 @@
       "index": 7,
       "spore_id": "15",
       "position": [
-        -0.16917104950503264,
-        1.114277177227494
+        0.19683756648604664,
+        0.689566992014475
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.493243815511556,
+      "cost": 3.0244122621035383,
       "in_links": [],
       "out_links": []
     },
@@ -142,14 +142,14 @@
       "index": 8,
       "spore_id": "17",
       "position": [
-        -0.17273142398606153,
-        1.014857086732759
+        0.20005264801507475,
+        0.587696115851967
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.46621716111162,
+      "cost": 2.9996714349591644,
       "in_links": [],
       "out_links": []
     },
@@ -157,14 +157,14 @@
       "index": 9,
       "spore_id": "19",
       "position": [
-        -0.27320547092115893,
-        0.9864696724153244
+        0.13455649629018876,
+        0.7376305052692361
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.5544268909092582,
+      "cost": 3.096183013766636,
       "in_links": [],
       "out_links": []
     }

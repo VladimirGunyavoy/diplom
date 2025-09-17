@@ -1161,7 +1161,8 @@ class BufferMergeManager:
                     child_spore=child_spore,
                     zoom_manager=zoom_manager,
                     color_manager=spore_manager.color_manager,
-                    config=spore_manager.config
+                    config=spore_manager.config,
+                    id_manager=spore_manager.id_manager
                 )
                 
                 # Сохраняем dt в линке для PickerManager
@@ -1194,16 +1195,9 @@ class BufferMergeManager:
                 # Устанавливаем цвет на основе управления
                 visual_link.color = spore_manager.color_manager.get_color('link', color_key)
                 
-                # Устанавливаем осмысленное имя линка на основе ID спор
-                parent_id = getattr(parent_spore, 'id', 'unknown')
-                child_id = getattr(child_spore, 'id', 'unknown')
-                if hasattr(spore_manager, 'id_manager') and hasattr(spore_manager.id_manager, 'get_next_link_id'):
-                    link_sequential_id = spore_manager.id_manager.get_next_link_id()
-                    visual_link.id = f"link_{link_sequential_id}_{parent_id}_to_{child_id}"
-                else:
-                    # Fallback, если IDManager недоступен
-                    visual_link.id = f"link_{parent_id}_to_{child_id}"
-                print(f"      🔗 Создан линк: {visual_link.id} (dt={dt_value})")
+                # НЕ устанавливаем visual_link.id вручную - он уже установлен в конструкторе Link
+                # через id_manager.get_next_link_id()
+                print(f"      🔗 Создан линк: {visual_link.link_id} (dt={dt_value})")
                 
                 # Добавляем в SporeManager (правильная последовательность)
                 spore_manager.links.append(visual_link)
@@ -1454,8 +1448,13 @@ class BufferMergeManager:
             # 🔗 СОБИРАЕМ ДАННЫЕ О СВЯЗЯХ с порядковыми номерами
             links_data = []
             
+            # 🔍 ДИАГНОСТИКА: Показываем что есть в SporeManager
+            print(f"🔍 DEBUG: SporeManager содержит {len(spore_manager.links)} линков")
+            print(f"🔍 DEBUG: График содержит {len(spore_manager.graph.edges)} связей")
+            
             # Используем новые методы поиска линков для получения правильных номеров
             all_links_info = spore_manager.list_all_links()
+            print(f"🔍 DEBUG: list_all_links() вернул {len(all_links_info)} связей")
             
             for link_info in all_links_info:
                 if not link_info['found']:
@@ -1513,6 +1512,11 @@ class BufferMergeManager:
             
             # Сортируем линки по номеру для консистентности
             links_data.sort(key=lambda x: x['link_number'])
+            
+            # 🔍 ДИАГНОСТИКА: Показываем что будет в JSON
+            print(f"🔍 DEBUG: JSON будет содержать {len(links_data)} связей")
+            for link_data in links_data[:3]:  # Показываем первые 3
+                print(f"   • Связь {link_data['link_number']}: {link_data['parent_spore_id']} → {link_data['child_spore_id']}")
             
             # 📝 ФОРМИРУЕМ ИТОГОВУЮ СТРУКТУРУ JSON
             export_data = {

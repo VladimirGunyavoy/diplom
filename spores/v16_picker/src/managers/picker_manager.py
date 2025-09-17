@@ -291,10 +291,22 @@ class PickerManager:
             if spore_index >= 0:
                 return str(spore_index + 1)  # Нумерация от 1 (как на картинке)
             else:
-                return "?"
+                # Fallback: используем spore_id если доступен
+                if hasattr(spore, 'spore_id'):
+                    return str(spore.spore_id)
+                elif hasattr(spore, 'get_spore_id'):
+                    return str(spore.get_spore_id())
+                else:
+                    return "?"
                 
         except Exception:
-            return "?"
+            # Fallback: используем spore_id если доступен
+            if hasattr(spore, 'spore_id'):
+                return str(spore.spore_id)
+            elif hasattr(spore, 'get_spore_id'):
+                return str(spore.get_spore_id())
+            else:
+                return "?"
 
     def _print_closest_spore_neighbors(self, closest_spore: Dict[str, Any]) -> None:
         """
