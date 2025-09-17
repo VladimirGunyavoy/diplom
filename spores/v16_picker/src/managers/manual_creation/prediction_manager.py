@@ -150,6 +150,7 @@ class PredictionManager:
                         child_spore=child_spore,
                         color_manager=self.deps.color_manager,
                         zoom_manager=self.deps.zoom_manager,
+                        id_manager=self.deps.id_manager,
                         config=self.deps.config
                     )
 
@@ -533,6 +534,7 @@ class PredictionManager:
                 child_spore=child_spore,
                 color_manager=self.deps.color_manager,
                 zoom_manager=self.deps.zoom_manager,
+                id_manager=self.deps.id_manager,
                 config=self.deps.config
             )
 

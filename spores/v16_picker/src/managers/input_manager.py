@@ -315,6 +315,20 @@ class InputManager:
                 'handler': self._handle_scroll_down,
                 'category': 'зум',
                 'enabled': lambda: self.zoom_manager is not None
+            },
+            
+            # === ДИАГНОСТИКА ID ===
+            'ctrl+i': {
+                'description': 'диагностика системы spore_id/link_id',
+                'handler': self._handle_id_diagnostics,
+                'category': 'диагностика',
+                'enabled': lambda: self.spore_manager is not None
+            },
+            'ctrl+shift+i': {
+                'description': 'проверка консистентности граф vs объекты',
+                'handler': self._handle_graph_consistency,
+                'category': 'диагностика',
+                'enabled': lambda: self.spore_manager is not None
             }
         }
         
@@ -1046,6 +1060,16 @@ class InputManager:
                 self.commands['ctrl+c']['handler']()
             return
         
+        # Обработка специальных команд диагностики через held_keys
+        elif held_keys['i'] and held_keys['left control'] and self.spore_manager:  # type: ignore
+            if held_keys['left shift']:  # Ctrl+Shift+I
+                if 'ctrl+shift+i' in self.commands:
+                    self.commands['ctrl+shift+i']['handler']()
+            else:  # Ctrl+I
+                if 'ctrl+i' in self.commands:
+                    self.commands['ctrl+i']['handler']()
+            return
+        
         # Свободные клавиши
         elif key in ['x']:  # Убираем z, c, i из свободных
             print(f"🔓 Клавиша '{key}' свободна")
@@ -1646,3 +1670,17 @@ class InputManager:
                 print("❌ ManualSporeManager не найден")
         except Exception as e:
             print(f"❌ Ошибка очистки графов: {e}")
+
+    def _handle_id_diagnostics(self):
+        """Обработчик диагностики системы spore_id/link_id (Ctrl+I)."""
+        if self.spore_manager:
+            self.spore_manager.print_id_diagnostics()
+        else:
+            print("❌ SporeManager не найден")
+
+    def _handle_graph_consistency(self):
+        """Обработчик проверки консистентности граф vs объекты (Ctrl+Shift+I)."""
+        if self.spore_manager:
+            self.spore_manager.check_graph_id_consistency()
+        else:
+            print("❌ SporeManager не найден")

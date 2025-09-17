@@ -1080,6 +1080,7 @@ class BufferMergeManager:
                     goal_position=goal_position,
                     is_goal=is_goal,
                     color_manager=color_manager,
+                    id_manager=getattr(spore_manager, 'id_manager', None),
                     config=spore_config
                 )
                 

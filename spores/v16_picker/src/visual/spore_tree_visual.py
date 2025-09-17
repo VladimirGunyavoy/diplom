@@ -131,6 +131,7 @@ class SporeTreeVisual:
             scale=spore_config.get('scale', 0.1),
             position=(root_data['position'][0], 0.0, root_data['position'][1]),
             color_manager=self.color_manager,
+            id_manager=self.id_manager,
             config=spore_config
         )
         
@@ -154,6 +155,7 @@ class SporeTreeVisual:
                 scale=spore_config.get('scale', 0.1),
                 position=(child_data['position'][0], 0.0, child_data['position'][1]),
                 color_manager=self.color_manager,
+                id_manager=self.id_manager,
                 config=spore_config
             )
             
@@ -187,6 +189,7 @@ class SporeTreeVisual:
             child_spore=child_link_spore,
             color_manager=self.color_manager,
             zoom_manager=self.zoom_manager,
+            id_manager=getattr(self, 'id_manager', None),
             config=self.config
         )
         
@@ -227,6 +230,7 @@ class SporeTreeVisual:
                 scale=spore_config.get('scale', 0.1),
                 position=(gc_data['position'][0], 0.0, gc_data['position'][1]),
                 color_manager=self.color_manager,
+                id_manager=self.id_manager,
                 config=spore_config
             )
             
@@ -275,6 +279,7 @@ class SporeTreeVisual:
             child_spore=child_link,
             color_manager=self.color_manager,
             zoom_manager=self.zoom_manager,
+            id_manager=getattr(self, 'id_manager', None),
             config=self.config
         )
 

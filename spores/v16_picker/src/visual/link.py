@@ -15,11 +15,33 @@ class Link(Scalable):
                  config: Optional[Dict[str, Any]] = None,
                  link_type: str = 'default',
                  max_length: Optional[float] = None,
+                 id_manager=None,
+                 link_id=None,  # Опциональный явный ID
                  **kwargs):
         self.config: Dict[str, Any] = config if config is not None else {}
         
         # Поле идентификатора устанавливается извне (например, менеджером)
         self.id = None
+        
+        # 🔧 НОВАЯ СИСТЕМА: Наш собственный link_id
+        if link_id is not None:
+            # Явно переданный ID (приоритет)
+            self.link_id = link_id
+        elif id_manager is not None:
+            # Получаем ID из IDManager
+            self.link_id = id_manager.get_next_link_id()
+        else:
+            # Fallback: генерируем ID на основе спор
+            parent_id = (getattr(parent_spore, 'spore_id', 'unknown') 
+                        if parent_spore else 'unknown')
+            child_id = (getattr(child_spore, 'spore_id', 'unknown') 
+                       if child_spore else 'unknown')
+            self.link_id = f"link_{parent_id}_to_{child_id}_{id(self)}"
+            print(f"⚠️ Link создан без IDManager, использован fallback "
+                  f"link_id: {self.link_id}")
+        
+        # Сохраняем ссылку на IDManager для передачи при клонировании
+        self._id_manager = id_manager
         
         thickness: float
         if link_type == 'angel':
@@ -51,12 +73,12 @@ class Link(Scalable):
         self.update_geometry()
 
     def set_max_length(self, max_length: Optional[float]) -> None:
-        """Устанавливает максимальную визуальную длину линка и сразу обновляет геометрию."""
+        """Устанавливает максимальную визуальную длину линка."""
         self.max_length = max_length
         self.update_geometry()
 
     def update_geometry(self) -> None:
-        """Обновляет позицию, ориентацию и масштаб линка между двумя точками с учетом max_length."""
+        """Обновляет позицию, ориентацию и масштаб линка между двумя точками."""
         ball_size = self.parent_spore.real_scale[0] * self.zoom_manager.spores_scale
 
         parent_pos = self.parent_spore.real_position
@@ -104,6 +126,16 @@ class Link(Scalable):
 
         self.real_scale = np.array(real_scale)
         self.real_position = real_pos
+        
+    def get_link_id(self) -> str:
+        """Возвращает наш внутренний link_id (НЕ Entity.id от Ursina)"""
+        return str(self.link_id)
+
+    def __str__(self) -> str:
+        """Для отладки показываем и Ursina id и наш link_id"""
+        parent_id = getattr(self.parent_spore, 'spore_id', 'N/A') if self.parent_spore else 'N/A'
+        child_id = getattr(self.child_spore, 'spore_id', 'N/A') if self.child_spore else 'N/A'
+        return f"Link(ursina_id={getattr(self, 'id', 'N/A')}, link_id={self.link_id}, {parent_id}->{child_id})"
         
     def apply_transform(self, a: float, b: np.ndarray, **kwargs) -> None:
         spores_scale = kwargs.get('spores_scale', 1.0)

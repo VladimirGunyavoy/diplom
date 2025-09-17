@@ -106,6 +106,7 @@ class PredictionVisualizer:
                     position=(0, 0, 0),
                     scale=correct_scale,  # 🔧 ИСПРАВЛЕНИЕ: Добавляем правильный scale
                     color_manager=self.color_manager,
+                    id_manager=self.id_manager,
                     is_ghost=True
                 )
                 # Используем числовой ID вместо строкового
@@ -135,6 +136,7 @@ class PredictionVisualizer:
                 model='sphere',
                 position=(0, 0, 0),
                 color_manager=self.color_manager,
+                id_manager=self.id_manager,
                 is_ghost=True
             )
             self.ghost_spore.enabled = False

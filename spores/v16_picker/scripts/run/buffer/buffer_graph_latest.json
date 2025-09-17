@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "export_time": "2025-09-16T22:37:44.190443",
+    "export_time": "2025-09-17T03:36:40.768062",
     "algorithm_version": "BufferMergeManager_v1.0",
     "distance_threshold": 0.0015
   },
@@ -31,8 +31,8 @@
     {
       "buffer_id": "buffer_root",
       "position": [
-        -0.22259282334735658,
-        1.0944836524853876
+        -0.1718926205876905,
+        1.063997819874684
       ],
       "merged_ghosts": [
         "ghost_root"
@@ -43,8 +43,8 @@
     {
       "buffer_id": "buffer_child_0",
       "position": [
-        -0.16664185371933618,
-        1.1498956395185094
+        -0.11753259028154485,
+        1.1080970407839634
       ],
       "merged_ghosts": [
         "ghost_child_0"
@@ -55,8 +55,8 @@
     {
       "buffer_id": "buffer_child_1",
       "position": [
-        -0.27483345366415,
-        1.0260589722619824
+        -0.22332354547711913,
+        1.0067823262837778
       ],
       "merged_ghosts": [
         "ghost_child_1"
@@ -67,8 +67,8 @@
     {
       "buffer_id": "buffer_child_2",
       "position": [
-        -0.16988319012707254,
-        1.1005688336485067
+        -0.12063067445368428,
+        1.058977107707682
       ],
       "merged_ghosts": [
         "ghost_child_2"
@@ -79,8 +79,8 @@
     {
       "buffer_id": "buffer_child_3",
       "position": [
-        -0.27437378434744664,
-        1.0763437613028182
+        -0.22280467875288948,
+        1.0571256673509564
       ],
       "merged_ghosts": [
         "ghost_child_3"
@@ -91,8 +91,8 @@
     {
       "buffer_id": "buffer_grandchild_0",
       "position": [
-        -0.11338618902707659,
-        1.1424750779531674
+        -0.06600417268276346,
+        1.0902545910380144
       ],
       "merged_ghosts": [
         "ghost_grandchild_0",
@@ -104,8 +104,8 @@
     {
       "buffer_id": "buffer_grandchild_1",
       "position": [
-        -0.2191655298124245,
-        1.1455194616278006
+        -0.16917104950503264,
+        1.114277177227494
       ],
       "merged_ghosts": [
         "ghost_grandchild_1",
@@ -117,8 +117,8 @@
     {
       "buffer_id": "buffer_grandchild_2",
       "position": [
-        -0.22298113374664522,
-        1.04593232269008
+        -0.17273142398606153,
+        1.014857086732759
       ],
       "merged_ghosts": [
         "ghost_grandchild_2",
@@ -130,8 +130,8 @@
     {
       "buffer_id": "buffer_grandchild_3",
       "position": [
-        -0.3253786740527316,
-        0.9936974651686656
+        -0.27320547092115893,
+        0.9864696724153244
       ],
       "merged_ghosts": [
         "ghost_grandchild_3",
@@ -152,7 +152,7 @@
       "parent_id": "buffer_child_1",
       "child_id": "buffer_root",
       "link_type": "buffer_max",
-      "source_info": "root-child_1(dt=-0.049,u=2.0)"
+      "source_info": "root-child_1(dt=-0.050,u=2.0)"
     },
     {
       "parent_id": "buffer_root",
@@ -170,7 +170,7 @@
       "parent_id": "buffer_child_0",
       "child_id": "buffer_grandchild_0",
       "link_type": "buffer_min",
-      "source_info": "child_0-grandchild_0(dt=0.046,u=-2.0)"
+      "source_info": "child_0-grandchild_0(dt=0.047,u=-2.0)"
     },
     {
       "parent_id": "buffer_grandchild_1",
@@ -200,7 +200,7 @@
       "parent_id": "buffer_grandchild_2",
       "child_id": "buffer_child_2",
       "link_type": "buffer_max",
-      "source_info": "child_2-grandchild_5(dt=-0.049,u=2.0)"
+      "source_info": "child_2-grandchild_5(dt=-0.050,u=2.0)"
     },
     {
       "parent_id": "buffer_child_3",

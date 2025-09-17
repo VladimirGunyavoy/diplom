@@ -123,6 +123,7 @@ class PreviewManager:
                 scale=spore_config.get('scale', 0.1),
                 position=(self.preview_position_2d[0], 0.0, self.preview_position_2d[1]),
                 color_manager=self.deps.color_manager,
+                id_manager=self.deps.id_manager,
                 is_ghost=True  # Делаем спору-призрак
             )
 

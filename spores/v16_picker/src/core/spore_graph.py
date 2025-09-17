@@ -34,16 +34,16 @@ class EdgeInfo:
         return (parent_id, child_id)
     
     def _get_spore_id(self, spore: Spore) -> str:
-        """Получает ID споры (числовой ID от IDManager или fallback)"""
-        spore_id = spore.id
-        
-        # Если ID это bound method (старая проблема), исправляем
-        if hasattr(spore_id, '__call__'):
-            print(f"⚠️ Обнаружен bound method ID у споры {spore}, используем object id")
-            spore_id = id(spore)
-        
-        # Преобразуем в строку для консистентности
-        return str(spore_id)
+        """Получает spore_id споры (наша система ID, НЕ Ursina Entity.id)"""
+        # Используем наш spore_id вместо Entity.id
+        if hasattr(spore, 'spore_id'):
+            return str(spore.spore_id)
+        elif hasattr(spore, 'get_spore_id'):
+            return str(spore.get_spore_id())
+        else:
+            # Fallback для старых спор без spore_id
+            print(f"⚠️ Spore {spore} не имеет spore_id, используем object id")
+            return f"legacy_{id(spore)}"
 
     def __repr__(self):
         parent_id = self._get_spore_id(self.parent_spore)
@@ -77,30 +77,17 @@ class SporeGraph:
 
     def add_spore(self, spore: Spore) -> None:
         """Добавляет спору в граф"""
-        if not hasattr(spore, 'id') or spore.id is None:
-            raise ValueError(f"Spore должна иметь уникальный id: {spore}")
+        # Проверяем наличие нашего spore_id
+        if not hasattr(spore, 'spore_id'):
+            raise ValueError(f"Spore должна иметь spore_id: {spore}. "
+                            f"Убедитесь, что спора создана с IDManager "
+                            f"или явным spore_id.")
 
-        # 🔧 ИСПРАВЛЕНИЕ: Проверяем и исправляем bound method ID
-        spore_id = spore.id
-        if hasattr(spore_id, '__call__'):  # Если это bound method
-            # Генерируем правильный ID на основе позиции и типа споры
-            if hasattr(spore, 'is_ghost') and spore.is_ghost:
-                # Для призрачных спор используем позицию для уникальности
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"ghost_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"ghost_{id(spore)}"
-            else:
-                # Для реальных спор также используем позицию
-                if hasattr(spore, 'calc_2d_pos'):
-                    pos = spore.calc_2d_pos()
-                    spore_id = f"real_{pos[0]:.4f}_{pos[1]:.4f}_{id(spore)}"
-                else:
-                    spore_id = f"spore_{id(spore)}"
-
-        # Приводим к строке для консистентности ключей в графе
-        spore_id = str(spore_id)
+        spore_id = str(spore.spore_id)
+        
+        # Проверка на пустой или некорректный ID
+        if not spore_id or spore_id == 'None':
+            raise ValueError(f"Spore имеет пустой spore_id: {spore}")
 
         self.nodes[spore_id] = spore
         if spore_id not in self.outgoing:
@@ -129,6 +116,13 @@ class SporeGraph:
         self.add_spore(parent_spore)
         self.add_spore(child_spore)
 
+        # Проверяем наличие link_id у Link объекта
+        if link_object and hasattr(link_object, 'link_id'):
+            # Все ок, используем link_id
+            pass
+        elif link_object:
+            print(f"⚠️ Link объект без link_id: {link_object}")
+
         edge_info = EdgeInfo(parent_spore, child_spore, link_type, link_object)
         edge_key = edge_info.get_direction_tuple()
 
@@ -147,16 +141,15 @@ class SporeGraph:
         return edge_info
     
     def _get_spore_id(self, spore: Spore) -> str:
-        """Получает ID споры (числовой ID от IDManager или fallback)"""
-        spore_id = spore.id
-        
-        # Если ID это bound method (старая проблема), исправляем
-        if hasattr(spore_id, '__call__'):
-            print(f"⚠️ Обнаружен bound method ID у споры {spore}, используем object id")
-            spore_id = id(spore)
-        
-        # Преобразуем в строку для консистентности
-        return str(spore_id)
+        """Получает spore_id споры (наша система ID)"""
+        if hasattr(spore, 'spore_id'):
+            return str(spore.spore_id)
+        elif hasattr(spore, 'get_spore_id'):
+            return str(spore.get_spore_id())
+        else:
+            # Fallback для legacy объектов
+            print(f"⚠️ Legacy spore без spore_id: {spore}")
+            return f"legacy_{id(spore)}"
 
     def remove_edge(self, parent_id: str, child_id: str) -> bool:
         """
@@ -229,7 +222,7 @@ class SporeGraph:
             if real_parent and real_child:
                 # Проверяем что связь еще не существует
                 edge_exists = self.get_edge_info(
-                    real_parent.id, real_child.id) is not None
+                    real_parent.spore_id, real_child.spore_id) is not None
 
                 if not edge_exists:
                     try:
@@ -271,7 +264,8 @@ class SporeGraph:
 
                     except Exception as e:
                         print(f"   ❌ Ошибка создания Link между "
-                              f"{real_parent.id} -> {real_child.id}: {e}")
+                              f"{real_parent.spore_id} -> "
+                              f"{real_child.spore_id}: {e}")
                         skipped_links += 1
                 else:
                     skipped_links += 1

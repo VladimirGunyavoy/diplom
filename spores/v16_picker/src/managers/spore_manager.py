@@ -541,6 +541,7 @@ class SporeManager:
                             new_spore,
                             color_manager=self.color_manager,
                             zoom_manager=self.zoom_manager,
+                            id_manager=self.id_manager,
                             config=self.config)
             
             # Сохраняем информацию об управлении и dt, которые привели к созданию дочерней споры
@@ -605,6 +606,7 @@ class SporeManager:
             scale=self.config.get('spore', {}).get('scale', 0.05),
             position=random_position_3d,
             color_manager=self.color_manager,
+            id_manager=self.id_manager,
             config=self.config.get('spore', {})
         )
         
@@ -657,6 +659,7 @@ class SporeManager:
                     scale=self.config.get('spore', {}).get('scale', 0.05),
                     position=pos_3d,
                     color_manager=self.color_manager,
+                    id_manager=self.id_manager,
                     config=self.config.get('spore', {}),
                     is_ghost=False  # Кандидаты не призраки
                 )
@@ -721,6 +724,7 @@ class SporeManager:
             scale=self.config.get('spore', {}).get('scale', 0.05),
             position=candidate_position,
             color_manager=self.color_manager,
+            id_manager=self.id_manager,
             config=self.config.get('spore', {})
         )
         
@@ -903,6 +907,7 @@ class SporeManager:
                            to_spore,     # existing_spore (куда приходит траектория)
                            color_manager=self.color_manager,
                            zoom_manager=self.zoom_manager,
+                           id_manager=self.id_manager,
                            config=self.config)
             
             # Сохраняем информацию об управлении и dt, которые привели к созданию связи
@@ -970,6 +975,7 @@ class SporeManager:
             self.ghost_link = Link(last_spore, self.optimal_ghost_spore, 
                                    color_manager=self.color_manager, 
                                    zoom_manager=self.zoom_manager,
+                                   id_manager=self.id_manager,
                                    config=self.config)
             self.ghost_link.color = self.color_manager.get_color('link', 'ghost')
             ghost_link_key = self.zoom_manager.get_unique_link_id()
@@ -1120,22 +1126,22 @@ class SporeManager:
 
     def find_link_by_id(self, link_id: str) -> Optional[Any]:
         """
-        Находит линк по полному ID.
+        Находит линк по полному link_id.
         
         Args:
-            link_id: Полный ID линка (например, "link_1_1_to_2")
+            link_id: Полный link_id линка (например, "link_1_1_to_2")
         
         Returns:
             Link объект или None если не найден
         """
         for link in self.links:
-            if hasattr(link, 'id') and link.id == link_id:
+            if hasattr(link, 'link_id') and str(link.link_id) == str(link_id):
                 return link
         return None
 
     def find_link_by_number(self, link_number: int) -> Optional[Any]:
         """
-        Находит линк по его порядковому номеру.
+        Находит линк по его порядковому номеру из IDManager.
         
         Args:
             link_number: Порядковый номер линка (например, 1, 2, 3...)
@@ -1143,9 +1149,8 @@ class SporeManager:
         Returns:
             Link объект или None если не найден
         """
-        target_prefix = f"link_{link_number}_"
         for link in self.links:
-            if hasattr(link, 'id') and link.id and link.id.startswith(target_prefix):
+            if hasattr(link, 'link_id') and str(link.link_id) == str(link_number):
                 return link
         return None
 
@@ -1199,5 +1204,173 @@ class SporeManager:
         
         return sorted(links_info, key=lambda x: x['number'])
 
+    def validate_all_ids(self) -> Dict[str, Any]:
+        """
+        Проверяет корректность новой системы spore_id и link_id.
+        
+        Returns:
+            dict: Отчет о состоянии ID системы
+        """
+        report = {
+            'total_spores': len(self.objects),
+            'total_links': len(self.links),
+            'spores_with_spore_id': 0,
+            'spores_without_spore_id': 0,
+            'links_with_link_id': 0,
+            'links_without_link_id': 0,
+            'spore_id_conflicts': [],
+            'link_id_conflicts': [],
+            'legacy_spores': [],
+            'legacy_links': []
+        }
+        
+        seen_spore_ids = set()
+        seen_link_ids = set()
+        
+        # Проверяем споры
+        for i, spore in enumerate(self.objects):
+            if hasattr(spore, 'spore_id'):
+                spore_id = str(spore.spore_id)
+                report['spores_with_spore_id'] += 1
+                
+                # Проверка на конфликты spore_id
+                if spore_id in seen_spore_ids:
+                    report['spore_id_conflicts'].append({
+                        'id': spore_id,
+                        'spore_index': i,
+                        'spore': spore
+                    })
+                else:
+                    seen_spore_ids.add(spore_id)
+            else:
+                report['spores_without_spore_id'] += 1
+                report['legacy_spores'].append({
+                    'index': i,
+                    'spore': spore,
+                    'ursina_id': getattr(spore, 'id', 'N/A'),
+                    'has_ursina_id': hasattr(spore, 'id')
+                })
+        
+        # Проверяем линки
+        for i, link in enumerate(self.links):
+            if hasattr(link, 'link_id'):
+                link_id = str(link.link_id)
+                report['links_with_link_id'] += 1
+                
+                # Проверка на конфликты link_id
+                if link_id in seen_link_ids:
+                    report['link_id_conflicts'].append({
+                        'id': link_id,
+                        'link_index': i,
+                        'link': link
+                    })
+                else:
+                    seen_link_ids.add(link_id)
+            else:
+                report['links_without_link_id'] += 1
+                report['legacy_links'].append({
+                    'index': i,
+                    'link': link,
+                    'ursina_id': getattr(link, 'id', 'N/A'),
+                    'has_ursina_id': hasattr(link, 'id')
+                })
+        
+        return report
 
+    def print_id_diagnostics(self) -> None:
+        """Выводит диагностику новой системы ID в читаемом виде"""
+        report = self.validate_all_ids()
+        
+        print("\n" + "="*60)
+        print("🔍 ДИАГНОСТИКА НОВОЙ СИСТЕМЫ ID (spore_id/link_id)")
+        print("="*60)
+        
+        print(f"📊 Общая статистика:")
+        print(f"   • Всего спор: {report['total_spores']}")
+        print(f"   • Всего линков: {report['total_links']}")
+        
+        print(f"\n🧬 Споры:")
+        print(f"   ✅ С spore_id: {report['spores_with_spore_id']}")
+        print(f"   ❌ Без spore_id: {report['spores_without_spore_id']}")
+        
+        print(f"\n🔗 Линки:")
+        print(f"   ✅ С link_id: {report['links_with_link_id']}")
+        print(f"   ❌ Без link_id: {report['links_without_link_id']}")
+        
+        # Показываем проблемы
+        if report['spore_id_conflicts']:
+            print(f"\n⚠️ КОНФЛИКТЫ SPORE_ID: {len(report['spore_id_conflicts'])}")
+            for conflict in report['spore_id_conflicts'][:3]:
+                print(f"   • ID '{conflict['id']}' дублируется "
+                      f"(спора #{conflict['spore_index']})")
+        
+        if report['link_id_conflicts']:
+            print(f"\n⚠️ КОНФЛИКТЫ LINK_ID: {len(report['link_id_conflicts'])}")
+            for conflict in report['link_id_conflicts'][:3]:
+                print(f"   • ID '{conflict['id']}' дублируется "
+                      f"(линк #{conflict['link_index']})")
+        
+        if report['legacy_spores']:
+            print(f"\n🏚️ LEGACY СПОРЫ (без spore_id): "
+                  f"{len(report['legacy_spores'])}")
+            for legacy in report['legacy_spores'][:3]:
+                ursina_id = legacy['ursina_id']
+                print(f"   • Спора #{legacy['index']}: ursina_id={ursina_id}")
+            if len(report['legacy_spores']) > 3:
+                print(f"   ... и ещё {len(report['legacy_spores']) - 3}")
+        
+        if report['legacy_links']:
+            print(f"\n🏚️ LEGACY ЛИНКИ (без link_id): "
+                  f"{len(report['legacy_links'])}")
+            for legacy in report['legacy_links'][:3]:
+                ursina_id = legacy['ursina_id']
+                print(f"   • Линк #{legacy['index']}: ursina_id={ursina_id}")
+            if len(report['legacy_links']) > 3:
+                print(f"   ... и ещё {len(report['legacy_links']) - 3}")
+        
+        # Общий статус
+        total_issues = (len(report['spore_id_conflicts']) + 
+                       len(report['link_id_conflicts']) + 
+                       report['spores_without_spore_id'] + 
+                       report['links_without_link_id'])
+        
+        if total_issues == 0:
+            print(f"\n✅ ВСЯ НОВАЯ СИСТЕМА ID РАБОТАЕТ КОРРЕКТНО!")
+        else:
+            print(f"\n🔧 Найдено проблем: {total_issues} (требуется доработка)")
+        
+        print("="*60)
+
+    def check_graph_id_consistency(self) -> None:
+        """Проверяет консистентность ID между SporeGraph и объектами"""
+        if not hasattr(self, 'graph'):
+            print("⚠️ SporeGraph не найден")
+            return
+        
+        print("\n" + "="*50)
+        print("🔍 ПРОВЕРКА КОНСИСТЕНТНОСТИ GRAPH vs OBJECTS")
+        print("="*50)
+        
+        # Проверяем споры в графе
+        graph_spore_ids = set(self.graph.nodes.keys())
+        object_spore_ids = set()
+        
+        for spore in self.objects:
+            if hasattr(spore, 'spore_id'):
+                object_spore_ids.add(str(spore.spore_id))
+        
+        # Споры в графе, но не в objects
+        orphan_in_graph = graph_spore_ids - object_spore_ids
+        if orphan_in_graph:
+            print(f"⚠️ Споры в графе, но НЕ в objects: {orphan_in_graph}")
+        
+        # Споры в objects, но не в графе
+        orphan_in_objects = object_spore_ids - graph_spore_ids
+        if orphan_in_objects:
+            print(f"⚠️ Споры в objects, но НЕ в графе: {orphan_in_objects}")
+        
+        if not orphan_in_graph and not orphan_in_objects:
+            print("✅ Граф и objects полностью синхронизированы!")
+        
+        print("="*50)
 

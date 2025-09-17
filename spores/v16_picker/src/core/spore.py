@@ -14,20 +14,51 @@ class Spore(SporeVisual):
     - Обеспечивает обратную совместимость с существующим API
     """
     
-    def __init__(self, 
-                 dt: float, 
-                 pendulum: PendulumSystem, 
-                 goal_position: np.ndarray | Tuple[float, float] | Tuple[float, float, float],
-                 model: str = 'sphere', 
+    def __init__(self,
+                 dt: float,
+                 pendulum: PendulumSystem,
+                 goal_position: (np.ndarray | Tuple[float, float] |
+                                 Tuple[float, float, float]),
+                 model: str = 'sphere',
                  color_manager: Optional[ColorManager] = None,
                  is_goal: bool = False,
                  is_ghost: bool = False,
+                 id_manager=None,
+                 spore_id=None,  # Опциональный явный ID
                  *args: Any, **kwargs: Any):
-        # Инициализируем визуальную часть
-        super().__init__(model=model, color_manager=color_manager, 
-                        is_goal=is_goal, *args, **kwargs)
+        # Инициализируем визуальную часть (Entity.id остается нетронутым)
+        super().__init__(model=model, color_manager=color_manager,
+                         is_goal=is_goal, *args, **kwargs)
         
-        self.is_ghost: bool = is_ghost # Сохраняем флаг
+        # 🔧 НОВАЯ СИСТЕМА: Наш собственный spore_id
+        if spore_id is not None:
+            # Явно переданный ID (приоритет)
+            self.spore_id = spore_id
+        elif id_manager is not None:
+            # Получаем ID из IDManager
+            if is_ghost:
+                self.spore_id = id_manager.get_next_ghost_id()
+            else:
+                self.spore_id = id_manager.get_next_spore_id()
+        else:
+            # Fallback: генерируем уникальный ID
+            if 'position' in kwargs:
+                pos = kwargs['position']
+                if hasattr(pos, '__len__') and len(pos) >= 2:
+                    y_coord = pos[2] if len(pos) > 2 else pos[1]
+                    self.spore_id = (f"spore_{pos[0]:.4f}_{y_coord:.4f}_"
+                                     f"{id(self)}")
+                else:
+                    self.spore_id = f"spore_{id(self)}"
+            else:
+                self.spore_id = f"spore_{id(self)}"
+            print(f"⚠️ Spore создана без IDManager, использован fallback "
+                  f"spore_id: {self.spore_id}")
+        
+        self.is_ghost: bool = is_ghost  # Сохраняем флаг
+        
+        # Сохраняем ссылку на IDManager для передачи при клонировании
+        self._id_manager = id_manager
 
         # Создаем логическую часть
         # Конвертируем goal_position в 2D если нужно
@@ -38,7 +69,10 @@ class Spore(SporeVisual):
             initial_pos = kwargs['position']
             if hasattr(initial_pos, '__len__') and len(initial_pos) >= 2:
                 # Конвертируем 3D позицию в 2D для логики
-                initial_pos_2d = np.array(initial_pos)[[0, 2]] if len(initial_pos) == 3 else np.array(initial_pos)
+                if len(initial_pos) == 3:
+                    initial_pos_2d = np.array(initial_pos)[[0, 2]]
+                else:
+                    initial_pos_2d = np.array(initial_pos)
             else:
                 initial_pos_2d = np.array([0.0, 0.0])  # По умолчанию
         else:
@@ -54,7 +88,8 @@ class Spore(SporeVisual):
         # Сохраняем параметры для обратной совместимости
         self.dt: float = dt
         self.pendulum: PendulumSystem = pendulum
-        self.goal_position: np.ndarray | Tuple[float, float] | Tuple[float, float, float] = goal_position
+        self.goal_position: (np.ndarray | Tuple[float, float] |
+                             Tuple[float, float, float]) = goal_position
         
         # Сохраняем параметры инициализации для создания новых спор
         self._initial_pendulum: PendulumSystem = pendulum
@@ -80,6 +115,14 @@ class Spore(SporeVisual):
         # Устанавливаем правильный цвет при создании
         self.update_visual_state()
         
+    def get_spore_id(self) -> str:
+        """Возвращает наш внутренний spore_id (НЕ Entity.id от Ursina)"""
+        return str(self.spore_id)
+
+    def __str__(self) -> str:
+        """Для отладки показываем и Ursina id и наш spore_id"""
+        ursina_id = getattr(self, 'id', 'N/A')
+        return f"Spore(ursina_id={ursina_id}, spore_id={self.spore_id})"
     
     def apply_transform(self, a: float, b: np.ndarray, **kwargs: Any) -> None:
         """Применяет трансформацию к визуальной части"""
@@ -101,7 +144,9 @@ class Spore(SporeVisual):
         result[2] = pos_2d[1]
         return result
     
-    def evolve_3d(self, state: Optional[np.ndarray] = None, control: float = 0, dt: Optional[float] = None) -> np.ndarray:
+    def evolve_3d(self, state: Optional[np.ndarray] = None,
+                  control: float = 0,
+                  dt: Optional[float] = None) -> np.ndarray:
         """
         Обратная совместимость: эволюция с возвратом 3D позиции
         """
@@ -123,9 +168,9 @@ class Spore(SporeVisual):
                 state_2d = self.logic.position_2d
             
             # Создаем временную логику для эволюции
-            temp_logic = SporeLogic(dt=self.dt, pendulum=self.pendulum, 
-                                   goal_position_2d=self.logic.goal_position_2d,
-                                   initial_position_2d=state_2d)
+            temp_logic = SporeLogic(dt=self.dt, pendulum=self.pendulum,
+                                    goal_position_2d=self.logic.goal_position_2d,
+                                    initial_position_2d=state_2d)
             new_pos_2d = temp_logic.evolve(control=control, dt=dt)
         
         # Конвертируем обратно в 3D позицию - оптимизация
@@ -135,7 +180,9 @@ class Spore(SporeVisual):
         result[2] = new_pos_2d[1]
         return result
     
-    def evolve_2d(self, state: Optional[np.ndarray] = None, control: float = 0, dt: Optional[float] = None) -> np.ndarray:
+    def evolve_2d(self, state: Optional[np.ndarray] = None,
+                  control: float = 0,
+                  dt: Optional[float] = None) -> np.ndarray:
         """
         Обратная совместимость: эволюция с возвратом 2D позиции
         """
@@ -144,12 +191,14 @@ class Spore(SporeVisual):
             return self.logic.evolve(control=control, dt=dt)
         else:
             # Создаем временную логику для эволюции
-            temp_logic = SporeLogic(dt=self.dt, pendulum=self.pendulum, 
-                                   goal_position_2d=self.logic.goal_position_2d,
-                                   initial_position_2d=np.array(state))
+            temp_logic = SporeLogic(dt=self.dt, pendulum=self.pendulum,
+                                    goal_position_2d=self.logic.goal_position_2d,
+                                    initial_position_2d=np.array(state))
             return temp_logic.evolve(control=control, dt=dt)
     
-    def step(self, state: Optional[np.ndarray] = None, control: float = 0, dt: Optional[float] = None) -> Spore:
+    def step(self, state: Optional[np.ndarray] = None,
+             control: float = 0,
+             dt: Optional[float] = None) -> Spore:
         """
         Обратная совместимость: создает новую спору с эволюционированной позицией
         """
@@ -168,16 +217,21 @@ class Spore(SporeVisual):
         
         return new_spore
     
-    def clone(self, new_position: Optional[np.ndarray | Tuple[float, float, float]] = None) -> Spore:
+    def clone(self, new_position: Optional[np.ndarray |
+                                           Tuple[float, float, float]] = None
+              ) -> Spore:
         """
         Обратная совместимость: создает копию споры.
         Можно передать новую позицию для клона.
         """
         init_kwargs = self._initial_kwargs.copy()
-        init_kwargs['position'] = new_position if new_position is not None else self.real_position
+        init_kwargs['position'] = (new_position if new_position is not None
+                                   else self.real_position)
         
         # Убираем дублирующиеся ключи, если они пришли через _initial_args
-        for key in ['pendulum', 'dt', 'model', 'color_manager', 'goal_position', 'is_goal', 'is_ghost']:
+        keys_to_remove = ['pendulum', 'dt', 'model', 'color_manager',
+                          'goal_position', 'is_goal', 'is_ghost']
+        for key in keys_to_remove:
             if key in init_kwargs:
                 del init_kwargs[key]
         
@@ -189,6 +243,7 @@ class Spore(SporeVisual):
             goal_position=self.goal_position,
             is_goal=self._initial_is_goal,
             is_ghost=self._initial_is_ghost,
+            id_manager=getattr(self, '_id_manager', None),  # IDManager
             **init_kwargs
         )
         
@@ -235,9 +290,9 @@ class Spore(SporeVisual):
             self.update_visual_state()
     
     def mark_evolution_completed(self) -> None:
-        """Помечает спору как завершившую эволюцию (например, после объединения)."""
+        """Помечает спору как завершившую эволюцию."""
         self.evolution_completed = True
-        # Обновляем визуальное состояние для отображения завершения эволюции
+        # Обновляем визуальное состояние для отображения завершения
         self.update_visual_state()
     
     def can_evolve(self) -> bool:
@@ -245,7 +300,7 @@ class Spore(SporeVisual):
         return self.is_alive() and not self.evolution_completed
     
     def update_visual_state(self) -> None:
-        """Обновляет визуальное состояние споры в зависимости от alive."""
+        """Обновляет визуальное состояние споры."""
         if hasattr(self, 'is_goal') and self.is_goal:
             # Целевая спора - всегда зеленый цвет (бессмертна)
             self.set_color_type('goal')
@@ -256,7 +311,7 @@ class Spore(SporeVisual):
             # Призрачная спора - полупрозрачный цвет
             self.set_color_type('ghost')
         elif self.evolution_completed:
-            # Спора завершила эволюцию (объединилась) - синий цвет
+            # Спора завершила эволюцию - синий цвет
             self.set_color_type('completed')
         elif not self.logic.is_alive():
             # Мертвая спора - серый цвет
@@ -269,10 +324,7 @@ class Spore(SporeVisual):
         """Обратная совместимость: удаление объекта"""
         self.destroy()
     
-    def __str__(self) -> str:
-        """Обратная совместимость: строковое представление"""
-        return f'{self.position}'
-    
     def __repr__(self) -> str:
         """Обратная совместимость: представление для отладки"""
-        return f'{self.position}' 
+        return f'{self.position}'
+
