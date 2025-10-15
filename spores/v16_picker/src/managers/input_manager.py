@@ -416,6 +416,15 @@ class InputManager:
                 if self.buffer_merge_manager.has_buffer_data():
                     print(f"   🖱️ ЛКМ: Материализация буферного графа в реальный...")
                     
+                    # 🔍 ДИАГНОСТИКА БУФЕРНЫХ ДАННЫХ
+                    buffer_positions = getattr(self.buffer_merge_manager, 'buffer_positions', {})
+                    buffer_links = getattr(self.buffer_merge_manager, 'buffer_links', [])
+                    print(f"   📊 Буферных спор: {len(buffer_positions)}")
+                    print(f"   🔗 Буферных связей: {len(buffer_links)}")
+                    
+                    if len(buffer_links) == 0:
+                        print(f"   ⚠️ ВНИМАНИЕ: Буферных связей нет! Материализация создаст споры без связей.")
+                    
                     # Материализуем буферный граф
                     result = self.buffer_merge_manager.materialize_buffer_to_real(
                         spore_manager=self.spore_manager,

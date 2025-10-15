@@ -5,6 +5,7 @@ BufferMergeManager - компонент для мерджа спор по кла
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Set
 import json
+import csv
 from datetime import datetime
 import matplotlib.pyplot as plt
 import os
@@ -102,6 +103,12 @@ class BufferMergeManager:
 
             # 4. 🔗 НОВОЕ: Обрабатываем связи
             self._process_links(tree_logic)
+
+            # ДОБАВИТЬ ПОСЛЕ СОЗДАНИЯ СВЯЗЕЙ:
+            print(f"\n🔍 DEBUG: Связи в буфере после мерджа:")
+            print(f"   📊 Всего буферных связей: {len(self.buffer_links)}")
+            for i, link in enumerate(self.buffer_links[:5]):  # Показать первые 5
+                print(f"   {i+1}. {link['parent_id']} → {link['child_id']} ({link['link_type']})")
 
             # 5. Сохраняем результат
             if save_image:
@@ -1117,6 +1124,15 @@ class BufferMergeManager:
 
     def _create_real_links(self, spore_manager, real_spores_map, stats, zoom_manager, config):
         """Создает реальные связи из буферных связей."""
+        
+        # ДОБАВИТЬ В НАЧАЛЕ МЕТОДА:
+        print(f"\n🔗 DEBUG: Начало создания связей")
+        print(f"   📊 Буферных связей для создания: {len(self.buffer_links)}")
+        print(f"   📊 Реальных спор в карте: {len(real_spores_map)}")
+        
+        for i, link in enumerate(self.buffer_links):
+            print(f"   {i+1}. Связь: {link['parent_id']} → {link['child_id']} (тип: {link['link_type']})")
+        
         print(f"\n   🔗 СОЗДАНИЕ РЕАЛЬНЫХ СВЯЗЕЙ:")
         
         # Импортируем Link
@@ -1155,14 +1171,26 @@ class BufferMergeManager:
                     if dt_match:
                         dt_value = float(dt_match.group(1))
                 
-                # Создаем визуальную связь
+                # 🔧 ИСПРАВЛЕНИЕ: Используем визуальные номера вместо внутренних spore_id
+                # Находим индексы спор в spore_manager.objects и используем их как визуальные номера
+                try:
+                    parent_index = spore_manager.objects.index(parent_spore) + 1  # +1 для визуального номера
+                    child_index = spore_manager.objects.index(child_spore) + 1    # +1 для визуального номера
+                    readable_link_id = f"link_{parent_index}_to_{child_index}"
+                except ValueError:
+                    # Fallback к spore_id если споры не найдены в objects
+                    parent_spore_id = getattr(parent_spore, 'spore_id', 'unknown')
+                    child_spore_id = getattr(child_spore, 'spore_id', 'unknown')
+                    readable_link_id = f"link_{parent_spore_id}_to_{child_spore_id}"
+                
+                # Создаем визуальную связь с читаемым ID
                 visual_link = Link(
                     parent_spore=parent_spore,
                     child_spore=child_spore,
                     zoom_manager=zoom_manager,
                     color_manager=spore_manager.color_manager,
                     config=spore_manager.config,
-                    id_manager=spore_manager.id_manager
+                    link_id=readable_link_id  # Передаем наш читаемый ID
                 )
                 
                 # Сохраняем dt в линке для PickerManager
@@ -1448,6 +1476,11 @@ class BufferMergeManager:
             # 🔗 СОБИРАЕМ ДАННЫЕ О СВЯЗЯХ с порядковыми номерами
             links_data = []
             
+            # ДОБАВИТЬ ПЕРЕД all_links_info = spore_manager.list_all_links():
+            print(f"\n🔍 DEBUG: Экспорт реального графа")
+            print(f"   📊 spore_manager.links: {len(spore_manager.links)}")
+            print(f"   📊 spore_manager.graph.edges: {len(spore_manager.graph.edges)}")
+            
             # 🔍 ДИАГНОСТИКА: Показываем что есть в SporeManager
             print(f"🔍 DEBUG: SporeManager содержит {len(spore_manager.links)} линков")
             print(f"🔍 DEBUG: График содержит {len(spore_manager.graph.edges)} связей")
@@ -1456,13 +1489,23 @@ class BufferMergeManager:
             all_links_info = spore_manager.list_all_links()
             print(f"🔍 DEBUG: list_all_links() вернул {len(all_links_info)} связей")
             
-            for link_info in all_links_info:
+            for i, link_info in enumerate(all_links_info):
+                print(f"🔍 DEBUG: Link {i}: found={link_info.get('found', 'missing')}, number={link_info.get('number', 'missing')}")
                 if not link_info['found']:
+                    print(f"   ⚠️ Пропускаем link {i} - found=False")
                     continue
                 
-                # Находим объект линка по номеру
-                link_obj = spore_manager.find_link_by_number(link_info['number'])
+                # 🔧 ИСПРАВЛЕНИЕ: Используем реальный индекс в массиве, а не номер из link_id
+                # Индекс i уже соответствует позиции в all_links_info, которая создается из spore_manager.links
+                if 0 <= i < len(spore_manager.links):
+                    link_obj = spore_manager.links[i]
+                    print(f"🔍 DEBUG: Используем прямой доступ links[{i}] для номера {link_info['number']}")
+                else:
+                    link_obj = None
+                    print(f"❌ Индекс {i} вне диапазона (всего links: {len(spore_manager.links)})")
+                
                 if not link_obj:
+                    print(f"   ❌ Пропускаем link {link_info['number']} - объект не найден")
                     continue
                 
                 # Получаем ID спор из информации о линке
@@ -1472,7 +1515,13 @@ class BufferMergeManager:
                 # Получаем дополнительные данные из объекта линка
                 control_value = getattr(link_obj, 'control_value', 0.0)
                 dt_value = getattr(link_obj, 'dt_value', 0.0)
-                color = getattr(link_obj, 'color', [1, 1, 0])
+                
+                # 🔧 ИСПРАВЛЕНИЕ: Конвертируем Color в список [r, g, b]
+                color_obj = getattr(link_obj, 'color', None)
+                if color_obj and hasattr(color_obj, 'r') and hasattr(color_obj, 'g') and hasattr(color_obj, 'b'):
+                    color = [float(color_obj.r), float(color_obj.g), float(color_obj.b)]
+                else:
+                    color = [1.0, 1.0, 0.0]  # желтый по умолчанию
                 
                 link_data = {
                     'link_number': link_info['number'],  # Порядковый номер линка
@@ -1488,11 +1537,14 @@ class BufferMergeManager:
                 }
                 links_data.append(link_data)
                 
-                # Добавляем связь в списки спор
-                parent_idx = spore_id_to_index.get(parent_id)
-                child_idx = spore_id_to_index.get(child_id)
+                # 🔧 ИСПРАВЛЕНИЕ: Используем визуальные номера напрямую как индексы
+                # parent_id и child_id теперь содержат визуальные номера (1, 2, 3...)
+                # Преобразуем их в индексы массива (0, 1, 2...)
+                parent_idx = parent_id - 1 if isinstance(parent_id, int) and parent_id > 0 else None
+                child_idx = child_id - 1 if isinstance(child_id, int) and child_id > 0 else None
                 
-                if parent_idx is not None:
+                # Проверяем границы массива
+                if parent_idx is not None and 0 <= parent_idx < len(spores_data):
                     spores_data[parent_idx]['out_links'].append({
                         'to_spore_id': child_id,
                         'link_number': link_info['number'],
@@ -1501,7 +1553,7 @@ class BufferMergeManager:
                         'dt_sign': 1 if dt_value >= 0 else -1
                     })
                     
-                if child_idx is not None:
+                if child_idx is not None and 0 <= child_idx < len(spores_data):
                     spores_data[child_idx]['in_links'].append({
                         'from_spore_id': parent_id,
                         'link_number': link_info['number'],
@@ -1517,6 +1569,17 @@ class BufferMergeManager:
             print(f"🔍 DEBUG: JSON будет содержать {len(links_data)} связей")
             for link_data in links_data[:3]:  # Показываем первые 3
                 print(f"   • Связь {link_data['link_number']}: {link_data['parent_spore_id']} → {link_data['child_spore_id']}")
+            
+            # 🔍 ДИАГНОСТИКА: Проверяем заполнение in_links и out_links
+            total_in_links = sum(len(spore['in_links']) for spore in spores_data)
+            total_out_links = sum(len(spore['out_links']) for spore in spores_data)
+            print(f"🔍 DEBUG: Заполнено входящих связей: {total_in_links}")
+            print(f"🔍 DEBUG: Заполнено исходящих связей: {total_out_links}")
+            
+            # Показываем примеры связей для первых спор
+            for i, spore_data in enumerate(spores_data[:3]):
+                if spore_data['in_links'] or spore_data['out_links']:
+                    print(f"   📍 Спора {i+1}: входящих={len(spore_data['in_links'])}, исходящих={len(spore_data['out_links'])}")
             
             # 📝 ФОРМИРУЕМ ИТОГОВУЮ СТРУКТУРУ JSON
             export_data = {
@@ -1542,6 +1605,11 @@ class BufferMergeManager:
             print(f"\n💾 Реальный граф экспортирован: {save_path}")
             print(f"   📊 Спор: {len(spores_data)}, Связей: {len(links_data)}")
             print(f"   🔢 Использованы правильные номера линков")
+            
+            # 📊 Автоматическая генерация CSV матрицы связей
+            csv_path = self._generate_csv_matrix_from_json(export_data, buffer_dir)
+            if csv_path:
+                print(f"   📋 CSV матрица связей: {csv_path}")
             
             return save_path
             
@@ -1748,3 +1816,119 @@ class BufferMergeManager:
     def has_buffer_data(self) -> bool:
         """Проверяет есть ли данные в буферном графе."""
         return bool(getattr(self, 'buffer_positions', {}))
+
+    def _generate_csv_matrix_from_json(self, export_data: dict, buffer_dir: str) -> str:
+        """
+        Генерирует CSV матрицу связей из JSON данных.
+        Автоматически вызывается при экспорте JSON.
+        
+        Args:
+            export_data: Данные экспорта JSON
+            buffer_dir: Директория для сохранения
+            
+        Returns:
+            str: Путь к сохраненному CSV файлу или пустая строка при ошибке
+        """
+        try:
+            spores = export_data.get('spores', [])
+            links = export_data.get('links', [])
+            
+            if not spores:
+                print("⚠️ Нет данных о спорах для CSV матрицы")
+                return ""
+            
+            print(f"📊 Генерация CSV матрицы: {len(spores)} спор, {len(links)} связей")
+            
+            # Получаем все индексы спор и сортируем
+            spore_indices = sorted([spore['index'] for spore in spores])
+            
+            # Создаем словарь связей: (row_index, col_index) -> link_info
+            links_dict = {}
+            
+            for link in links:
+                parent_spore_id = link.get('parent_spore_id')
+                child_spore_id = link.get('child_spore_id')
+                
+                # Находим индексы по spore_id
+                parent_index = None
+                child_index = None
+                
+                for spore in spores:
+                    if spore['spore_id'] == parent_spore_id:
+                        parent_index = spore['index']
+                    if spore['spore_id'] == child_spore_id:
+                        child_index = spore['index']
+                
+                if parent_index is not None and child_index is not None:
+                    control = link.get('control', 0)
+                    dt = link.get('dt', 0)
+                    dt_sign = link.get('dt_sign', 1)
+                    
+                    # Вычисляем итоговое время
+                    dt_value = dt * dt_sign
+                    
+                    # Определяем базовые значения
+                    control_str = f"+{control}" if control >= 0 else str(control)
+                    
+                    if dt_value > 0:
+                        # Прямая связь - транспонируем (child в строки, parent в столбцы)
+                        dt_str = f"+{dt_value}"
+                        link_text = f"{control_str} {dt_str}"
+                        links_dict[(child_index, parent_index)] = link_text
+                        
+                        # Добавляем дублированную связь с обратным направлением
+                        reverse_dt_str = f"{-dt_value:+.3f}"
+                        reverse_link_text = f"{control_str} {reverse_dt_str}"
+                        links_dict[(parent_index, child_index)] = reverse_link_text
+                        
+                    else:
+                        # Обратная связь - транспонируем (child в строки, parent в столбцы)
+                        inverted_dt_value = -dt_value  # Делаем время положительным
+                        dt_str = f"+{inverted_dt_value}"
+                        link_text = f"{control_str} {dt_str}"
+                        links_dict[(child_index, parent_index)] = link_text
+                        
+                        # Добавляем дублированную связь
+                        original_dt_str = f"{dt_value:+.3f}"
+                        reverse_link_text = f"{control_str} {original_dt_str}"
+                        links_dict[(parent_index, child_index)] = reverse_link_text
+            
+            # Создаем заголовки (индексы + 1 для отображения)
+            headers = [''] + [str(idx + 1) for idx in spore_indices]
+            
+            # Создаем матрицу
+            matrix = []
+            for row_idx in spore_indices:
+                row = [str(row_idx + 1)]  # Первый столбец - индекс строки
+                
+                for col_idx in spore_indices:
+                    # Проверяем есть ли связь
+                    link_text = links_dict.get((row_idx, col_idx), '')
+                    row.append(link_text)
+                
+                matrix.append(row)
+            
+            # Сохраняем CSV файл
+            csv_path = os.path.join(buffer_dir, "spores_links_matrix.csv")
+            
+            with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Записываем заголовки
+                writer.writerow(headers)
+                
+                # Записываем строки матрицы
+                writer.writerows(matrix)
+            
+            # Подсчитываем статистику
+            total_links = sum(1 for row in matrix for cell in row[1:] if cell.strip())
+            
+            print(f"📊 CSV: {len(matrix)} x {len(headers)}, связей: {total_links}")
+            
+            return csv_path
+            
+        except Exception as e:
+            print(f"❌ Ошибка генерации CSV матрицы: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""

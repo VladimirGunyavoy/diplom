@@ -1206,13 +1206,19 @@ class SporeManager:
         for i, link in enumerate(self.links):
             # Используем новую систему link_id
             if hasattr(link, 'link_id') and link.link_id:
-                # Извлекаем номер из link_id
-                link_parts = str(link.link_id).split('_')
-                link_number = int(link_parts[1]) if len(link_parts) > 1 and link_parts[1].isdigit() else i + 1
+                # 🔧 ИСПРАВЛЕНИЕ: Используем порядковый номер в массиве вместо парсинга link_id
+                # link_id может содержать spore_id, а не порядковые номера
+                link_number = i + 1  # Простой порядковый номер
                 
-                # Получаем информацию о родительской и дочерней спорах
-                parent_id = getattr(link.parent_spore, 'spore_id', 'unknown') if link.parent_spore else 'unknown'
-                child_id = getattr(link.child_spore, 'spore_id', 'unknown') if link.child_spore else 'unknown'
+                # 🔧 ИСПРАВЛЕНИЕ: Используем визуальные номера (индексы + 1) вместо spore_id
+                # Это обеспечит соответствие с номерами на графике
+                try:
+                    parent_id = self.objects.index(link.parent_spore) + 1 if link.parent_spore else 0
+                    child_id = self.objects.index(link.child_spore) + 1 if link.child_spore else 0
+                except ValueError:
+                    # Fallback к spore_id если споры не найдены в objects
+                    parent_id = getattr(link.parent_spore, 'spore_id', 'unknown') if link.parent_spore else 'unknown'
+                    child_id = getattr(link.child_spore, 'spore_id', 'unknown') if link.child_spore else 'unknown'
                 
                 info = {
                     'found': True,

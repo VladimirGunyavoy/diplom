@@ -992,55 +992,67 @@ class PickerManager:
         out_links = target_spore_data.get('out_links', [])
         if out_links:
             print(f"   📍 ИСХОДЯЩИЕ СВЯЗИ (куда можем попасть):")
-            for i, link in enumerate(out_links):
-                to_spore_id = link['to_spore_id']
-                control = link['control']
-                dt = link['dt']
-                dt_sign = link['dt_sign']
+            for i, link_data in enumerate(out_links):
+                # 🔧 ИСПРАВЛЕНИЕ: out_links теперь содержит словари с полной информацией
+                to_spore_id = link_data.get('to_spore_id')
                 
-                # Находим целевую спору для получения её визуального ID
-                target_visual_id_out = self._find_visual_id_by_spore_id(to_spore_id, graph_data)
+                # Используем данные прямо из link_data вместо поиска в links
+                control = link_data.get('control', 0)
+                dt = link_data.get('dt', 0)
+                dt_sign = link_data.get('dt_sign', 1)
                 
-                # Определяем направление времени
-                if dt_sign > 0:
+                if to_spore_id:
+                    # 🔧 ИСПРАВЛЕНИЕ: to_spore_id уже является визуальным номером
+                    target_visual_id_out = to_spore_id
+                    
+                    # 🔧 ИСПРАВЛЕНИЕ: Исходящая связь - всегда прямое время (положительное)
                     time_direction = "прямое время"
                     time_symbol = "⏩"
-                    dt_str = f"+{dt}"
+                    dt_str = f"+{dt}"  # Всегда положительное время
+                    
+                    control_str = f"+{control}" if control > 0 else str(control)
+                    link_type = "max" if control > 0 else "min"  # Простое определение типа
+                    
+                    print(f"      🎯 Спора {target_visual_id_out}: {link_type}, управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
                 else:
-                    time_direction = "обратное время"
-                    time_symbol = "⏪"
-                    dt_str = f"-{dt}"
-                
-                control_str = f"+{control}" if control > 0 else str(control)
-                
-                print(f"      🎯 Спора {target_visual_id_out}: управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
+                    print(f"      🎯 Спора 0: (детали связи не найдены)")
         
         # Анализируем входящие связи (in_links) - откуда можем прийти
         in_links = target_spore_data.get('in_links', [])
         if in_links:
             print(f"   📍 ВХОДЯЩИЕ СВЯЗИ (откуда можем прийти):")
-            for i, link in enumerate(in_links):
-                from_spore_id = link['from_spore_id']
-                control = link['control']
-                dt = link['dt']
-                dt_sign = link['dt_sign']
+            for i, link_data in enumerate(in_links):
+                # 🔧 ИСПРАВЛЕНИЕ: in_links теперь содержит словари с полной информацией
+                from_spore_id = link_data.get('from_spore_id')
                 
-                # Находим исходную спору для получения её визуального ID
-                source_visual_id = self._find_visual_id_by_spore_id(from_spore_id, graph_data)
+                # Используем данные прямо из link_data вместо поиска в links
+                control = link_data.get('control', 0)
+                dt = link_data.get('dt', 0)
+                dt_sign = link_data.get('dt_sign', 1)
                 
-                # Определяем направление времени для входящих связей
-                if dt_sign > 0:
-                    time_direction = "прямое время"
-                    time_symbol = "⏩"
-                    dt_str = f"+{dt}"
-                else:
+                if from_spore_id:
+                    # 🔧 ИСПРАВЛЕНИЕ: from_spore_id уже является визуальным номером
+                    source_visual_id = from_spore_id
+                    
+                    # 🔧 ИСПРАВЛЕНИЕ: Входящая связь - всегда обратное время (отрицательное)
                     time_direction = "обратное время"
                     time_symbol = "⏪"
-                    dt_str = f"-{dt}"
-                
-                control_str = f"+{control}" if control > 0 else str(control)
-                
-                print(f"      🎯 Спора {source_visual_id}: управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
+                    dt_str = f"-{dt}"  # Всегда отрицательное время
+                    
+                    control_str = f"+{control}" if control > 0 else str(control)
+                    link_type = "max" if control > 0 else "min"  # Простое определение типа
+                    
+                    print(f"      🎯 Спора {source_visual_id}: {link_type}, управление={control_str}, время={dt_str} ({time_direction}) {time_symbol}")
+                else:
+                    print(f"      🎯 Спора 0: (детали связи не найдены)")
+
+    def _find_link_details(self, parent_spore_id: str, child_spore_id: str, graph_data: dict) -> dict:
+        """Находит детальную информацию о связи в массиве links."""
+        for link_data in graph_data.get('links', []):
+            if (link_data.get('parent_spore_id') == parent_spore_id and 
+                link_data.get('child_spore_id') == child_spore_id):
+                return link_data
+        return {}
 
     def _find_visual_id_by_spore_id(self, spore_id: str, graph_data: dict) -> int:
         """Находит визуальный ID споры по её spore_id в JSON данных."""
