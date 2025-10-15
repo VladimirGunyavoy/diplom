@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from ..managers.angel_manager import AngelManager
     from ..visual.cost_visualizer import CostVisualizer
     from ..managers.dt_manager import DTManager
+    from ..visual.controls_window import ControlsWindow
     
 from ..utils.debug_output import always_print
 
@@ -58,6 +59,9 @@ class InputManager:
 
         # 🔄 v16: BufferMergeManager для клавиши M
         self.buffer_merge_manager = BufferMergeManager(distance_threshold=1.5e-3)
+        
+        # 🆕 v16: Окно с инструкциями управления
+        self.controls_window: Optional['ControlsWindow'] = None
 
         print(f"[IM] constructed, dt_manager id={id(self.dt_manager) if self.dt_manager else None}")
 
@@ -92,244 +96,191 @@ class InputManager:
     def _setup_command_system(self):
         """Настраивает централизованную командную систему."""
         self.commands = {
-            # === СПОРЫ ===
-            'f': {
-                'description': 'новая спора от последней (эволюция)',
-                'handler': self._handle_spore_creation,
-                'category': 'споры',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            'g': {
-                'description': 'активировать случайную кандидатскую спору', 
-                'handler': self._handle_candidate_activation,
-                'category': 'споры',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            'v': {
-                'description': 'развить всех кандидатов до завершения',
-                'handler': self._handle_evolve_all,
-                'category': 'споры', 
-                'enabled': lambda: self.spore_manager is not None
-            },
+            # === SPORES === (removed - outdated functionality)
             
             # === ZOOM ===
             'e': {
-                'description': 'приблизить камеру',
+                'description': 'zoom in',
                 'handler': self._handle_zoom_in,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             't': {
-                'description': 'отдалить камеру',
+                'description': 'zoom out',
                 'handler': self._handle_zoom_out,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             'r': {
-                'description': 'сброс всех трансформаций зума',
+                'description': 'reset zoom',
                 'handler': self._handle_zoom_reset,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             '1': {
-                'description': 'уменьшить масштаб спор',
+                'description': 'scale down',
                 'handler': self._handle_spores_scale_down,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             '2': {
-                'description': 'увеличить масштаб спор',
+                'description': 'scale up',
                 'handler': self._handle_spores_scale_up,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             
-            # === КАНДИДАТЫ ===
+            # === CANDIDATES ===
             '5': {
-                'description': 'уменьшить радиус генерации кандидатов',
+                'description': 'candidates -',
                 'handler': self._handle_candidates_radius_down,
-                'category': 'кандидаты',
+                'category': 'candidates',
                 'enabled': lambda: self.spore_manager is not None
             },
             '6': {
-                'description': 'увеличить радиус генерации кандидатов',
+                'description': 'candidates +',
                 'handler': self._handle_candidates_radius_up,
-                'category': 'кандидаты',
+                'category': 'candidates',
                 'enabled': lambda: self.spore_manager is not None
             },
             
-            # === ВИЗУАЛИЗАЦИЯ ===
+            # === VISUAL ===
             'y': {
-                'description': 'включить/выключить ангелов',
+                'description': 'toggle angels',
                 'handler': self._handle_toggle_angels,
-                'category': 'визуализация',
+                'category': 'visual',
                 'enabled': lambda: self.angel_manager is not None
             },
             'u': {
-                'description': 'переключить видимость системы координат',
+                'description': 'toggle frame',
                 'handler': self._handle_toggle_frame,
-                'category': 'визуализация',
+                'category': 'visual',
                 'enabled': lambda: self.scene_setup is not None
             },
             
-            # === DT & ВРЕМЯ ===
+            # === TIME ===
             ',': {
-                'description': 'сбросить dt к исходному значению',
+                'description': 'reset dt (comma)',
                 'handler': self._handle_dt_reset,
-                'category': 'время',
+                'category': 'time',
                 'enabled': lambda: self.dt_manager is not None
             },
             'm': {
-                'description': 'мердж призрачного дерева в буферный граф',
+                'description': 'merge ghost tree',
                 'handler': self._handle_merge_optimization,
-                'category': 'мердж',
+                'category': 'merge',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             'j': {
-                'description': 'показать статистику dt',
+                'description': 'dt stats',
                 'handler': self._handle_dt_stats,
-                'category': 'время',
+                'category': 'time',
                 'enabled': lambda: self.dt_manager is not None
             },
             
-            # === ОПТИМИЗАЦИЯ ===
+            # === OPTIMIZE ===
             'o': {
-                'description': 'запуск оптимизации дерева',
+                'description': 'optimize tree',
                 'handler': self._handle_optimization,
-                'category': 'оптимизация',
+                'category': 'optimize',
                 'enabled': lambda: self.manual_spore_manager is not None and self.dt_manager is not None
             },
             'p': {
-                'description': 'применить оптимальные пары к призрачному дереву',
+                'description': 'apply pairs',
                 'handler': self._handle_optimal_pairs,
-                'category': 'оптимизация',
+                'category': 'optimize',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             
-            # === ДЕРЕВЬЯ ===  
+            # === TREE ===  
             'k': {
-                'description': 'переключить режим создания (споры/деревья)',
+                'description': 'toggle mode',
                 'handler': self._handle_toggle_creation_mode,
-                'category': 'деревья',
+                'category': 'tree',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             '7': {
-                'description': 'глубина дерева = 1',
+                'description': 'depth 1',
                 'handler': self._handle_tree_depth_1,
-                'category': 'деревья',
+                'category': 'tree',
                 'enabled': lambda: self._is_tree_mode()
             },
             '8': {
-                'description': 'глубина дерева = 2',
+                'description': 'depth 2',
                 'handler': self._handle_tree_depth_2,
-                'category': 'деревья',
+                'category': 'tree',
                 'enabled': lambda: self._is_tree_mode()
             },
             
-            # === ПРИЗРАКИ ===
+            # === GHOSTS ===
             ';': {
-                'description': 'включить/выключить призрачную систему', 
+                'description': 'toggle ghosts', 
                 'handler': self._handle_toggle_ghosts,
-                'category': 'призраки',
+                'category': 'ghosts',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             
-            # === ОТЛАДКА ===
-            'h': {
-                'description': 'переключить детальную отладку призрачного дерева',
-                'handler': self._handle_debug_toggle,
-                'category': 'отладка',
-                'enabled': lambda: True
-            },
+            # === DEBUG ===
             # 'l': {
-            #     'description': 'построить график последнего созданного дерева (debug)',
+            #     'description': 'plot tree graph (debug)',
             #     'handler': self._handle_debug_plot_tree,
-            #     'category': 'отладка',
+            #     'category': 'debug',
             #     'enabled': lambda: self.manual_spore_manager is not None
             # },
             'l': {
-                'description': 'показать статистику всех графов связей',
+                'description': 'graph stats',
                 'handler': self._handle_all_graph_stats,
-                'category': 'отладка',
+                'category': 'debug',
                 'enabled': lambda: self.spore_manager is not None
             },
-            'shift+l': {
-                'description': 'очистить все графы связей',  
-                'handler': self._handle_clear_all_graphs,
-                'category': 'отладка',
-                'enabled': lambda: self.manual_spore_manager is not None
-            },
             
-            # === СПРАВКА ===
-            'n': {
-                'description': 'показать справку по всем командам',
-                'handler': self._handle_help,
-                'category': 'справка',
-                'enabled': lambda: True
-            },
-            '[': {
-                'description': 'сбросить dt к исходному значению',
-                'handler': self._handle_dt_reset,
-                'category': 'время',
-                'enabled': lambda: self.dt_manager is not None
-            },
             
-            # === УДАЛЕНИЕ СПОР ===
+            # === DELETE ===
             'ctrl+c': {
-                'description': 'полная очистка всех спор',
+                'description': 'clear all',
                 'handler': self._handle_clear_all,
-                'category': 'удаление',
+                'category': 'delete',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             'z': {
-                'description': 'удалить последнюю группу спор',
+                'description': 'delete last',
                 'handler': self._handle_delete_last_group,
-                'category': 'удаление',
+                'category': 'delete',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             'i': {
-                'description': 'статистика истории групп',
+                'description': 'groups stats',
                 'handler': self._handle_groups_stats,
-                'category': 'статистика',
+                'category': 'stats',
                 'enabled': lambda: self.manual_spore_manager is not None
             },
             # Команды движения камеры (w, a, s, d, space, shift) обрабатываются в first person controller
             
                                             # === КУРСОР ===
                 'alt': {
-                    'description': 'переключить захват курсора (обрабатывается в SceneSetup)',
+                    'description': 'toggle cursor',
                     'handler': self._handle_toggle_cursor,
-                    'category': 'курсор',
+                    'category': 'ui',
                     'enabled': lambda: self.scene_setup is not None
                 },
             
-            # === КОЛЕСИКО МЫШИ ===
+            # === MOUSE WHEEL ===
             'scroll up': {
-                'description': 'приблизить камеру (колесико вверх)',
+                'description': 'zoom in',
                 'handler': self._handle_scroll_up,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             'scroll down': {
-                'description': 'отдалить камеру (колесико вниз)',
+                'description': 'zoom out',
                 'handler': self._handle_scroll_down,
-                'category': 'зум',
+                'category': 'zoom',
                 'enabled': lambda: self.zoom_manager is not None
             },
             
-            # === ДИАГНОСТИКА ID ===
-            'ctrl+i': {
-                'description': 'диагностика системы spore_id/link_id',
-                'handler': self._handle_id_diagnostics,
-                'category': 'диагностика',
-                'enabled': lambda: self.spore_manager is not None
-            },
-            'ctrl+shift+i': {
-                'description': 'проверка консистентности граф vs объекты',
-                'handler': self._handle_graph_consistency,
-                'category': 'диагностика',
-                'enabled': lambda: self.spore_manager is not None
-            }
+            # === DIAGNOSTIC ===
+            
+            # === UI ===
         }
         
         print(f"✅ Командная система настроена: {len(self.commands)} команд")
@@ -741,9 +692,9 @@ class InputManager:
             import traceback
             traceback.print_exc()
 
-    def _handle_help(self):
-        """Обработчик вывода справки (N)."""
-        self.print_commands_help()
+    # def _handle_help(self):  # Убрано - теперь используется окно управления
+    #     """Обработчик вывода справки (N)."""
+    #     self.print_commands_help()
 
     def _handle_optimization(self):
         """Обработчик оптимизации дерева (O)."""
@@ -1069,15 +1020,7 @@ class InputManager:
                 self.commands['ctrl+c']['handler']()
             return
         
-        # Обработка специальных команд диагностики через held_keys
-        elif held_keys['i'] and held_keys['left control'] and self.spore_manager:  # type: ignore
-            if held_keys['left shift']:  # Ctrl+Shift+I
-                if 'ctrl+shift+i' in self.commands:
-                    self.commands['ctrl+shift+i']['handler']()
-            else:  # Ctrl+I
-                if 'ctrl+i' in self.commands:
-                    self.commands['ctrl+i']['handler']()
-            return
+        # Ctrl+I removed - not working properly
         
         # Свободные клавиши
         elif key in ['x']:  # Убираем z, c, i из свободных
@@ -1693,3 +1636,20 @@ class InputManager:
             self.spore_manager.check_graph_id_consistency()
         else:
             print("❌ SporeManager не найден")
+
+    def set_controls_window(self, controls_window: 'ControlsWindow'):
+        """
+        Связывает окно управления с InputManager.
+        
+        Args:
+            controls_window: Экземпляр ControlsWindow для отображения команд
+        """
+        self.controls_window = controls_window
+        print("📋 Controls window linked to InputManager")
+
+    def _handle_toggle_controls(self):
+        """Обработчик переключения видимости окна управления."""
+        if self.controls_window:
+            self.controls_window.toggle_visibility()
+        else:
+            print("⚠️ Controls window not initialized")

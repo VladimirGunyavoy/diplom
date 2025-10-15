@@ -14,9 +14,12 @@ UI Manager - Централизованное управление всеми UI
 """
 
 from ursina import color, destroy, Text
-from typing import Dict, Optional, Callable, Any
+from typing import Dict, Optional, Callable, Any, TYPE_CHECKING
 from ..managers.color_manager import ColorManager
 from .ui_constants import UI_POSITIONS
+
+if TYPE_CHECKING:
+    from .controls_window import ControlsWindow
 
 
 class UIManager:
@@ -28,7 +31,11 @@ class UIManager:
         self.color_manager: ColorManager = color_manager
         
         self.elements: Dict[str, Dict[str, Text]] = {'static': {}, 'dynamic': {}}
+        self.category_visibility: Dict[str, bool] = {'static': True, 'dynamic': True}
         self.update_functions: Dict[str, Callable[[], None]] = {}
+        
+        # Controls Window - отдельный компонент
+        self.controls_window: Optional['ControlsWindow'] = None
         
         self.styles: Dict[str, Dict[str, Any]] = {
             'default': {
@@ -74,6 +81,7 @@ class UIManager:
         # 1. Создаем объект Text без фона
         element = Text(**element_kwargs)
         element.style = style
+        element.enabled = self.category_visibility.get(category, True)
         
         # 2. Включаем фон отдельной командой, как вы и предложили
         if should_have_background:
@@ -118,20 +126,39 @@ class UIManager:
         if category in self.elements:
             for element in self.elements[category].values():
                 element.enabled = True
-    
+
+        if category in self.category_visibility:
+            self.category_visibility[category] = True
+            if category == 'static' and self.controls_window:
+                self.controls_window.set_visibility(True)
+
     def hide_category(self, category: str) -> None:
         if category in self.elements:
             for element in self.elements[category].values():
                 element.enabled = False
-    
+
+        if category in self.category_visibility:
+            self.category_visibility[category] = False
+            if category == 'static' and self.controls_window:
+                self.controls_window.set_visibility(False)
+
     def toggle_category(self, category: str) -> None:
+        new_state = None
+
         if category in self.elements:
             elements = list(self.elements[category].values())
             if elements:
                 new_state = not elements[0].enabled
                 for element in elements:
                     element.enabled = new_state
-    
+        elif category in self.category_visibility:
+            new_state = not self.category_visibility[category]
+
+        if new_state is not None and category in self.category_visibility:
+            self.category_visibility[category] = new_state
+            if category == 'static' and self.controls_window:
+                self.controls_window.set_visibility(new_state)
+
     def register_update_function(self, key: str, func: Callable[[], None]) -> None:
         self.update_functions[key] = func
     
@@ -202,6 +229,52 @@ class UIManager:
         for category, count in stats.items():
             print(f"  {category.capitalize()}: {count}")
         print("------------------------")
+    
+    def create_controls_window(self, input_manager, position: tuple = UI_POSITIONS.CONTROLS_WINDOW, scale: float = 0.7) -> 'ControlsWindow':
+        """
+        Создает и настраивает окно управления.
+        
+        Args:
+            input_manager: InputManager для получения команд
+            position: Позиция окна
+            scale: Масштаб текста
+            
+        Returns:
+            Созданный экземпляр ControlsWindow
+        """
+        from .controls_window import ControlsWindow
+        
+        self.controls_window = ControlsWindow(
+            input_manager=input_manager,
+            color_manager=self.color_manager,
+            position=position,
+            scale=scale
+        )
+        
+        print("📋 Controls window created via UIManager")
+        return self.controls_window
+    
+    def toggle_controls_window(self) -> None:
+        """Переключает видимость окна управления."""
+        if self.controls_window:
+            self.controls_window.toggle_visibility()
+        else:
+            print("⚠️ Controls window not initialized")
+    
+    def show_controls_window(self) -> None:
+        """Показывает окно управления."""
+        if self.controls_window and not self.controls_window.visible:
+            self.controls_window.toggle_visibility()
+    
+    def hide_controls_window(self) -> None:
+        """Скрывает окно управления."""
+        if self.controls_window and self.controls_window.visible:
+            self.controls_window.toggle_visibility()
+    
+    def update_controls_window(self) -> None:
+        """Обновляет содержимое окна управления."""
+        if self.controls_window:
+            self.controls_window.update_commands()
 
 def get_ui_manager(color_manager: Optional[ColorManager] = None) -> UIManager:
     return UIManager(color_manager)

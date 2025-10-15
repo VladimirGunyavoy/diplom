@@ -16,7 +16,7 @@ UI Setup - Готовые настройки интерфейса для дем�
 
 import time
 import numpy as np
-from ursina import Entity, camera, color, Text
+from ursina import Entity, camera, color, Text, destroy
 from .ui_manager import UIManager
 from ..managers.color_manager import ColorManager
 from textwrap import dedent
@@ -101,13 +101,16 @@ class UI_setup:
 
     def setup_demo_ui(self, 
                       data_providers: Optional[Dict[str, Callable[[], Any]]] = None, 
-                      spawn_area: Optional[SpawnAreaLogic] = None) -> Dict[str, Entity]:
+                      spawn_area: Optional[SpawnAreaLogic] = None,
+                      input_manager = None) -> Dict[str, Entity]:
         """
         Настраивает полный UI для демонстрационного скрипта, используя колбэки.
         
         Args:
             data_providers (dict): Словарь с функциями для получения данных.
                                    Пример: {'get_spore_count': lambda: ...}
+            spawn_area: Опциональная область спавна для отображения статуса
+            input_manager: Опциональный InputManager для создания окна управления
         """
         # Сохраняем ссылки на поставщиков данных
         self.data_providers = data_providers if data_providers else {}
@@ -137,13 +140,7 @@ class UI_setup:
                 prefix="Spores: "
             )
             
-            # Добавляем инструкцию "F - new spore" через UI Manager
-            self.ui_elements['spore_instruction'] = self.ui_manager.create_instructions(
-                'spore_control',
-                'F - new spore',
-                position=UI_POSITIONS.SPORE_INSTRUCTION
-            )
-            print("   ✓ Счетчик спор и команда F")
+
         
         # 4.5. Информация о кандидатах
         if 'get_candidate_info' in self.data_providers:
@@ -178,9 +175,8 @@ class UI_setup:
         # 6. Отладочная информация убрана
         print("   ✓ Отладочная информация отключена")
         
-        # 7. Игровые команды
-        self._create_game_commands()
-        print("   ✓ Игровые команды")
+        # 7. Игровые команды убраны (теперь используется ControlsWindow)
+        print("   ✓ Игровые команды убраны (используется ControlsWindow)")
         
         # 8. Демонстрационные команды убраны
         print("   ✓ Демонстрационные команды убраны")
@@ -189,30 +185,30 @@ class UI_setup:
         self._register_update_functions()
         print("   ✓ Функции автообновления")
         
+        # === ОКНО УПРАВЛЕНИЯ ===
+        if input_manager:
+            try:
+                # Создаем окно управления через UIManager
+                self.controls_window = self.ui_manager.create_controls_window(
+                    input_manager=input_manager,
+                    position=UI_POSITIONS.CONTROLS_WINDOW,
+                    scale=0.7
+                )
+                
+                # Связываем с InputManager
+                input_manager.set_controls_window(self.controls_window)
+                
+                print("   ✓ Controls window created via UIManager and linked")
+            except Exception as e:
+                print(f"   ⚠️ Failed to create controls window: {e}")
+                self.controls_window = None
+        else:
+            self.controls_window = None
+        
         print(f"   📊 Всего UI элементов: {self.ui_manager.get_stats()['total']}")
         return self.ui_elements
     
-    def _create_game_commands(self) -> None:
-        """Создает блок с основными игровыми командами"""
-        game_text = """CONTROLS:
-WASD - move camera
-Space/Shift - up/down
-E/T - zoom in/out
-R - reset zoom
-1 - larger spores
-2 - smaller spores
-H - hide/show all UI
-U - hide/show frame
-M - reset dt
-J - show dt stats
-Ctrl+Scroll - 
-change dt"""
-        
-        self.ui_elements['game_commands'] = self.ui_manager.create_instructions(
-            'game_controls',
-            game_text,
-            position=UI_POSITIONS.GAME_CONTROLS
-        )
+    # _create_game_commands() удален - теперь используется ControlsWindow
     
     def _create_scene_ui(self) -> None:
         """Создает основные UI элементы сцены"""
@@ -367,12 +363,15 @@ change dt"""
     # ===== ОБРАБОТЧИК КОМАНД =====
     def handle_demo_commands(self, key: str) -> bool:
         """Обрабатывает команды, специфичные для этого UI."""
-        if key == 'h' and time.time() - self.ui_toggle_timer > 0.2:
-            self.ui_manager.toggle_category('static')
-            self.ui_manager.toggle_category('dynamic')
-            self.ui_toggle_timer = time.time()
-            return True
+        # Команда H убрана - больше нет toggle UI через клавишу
         return False
+    
+    def toggle_controls_window(self) -> None:
+        """Переключает видимость окна управления."""
+        if hasattr(self, 'controls_window') and self.controls_window:
+            self.controls_window.toggle_visibility()
+        else:
+            print("⚠️ Controls window not available")
         
     def update(self) -> None:
         """Вызывает все зарегистрированные функции обновления UI."""

@@ -11,10 +11,9 @@ class UI_POSITIONS:
     # --- Базовые позиции (для монитора main) ---
     _BASE_POSITIONS = {
         # --- Левая сторона экрана ---
-        'GAME_CONTROLS': Vec2(-0.76, 0.46),
-        'SPORE_INSTRUCTION': Vec2(-0.76, 0.19),
-        'SPORE_COUNTER': Vec2(-0.76, 0.13),
-        'DT_INFO': Vec2(-0.76, 0.07),
+        'CONTROLS_WINDOW': Vec2(-0.76 + 0.15, 0.235),
+        'SPORE_COUNTER': Vec2(-0.76, -0.39),
+        'DT_INFO': Vec2(-0.76, -0.45),
         
         # --- Правая сторона экрана ---
         'SPAWN_AREA_INFO': Vec2(0.5, 0.27),
@@ -31,7 +30,8 @@ class UI_POSITIONS:
         'DEFAULT_INSTRUCTIONS': Vec2(-0.75, 0.45),
         'DEFAULT_COUNTER': Vec2(-0.95, 0.4),
         'DEFAULT_INFO_BLOCK': Vec2(-0.95, 0.9),
-        'DEFAULT_DEBUG_INFO': Vec2(0.5, 0.45)
+        'DEFAULT_DEBUG_INFO': Vec2(0.5, 0.45),
+        
     }
     
     _current_monitor = "main"
