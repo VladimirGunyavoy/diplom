@@ -142,7 +142,7 @@ class ValenceManager:
                 'target_spore': child,
                 'target_id': child_id,
                 'path': [spore_id, child_id],
-                'time_direction': time_direction,
+                'time_direction': 'forward',
                 'dt': dt_value,
                 'control': control_value,
                 'raw_direction': 'outgoing',
@@ -166,7 +166,7 @@ class ValenceManager:
                 'target_spore': parent,
                 'target_id': parent_id,
                 'path': [spore_id, parent_id],
-                'time_direction': time_direction,
+                'time_direction': 'backward',
                 'dt': dt_value,
                 'control': control_value,
                 'raw_direction': 'incoming',
@@ -257,6 +257,20 @@ class ValenceManager:
             return dt
 
         return None
+
+    def _extract_dt_for_direction(self, edge_info: Any, direction: str) -> Optional[float]:
+        """Извлекает dt и приводит знак в соответствии с направлением."""
+        raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+        if raw_dt is None:
+            return None
+
+        abs_dt = abs(raw_dt)
+        if direction == 'forward':
+            return abs_dt
+        if direction == 'backward':
+            return -abs_dt
+        return raw_dt
+
 
     def _extract_control_from_edge(self, edge_info: Any) -> Optional[float]:
         """
