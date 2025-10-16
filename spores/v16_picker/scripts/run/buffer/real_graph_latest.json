@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "export_time": "2025-10-17T00:53:14.653733",
+    "export_time": "2025-10-17T01:25:55.102821",
     "version": "RealGraphExporter_v2.0",
     "description": "Реальный граф спор с правильными номерами линков для анализа пикером"
   },
@@ -10,11 +10,11 @@
     "goal_spores": 1,
     "id_manager_stats": {
       "spores_created": 19,
-      "links_created": 3484,
+      "links_created": 2144,
       "angels_created": 0,
       "pillars_created": 0,
-      "ghosts_created": 8604,
-      "total_objects": 12107
+      "ghosts_created": 5954,
+      "total_objects": 8117
     }
   },
   "spores": [
@@ -37,27 +37,27 @@
       "index": 1,
       "spore_id": "3",
       "position": [
-        -0.07598915481961883,
-        1.5809712230121153
+        -0.09838990403336154,
+        1.3723613283520342
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.5850084554324493,
+      "cost": 3.5186425499183898,
       "in_links": [
         {
           "from_spore_id": 4,
           "link_number": 2,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": -1
         },
         {
           "from_spore_id": 6,
           "link_number": 4,
           "control": -2.0,
-          "dt": 0.064,
+          "dt": 0.049,
           "dt_sign": -1
         }
       ],
@@ -66,14 +66,14 @@
           "to_spore_id": 3,
           "link_number": 1,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": 1
         },
         {
           "to_spore_id": 5,
           "link_number": 3,
           "control": -2.0,
-          "dt": 0.065,
+          "dt": 0.049,
           "dt_sign": 1
         }
       ]
@@ -82,27 +82,27 @@
       "index": 2,
       "spore_id": "5",
       "position": [
-        0.029176983255158495,
-        1.5901389969368565
+        -0.029202714169048443,
+        1.3922577682235753
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.4950903874409422,
+      "cost": 3.4629912112805616,
       "in_links": [
         {
           "from_spore_id": 2,
           "link_number": 1,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": 1
         },
         {
           "from_spore_id": 8,
           "link_number": 6,
           "control": -2.0,
-          "dt": 0.062,
+          "dt": 0.048,
           "dt_sign": -1
         }
       ],
@@ -111,7 +111,7 @@
           "to_spore_id": 7,
           "link_number": 5,
           "control": -2.0,
-          "dt": 0.063,
+          "dt": 0.048,
           "dt_sign": 1
         }
       ]
@@ -120,20 +120,20 @@
       "index": 3,
       "spore_id": "7",
       "position": [
-        -0.17953916036793804,
-        1.5374000541363124
+        -0.1661526523304848,
+        1.3353137704067597
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.659712806533401,
+      "cost": 3.567103071048582,
       "in_links": [
         {
           "from_spore_id": 10,
           "link_number": 8,
           "control": -2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         }
       ],
@@ -142,14 +142,14 @@
           "to_spore_id": 2,
           "link_number": 2,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": -1
         },
         {
           "to_spore_id": 9,
           "link_number": 7,
           "control": -2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ]
@@ -158,27 +158,27 @@
       "index": 4,
       "spore_id": "9",
       "position": [
-        0.02458027595444412,
-        1.5265406197204385
+        -0.03194734114579095,
+        1.343570909124016
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.4707457244014597,
+      "cost": 3.4462330222274624,
       "in_links": [
         {
           "from_spore_id": 2,
           "link_number": 3,
           "control": -2.0,
-          "dt": 0.065,
+          "dt": 0.049,
           "dt_sign": 1
         },
         {
           "from_spore_id": 9,
           "link_number": 10,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         }
       ],
@@ -187,7 +187,7 @@
           "to_spore_id": 7,
           "link_number": 9,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ]
@@ -196,20 +196,20 @@
       "index": 5,
       "spore_id": "11",
       "position": [
-        -0.17810247915916658,
-        1.6038828692707898
+        -0.16587266861351757,
+        1.3854757963018138
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.686841251603632,
+      "cost": 3.5859242164901084,
       "in_links": [
         {
           "from_spore_id": 10,
           "link_number": 12,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         }
       ],
@@ -218,14 +218,14 @@
           "to_spore_id": 2,
           "link_number": 4,
           "control": -2.0,
-          "dt": 0.064,
+          "dt": 0.049,
           "dt_sign": -1
         },
         {
           "to_spore_id": 8,
           "link_number": 11,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ]
@@ -234,27 +234,27 @@
       "index": 6,
       "spore_id": "13",
       "position": [
-        0.126497291316811,
-        1.5054812572929468
+        0.03639504202673461,
+        1.347774132849746
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.3700530942427123,
+      "cost": 3.3850747170781137,
       "in_links": [
         {
           "from_spore_id": 3,
           "link_number": 5,
           "control": -2.0,
-          "dt": 0.063,
+          "dt": 0.048,
           "dt_sign": 1
         },
         {
           "from_spore_id": 5,
           "link_number": 9,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ],
@@ -264,20 +264,20 @@
       "index": 7,
       "spore_id": "15",
       "position": [
-        -0.07159646706149321,
-        1.6450909340011066
+        -0.09659009808649427,
+        1.4216772489635556
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.6098326073711164,
+      "cost": 3.536520401166101,
       "in_links": [
         {
           "from_spore_id": 6,
           "link_number": 11,
           "control": 2.0,
-          "dt": 0.066,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ],
@@ -286,7 +286,7 @@
           "to_spore_id": 3,
           "link_number": 6,
           "control": -2.0,
-          "dt": 0.062,
+          "dt": 0.048,
           "dt_sign": -1
         }
       ]
@@ -295,20 +295,20 @@
       "index": 8,
       "spore_id": "17",
       "position": [
-        -0.07777669041596569,
-        1.5154206836839366
+        -0.09963241317650379,
+        1.3228351494381718
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.558204847376966,
+      "cost": 3.50077356655166,
       "in_links": [
         {
           "from_spore_id": 4,
           "link_number": 7,
           "control": -2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": 1
         }
       ],
@@ -317,7 +317,7 @@
           "to_spore_id": 5,
           "link_number": 10,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         }
       ]
@@ -326,28 +326,28 @@
       "index": 9,
       "spore_id": "19",
       "position": [
-        -0.28167852018056844,
-        1.5267184329577204
+        -0.23289581488019723,
+        1.3317328012515137
       ],
       "type": "normal",
       "is_goal": false,
       "is_alive": true,
       "dt": 0.1,
-      "cost": 3.748284478903934,
+      "cost": 3.627763328658151,
       "in_links": [],
       "out_links": [
         {
           "to_spore_id": 4,
           "link_number": 8,
           "control": -2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         },
         {
           "to_spore_id": 6,
           "link_number": 12,
           "control": 2.0,
-          "dt": 0.067,
+          "dt": 0.05,
           "dt_sign": -1
         }
       ]
@@ -360,9 +360,9 @@
       "parent_spore_id": 2,
       "child_spore_id": 3,
       "control": 2.0,
-      "dt": 0.066,
+      "dt": 0.05,
       "dt_sign": 1,
-      "raw_dt": 0.066,
+      "raw_dt": 0.05,
       "direction": "forward",
       "color": [
         1.0,
@@ -376,9 +376,9 @@
       "parent_spore_id": 4,
       "child_spore_id": 2,
       "control": 2.0,
-      "dt": 0.066,
+      "dt": 0.05,
       "dt_sign": -1,
-      "raw_dt": -0.066,
+      "raw_dt": -0.05,
       "direction": "backward",
       "color": [
         1.0,
@@ -392,9 +392,9 @@
       "parent_spore_id": 2,
       "child_spore_id": 5,
       "control": -2.0,
-      "dt": 0.065,
+      "dt": 0.049,
       "dt_sign": 1,
-      "raw_dt": 0.065,
+      "raw_dt": 0.049,
       "direction": "forward",
       "color": [
         0.4000000059604645,
@@ -408,9 +408,9 @@
       "parent_spore_id": 6,
       "child_spore_id": 2,
       "control": -2.0,
-      "dt": 0.064,
+      "dt": 0.049,
       "dt_sign": -1,
-      "raw_dt": -0.064,
+      "raw_dt": -0.049,
       "direction": "backward",
       "color": [
         0.4000000059604645,
@@ -424,9 +424,9 @@
       "parent_spore_id": 3,
       "child_spore_id": 7,
       "control": -2.0,
-      "dt": 0.063,
+      "dt": 0.048,
       "dt_sign": 1,
-      "raw_dt": 0.063,
+      "raw_dt": 0.048,
       "direction": "forward",
       "color": [
         0.4000000059604645,
@@ -440,9 +440,9 @@
       "parent_spore_id": 8,
       "child_spore_id": 3,
       "control": -2.0,
-      "dt": 0.062,
+      "dt": 0.048,
       "dt_sign": -1,
-      "raw_dt": -0.062,
+      "raw_dt": -0.048,
       "direction": "backward",
       "color": [
         0.4000000059604645,
@@ -456,9 +456,9 @@
       "parent_spore_id": 4,
       "child_spore_id": 9,
       "control": -2.0,
-      "dt": 0.067,
+      "dt": 0.05,
       "dt_sign": 1,
-      "raw_dt": 0.067,
+      "raw_dt": 0.05,
       "direction": "forward",
       "color": [
         0.4000000059604645,
@@ -472,9 +472,9 @@
       "parent_spore_id": 10,
       "child_spore_id": 4,
       "control": -2.0,
-      "dt": 0.067,
+      "dt": 0.05,
       "dt_sign": -1,
-      "raw_dt": -0.067,
+      "raw_dt": -0.05,
       "direction": "backward",
       "color": [
         0.4000000059604645,
@@ -488,9 +488,9 @@
       "parent_spore_id": 5,
       "child_spore_id": 7,
       "control": 2.0,
-      "dt": 0.067,
+      "dt": 0.05,
       "dt_sign": 1,
-      "raw_dt": 0.067,
+      "raw_dt": 0.05,
       "direction": "forward",
       "color": [
         1.0,
@@ -504,9 +504,9 @@
       "parent_spore_id": 9,
       "child_spore_id": 5,
       "control": 2.0,
-      "dt": 0.067,
+      "dt": 0.05,
       "dt_sign": -1,
-      "raw_dt": -0.067,
+      "raw_dt": -0.05,
       "direction": "backward",
       "color": [
         1.0,
@@ -520,9 +520,9 @@
       "parent_spore_id": 6,
       "child_spore_id": 8,
       "control": 2.0,
-      "dt": 0.066,
+      "dt": 0.05,
       "dt_sign": 1,
-      "raw_dt": 0.066,
+      "raw_dt": 0.05,
       "direction": "forward",
       "color": [
         1.0,
@@ -536,9 +536,9 @@
       "parent_spore_id": 10,
       "child_spore_id": 6,
       "control": 2.0,
-      "dt": 0.067,
+      "dt": 0.05,
       "dt_sign": -1,
-      "raw_dt": -0.067,
+      "raw_dt": -0.05,
       "direction": "backward",
       "color": [
         1.0,
