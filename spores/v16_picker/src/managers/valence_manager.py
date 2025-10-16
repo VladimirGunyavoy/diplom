@@ -134,10 +134,9 @@ class ValenceManager:
             child_id = self.spore_manager.graph._get_spore_id(child)
             edge_info = self.spore_manager.graph.get_edge_info(spore_id, child_id)
 
-            dt_value = self._extract_dt_for_direction(edge_info, 'forward')
-            control_value = self._convert_to_float(
-                self._extract_control_from_edge(edge_info)
-            )
+            dt_value = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            control_value = self._convert_to_float(self._extract_control_from_edge(edge_info))
+            time_direction = self._determine_time_direction(dt_value)
 
             neighbor_info = {
                 'target_spore': child,
@@ -157,10 +156,12 @@ class ValenceManager:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
             edge_info = self.spore_manager.graph.get_edge_info(parent_id, spore_id)
 
-            dt_value = self._extract_dt_for_direction(edge_info, 'backward')
-            control_value = self._convert_to_float(
-                self._extract_control_from_edge(edge_info)
-            )
+            raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            raw_control = self._convert_to_float(self._extract_control_from_edge(edge_info))
+
+            dt_value = -raw_dt if raw_dt is not None else None
+            control_value = -raw_control if raw_control is not None else None
+            time_direction = self._determine_time_direction(dt_value)
 
             neighbor_info = {
                 'target_spore': parent,
@@ -214,19 +215,11 @@ class ValenceManager:
                 first_dt = direct_neighbor.get('dt')
                 second_dt = neighbor.get('dt')
 
-                dt_sequence = []
-                if first_dt is not None:
-                    dt_sequence.append(first_dt)
-                if second_dt is not None:
-                    dt_sequence.append(second_dt)
-                dt_total = sum(dt_sequence) if dt_sequence else None
-
                 neighbor_info = {
                     'target_spore': neighbor.get('target_spore'),
                     'target_id': target_id,
                     'path': path,
                     'intermediate_id': intermediate_id,
-                    'intermediate_spore': direct_neighbor.get('target_spore'),
                     'first_time_direction': direct_neighbor.get('time_direction'),
                     'first_control': first_control,
                     'first_control_type': first_control_type,
@@ -235,8 +228,8 @@ class ValenceManager:
                     'second_control': second_control,
                     'second_control_type': second_control_type,
                     'second_dt': second_dt,
-                    'dt': dt_total,
-                    'dt_sequence': dt_sequence or None,
+                    'dt': (first_dt if first_dt is not None else 0)
+                          + (second_dt if second_dt is not None else 0),
                 }
                 neighbors.append(neighbor_info)
 
@@ -354,15 +347,51 @@ class ValenceManager:
 
         return None
 
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """Преобразует значение (включая numpy) в float."""
+        if value is None:
+            return None
+
+        if isinstance(value, np.ndarray):
+            if value.size == 0:
+                return None
+            value = value.flatten()[0]
+
+        if isinstance(value, (np.floating, np.integer)):
+            return float(value)
+
+        if isinstance(value, (float, int)):
+            return float(value)
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _determine_time_direction(self, dt_value: Optional[float]) -> str:
+        """Определяет направление времени по знаку dt."""
+        if dt_value is None:
+            return 'forward'
+        return 'forward' if dt_value >= 0 else 'backward'
+
+    def _determine_control_type(self, control_value: Optional[float]) -> Optional[str]:
+        """Определяет тип управления по знаку control."""
+        if control_value is None:
+            return None
+
+        if control_value > 0:
+            return 'max'
+        if control_value < 0:
+            return 'min'
+
+        return None
+
     def _occupy_slot_from_neighbor(self, valence: SporeValence, neighbor: Dict[str, Any], distance: int) -> None:
         """Заполняет слот валентности на основе информации о соседе."""
 
         if distance == 1:
             time_dir = neighbor.get('time_direction')
-            control_type = self._determine_control_type(neighbor.get('control'))
-
-            if not control_type or not time_dir:
-                return
+            control_type = self._determine_control_type(neighbor.get('control')) or 'max'
 
             slot = valence.find_slot_by_parameters(
                 slot_type='child',
