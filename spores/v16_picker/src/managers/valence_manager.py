@@ -134,10 +134,9 @@ class ValenceManager:
             child_id = self.spore_manager.graph._get_spore_id(child)
             edge_info = self.spore_manager.graph.get_edge_info(spore_id, child_id)
 
-            dt_value = self._extract_dt_for_direction(edge_info, 'forward')
-            control_value = self._convert_to_float(
-                self._extract_control_from_edge(edge_info)
-            )
+            dt_value = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            control_value = self._convert_to_float(self._extract_control_from_edge(edge_info))
+            time_direction = self._determine_time_direction(dt_value)
 
             neighbor_info = {
                 'target_spore': child,
@@ -156,10 +155,12 @@ class ValenceManager:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
             edge_info = self.spore_manager.graph.get_edge_info(parent_id, spore_id)
 
-            dt_value = self._extract_dt_for_direction(edge_info, 'backward')
-            control_value = self._convert_to_float(
-                self._extract_control_from_edge(edge_info)
-            )
+            raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            raw_control = self._convert_to_float(self._extract_control_from_edge(edge_info))
+
+            dt_value = -raw_dt if raw_dt is not None else None
+            control_value = -raw_control if raw_control is not None else None
+            time_direction = self._determine_time_direction(dt_value)
 
             neighbor_info = {
                 'target_spore': parent,
@@ -217,7 +218,6 @@ class ValenceManager:
                     'target_id': target_id,
                     'path': path,
                     'intermediate_id': intermediate_id,
-                    'intermediate_spore': direct_neighbor.get('target_spore'),
                     'first_time_direction': direct_neighbor.get('time_direction'),
                     'first_control': first_control,
                     'first_control_type': first_control_type,
@@ -341,10 +341,7 @@ class ValenceManager:
 
         if distance == 1:
             time_dir = neighbor.get('time_direction')
-            control_type = self._determine_control_type(neighbor.get('control'))
-
-            if not control_type or not time_dir:
-                return
+            control_type = self._determine_control_type(neighbor.get('control')) or 'max'
 
             slot = valence.find_slot_by_parameters(
                 slot_type='child',
