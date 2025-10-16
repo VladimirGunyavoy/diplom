@@ -63,7 +63,8 @@ class ValenceSlot:
     second_time_direction: Optional[str] = None  # 'forward' или 'backward'
 
     # Данные о занятости
-    dt_value: Optional[float] = None  # Время перехода
+    dt_value: Optional[float] = None  # Суммарное время перехода
+    dt_sequence: Optional[List[float]] = None  # Последовательность dt по шагам
     occupied: bool = False  # Занят ли слот
     neighbor_id: Optional[int] = None  # ID соседа
 
@@ -98,7 +99,13 @@ class ValenceSlot:
     def __repr__(self) -> str:
         """Красивое строковое представление слота"""
         status = "🔒" if self.occupied else "🔓"
-        dt_str = f"dt={self.dt_value:+.6f}" if self.dt_value is not None else "dt=None"
+        if self.dt_sequence:
+            formatted = ", ".join(f"{dt:+.6f}" for dt in self.dt_sequence)
+            dt_str = f"dt=[{formatted}]"
+        elif self.dt_value is not None:
+            dt_str = f"dt={self.dt_value:+.6f}"
+        else:
+            dt_str = "dt=None"
         neighbor_str = f"→{self.neighbor_id}" if self.neighbor_id is not None else ""
         fixed_str = "🔧" if self.is_fixed else ""
         return f"{status}{fixed_str} {self.get_slot_name()}: {dt_str} {neighbor_str}"

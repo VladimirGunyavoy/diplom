@@ -144,6 +144,7 @@ class ValenceManager:
                 'path': [spore_id, child_id],
                 'time_direction': 'forward',
                 'dt': dt_value,
+                'dt_sequence': [dt_value] if dt_value is not None else None,
                 'control': control_value,
                 'raw_direction': 'outgoing',
             }
@@ -168,6 +169,7 @@ class ValenceManager:
                 'path': [spore_id, parent_id],
                 'time_direction': 'backward',
                 'dt': dt_value,
+                'dt_sequence': [dt_value] if dt_value is not None else None,
                 'control': control_value,
                 'raw_direction': 'incoming',
             }
@@ -286,6 +288,7 @@ class ValenceManager:
             return None
 
         link = edge_info.link_object
+        control = None
         if hasattr(link, 'control_value'):
             control = link.control_value
             # Конвертируем numpy в python float
@@ -293,7 +296,54 @@ class ValenceManager:
                 control = float(control.flatten()[0]) if control.size > 0 else None
             elif control is not None:
                 control = float(control)
-            return control
+
+        link_type = getattr(edge_info, 'link_type', '') or ''
+        link_type_lower = link_type.lower() if isinstance(link_type, str) else ''
+        if 'max' in link_type_lower:
+            magnitude = abs(control) if control is not None else 1.0
+            control = magnitude
+        elif 'min' in link_type_lower:
+            magnitude = abs(control) if control is not None else 1.0
+            control = -magnitude
+
+        return control
+
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """Преобразует значение (включая numpy) в float."""
+        if value is None:
+            return None
+
+        if isinstance(value, np.ndarray):
+            if value.size == 0:
+                return None
+            value = value.flatten()[0]
+
+        if isinstance(value, (np.floating, np.integer)):
+            return float(value)
+
+        if isinstance(value, (float, int)):
+            return float(value)
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _determine_time_direction(self, dt_value: Optional[float]) -> str:
+        """Определяет направление времени по знаку dt."""
+        if dt_value is None:
+            return 'forward'
+        return 'forward' if dt_value >= 0 else 'backward'
+
+    def _determine_control_type(self, control_value: Optional[float]) -> Optional[str]:
+        """Определяет тип управления по знаку control."""
+        if control_value is None:
+            return None
+
+        if control_value > 0:
+            return 'max'
+        if control_value < 0:
+            return 'min'
 
         return None
 
@@ -353,6 +403,8 @@ class ValenceManager:
                 slot.occupied = True
                 slot.neighbor_id = neighbor.get('target_id')
                 slot.dt_value = neighbor.get('dt')
+                slot.dt_sequence = (list(neighbor.get('dt_sequence'))
+                                     if neighbor.get('dt_sequence') is not None else None)
                 slot.is_fixed = True  # Существующие связи зафиксированы
 
         elif distance == 2:
@@ -379,6 +431,8 @@ class ValenceManager:
                 slot.occupied = True
                 slot.neighbor_id = neighbor.get('target_id')
                 slot.dt_value = neighbor.get('dt')
+                slot.dt_sequence = (list(neighbor.get('dt_sequence'))
+                                     if neighbor.get('dt_sequence') is not None else None)
                 slot.is_fixed = True  # Существующие связи зафиксированы
 
     def clear_cache(self) -> None:
