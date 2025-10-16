@@ -332,7 +332,8 @@ input_manager = InputManager(
     angel_manager=angel_manager,
     cost_visualizer=cost_surface,
     manual_spore_manager=manual_spore_manager,  # v13_manual: для обработки ЛКМ
-    dt_manager=dt_manager
+    dt_manager=dt_manager,
+    picker_manager=picker_manager  # v16_picker: для анализа споры под курсором
 )
 
 # Включаем режим InputManager для централизованной обработки ввода

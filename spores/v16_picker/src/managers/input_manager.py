@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from ..visual.cost_visualizer import CostVisualizer
     from ..managers.dt_manager import DTManager
     from ..visual.controls_window import ControlsWindow
+    from ..managers.picker_manager import PickerManager
     
 from ..utils.debug_output import always_print
 
@@ -34,17 +35,18 @@ class InputManager:
     Принимает ссылки на все необходимые менеджеры и объекты сцены,
     и делегирует им команды в зависимости от нажатой клавиши.
     """
-    def __init__(self, 
-                 scene_setup: Optional[SceneSetup] = None, 
-                 zoom_manager: Optional[ZoomManager] = None, 
-                 spore_manager: Optional[SporeManager] = None, 
-                 spawn_area_manager: Optional[SpawnAreaManager] = None, 
-                 param_manager: Optional[ParamManager] = None, 
+    def __init__(self,
+                 scene_setup: Optional[SceneSetup] = None,
+                 zoom_manager: Optional[ZoomManager] = None,
+                 spore_manager: Optional[SporeManager] = None,
+                 spawn_area_manager: Optional[SpawnAreaManager] = None,
+                 param_manager: Optional[ParamManager] = None,
                  ui_setup: Optional[UI_setup] = None,
                  angel_manager: Optional['AngelManager'] = None,
                  cost_visualizer: Optional['CostVisualizer'] = None,
                  manual_spore_manager: Optional["ManualSporeManager"] = None,
-                 dt_manager: Optional['DTManager'] = None):
+                 dt_manager: Optional['DTManager'] = None,
+                 picker_manager: Optional['PickerManager'] = None):
         
         self.scene_setup: Optional[SceneSetup] = scene_setup
         self.zoom_manager: Optional[ZoomManager] = zoom_manager
@@ -56,6 +58,7 @@ class InputManager:
         self.cost_visualizer: Optional['CostVisualizer'] = cost_visualizer
         self.manual_spore_manager: Optional["ManualSporeManager"] = manual_spore_manager
         self.dt_manager: Optional['DTManager'] = dt_manager
+        self.picker_manager: Optional['PickerManager'] = picker_manager
 
         # 🔄 v16: BufferMergeManager для клавиши M
         self.buffer_merge_manager = BufferMergeManager(distance_threshold=1.5e-3)
@@ -230,6 +233,12 @@ class InputManager:
             'l': {
                 'description': 'graph stats',
                 'handler': self._handle_all_graph_stats,
+                'category': 'debug',
+                'enabled': lambda: self.spore_manager is not None
+            },
+            'v': {
+                'description': 'valence analysis',
+                'handler': self._handle_valence_analysis,
                 'category': 'debug',
                 'enabled': lambda: self.spore_manager is not None
             },
@@ -1653,3 +1662,52 @@ class InputManager:
             self.controls_window.toggle_visibility()
         else:
             print("⚠️ Controls window not initialized")
+
+    def _handle_valence_analysis(self):
+        """Обработчик анализа валентности (V)."""
+        if not self.spore_manager:
+            print("❌ SporeManager не найден")
+            return
+
+        try:
+            # Импортируем ValenceManager
+            from ..managers.valence_manager import ValenceManager
+
+            # Создаем менеджер валентности
+            valence_manager = ValenceManager(spore_manager=self.spore_manager)
+
+            # Пытаемся получить спору под курсором через PickerManager
+            target_spore_id = None
+
+            if self.picker_manager:
+                closest_spore = self.picker_manager.get_closest_spore()
+                if closest_spore:
+                    target_spore_id = closest_spore['id']
+                    print(f"🎯 Анализ споры под курсором: {target_spore_id}")
+
+            # Если PickerManager недоступен или не нашел спору, используем первую спору в графе
+            if not target_spore_id:
+                all_spore_ids = list(self.spore_manager.graph.nodes.keys())
+
+                if not all_spore_ids:
+                    print("❌ В графе нет спор для анализа")
+                    return
+
+                target_spore_id = all_spore_ids[0]
+                print(f"ℹ️ PickerManager недоступен, анализ первой споры в графе: {target_spore_id}")
+
+            print(f"\n🔬 АНАЛИЗ ВАЛЕНТНОСТИ СПОРЫ {target_spore_id}")
+            print("=" * 60)
+
+            # Выводим детальный отчет для выбранной споры
+            valence_manager.print_valence_report(target_spore_id)
+
+            # Выводим сводку по всему графу
+            print("\n" + "=" * 60)
+            valence_manager.print_graph_valence_summary()
+            print("=" * 60)
+
+        except Exception as e:
+            print(f"❌ Ошибка анализа валентности: {e}")
+            import traceback
+            traceback.print_exc()
