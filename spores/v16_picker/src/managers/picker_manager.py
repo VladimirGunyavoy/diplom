@@ -52,7 +52,8 @@ class PickerManager:
         
         # Список близких спор
         self.close_spores: List[Dict[str, Any]] = []
-        
+        self._neighbor_cache: Dict[str, Dict[int, List[Dict[str, Any]]]] = {}
+
         # Предыдущие координаты look_point для проверки изменений
         self.last_look_point: Optional[Tuple[float, float]] = None
         
@@ -205,6 +206,19 @@ class PickerManager:
                 continue
         
         # ВЫВОДИМ ТОЛЬКО САМУЮ БЛИЗКУЮ СПОРУ
+        neighbor_cache: Dict[str, Dict[int, List[Dict[str, Any]]]] = {}
+        for spore_info in new_close_spores:
+            spore_neighbors: Dict[int, List[Dict[str, Any]]] = {}
+            try:
+                spore_neighbors = self._collect_neighbors_snapshot(spore_info['id'])
+            except Exception as error:
+                if self.verbose_output:
+                    print(f"[PickerManager] failed to collect neighbors for {spore_info['id']}: {error}")
+            neighbor_cache[spore_info['id']] = spore_neighbors
+            spore_info['neighbors'] = spore_neighbors
+
+        self._neighbor_cache = neighbor_cache
+
         if self.verbose_output:
             print(f"\n🎯 LOOK_POINT: ({look_point_x:.4f}, {look_point_z:.4f})")
             
@@ -393,120 +407,407 @@ class PickerManager:
             return []
 
     def _get_direct_neighbors(self, spore_id: str) -> List[Dict[str, Any]]:
-        """
-        Получает прямых соседей споры (расстояние 1) с учетом направления времени.
-        
-        Логика:
-        - Если связь A → B с dt > 0, то из A можно добраться в B с прямым временем
-        - Если связь A → B с dt < 0, то из B можно добраться в A с обратным временем
-        - Для поиска соседей споры X учитываем обе возможности
-        """
-        neighbors = []
-        
-        # Получаем детей (исходящие связи) - можем добраться с прямым временем
+        """Return direct neighbors in both directions with per-step metadata."""
+        neighbors: List[Dict[str, Any]] = []
+
+        # Outgoing edges from this spore (forward direction)
         children = self.spore_manager.graph.get_children(spore_id)
-        
         for child in children:
             child_id = self.spore_manager.graph._get_spore_id(child)
-            edge_info = self.spore_manager.graph.get_edge_info(
-                spore_id, child_id)
+            edge_info = self.spore_manager.graph.get_edge_info(spore_id, child_id)
 
-            # Определяем направление по знаку dt первой связи
-            if edge_info and edge_info.link_object:
-                dt_value = getattr(edge_info.link_object, 'dt_value', 0)
-                time_dir = 'forward' if dt_value >= 0 else 'backward'
-            else:
-                time_dir = 'unknown'
-            
+            dt_value = self._extract_dt(edge_info, 'forward')
             neighbor_info = {
                 'target_spore': child,
                 'target_id': child_id,
                 'path': [spore_id, child_id],
                 'edges': [edge_info] if edge_info else [],
-                'time_direction': time_dir,
+                'time_direction': 'forward',
+                'dt': dt_value,
+                'dt_sequence': [dt_value],
+                'step_time_directions': ['forward'],
                 'can_reach': True
             }
             neighbors.append(neighbor_info)
-        
-        # Получаем родителей (входящие связи) - можем добраться с обратным временем
+
+        # Incoming edges to this spore (backward direction)
         parents = self.spore_manager.graph.get_parents(spore_id)
-        
         for parent in parents:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
-            edge_info = self.spore_manager.graph.get_edge_info(
-                parent_id, spore_id)
+            edge_info = self.spore_manager.graph.get_edge_info(parent_id, spore_id)
 
-            # Определяем направление по знаку dt первой связи
-            if edge_info and edge_info.link_object:
-                dt_value = getattr(edge_info.link_object, 'dt_value', 0)
-                time_dir = 'forward' if dt_value >= 0 else 'backward'
-            else:
-                time_dir = 'unknown'
-            
+            dt_value = self._extract_dt(edge_info, 'backward')
             neighbor_info = {
                 'target_spore': parent,
                 'target_id': parent_id,
-                'path': [parent_id, spore_id],
+                'path': [spore_id, parent_id],
                 'edges': [edge_info] if edge_info else [],
-                'time_direction': time_dir,
+                'time_direction': 'backward',
+                'dt': dt_value,
+                'dt_sequence': [dt_value],
+                'step_time_directions': ['backward'],
                 'can_reach': True
             }
             neighbors.append(neighbor_info)
-        
+
+        return neighbors
+
+    def _collect_neighbors_snapshot(
+            self,
+            spore_id: str,
+            max_distance: int = 2
+    ) -> Dict[int, List[Dict[str, Any]]]:
+        """
+        Collect neighbors around a spore for quick access by distance.
+        """
+        snapshot: Dict[int, List[Dict[str, Any]]] = {}
+
+        if not self.spore_manager or not getattr(self.spore_manager, 'graph', None):
+            return snapshot
+
+        for distance in range(1, max_distance + 1):
+            raw_neighbors = self._get_neighbors_at_distance(spore_id, distance)
+            if not raw_neighbors:
+                continue
+
+            serialized_neighbors = []
+            seen_signatures = set()
+
+            for neighbor in raw_neighbors:
+                serialized = self._serialize_neighbor_info(distance, neighbor)
+                signature = (
+                    serialized.get('visual_id'),
+                    tuple(serialized.get('path', [])),
+                    tuple(serialized.get('dt_values', [])),
+                    tuple(serialized.get('control_values', [])),
+                    tuple(serialized.get('step_time_directions', []))
+                )
+                if signature in seen_signatures:
+                    continue
+                seen_signatures.add(signature)
+                serialized_neighbors.append(serialized)
+
+            if serialized_neighbors:
+                snapshot[distance] = serialized_neighbors
+
+        return snapshot
+
+    def _serialize_neighbor_info(
+            self,
+            distance: int,
+            neighbor_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Convert raw neighbor info into a JSON-friendly structure.
+        """
+        target_id = neighbor_info.get('target_id')
+        target_spore = neighbor_info.get('target_spore')
+        position: Optional[Tuple[float, float]] = None
+
+        if target_spore is not None:
+            visual_id = self._get_visual_spore_id(target_spore)
+            try:
+                pos = target_spore.calc_2d_pos()
+                position = (float(pos[0]), float(pos[1]))
+            except Exception:
+                position = None
+        else:
+            visual_id = str(target_id) if target_id is not None else None
+
+        raw_path = list(neighbor_info.get('path', []))
+
+        serialized: Dict[str, Any] = {
+            'distance': distance,
+            'target_id': target_id,
+            'visual_id': visual_id,
+            'position': position,
+            'raw_path': raw_path,
+            'path': self._convert_path_to_visual_ids(raw_path),
+            'time_direction': neighbor_info.get('time_direction', 'unknown'),
+            'can_reach': bool(neighbor_info.get('can_reach', False)),
+            'dt_values': [],
+            'control_values': []
+        }
+
+        if distance == 2:
+            serialized['intermediate_id'] = neighbor_info.get('intermediate_id')
+            intermediate_spore = neighbor_info.get('intermediate_spore')
+
+            if intermediate_spore is not None:
+                serialized['intermediate_visual_id'] = self._get_visual_spore_id(intermediate_spore)
+                try:
+                    pos = intermediate_spore.calc_2d_pos()
+                    serialized['intermediate_position'] = (float(pos[0]), float(pos[1]))
+                except Exception:
+                    serialized['intermediate_position'] = None
+            else:
+                serialized['intermediate_visual_id'] = (
+                    str(serialized['intermediate_id'])
+                    if serialized.get('intermediate_id') is not None
+                    else None
+                )
+                serialized['intermediate_position'] = None
+
+        step_time_dirs = list(neighbor_info.get('step_time_directions') or [])
+        if not step_time_dirs:
+            step_dir = neighbor_info.get('time_direction')
+            if step_dir:
+                step_time_dirs = [step_dir]
+
+        step_dt_sequence = neighbor_info.get('dt_sequence')
+        if step_dt_sequence is not None:
+            step_dt_sequence = list(step_dt_sequence)
+        else:
+            dt_single = neighbor_info.get('dt')
+            step_dt_sequence = [dt_single] if dt_single is not None else []
+
+        num_steps = max(len(raw_path) - 1, len(step_time_dirs), len(step_dt_sequence))
+
+        while len(step_time_dirs) < num_steps:
+            step_time_dirs.append('unknown')
+        while len(step_dt_sequence) < num_steps:
+            step_dt_sequence.append(None)
+
+        edges = neighbor_info.get('edges') or []
+        dt_values: List[Optional[float]] = []
+        control_values: List[Optional[float]] = []
+
+        for idx in range(num_steps):
+            edge = edges[idx] if idx < len(edges) else None
+            step_dir = step_time_dirs[idx]
+            dt_override = step_dt_sequence[idx]
+
+            control_value = None
+            dt_candidate = None
+            if edge and getattr(edge, 'link_object', None):
+                link = edge.link_object
+                dt_candidate = self._to_serializable_number(getattr(link, 'dt_value', None))
+                control_value = getattr(link, 'control_value', None)
+
+            if dt_candidate is None:
+                dt_candidate = self._to_serializable_number(dt_override)
+
+            dt_value = self._adjust_dt_sign(dt_candidate, step_dir)
+
+            dt_values.append(self._to_serializable_number(dt_value))
+            control_values.append(self._to_serializable_number(control_value))
+
+        serialized['dt_values'] = dt_values
+        serialized['control_values'] = control_values
+        serialized['step_time_directions'] = step_time_dirs[:num_steps]
+        serialized['step_dt_values'] = dt_values.copy()
+
+        return serialized
+
+    def _to_serializable_number(self, value: Any) -> Optional[float]:
+        """
+        Convert numpy-based values to plain Python numbers when possible.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, np.ndarray):
+            if value.size == 0:
+                return None
+            value = value.flatten()[0]
+
+        if isinstance(value, (np.floating, np.integer)):
+            return float(value)
+
+        if isinstance(value, (float, int)):
+            return float(value)
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+    
+    def _combine_time_directions(self, first: str, second: str) -> str:
+        """Combine directions for two-step routes."""
+        if first == 'unknown' or second == 'unknown':
+            return 'unknown'
+        if first == second:
+            return first
+        return 'mixed'
+
+    def _extract_dt(self, edge_info: Any, direction: str) -> Optional[float]:
+        """Extract dt value from edge and align sign with expected direction."""
+        if not edge_info or not getattr(edge_info, 'link_object', None):
+            return None
+
+        raw_dt = getattr(edge_info.link_object, 'dt_value', None)
+        dt_serializable = self._to_serializable_number(raw_dt)
+        return self._adjust_dt_sign(dt_serializable, direction)
+
+    def _adjust_dt_sign(self, dt_value: Any, direction: str) -> Optional[float]:
+        """Adjust dt sign so that forward steps are positive and backward negative."""
+        if dt_value is None:
+            return None
+        try:
+            dt_float = float(dt_value)
+        except (TypeError, ValueError):
+            return dt_value
+
+        if direction == 'forward':
+            return abs(dt_float)
+        if direction == 'backward':
+            return -abs(dt_float)
+        return dt_float
+
+    def _format_step_description(self, dt: Optional[float], direction: str) -> str:
+        """Format a single step description with dt and direction label."""
+        dt_str = self._format_signed_number(dt)
+        direction_str = self._format_time_direction(direction)
+        return f"{dt_str} ({direction_str})"
+
+    def _convert_path_to_visual_ids(self, path: List[Any]) -> List[str]:
+        """Convert internal graph node ids to visual ids used in UI."""
+        if not path:
+            return []
+
+        visual_path: List[str] = []
+        nodes_map = getattr(self.spore_manager.graph, 'nodes', {})
+
+        for node_id in path:
+            spore_obj = nodes_map.get(node_id)
+            if spore_obj is not None:
+                visual_path.append(self._get_visual_spore_id(spore_obj))
+            else:
+                visual_path.append(str(node_id))
+
+        return visual_path
+
+    def _format_signed_number(self, value: Optional[float], precision: int = 3) -> str:
+        """Render numbers with an explicit sign for console output."""
+        if value is None:
+            return '—'
+        try:
+            return f"{float(value):+.{precision}f}"
+        except (TypeError, ValueError):
+            return str(value)
+    
+    def _format_time_direction(self, direction: str) -> str:
+        """
+        Return human-readable text for time direction.
+        """
+        mapping = {
+            'forward': "прямое время ⏩",
+            'backward': "обратное время ⏪",
+            'mixed': "смешанное время 🔁",
+            'unknown': "время неизвестно ❓"
+        }
+        return mapping.get(direction, mapping['unknown'])
+
+    def _print_neighbor_cache_summary(
+            self,
+            visual_id: str,
+            neighbors_snapshot: Optional[Dict[int, List[Dict[str, Any]]]]
+    ) -> None:
+        """Print cached neighbors grouped by graph distance."""
+        print(f"\n🧭 СОСЕДИ СПОРЫ {visual_id}:")
+
+        if not neighbors_snapshot:
+            print('   • Соседи не найдены.')
+            return
+
+        for distance in sorted(neighbors_snapshot.keys()):
+            neighbors = neighbors_snapshot.get(distance, [])
+            header = 'На расстоянии 1' if distance == 1 else f'На расстоянии {distance}'
+            print(f"   • {header} ({len(neighbors)}):")
+
+            for neighbor in neighbors:
+                target_visual = neighbor.get('visual_id') or neighbor.get('target_id') or '?'
+                position = neighbor.get('position')
+                if isinstance(position, (tuple, list)) and len(position) == 2:
+                    pos_str = f"({position[0]:.4f}, {position[1]:.4f})"
+                else:
+                    pos_str = '(нет позиции)'
+
+                step_dt_values = neighbor.get('step_dt_values', neighbor.get('dt_values', []))
+                step_dirs = neighbor.get('step_time_directions', [])
+
+                dt_str = ', '.join(
+                    self._format_signed_number(val) if val is not None else '—'
+                    for val in step_dt_values
+                ) or '—'
+
+                control_values = neighbor.get('control_values') or []
+                control_str = ', '.join(
+                    self._format_signed_number(val, precision=2) if val is not None else 'None'
+                    for val in control_values
+                ) or '—'
+
+                path = neighbor.get('path') or []
+                path_str = '→'.join(str(node) for node in path) if path else '—'
+
+                step_parts = []
+                for idx, dt_val in enumerate(step_dt_values):
+                    direction_for_step = step_dirs[idx] if idx < len(step_dirs) else 'unknown'
+                    step_parts.append(self._format_step_description(dt_val, direction_for_step))
+                steps_str = '; '.join(step_parts) if step_parts else '—'
+
+                time_direction = neighbor.get('time_direction', 'unknown')
+                time_summary = self._format_time_direction(time_direction)
+
+                extra = ''
+                if distance == 2:
+                    intermediate = neighbor.get('intermediate_visual_id') or neighbor.get('intermediate_id')
+                    if intermediate:
+                        extra = f', через {intermediate}'
+
+                print(
+                    f"      🎯 Спора {target_visual} {pos_str} | dt: {dt_str} | "
+                    f"u: {control_str} | путь: {path_str} | шаги: {steps_str} | итог: {time_summary}{extra}"
+                )
+
         return neighbors
 
     def _get_neighbors_at_distance_2(self, spore_id: str) -> List[Dict[str, Any]]:
-        """
-        Получает соседей споры на расстоянии 2 с учетом направления времени.
-        """
-        neighbors = []
-        visited = {spore_id}  # Избегаем циклов
-        
-        # Получаем прямых соседей
+        """???????? ??????? ????? ?? ?????????? 2 ? ?????? ??????????? ???????."""
+        neighbors: List[Dict[str, Any]] = []
+
         direct_neighbors = self._get_direct_neighbors(spore_id)
-        
+
         for direct_neighbor in direct_neighbors:
             intermediate_id = direct_neighbor['target_id']
-            if intermediate_id in visited:
+            if intermediate_id == spore_id:
                 continue
-                
-            visited.add(intermediate_id)
-            
-            # Получаем соседей промежуточной споры
+
             intermediate_neighbors = self._get_direct_neighbors(intermediate_id)
-            
+
             for neighbor in intermediate_neighbors:
                 target_id = neighbor['target_id']
-                if target_id in visited:
+                if target_id in {spore_id, intermediate_id}:
                     continue
-                    
-                # Создаем путь длиной 2
+
                 path = [spore_id, intermediate_id, target_id]
-                edges = direct_neighbor['edges'] + neighbor['edges']
-                
-                # Определяем общее направление времени для маршрута длиной 2
-                # Если оба шага в одном направлении - сохраняем направление
-                # Если в разных - считаем смешанным
+                edges = (direct_neighbor.get('edges') or []) + (neighbor.get('edges') or [])
+
                 first_direction = direct_neighbor.get('time_direction', 'unknown')
                 second_direction = neighbor.get('time_direction', 'unknown')
-                
-                if first_direction == second_direction:
-                    combined_direction = first_direction
-                else:
-                    combined_direction = 'mixed'
-                
+                combined_direction = self._combine_time_directions(first_direction, second_direction)
+
+                step_dirs = list(direct_neighbor.get('step_time_directions') or [first_direction])
+                step_dirs += list(neighbor.get('step_time_directions') or [second_direction])
+
+                direct_dt_seq = direct_neighbor.get('dt_sequence') or [direct_neighbor.get('dt')]
+                neighbor_dt_seq = neighbor.get('dt_sequence') or [neighbor.get('dt')]
+                combined_dt_seq = list(direct_dt_seq) + list(neighbor_dt_seq)
+
                 neighbor_info = {
-                    'target_spore': neighbor['target_spore'],
+                    'target_spore': neighbor.get('target_spore'),
                     'target_id': target_id,
                     'path': path,
                     'edges': edges,
-                    'intermediate_spore': direct_neighbor['target_spore'],
+                    'intermediate_spore': direct_neighbor.get('target_spore'),
                     'intermediate_id': intermediate_id,
                     'time_direction': combined_direction,
+                    'step_time_directions': step_dirs,
+                    'dt_sequence': combined_dt_seq,
                     'can_reach': True
                 }
                 neighbors.append(neighbor_info)
-        
+
         return neighbors
 
     def _print_neighbor_info(self, neighbor_info: Dict[str, Any], distance: int) -> None:
@@ -969,18 +1270,45 @@ class PickerManager:
         
         target_spore = spore_info['spore']
         target_visual_id = self._get_visual_spore_id(target_spore)
-        
-        # Находим спору в JSON данных по индексу
+
+        graph_spore_id = self.spore_manager.graph._get_spore_id(target_spore)
+
+        neighbors_snapshot = spore_info.get('neighbors')
+        if not neighbors_snapshot:
+            neighbors_snapshot = self._collect_neighbors_snapshot(graph_spore_id)
+            if neighbors_snapshot is not None:
+                spore_info['neighbors'] = neighbors_snapshot
+
+        self._print_neighbor_cache_summary(target_visual_id, neighbors_snapshot)
+
+        json_spore_id = getattr(target_spore, 'spore_id', None)
         target_spore_data = None
-        for spore_data in graph_data.get('spores', []):
-            if spore_data['index'] == int(target_visual_id) - 1:
-                target_spore_data = spore_data
-                break
-        
+
+        if json_spore_id is not None:
+            for spore_data in graph_data.get('spores', []):
+                if spore_data.get('spore_id') == json_spore_id:
+                    target_spore_data = spore_data
+                    break
+
         if not target_spore_data:
-            print(f"❌ Спора {target_visual_id} не найдена в JSON данных")
+            idx_guess = None
+            if json_spore_id is None:
+                try:
+                    idx_guess = int(target_visual_id) - 1
+                except ValueError:
+                    idx_guess = None
+            if idx_guess is not None:
+                spores_list = graph_data.get('spores', [])
+                if 0 <= idx_guess < len(spores_list):
+                    target_spore_data = spores_list[idx_guess]
+
+        if not target_spore_data:
+            msg = f"❌ Спора {target_visual_id} не найдена в JSON данных"
+            if json_spore_id is not None:
+                msg += f" (ожидаемый spore_id={json_spore_id})"
+            print(msg)
             return
-        
+
         print(f"\n🔗 СОСЕДИ СПОРЫ {target_visual_id} (из JSON):")
         
         # 🔧 ОТЛАДОЧНАЯ ИНФОРМАЦИЯ О JSON
