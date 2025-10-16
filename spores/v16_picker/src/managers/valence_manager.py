@@ -8,7 +8,7 @@ Valence Manager - Менеджер для анализа валентности 
 
 from typing import Dict, Optional, List, Any
 import numpy as np
-from ..logic.valence import ValenceSlot, SporeValence
+from ..logic.valence import SporeValence
 
 
 class ValenceManager:
@@ -124,15 +124,8 @@ class ValenceManager:
             return []
 
     def _get_direct_neighbors(self, spore_id: str) -> List[Dict[str, Any]]:
-        """
-        Получает прямых соседей (детей и родителей).
+        """Получает прямых соседей (детей и родителей)."""
 
-        Args:
-            spore_id: ID споры
-
-        Returns:
-            Список соседей с метаданными
-        """
         neighbors: List[Dict[str, Any]] = []
 
         # Исходящие связи (дети)
@@ -141,109 +134,100 @@ class ValenceManager:
             child_id = self.spore_manager.graph._get_spore_id(child)
             edge_info = self.spore_manager.graph.get_edge_info(spore_id, child_id)
 
-            dt_value = self._extract_dt_from_edge(edge_info)
-            control_value = self._extract_control_from_edge(edge_info)
-
-            # Направление времени определяется знаком dt:
-            # dt > 0 → forward (прямое время)
-            # dt < 0 → backward (обратное время)
-            time_direction = 'forward' if dt_value and dt_value > 0 else 'backward'
+            dt_value = self._extract_dt_for_direction(edge_info, 'forward')
+            control_value = self._convert_to_float(
+                self._extract_control_from_edge(edge_info)
+            )
 
             neighbor_info = {
                 'target_spore': child,
                 'target_id': child_id,
                 'path': [spore_id, child_id],
-                'time_direction': time_direction,
+                'time_direction': 'forward',
                 'dt': dt_value,
                 'control': control_value,
+                'raw_direction': 'outgoing',
             }
             neighbors.append(neighbor_info)
 
-        # Входящие связи (родители)
+        # Входящие связи (родители) — двигаемся против направления ребра
         parents = self.spore_manager.graph.get_parents(spore_id)
         for parent in parents:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
             edge_info = self.spore_manager.graph.get_edge_info(parent_id, spore_id)
 
-            dt_value = self._extract_dt_from_edge(edge_info)
-            control_value = self._extract_control_from_edge(edge_info)
-
-            # Направление времени определяется знаком dt:
-            # dt > 0 → forward (прямое время)
-            # dt < 0 → backward (обратное время)
-            time_direction = 'forward' if dt_value and dt_value > 0 else 'backward'
+            dt_value = self._extract_dt_for_direction(edge_info, 'backward')
+            control_value = self._convert_to_float(
+                self._extract_control_from_edge(edge_info)
+            )
 
             neighbor_info = {
                 'target_spore': parent,
                 'target_id': parent_id,
                 'path': [spore_id, parent_id],
-                'time_direction': time_direction,
+                'time_direction': 'backward',
                 'dt': dt_value,
                 'control': control_value,
+                'raw_direction': 'incoming',
             }
             neighbors.append(neighbor_info)
 
         return neighbors
 
     def _get_neighbors_at_distance_2(self, spore_id: str) -> List[Dict[str, Any]]:
-        """
-        Получает соседей на расстоянии 2 (внуки).
+        """Получает соседей на расстоянии 2 (внуки)."""
 
-        Args:
-            spore_id: ID споры
-
-        Returns:
-            Список внуков с метаданными о пути
-        """
         neighbors: List[Dict[str, Any]] = []
 
-        # Получаем прямых соседей
         direct_neighbors = self._get_direct_neighbors(spore_id)
 
-        # Для каждого прямого соседа получаем его соседей
         for direct_neighbor in direct_neighbors:
             intermediate_id = direct_neighbor['target_id']
 
-            # Избегаем циклов
             if intermediate_id == spore_id:
                 continue
 
-            # Получаем соседей промежуточной споры
             intermediate_neighbors = self._get_direct_neighbors(intermediate_id)
 
             for neighbor in intermediate_neighbors:
                 target_id = neighbor['target_id']
 
-                # Избегаем возврата к исходной споре и промежуточной
                 if target_id in {spore_id, intermediate_id}:
                     continue
 
-                # Формируем информацию о маршруте из 2 шагов
+                first_control = direct_neighbor.get('control')
+                second_control = neighbor.get('control')
+
+                first_control_type = self._determine_control_type(first_control)
+                second_control_type = self._determine_control_type(second_control)
+
+                if not first_control_type or not second_control_type:
+                    continue
+
+                if first_control_type == second_control_type:
+                    continue
+
                 path = [spore_id, intermediate_id, target_id]
 
-                # Первый шаг: от spore_id к intermediate_id
-                first_time_dir = direct_neighbor['time_direction']
-                first_control = direct_neighbor['control']
-                first_dt = direct_neighbor['dt']
-
-                # Второй шаг: от intermediate_id к target_id
-                second_time_dir = neighbor['time_direction']
-                second_control = neighbor['control']
-                second_dt = neighbor['dt']
+                first_dt = direct_neighbor.get('dt')
+                second_dt = neighbor.get('dt')
 
                 neighbor_info = {
-                    'target_spore': neighbor['target_spore'],
+                    'target_spore': neighbor.get('target_spore'),
                     'target_id': target_id,
                     'path': path,
                     'intermediate_id': intermediate_id,
-                    'first_time_direction': first_time_dir,
+                    'intermediate_spore': direct_neighbor.get('target_spore'),
+                    'first_time_direction': direct_neighbor.get('time_direction'),
                     'first_control': first_control,
+                    'first_control_type': first_control_type,
                     'first_dt': first_dt,
-                    'second_time_direction': second_time_dir,
+                    'second_time_direction': neighbor.get('time_direction'),
                     'second_control': second_control,
+                    'second_control_type': second_control_type,
                     'second_dt': second_dt,
-                    # Общий dt - сумма двух шагов
-                    'dt': (first_dt if first_dt is not None else 0) + (second_dt if second_dt is not None else 0),
+                    'dt': (first_dt if first_dt is not None else 0)
+                          + (second_dt if second_dt is not None else 0),
                 }
                 neighbors.append(neighbor_info)
 
@@ -274,6 +258,20 @@ class ValenceManager:
 
         return None
 
+    def _extract_dt_for_direction(self, edge_info: Any, direction: str) -> Optional[float]:
+        """Извлекает dt и приводит знак в соответствии с направлением."""
+        raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+        if raw_dt is None:
+            return None
+
+        abs_dt = abs(raw_dt)
+        if direction == 'forward':
+            return abs_dt
+        if direction == 'backward':
+            return -abs_dt
+        return raw_dt
+
+
     def _extract_control_from_edge(self, edge_info: Any) -> Optional[float]:
         """
         Извлекает значение управления из информации о связи.
@@ -299,52 +297,80 @@ class ValenceManager:
 
         return None
 
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """Преобразует значение (включая numpy) в float."""
+        if value is None:
+            return None
+
+        if isinstance(value, np.ndarray):
+            if value.size == 0:
+                return None
+            value = value.flatten()[0]
+
+        if isinstance(value, (np.floating, np.integer)):
+            return float(value)
+
+        if isinstance(value, (float, int)):
+            return float(value)
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _determine_time_direction(self, dt_value: Optional[float]) -> str:
+        """Определяет направление времени по знаку dt."""
+        if dt_value is None:
+            return 'forward'
+        return 'forward' if dt_value >= 0 else 'backward'
+
+    def _determine_control_type(self, control_value: Optional[float]) -> Optional[str]:
+        """Определяет тип управления по знаку control."""
+        if control_value is None:
+            return None
+
+        if control_value > 0:
+            return 'max'
+        if control_value < 0:
+            return 'min'
+
+        return None
+
     def _occupy_slot_from_neighbor(self, valence: SporeValence, neighbor: Dict[str, Any], distance: int) -> None:
-        """
-        Заполняет слот валентности на основе информации о соседе.
+        """Заполняет слот валентности на основе информации о соседе."""
 
-        Args:
-            valence: Валентность споры для заполнения
-            neighbor: Информация о соседе
-            distance: Расстояние до соседа (1 или 2)
-        """
         if distance == 1:
-            # Для детей - просто time_direction и control
             time_dir = neighbor.get('time_direction')
-            control = neighbor.get('control')
+            control_type = self._determine_control_type(neighbor.get('control'))
 
-            # Определяем тип управления (max/min)
-            if control is not None:
-                control_type = 'max' if control > 0 else 'min'
-            else:
-                control_type = 'max'  # Дефолт
+            if not control_type or not time_dir:
+                return
 
-            # Ищем соответствующий слот
             slot = valence.find_slot_by_parameters(
                 slot_type='child',
                 time_direction=time_dir,
                 control_type=control_type
             )
 
-            if slot:
+            if slot and not slot.occupied:
                 slot.occupied = True
                 slot.neighbor_id = neighbor.get('target_id')
                 slot.dt_value = neighbor.get('dt')
                 slot.is_fixed = True  # Существующие связи зафиксированы
 
         elif distance == 2:
-            # Для внуков - два шага
             first_time_dir = neighbor.get('first_time_direction')
-            first_control = neighbor.get('first_control')
+            first_control_type = neighbor.get('first_control_type')
             second_time_dir = neighbor.get('second_time_direction')
+            second_control_type = neighbor.get('second_control_type')
 
-            # Определяем тип управления первого шага
-            if first_control is not None:
-                first_control_type = 'max' if first_control > 0 else 'min'
-            else:
-                first_control_type = 'max'  # Дефолт
+            if not first_control_type or not second_control_type:
+                return
 
-            # Ищем соответствующий слот
+            expected_second_type = 'min' if first_control_type == 'max' else 'max'
+            if second_control_type != expected_second_type:
+                return
+
             slot = valence.find_slot_by_parameters(
                 slot_type='grandchild',
                 time_direction=first_time_dir,
@@ -352,7 +378,7 @@ class ValenceManager:
                 second_time_direction=second_time_dir
             )
 
-            if slot:
+            if slot and not slot.occupied:
                 slot.occupied = True
                 slot.neighbor_id = neighbor.get('target_id')
                 slot.dt_value = neighbor.get('dt')
