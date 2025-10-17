@@ -1,11 +1,11 @@
 """
 Valence System - Система валентности для отслеживания связей спор
-===================================================================
+==================================================================
 
 Модуль для отслеживания занятых и свободных валентных мест каждой споры.
-Каждая спора имеет 8 валентных слотов:
+Каждая спора имеет 12 валентных слотов:
 - 4 слота для детей (соседи 1-го порядка)
-- 4 слота для внуков (соседи 2-го порядка, только с чередованием управления)
+- 8 слотов для внуков (соседи 2-го порядка, только с чередованием управления)
 
 ВАЖНО: Для внуков учитываются только пути где управление ЧЕРЕДУЕТСЯ.
 Пути с одинаковым управлением (max→max, min→min) не являются валентными слотами.
@@ -16,9 +16,13 @@ Valence System - Система валентности для отслежива
 - backward_max: обратное время, максимальное управление
 - backward_min: обратное время, минимальное управление
 
-Структура слотов внуков (4 слота, только с инверсией управления):
+Структура слотов внуков (8 слотов, только с инверсией управления):
 - forward_max_forward_min: 1й шаг (forward, max), 2й шаг (forward, min) ✓
 - forward_max_backward_min: 1й шаг (forward, max), 2й шаг (backward, min) ✓
+- forward_min_forward_max: 1й шаг (forward, min), 2й шаг (forward, max) ✓
+- forward_min_backward_max: 1й шаг (forward, min), 2й шаг (backward, max) ✓
+- backward_max_forward_min: 1й шаг (backward, max), 2й шаг (forward, min) ✓
+- backward_max_backward_min: 1й шаг (backward, max), 2й шаг (backward, min) ✓
 - backward_min_forward_max: 1й шаг (backward, min), 2й шаг (forward, max) ✓
 - backward_min_backward_max: 1й шаг (backward, min), 2й шаг (backward, max) ✓
 
@@ -116,20 +120,20 @@ class SporeValence:
     """
     Полная валентность одной споры.
 
-    Хранит информацию о всех 8 валентных слотах (4 детей + 4 внуков),
+    Хранит информацию о всех валентных слотах (4 детей + 8 внуков),
     их занятости и параметрах связей.
 
-    ВАЖНО: Для внуков учитываются только 4 слота с чередованием управления,
+    ВАЖНО: Для внуков учитываются только слоты с чередованием управления,
     пути с одинаковым управлением (max→max, min→min) не являются валентными.
 
     Attributes:
         spore_id: ID споры
-        total_slots: Общее количество слотов (всегда 8: 4 детей + 4 внуков)
+        total_slots: Общее количество слотов (4 детей + 8 внуков)
         children_slots: Список из 4 слотов для детей
-        grandchildren_slots: Список из 4 слотов для внуков (только с чередованием управления)
+        grandchildren_slots: Список из 8 слотов для внуков (только с чередованием управления)
     """
     spore_id: int
-    total_slots: int = 8  # 4 детей + 4 внуков (только с чередованием управления)
+    total_slots: int = 12  # 4 детей + 8 внуков (только с чередованием управления)
 
     # Слоты детей (4 штуки)
     children_slots: List[ValenceSlot] = field(default_factory=list)
@@ -143,6 +147,9 @@ class SporeValence:
             self.children_slots = self._create_children_slots()
         if not self.grandchildren_slots:
             self.grandchildren_slots = self._create_grandchildren_slots()
+        # Обновляем общее количество слотов согласно фактическому числу
+        self.total_slots = len(self.children_slots) + len(self.grandchildren_slots)
+
 
     def _create_children_slots(self) -> List[ValenceSlot]:
         """Создает 4 пустых слота для детей"""
@@ -154,47 +161,28 @@ class SporeValence:
         ]
 
     def _create_grandchildren_slots(self) -> List[ValenceSlot]:
-        """
-        Создает 4 пустых слота для внуков.
+        """Создает пустые слоты для внуков с чередованием управления"""
+        # Только пути с чередованием управления (max→min или min→max)
+        slots: List[ValenceSlot] = []
 
-        ВАЖНО: Валентные слоты внуков - только те, где управление ЧЕРЕДУЕТСЯ.
-        Пути с одинаковым управлением (max→max или min→min) не являются валентными.
-        """
-        slots = []
+        combinations = [
+            ('forward', 'max', 'forward'),
+            ('forward', 'max', 'backward'),
+            ('forward', 'min', 'forward'),
+            ('forward', 'min', 'backward'),
+            ('backward', 'max', 'forward'),
+            ('backward', 'max', 'backward'),
+            ('backward', 'min', 'forward'),
+            ('backward', 'min', 'backward'),
+        ]
 
-        # Только пути с чередованием управления:
-        # 1. forward_max → forward_min (max→min ✓)
-        # 2. forward_max → backward_min (max→min ✓)
-        # 3. backward_min → forward_max (min→max ✓)
-        # 4. backward_min → backward_max (min→max ✓)
-
-        slots.append(ValenceSlot(
-            slot_type='grandchild',
-            time_direction='forward',
-            control_type='max',
-            second_time_direction='forward'  # второе управление будет min (инверсия)
-        ))
-
-        slots.append(ValenceSlot(
-            slot_type='grandchild',
-            time_direction='forward',
-            control_type='max',
-            second_time_direction='backward'  # второе управление будет min (инверсия)
-        ))
-
-        slots.append(ValenceSlot(
-            slot_type='grandchild',
-            time_direction='backward',
-            control_type='min',
-            second_time_direction='forward'  # второе управление будет max (инверсия)
-        ))
-
-        slots.append(ValenceSlot(
-            slot_type='grandchild',
-            time_direction='backward',
-            control_type='min',
-            second_time_direction='backward'  # второе управление будет max (инверсия)
-        ))
+        for time_direction, control_type, second_time_direction in combinations:
+            slots.append(ValenceSlot(
+                slot_type='grandchild',
+                time_direction=time_direction,
+                control_type=control_type,
+                second_time_direction=second_time_direction
+            ))
 
         return slots
 

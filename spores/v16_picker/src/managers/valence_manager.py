@@ -214,22 +214,31 @@ class ValenceManager:
 
                 first_dt = direct_neighbor.get('dt')
                 second_dt = neighbor.get('dt')
+                dt_sequence = [first_dt, second_dt]
+                dt_values = [dt for dt in dt_sequence if dt is not None]
+                total_dt = sum(dt_values) if dt_values else None
+
+                first_time_dir = direct_neighbor.get('time_direction')
+                second_time_dir = neighbor.get('time_direction')
 
                 neighbor_info = {
                     'target_spore': neighbor.get('target_spore'),
                     'target_id': target_id,
                     'path': path,
                     'intermediate_id': intermediate_id,
-                    'first_time_direction': direct_neighbor.get('time_direction'),
+                    'intermediate_spore': direct_neighbor.get('target_spore'),
+                    'first_time_direction': first_time_dir,
                     'first_control': first_control,
                     'first_control_type': first_control_type,
                     'first_dt': first_dt,
-                    'second_time_direction': neighbor.get('time_direction'),
+                    'second_time_direction': second_time_dir,
                     'second_control': second_control,
                     'second_control_type': second_control_type,
                     'second_dt': second_dt,
-                    'dt': (first_dt if first_dt is not None else 0)
-                          + (second_dt if second_dt is not None else 0),
+                    'step_time_directions': [first_time_dir, second_time_dir],
+                    'control_sequence': [first_control, second_control],
+                    'dt_sequence': dt_sequence,
+                    'dt': total_dt,
                 }
                 neighbors.append(neighbor_info)
 
