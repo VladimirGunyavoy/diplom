@@ -128,15 +128,16 @@ class ValenceManager:
 
         neighbors: List[Dict[str, Any]] = []
 
-        # Исходящие связи (дети)
+        # Исходящие связи (дети) - всегда forward
         children = self.spore_manager.graph.get_children(spore_id)
         for child in children:
             child_id = self.spore_manager.graph._get_spore_id(child)
             edge_info = self.spore_manager.graph.get_edge_info(spore_id, child_id)
 
-            dt_value = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            # Для исходящих связей: dt всегда положительный, direction = forward
+            raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
+            dt_value = abs(raw_dt) if raw_dt is not None else None
             control_value = self._convert_to_float(self._extract_control_from_edge(edge_info))
-            time_direction = self._determine_time_direction(dt_value)
 
             neighbor_info = {
                 'target_spore': child,
@@ -150,27 +151,31 @@ class ValenceManager:
             }
             neighbors.append(neighbor_info)
 
-        # Входящие связи (родители) — двигаемся против направления ребра
+        # Входящие связи (родители) - инвертируем только направление времени
         parents = self.spore_manager.graph.get_parents(spore_id)
         for parent in parents:
             parent_id = self.spore_manager.graph._get_spore_id(parent)
             edge_info = self.spore_manager.graph.get_edge_info(parent_id, spore_id)
 
+            # Для входящих связей (идем против направления ребра):
+            # - Управление остается тем же самым (управление не зависит от направления движения)
+            # - Время инвертируется (если ребро шло forward, то назад = backward и наоборот)
             raw_dt = self._convert_to_float(self._extract_dt_from_edge(edge_info))
             raw_control = self._convert_to_float(self._extract_control_from_edge(edge_info))
 
-            dt_value = -raw_dt if raw_dt is not None else None
-            control_value = -raw_control if raw_control is not None else None
-            time_direction = self._determine_time_direction(dt_value)
+            # link.dt_value всегда положительный, поэтому инвертируем его для backward
+            # Для входящих связей всегда backward (отрицательное время)
+            dt_value = -abs(raw_dt) if raw_dt is not None else None
+            time_direction = 'backward'
 
             neighbor_info = {
                 'target_spore': parent,
                 'target_id': parent_id,
                 'path': [spore_id, parent_id],
-                'time_direction': 'backward',
+                'time_direction': time_direction,
                 'dt': dt_value,
                 'dt_sequence': [dt_value] if dt_value is not None else None,
-                'control': control_value,
+                'control': raw_control,
                 'raw_direction': 'incoming',
             }
             neighbors.append(neighbor_info)
@@ -254,13 +259,24 @@ class ValenceManager:
         Returns:
             Значение dt или None
         """
-        if not edge_info or not hasattr(edge_info, 'link_object'):
+        if not edge_info:
             return None
 
-        link = edge_info.link_object
-        if hasattr(link, 'dt_value'):
-            dt = link.dt_value
-            # Конвертируем numpy в python float
+        # Если link_object есть, используем его
+        if hasattr(edge_info, 'link_object') and edge_info.link_object is not None:
+            link = edge_info.link_object
+            if hasattr(link, 'dt_value'):
+                dt = link.dt_value
+                # Конвертируем numpy в python float
+                if isinstance(dt, np.ndarray):
+                    dt = float(dt.flatten()[0]) if dt.size > 0 else None
+                elif dt is not None:
+                    dt = float(dt)
+                return dt
+
+        # Если link_object нет, попробуем EdgeInfo напрямую (для BufferMergeManager)
+        if hasattr(edge_info, 'dt_value'):
+            dt = edge_info.dt_value
             if isinstance(dt, np.ndarray):
                 dt = float(dt.flatten()[0]) if dt.size > 0 else None
             elif dt is not None:
@@ -293,19 +309,31 @@ class ValenceManager:
         Returns:
             Значение управления или None
         """
-        if not edge_info or not hasattr(edge_info, 'link_object'):
+        if not edge_info:
             return None
 
-        link = edge_info.link_object
         control = None
-        if hasattr(link, 'control_value'):
-            control = link.control_value
-            # Конвертируем numpy в python float
+
+        # Пробуем из link_object
+        if hasattr(edge_info, 'link_object') and edge_info.link_object is not None:
+            link = edge_info.link_object
+            if hasattr(link, 'control_value'):
+                control = link.control_value
+                # Конвертируем numpy в python float
+                if isinstance(control, np.ndarray):
+                    control = float(control.flatten()[0]) if control.size > 0 else None
+                elif control is not None:
+                    control = float(control)
+
+        # Если нет link_object, пробуем EdgeInfo напрямую
+        if control is None and hasattr(edge_info, 'control_value'):
+            control = edge_info.control_value
             if isinstance(control, np.ndarray):
                 control = float(control.flatten()[0]) if control.size > 0 else None
             elif control is not None:
                 control = float(control)
 
+        # Проверяем link_type
         link_type = getattr(edge_info, 'link_type', '') or ''
         link_type_lower = link_type.lower() if isinstance(link_type, str) else ''
         if 'max' in link_type_lower:
@@ -316,45 +344,6 @@ class ValenceManager:
             control = -magnitude
 
         return control
-
-    def _convert_to_float(self, value: Any) -> Optional[float]:
-        """Преобразует значение (включая numpy) в float."""
-        if value is None:
-            return None
-
-        if isinstance(value, np.ndarray):
-            if value.size == 0:
-                return None
-            value = value.flatten()[0]
-
-        if isinstance(value, (np.floating, np.integer)):
-            return float(value)
-
-        if isinstance(value, (float, int)):
-            return float(value)
-
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
-
-    def _determine_time_direction(self, dt_value: Optional[float]) -> str:
-        """Определяет направление времени по знаку dt."""
-        if dt_value is None:
-            return 'forward'
-        return 'forward' if dt_value >= 0 else 'backward'
-
-    def _determine_control_type(self, control_value: Optional[float]) -> Optional[str]:
-        """Определяет тип управления по знаку control."""
-        if control_value is None:
-            return None
-
-        if control_value > 0:
-            return 'max'
-        if control_value < 0:
-            return 'min'
-
-        return None
 
     def _convert_to_float(self, value: Any) -> Optional[float]:
         """Преобразует значение (включая numpy) в float."""

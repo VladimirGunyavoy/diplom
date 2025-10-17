@@ -127,3 +127,6 @@ temp/
 *.tmp
 
 spores/v16_picker/scripts/run/buffer/
+
+# Windows reserved names
+NUL
