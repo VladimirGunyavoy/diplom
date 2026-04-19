@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(timeout 8 python main.py)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(del \"c:\\\\GitHub\\\\diplom\\\\spores_2\\\\player_zoom\\\\.llm\\\\history\\\\changelog_archive.md\")",
+      "Bash(git -C c:/GitHub/diplom log --oneline --all)",
+      "Bash(git -C c:/GitHub/diplom log --oneline --all -- \"spores_2/player_zoom/src/*\")",
+      "Bash(git -C c:/GitHub/diplom status --short)",
+      "Bash(git -C c:/GitHub/diplom stash list)",
+      "Bash(git -C c:/GitHub/diplom status --short -- spores_2/player_zoom/)",
+      "Bash(git -C c:/GitHub/diplom log --oneline -3 -- spores_2/player_zoom/)",
+      "Bash(git -C c:/GitHub/diplom add spores_2/player_zoom/)",
+      "Bash(git -C c:/GitHub/diplom commit -m ' *)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom remote -v)",
+      "Bash(git -C c:/GitHub/diplom reset HEAD~1)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom add .)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom status --short)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom reset HEAD src/__pycache__/)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom commit -m ' *)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

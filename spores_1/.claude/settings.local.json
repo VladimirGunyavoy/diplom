@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python main.py)",
+      "Bash(timeout 5 python src/watcher.py)",
+      "Bash(python -c \":*)",
+      "Bash(ls -lh *.py src/*.py)",
+      "Bash(grep -n \"^[[:space:]]*#\" src/*.py main.py)",
+      "Bash(grep -E \"^[[:space:]]*#[[:space:]]*\\(def|class|import|from|if|for|while|return|=|\\\\w+\\\\\\(\\)\" src/*.py main.py)",
+      "Bash(grep -r [А-Яа-я] /c/GitHub/diplom/spores/player_zoom/src --include=*.py)",
+      "Bash(tasklist)",
+      "Bash(taskkill /F /PID 19304 /PID 30076)",
+      "Bash(taskkill //F //PID 19304)",
+      "Bash(taskkill //F //PID 30076)"
+    ]
+  }
+}

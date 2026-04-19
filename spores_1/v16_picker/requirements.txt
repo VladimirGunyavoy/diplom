@@ -1,0 +1,7 @@
+ursina
+numpy
+scipy
+matplotlib
+watchdog
+numba
+pandas

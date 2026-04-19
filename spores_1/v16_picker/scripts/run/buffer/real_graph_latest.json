@@ -1,0 +1,552 @@
+{
+  "metadata": {
+    "export_time": "2026-04-09T03:10:24.913282",
+    "version": "RealGraphExporter_v2.0",
+    "description": "Реальный граф спор с правильными номерами линков для анализа пикером"
+  },
+  "statistics": {
+    "total_spores": 10,
+    "total_links": 12,
+    "goal_spores": 1,
+    "id_manager_stats": {
+      "spores_created": 18,
+      "links_created": 16812,
+      "angels_created": 0,
+      "pillars_created": 0,
+      "ghosts_created": 54639,
+      "total_objects": 71469
+    }
+  },
+  "spores": [
+    {
+      "index": 0,
+      "spore_id": "1",
+      "position": [
+        3.14159,
+        0.0
+      ],
+      "type": "goal",
+      "is_goal": true,
+      "is_alive": true,
+      "dt": 0.049999945363602666,
+      "cost": 0.0,
+      "in_links": [],
+      "out_links": []
+    },
+    {
+      "index": 1,
+      "spore_id": "2",
+      "position": [
+        3.1412793639911936,
+        0.003996911964646887
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.004008964951593436,
+      "in_links": [
+        {
+          "from_spore_id": 4,
+          "link_number": 2,
+          "control": 2.0,
+          "dt": 0.158,
+          "dt_sign": -1
+        },
+        {
+          "from_spore_id": 6,
+          "link_number": 4,
+          "control": -2.0,
+          "dt": 0.14,
+          "dt_sign": -1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 3,
+          "link_number": 1,
+          "control": 2.0,
+          "dt": 0.15,
+          "dt_sign": 1
+        },
+        {
+          "to_spore_id": 5,
+          "link_number": 3,
+          "control": -2.0,
+          "dt": 0.165,
+          "dt_sign": 1
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "spore_id": "4",
+      "position": [
+        3.1474507846233526,
+        0.07848251551278076
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.0,
+      "cost": 0.07870104216346313,
+      "in_links": [
+        {
+          "from_spore_id": 2,
+          "link_number": 1,
+          "control": 2.0,
+          "dt": 0.15,
+          "dt_sign": 1
+        },
+        {
+          "from_spore_id": 8,
+          "link_number": 6,
+          "control": -2.0,
+          "dt": 0.063,
+          "dt_sign": -1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 7,
+          "link_number": 5,
+          "control": -2.0,
+          "dt": 0.173,
+          "dt_sign": 1
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "spore_id": "6",
+      "position": [
+        3.1470087076159117,
+        -0.07788458482792925
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.07807285665354924,
+      "in_links": [
+        {
+          "from_spore_id": 7,
+          "link_number": 8,
+          "control": -2.0,
+          "dt": 0.173,
+          "dt_sign": -1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 2,
+          "link_number": 2,
+          "control": 2.0,
+          "dt": 0.158,
+          "dt_sign": -1
+        },
+        {
+          "to_spore_id": 9,
+          "link_number": 7,
+          "control": -2.0,
+          "dt": 0.072,
+          "dt_sign": 1
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "spore_id": "8",
+      "position": [
+        3.1351675512795603,
+        -0.07832542413794578
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.0,
+      "cost": 0.07858829374630663,
+      "in_links": [
+        {
+          "from_spore_id": 2,
+          "link_number": 3,
+          "control": -2.0,
+          "dt": 0.165,
+          "dt_sign": 1
+        },
+        {
+          "from_spore_id": 9,
+          "link_number": 10,
+          "control": 2.0,
+          "dt": 0.064,
+          "dt_sign": -1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 10,
+          "link_number": 9,
+          "control": 2.0,
+          "dt": 0.173,
+          "dt_sign": 1
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "spore_id": "10",
+      "position": [
+        3.1356811674793055,
+        0.07718082044571331
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.07740667507670804,
+      "in_links": [
+        {
+          "from_spore_id": 10,
+          "link_number": 12,
+          "control": 2.0,
+          "dt": 0.173,
+          "dt_sign": -1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 2,
+          "link_number": 4,
+          "control": -2.0,
+          "dt": 0.14,
+          "dt_sign": -1
+        },
+        {
+          "to_spore_id": 8,
+          "link_number": 11,
+          "control": 2.0,
+          "dt": 0.073,
+          "dt_sign": 1
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "spore_id": "12",
+      "position": [
+        3.153987893754361,
+        -0.001074347579283462
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.012444355839718669,
+      "in_links": [
+        {
+          "from_spore_id": 3,
+          "link_number": 5,
+          "control": -2.0,
+          "dt": 0.173,
+          "dt_sign": 1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 4,
+          "link_number": 8,
+          "control": -2.0,
+          "dt": 0.173,
+          "dt_sign": -1
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "spore_id": "14",
+      "position": [
+        3.141529846937486,
+        0.11068280227297982
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.11068281861874714,
+      "in_links": [
+        {
+          "from_spore_id": 6,
+          "link_number": 11,
+          "control": 2.0,
+          "dt": 0.073,
+          "dt_sign": 1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 3,
+          "link_number": 6,
+          "control": -2.0,
+          "dt": 0.063,
+          "dt_sign": -1
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "spore_id": "16",
+      "position": [
+        3.140220520328012,
+        -0.11104678592015091
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.1,
+      "cost": 0.11105523012342919,
+      "in_links": [
+        {
+          "from_spore_id": 4,
+          "link_number": 7,
+          "control": -2.0,
+          "dt": 0.072,
+          "dt_sign": 1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 5,
+          "link_number": 10,
+          "control": 2.0,
+          "dt": 0.064,
+          "dt_sign": -1
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "spore_id": "18",
+      "position": [
+        3.1286162842994454,
+        0.000755560103278134
+      ],
+      "type": "normal",
+      "is_goal": false,
+      "is_alive": true,
+      "dt": 0.04360653365012307,
+      "cost": 0.012995698140095437,
+      "in_links": [
+        {
+          "from_spore_id": 5,
+          "link_number": 9,
+          "control": 2.0,
+          "dt": 0.173,
+          "dt_sign": 1
+        }
+      ],
+      "out_links": [
+        {
+          "to_spore_id": 6,
+          "link_number": 12,
+          "control": 2.0,
+          "dt": 0.173,
+          "dt_sign": -1
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "link_number": 1,
+      "link_id": "link_2_to_3",
+      "parent_spore_id": 2,
+      "child_spore_id": 3,
+      "control": 2.0,
+      "dt": 0.15,
+      "dt_sign": 1,
+      "raw_dt": 0.15,
+      "direction": "forward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "link_number": 2,
+      "link_id": "link_4_to_2",
+      "parent_spore_id": 4,
+      "child_spore_id": 2,
+      "control": 2.0,
+      "dt": 0.158,
+      "dt_sign": -1,
+      "raw_dt": -0.158,
+      "direction": "backward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "link_number": 3,
+      "link_id": "link_2_to_5",
+      "parent_spore_id": 2,
+      "child_spore_id": 5,
+      "control": -2.0,
+      "dt": 0.165,
+      "dt_sign": 1,
+      "raw_dt": 0.165,
+      "direction": "forward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 4,
+      "link_id": "link_6_to_2",
+      "parent_spore_id": 6,
+      "child_spore_id": 2,
+      "control": -2.0,
+      "dt": 0.14,
+      "dt_sign": -1,
+      "raw_dt": -0.14,
+      "direction": "backward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 5,
+      "link_id": "link_3_to_7",
+      "parent_spore_id": 3,
+      "child_spore_id": 7,
+      "control": -2.0,
+      "dt": 0.173,
+      "dt_sign": 1,
+      "raw_dt": 0.173,
+      "direction": "forward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 6,
+      "link_id": "link_8_to_3",
+      "parent_spore_id": 8,
+      "child_spore_id": 3,
+      "control": -2.0,
+      "dt": 0.063,
+      "dt_sign": -1,
+      "raw_dt": -0.063,
+      "direction": "backward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 7,
+      "link_id": "link_4_to_9",
+      "parent_spore_id": 4,
+      "child_spore_id": 9,
+      "control": -2.0,
+      "dt": 0.072,
+      "dt_sign": 1,
+      "raw_dt": 0.072,
+      "direction": "forward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 8,
+      "link_id": "link_7_to_4",
+      "parent_spore_id": 7,
+      "child_spore_id": 4,
+      "control": -2.0,
+      "dt": 0.173,
+      "dt_sign": -1,
+      "raw_dt": -0.173,
+      "direction": "backward",
+      "color": [
+        0.4000000059604645,
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "link_number": 9,
+      "link_id": "link_5_to_10",
+      "parent_spore_id": 5,
+      "child_spore_id": 10,
+      "control": 2.0,
+      "dt": 0.173,
+      "dt_sign": 1,
+      "raw_dt": 0.173,
+      "direction": "forward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "link_number": 10,
+      "link_id": "link_9_to_5",
+      "parent_spore_id": 9,
+      "child_spore_id": 5,
+      "control": 2.0,
+      "dt": 0.064,
+      "dt_sign": -1,
+      "raw_dt": -0.064,
+      "direction": "backward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "link_number": 11,
+      "link_id": "link_6_to_8",
+      "parent_spore_id": 6,
+      "child_spore_id": 8,
+      "control": 2.0,
+      "dt": 0.073,
+      "dt_sign": 1,
+      "raw_dt": 0.073,
+      "direction": "forward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "link_number": 12,
+      "link_id": "link_10_to_6",
+      "parent_spore_id": 10,
+      "child_spore_id": 6,
+      "control": 2.0,
+      "dt": 0.173,
+      "dt_sign": -1,
+      "raw_dt": -0.173,
+      "direction": "backward",
+      "color": [
+        1.0,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    }
+  ]
+}
