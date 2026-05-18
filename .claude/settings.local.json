@@ -18,7 +18,9 @@
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom add .)",
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom status --short)",
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom reset HEAD src/__pycache__/)",
-      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom commit -m ' *)"
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom commit -m ' *)",
+      "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom rm -r --cached src/__pycache__/)",
+      "Bash(python -c ' *)"
     ],
     "deny": [],
     "ask": []
