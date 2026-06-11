@@ -1,12 +1,12 @@
 # Session Handoff
 [РУТИНА НЕ ВЫПОЛНЕНА]
 
-Дата: 2026-06-12, v3 сессия 3 (сессия 17)
-Сделано: Миграция .llm/ протокола v1 → v2 — рутина разделена на стартовую (changelog/decisions/обновление state/ + git commit, выполняется в начале следующей сессии, когда контекст пустой) и финишную (только handoff, 10 строк)
-Стоп на: Миграция структуры завершена и закоммичена; задач разработки v3 в этой сессии не было
-Следующий шаг: Новый агент выполняет AGENT_START_ROUTINE.md (этот handoff обработать как обычно), затем берётся за задачу пользователя — активной задачи в plan.md сейчас нет
+Дата: 2026-06-12, v3 сессия 4 (сессия 18)
+Сделано: Клавиши 1-8 переключают видимость каждой из 8 веток целиком (споры, рёбра-стрелки, root-линии, envelope, fan_surface); состояние сохраняется через rebuild при смене n_tau
+Стоп на: Фича реализована, main.py запускался без ошибок, пользователь проверил вручную — работает; рабочие файлы фичи не закоммичены
+Следующий шаг: Новый агент коммитит рабочие файлы фичи (см. ниже) + дописывает changelog_recent.md за сессию 18; активной задачи в plan.md нет, ScalableFanSurface bug остаётся в issues
 Грабли: —
 Не трогай: history/changelog_archive.md (append-only)
-Рабочие файлы: spores_2/v3/.llm/AGENT_START_ROUTINE.md (новый), spores_2/v3/.llm/AGENT_END_ROUTINE.md, spores_2/v3/.llm/AGENT_START.md, spores_2/v3/.llm/state/token_stats.md, spores_2/v3/.llm/state/session_handoff.md (новый), spores_2/v3/.llm/history/decisions.md, spores_2/v3/.llm/history/changelog_recent.md
-Архитектурные решения: Decision #20 — разделение рутины на стартовую и финишную (v2)
-Коммиты этой сессии: см. git log --oneline -3 (коммит миграции `[v3 s17]: ...`)
+Рабочие файлы: spores_2/v3/main.py, spores_2/v3/src/core/line_manager.py, spores_2/v3/src/core/surface_manager.py, spores_2/v3/src/spores/boundary_ray_family.py
+Архитектурные решения: нет
+Коммиты этой сессии: см. git log --oneline -3 (стартовая рутина s18: changelog s17 + token stats)
