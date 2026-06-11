@@ -37,3 +37,10 @@ class SurfaceManager:
         if name in self._surfaces:
             self._surfaces[name].enabled = False
             self._zoom_manager.unregister_object(name)
+
+    def toggle(self, name: str) -> None:
+        surf = self._surfaces[name]
+        surf.enabled = not surf.enabled
+
+    def set_visible(self, name: str, visible: bool) -> None:
+        self._surfaces[name].enabled = visible

@@ -46,6 +46,9 @@ class LineManager:
             self._lines[name].enabled = False
             self._zoom_manager.unregister_object(name)
 
+    def set_visible(self, name: str, visible: bool) -> None:
+        self._lines[name].enabled = visible
+
     def increase_arrow_size(self, factor: float = 1.2) -> None:
         self.arrow_scale *= factor
         self._apply_arrow_scale()

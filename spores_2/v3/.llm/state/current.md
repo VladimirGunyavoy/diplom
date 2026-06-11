@@ -1,6 +1,6 @@
 # Current State - Текущее состояние проекта
 
-**Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
+**Last updated:** 2026-06-12 (v3 сессия 4 / общая сессия 18)
 
 ---
 
@@ -27,6 +27,13 @@
 - ✅ **`BranchFamilyManager`** в `src/spores/branch_family_manager.py`
 - ✅ **`SurfaceManager`** + **`ScalableFanSurface`** — grid-триангуляция, alpha=0.5
 - ✅ **Все 8 шаблонов** активны в main.py
+
+### Видимость веток (v3 сессия 4 / сессия 18):
+- ✅ Клавиши `1`-`8` (press) — toggle видимости каждой из 8 веток целиком (споры, рёбра-стрелки, root-линии, envelope, fan_surface)
+  - `BranchFamily.set_visible()/toggle()` — управляет всеми визуальными элементами ветки
+  - Новые методы: `_BranchRay.set_visible()`, `LineManager.set_visible()`, `SurfaceManager.set_visible()/toggle()`
+  - Состояние `_visible` сохраняется через rebuild (`_build()` вызывает `set_visible(self._visible)` в конце) — переживает смену n_tau
+  - Не конфликтует с клавишами `1`-`4` (mode='scroll') для resize/tau/a_max/n_tau — toggle срабатывает на press, параметры на held+scroll
 
 ### ScalableArrow (v3 сессия 1, доработано сессия 16):
 - ✅ **`ScalableArrow`** в `src/core/scalable_arrow.py` — наследуется от ScalableLine

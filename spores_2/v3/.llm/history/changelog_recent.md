@@ -1,9 +1,25 @@
 # Changelog - Последние сессии
 
-**Last updated:** 2026-06-12 (v3 сессия 3 / сессия 17)
+**Last updated:** 2026-06-12 (v3 сессия 4 / сессия 18)
 
 > Хранит последние 5 сессий. Если сессий стало > 5 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
 > Полная история → [changelog_archive.md](changelog_archive.md)
+
+---
+
+## 2026-06-12 (v3 сессия 4 / сессия 18) - Toggle видимости веток (клавиши 1-8)
+
+**Что сделано:**
+- 🔄 `src/spores/boundary_ray_family.py` — `_BranchRay.set_visible()`; `BranchFamily.set_visible()/toggle()` управляет видимостью спор, рёбер-стрелок, root-линий, envelope и fan_surface ветки целиком
+- 🆕 `src/core/line_manager.py` — `set_visible(name, visible)`
+- 🆕 `src/core/surface_manager.py` — `toggle(name)`, `set_visible(name, visible)`
+- 🔄 `main.py` — все 8 веток (`b_ppp` ... `b_mmm`) присвоены переменным при создании; клавиши `1`-`8` (mode='press') toggle'ят видимость соответствующей ветки
+
+**Технические детали:**
+- `BranchFamily._visible` сохраняется как состояние и переустанавливается в конце `_build()` (`set_visible(self._visible)`) — видимость ветки переживает rebuild при смене `n_tau`
+- Toggle на press не конфликтует с существующими `1`-`4` на mode='scroll' (resize/tau/a_max/n_tau при удержании+скролле)
+
+**Участники:** Пользователь + Claude Sonnet 4.6
 
 ---
 

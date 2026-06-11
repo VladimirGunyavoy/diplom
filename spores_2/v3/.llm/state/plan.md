@@ -1,12 +1,21 @@
 # Plan & Progress - План и прогресс
 
-**Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
+**Last updated:** 2026-06-12 (v3 сессия 4 / общая сессия 18)
 
 ---
 
 ## 🎯 Текущая задача
 
 *(нет активной задачи)*
+
+---
+
+## ✅ Сделано в v3 сессии 4 (сессия 18)
+
+- `src/spores/boundary_ray_family.py` — `_BranchRay.set_visible()`, `BranchFamily.set_visible()/toggle()`; `_visible` сохраняется через rebuild (`_build()` зовёт `set_visible(self._visible)`)
+- `src/core/line_manager.py` — `set_visible(name, visible)`
+- `src/core/surface_manager.py` — `toggle(name)`, `set_visible(name, visible)`
+- `main.py` — все 8 веток присвоены переменным (`b_ppp` ... `b_mmm`); клавиши `1`-`8` (press) toggle'ят видимость соответствующей ветки
 
 ---
 

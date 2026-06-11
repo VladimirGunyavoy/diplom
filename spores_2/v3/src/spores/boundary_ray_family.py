@@ -68,6 +68,12 @@ class _BranchRay:
         for lname in self._line_names:
             self._lm.disable(lname)
 
+    def set_visible(self, visible: bool) -> None:
+        for spore in self._nodes:
+            spore.enabled = visible
+        for lname in self._line_names:
+            self._lm.set_visible(lname, visible)
+
 
 class BranchFamily:
 
@@ -94,6 +100,7 @@ class BranchFamily:
         self._grid_lines: List[str] = []
         self._grid_index: List[Tuple[int, int]] = []
         self._fan_surface: str = ''
+        self._visible: bool = True
         self._n_tau: int = -1
         self._generation: int = 0
 
@@ -102,6 +109,19 @@ class BranchFamily:
         self._cached_tau: float = np.nan
 
         self._build()
+
+    def set_visible(self, visible: bool) -> None:
+        self._visible = visible
+        for ray in self._rays:
+            ray.set_visible(visible)
+        for lname in [self._root_line, self._root_line2] + self._envelope_lines + self._grid_lines:
+            if lname:
+                self._lm.set_visible(lname, visible)
+        if self._fan_surface:
+            self._sfm.set_visible(self._fan_surface, visible)
+
+    def toggle(self) -> None:
+        self.set_visible(not self._visible)
 
     def _phase_edge(self, u_sign: int, t_sign: int):
         t_key = 'fwd' if t_sign > 0 else 'bwd'
@@ -174,6 +194,8 @@ class BranchFamily:
 
         self._generation += 1
         print(f"[BranchFamily] Built {len(self._rays)} rays (gen {self._generation})")
+
+        self.set_visible(self._visible)
 
     def _recompute(self) -> None:
         pm = self._ctx.param_manager
