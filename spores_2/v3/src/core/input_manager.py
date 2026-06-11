@@ -102,16 +102,24 @@ class InputManager:
                     self.zoom_manager.zoom_out()
             return
 
+        # === Q/E: params take priority over zoom ===
+        if key in ('q', 'e'):
+            sign = +1 if key == 'e' else -1
+            for b in self._bindings:
+                if b.mode == 'scroll' and held_keys[b.key]:
+                    b.action(sign)
+                    return
+            if self.zoom_manager:
+                if sign == +1:
+                    self.zoom_manager.zoom_in()
+                    print("   [Zoom] Zoom in")
+                else:
+                    self.zoom_manager.zoom_out()
+                    print("   [Zoom] Zoom out")
+            return
+
         # === ZOOM ===
         if self.zoom_manager:
-            if key == 'e':
-                self.zoom_manager.zoom_in()
-                print("   [Zoom] Zoom in")
-                return
-            if key == 'q':
-                self.zoom_manager.zoom_out()
-                print("   [Zoom] Zoom out")
-                return
             if key == 'r':
                 self.zoom_manager.reset_zoom()
                 print("   [Zoom] Reset")

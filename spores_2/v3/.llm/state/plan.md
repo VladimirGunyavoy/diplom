@@ -1,12 +1,26 @@
 # Plan & Progress - План и прогресс
 
-**Last updated:** 2026-05-27 (v3 сессия 1 / общая сессия 15)
+**Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
 
 ---
 
 ## 🎯 Текущая задача
 
 *(нет активной задачи)*
+
+---
+
+## ✅ Сделано в v3 сессии 2 (сессия 16)
+
+- `src/math/pendulum.py` — новый класс `Pendulum`: RK4 (n_sub=10), `θ̈ = -sin(θ) + u`, `θ=0` — нижнее устойчивое положение (изначально был `InvertedPendulum` с `θ=0`=верх, переименован и сменена конвенция по запросу)
+- `src/math/double_integrator.py`, `__init__.py` — единый интерфейс `step(x0,v0,u,dt) -> (x,v)` для обеих моделей
+- `src/spores/boundary_ray_family.py` — `_recompute()` зовёт `ctx.model.step(...)` вместо инлайн-формулы double integrator
+- `main.py` — секция `DYNAMICS MODEL`, `model = Pendulum(shared_context)`, `shared_context.bind('model', ...)`
+- `config/colors.json` — новая палитра "мягкая радуга": 8 цветов node/edge/surface_{ppp..mmm} равномерно по кругу оттенков (S≈0.55, V≈0.82), 4 семантических цвета фазовых рёбер приведены к той же тональности
+- `src/core/scalable_arrow.py` — `size_factor` (множитель размера наконечника)
+- `src/core/line_manager.py` — `arrow_scale` + `increase/decrease_arrow_size()`
+- `main.py` — `_resize()`: клавиша `1`+scroll/Q-E меняет размер спор и стрелок одновременно
+- `src/core/input_manager.py` — Q/E дублируют логику scroll up/down (параметры 1-4 приоритетнее зума)
 
 ---
 
@@ -56,8 +70,7 @@
 
 ### 1. ~~Починить ScalableFanSurface~~ ✅ ГОТОВО (сессия 14)
 
-### 2. Git коммит v3
-**Статус:** Не сделан (сделать в конце сессии 15)
+### 2. ~~Git коммит v3~~ ✅ ГОТОВО (сессия 16)
 
 ---
 
@@ -76,7 +89,7 @@
 
 ## 🔮 Долгосрочные цели
 
-- Нелинейная динамика вместо DoubleIntegrator
+- ~~Нелинейная динамика вместо DoubleIntegrator~~ ✅ ГОТОВО (сессия 16, `Pendulum`)
 - Юнит-тесты для математики
 
 ---

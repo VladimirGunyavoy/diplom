@@ -18,6 +18,7 @@ class ScalableArrow(ScalableLine):
     def __init__(self, p1, p2, t_sign: int = 1, thickness=3, **kwargs):
         self._tri_entity = None
         self.t_sign = t_sign
+        self.size_factor: float = 1.0
         super().__init__(p1, p2, thickness=thickness, **kwargs)
         tri_mesh = Mesh(
             vertices=[Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)],
@@ -46,7 +47,7 @@ class ScalableArrow(ScalableLine):
         if self.t_sign < 0:
             d = -d
         d = d / length
-        size = length / 4
+        size = length / 4 * self.size_factor
         half_base = size / np.sqrt(15)  # leg = 2*base → half_base = size/sqrt(15)
         perp = np.array([-d[2], 0.0, d[0]])
         mid = (p1 + p2) / 2

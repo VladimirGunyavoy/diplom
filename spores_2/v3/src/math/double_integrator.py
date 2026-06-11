@@ -10,25 +10,24 @@ Exact analytical step (constant u over interval):
     v_new = v + u*dt
 
 a_max is synced from shared_context.param_manager each tick.
-step() is stateless: takes (x0, v0, u, t) and returns new [x, v].
+step() is stateless: takes (x0, v0, u, dt) and returns (x, v).
+Works for scalars or numpy arrays (BranchFamily calls it vectorized over rays).
 
 JIT note:
     _step() is written for numba compatibility.
     To enable: decorate with @njit from numba.
 """
 
-import numpy as np
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..core.shared_context import SharedContext
 
 
-def _step(x0: float, v0: float, u: float, dt: float) -> np.ndarray:
-    new = np.empty(2)
-    new[0] = x0 + v0 * dt + 0.5 * u * dt * dt
-    new[1] = v0 + u * dt
-    return new
+def _step(x0, v0, u, dt):
+    new_x = x0 + v0 * dt + 0.5 * u * dt * dt
+    new_v = v0 + u * dt
+    return new_x, new_v
 
 
 class DoubleIntegrator:
@@ -45,9 +44,9 @@ class DoubleIntegrator:
     def tick(self) -> None:
         self.a_max = self._ctx.param_manager.a_max
 
-    def step(self, x0: float, v0: float, u: float, t: float) -> np.ndarray:
-        """Compute one step from (x0, v0) under control u for time t. Returns [x, v]."""
-        return _step(x0, v0, u, t)
+    def step(self, x0, v0, u, dt):
+        """Compute one step from (x0, v0) under control u for time dt. Returns (x, v)."""
+        return _step(x0, v0, u, dt)
 
     def __repr__(self) -> str:
         return f"DoubleIntegrator(a_max={self.a_max:.3f})"

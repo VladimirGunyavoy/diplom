@@ -1,9 +1,31 @@
 # Changelog - Последние сессии
 
-**Last updated:** 2026-05-27 (v3 сессия 1 / общая сессия 15)
+**Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
 
 > Хранит последние 3 сессии. Если сессий стало > 3 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
 > Полная история → [changelog_archive.md](changelog_archive.md)
+
+---
+
+## 2026-06-12 (v3 сессия 2 / сессия 16) - Pendulum + мягкая радуга + arrow_scale
+
+**Что сделано:**
+- 🆕 `src/math/pendulum.py` — класс `Pendulum`: RK4 (n_sub=10) для `θ̈ = -sin(θ) + u`, `θ=0` — нижнее устойчивое положение, нормировка g/l=1, m·l²=1; векторизован (np.sin поэлементно), интерфейс `step(x0,v0,u,dt) -> (θ,ω)`
+- 🔄 `src/math/double_integrator.py`, `src/math/__init__.py` — `DoubleIntegrator.step()` теперь возвращает `(x,v)` (был `np.array`), убран неиспользуемый `import numpy` — единый интерфейс с `Pendulum`
+- 🔄 `src/spores/boundary_ray_family.py` — `_recompute()` зовёт `self._ctx.model.step(x, v, u, dt)` вместо инлайн-формулы double integrator; убран прямой импорт `_step`
+- 🔄 `main.py` — новая секция `DYNAMICS MODEL`: `model = Pendulum(shared_context)`, `shared_context.bind('model', ...)` — переключение динамики = одна строка
+- 🔄 `config/colors.json` — новая палитра "мягкая радуга": `node/edge/surface_{ppp..mmm}` — 8 цветов равномерно по кругу оттенков (шаг 45°, S≈0.55, V≈0.82), единый RGB на ветку с alpha 1.0/0.6/0.4; 4 цвета фазовых рёбер (`edge_fwd/bwd_pos/neg`) приведены к той же тональности
+- 🆕 `src/core/scalable_arrow.py` — `size_factor` (default 1.0): `size = length/4 * size_factor`
+- 🔄 `src/core/line_manager.py` — `arrow_scale` + `increase/decrease_arrow_size()`, применяется в `create_arrow()` и ко всем существующим стрелкам
+- 🔄 `main.py` — `_resize()`: клавиша `1` (scroll/Q-E) меняет `spore_manager` и `line_manager.arrow_scale` одновременно
+- 🔄 `src/core/input_manager.py` — Q/E дублируют логику `scroll up/down` (held-keys 1-4 приоритетнее зума)
+
+**Технические детали:**
+- Маятник: `θ̈ = sin(θ) + u` соответствует θ=0=верх (неустойчиво); для θ=0=низ (устойчиво) знак гравитационного члена меняется на `-sin(θ)`
+- Класс был изначально `InvertedPendulum`, переименован в `Pendulum` после смены конвенции (при θ=0=низ это уже не "перевёрнутый" маятник)
+- `model.step()` — общий интерфейс для `DoubleIntegrator`/`Pendulum`, диспетчеризуется через `shared_context.model`
+
+**Участники:** Пользователь + Claude Sonnet 4.6
 
 ---
 
@@ -43,52 +65,6 @@
 - Grid-триангуляция: fan (root → col[0]) + квады между соседними лучами. `n_tau + 2*n_tau*(n_tau-1)` треугольников, нет перекрытий
 - Dirty flag: кешируем `root_pos.copy()`, `a_max`, `tau`; `np.array_equal` для сравнения
 - Суффикс `{u1}{t1}{t2}` (p=+1, m=−1): полностью кодирует шаблон
-
-**Участники:** Пользователь + Claude Sonnet 4.6
-
----
-
-## 2026-05-26 (сессия 13) - Диагностика ScalableFanSurface
-
-**Что сделано:**
-- 🔄 `src/core/scalable_surface.py` — `mode='triangle'` + явные tris → `mode='ngon'` без explicit triangles
-- 🔄 `src/core/surface_manager.py` — добавлен `double_sided=True`
-- 🔄 `src/spores/boundary_ray_family.py` — boundary переписан на семантически чистую версию: `positions[0,:]` + `positions[1:, n-1]` + `positions[-1,-2::-1]`
-- 🆕 `tests/test_boundary.ipynb` — ноутбук для визуализации boundary (matplotlib 2D); **подтверждено: граница логически верна**
-
-**Результат:** частичное улучшение (1 треугольник → ромб), но bug не закрыт. `double_sided` не помог.
-
-**Следующий шаг:** вернуться к `mode='triangle'` + переприсваивать `self._tris` в каждом `apply_transform`; добавить debug-print для диагностики.
-
-**Участники:** Пользователь + Claude Sonnet 4.6
-
----
-
-## 2026-05-26 (сессия 12) - BranchFamily + SurfaceManager + monitors.json
-
-**Что сделано:**
-- 🆕 `config/monitors.json` — конфиг мониторов вынесен из WindowManager; добавлено поле `margin` (для левого монитора `[-0.07, -0.0]`)
-- 🔄 `src/core/window_manager.py` — читает monitors.json, добавлен `get_margin()`, удалён хардкод `MONITORS`
-- 🔄 `main.py` — UI-элементы используют `window_manager.get_margin()`
-- 🗑️ `src/spores/ghost_spore_family.py` — удалён целиком (семья заменена веткой)
-- 🔄 `src/spores/boundary_ray_family.py` — полностью переписан как **`BranchFamily`**:
-  - Шаблон `((u1_sign, t1_sign), (u2_sign, t2_sign))`, u1 ≠ u2
-  - k=0..n_tau лучей (k=0 = чистая фаза-2, k=n_tau = чистая фаза-1)
-  - Вычисления векторизованы через numpy (нет Python-цикла по лучам)
-  - grid: iso-offset линии (j dtau после переключения)
-  - root_line, envelope, fan_surface
-- 🆕 `src/core/surface_manager.py` — фабрика `ScalableFanSurface`, dh=0.002 (z-fighting)
-- 🔄 `src/core/scalable_surface.py` — добавлен класс `ScalableFanSurface` (веер треугольников)
-- 🔄 `config/colors.json` — добавлены `surface_plus_u`, `surface_minus_u`
-- 🔄 `main.py` — n_u убран из params; два бранча `branch_plus/minus` с шаблонами `(+u,+t)→(-u,+t)` и `(-u,+t)→(+u,+t)`
-
-**Технические детали:**
-- `BranchFamily` независима от любой семьи — вычисляет boundary-узлы сама от root_spore
-- Граница поверхности: `positions[0,:]` + `positions[1:-1,-1]` + `positions[-1,::-1]` = 3*n_tau-1 точек
-- `SurfaceManager._count * dh` — offset по y для каждой поверхности
-
-**Незакрытый баг:**
-- `ScalableFanSurface` рендерит только линию от рута к одной угловой точке вместо полного вееpa. Скорее всего проблема в инициализации или порядке вершин треугольников. **Следующей сессии — починить.**
 
 **Участники:** Пользователь + Claude Sonnet 4.6
 

@@ -1,6 +1,6 @@
 # Current State - Текущее состояние проекта
 
-**Last updated:** 2026-05-27 (v3 сессия 1 / общая сессия 15)
+**Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
 
 ---
 
@@ -28,37 +28,39 @@
 - ✅ **`SurfaceManager`** + **`ScalableFanSurface`** — grid-триангуляция, alpha=0.5
 - ✅ **Все 8 шаблонов** активны в main.py
 
-### ScalableArrow (v3 сессия 1):
+### ScalableArrow (v3 сессия 1, доработано сессия 16):
 - ✅ **`ScalableArrow`** в `src/core/scalable_arrow.py` — наследуется от ScalableLine
   - Равнобедренный треугольник (leg = 2×base) в середине линии, центр масс = середина
   - `t_sign` управляет направлением: +1 = p1→p2, −1 = p2→p1
   - Отдельный `_tri_entity`, всегда alpha=1 (непрозрачный)
   - `__setattr__` синхронизирует color/enabled на треугольник
-- ✅ **`LineManager.create_arrow()`** — создаёт ScalableArrow, alpha=1 принудительно
+  - `size_factor` (по умолчанию 1.0) — множитель размера наконечника: `size = length/4 * size_factor`
+- ✅ **`LineManager.create_arrow()`** — создаёт ScalableArrow, alpha=1 принудительно, применяет `arrow_scale`
+- ✅ **`LineManager.increase/decrease_arrow_size()`** — меняют `arrow_scale` для всех стрелок + `update_transform()`
 
-### Цветовая схема v3:
-- ✅ 4 семантических цвета рёбер по (t_sign, u_sign):
-  - `edge_fwd_pos` — красный (t>0, u>0)
-  - `edge_fwd_neg` — синий (t>0, u<0)
-  - `edge_bwd_pos` — оранжевый (t<0, u>0)
-  - `edge_bwd_neg` — маджента/фиолетовый (t<0, u<0)
-- ✅ Цвета узлов (node_*) — alpha=1.0, непрозрачные
-- ✅ Цвета поверхностей (surface_*) — alpha=0.5
+### Цветовая схема v3 (палитра обновлена сессия 16):
+- ✅ "Мягкая радуга" — `node/edge/surface_{ppp..mmm}`: 8 цветов равномерно по кругу оттенков (шаг 45°), S≈0.55 V≈0.82, единый RGB на ветку
+  - alpha: node=1.0, edge=0.6, surface=0.4
+- ✅ 4 семантических цвета фазовых рёбер по (t_sign, u_sign) — `edge_fwd_pos/neg`, `edge_bwd_pos/neg` — приведены к той же тональности (коралл/голубой/персик/розовый)
 
 ### Документация:
 - ✅ **`docs/reachability.md`** — алгоритм ветвей, связь с принципом Понтрягина, термины
 
 ### Параметры (актуальное):
-- `1` + scroll — spore size
-- `2` + scroll — tau
-- `3` + scroll — a_max (min=0)
-- `4` + scroll — n_tau (шаг 1, min=0)
-- `scroll` — zoom
+- `1` + scroll/Q-E — spore size + arrow size (синхронно, `_resize()` в main.py)
+- `2` + scroll/Q-E — tau
+- `3` + scroll/Q-E — a_max (min=0)
+- `4` + scroll/Q-E — n_tau (шаг 1, min=0)
+- `scroll`/`Q-E` — zoom (если не зажата клавиша параметра 1-4)
 - *(n_u убран — концепция семьи удалена)*
 
-### Математика:
-- ✅ `DoubleIntegrator` — 1D, stateless step, a_max из SharedContext
-- ✅ `_step()` — numpy, JIT-готова
+### Математика (модель — сессия 16):
+- ✅ `DoubleIntegrator` — 1D, stateless `step(x0,v0,u,dt) -> (x,v)`, a_max из SharedContext
+- ✅ `Pendulum` (`src/math/pendulum.py`) — нелинейный маятник, RK4 (n_sub=10)
+  - `θ=0` — нижнее устойчивое положение, `θ̈ = -sin(θ) + u`, нормировка g/l=1, m·l²=1
+  - Векторизован (np.sin поэлементно), интерфейс step() идентичен DoubleIntegrator
+- ✅ Модель подключается через `shared_context.model` — `BranchFamily._recompute()` зовёт `ctx.model.step(...)`
+  - Переключение модели = одна строка в `main.py` (`model = Pendulum(shared_context)`)
 
 ---
 
@@ -99,6 +101,7 @@ src/
 
   math/
     double_integrator.py
+    pendulum.py            ← НОВЫЙ (сессия 16)
     spore_integrator.py
 ```
 

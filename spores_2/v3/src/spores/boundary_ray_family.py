@@ -19,7 +19,6 @@ Recompute positions: every tick.
 import numpy as np
 from typing import List, Tuple, TYPE_CHECKING
 from .spore import GhostSpore, Spore
-from ..math.double_integrator import _step
 
 if TYPE_CHECKING:
     from ..core.shared_context import SharedContext
@@ -202,8 +201,7 @@ class BranchFamily:
             mask = step_i <= k_arr
             u  = np.where(mask, u1, u2)
             dt = np.where(mask, dt1, dt2)
-            x = x + v * dt + 0.5 * u * dt * dt
-            v = v + u * dt
+            x, v = self._ctx.model.step(x, v, u, dt)
             positions[:, step_i - 1, 0] = x
             positions[:, step_i - 1, 1] = 0.03
             positions[:, step_i - 1, 2] = v

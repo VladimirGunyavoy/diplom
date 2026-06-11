@@ -4,6 +4,52 @@
 
 ---
 
+## 2026-05-26 (сессия 13) - Диагностика ScalableFanSurface
+
+**Что сделано:**
+- 🔄 `src/core/scalable_surface.py` — `mode='triangle'` + явные tris → `mode='ngon'` без explicit triangles
+- 🔄 `src/core/surface_manager.py` — добавлен `double_sided=True`
+- 🔄 `src/spores/boundary_ray_family.py` — boundary переписан на семантически чистую версию: `positions[0,:]` + `positions[1:, n-1]` + `positions[-1,-2::-1]`
+- 🆕 `tests/test_boundary.ipynb` — ноутбук для визуализации boundary (matplotlib 2D); **подтверждено: граница логически верна**
+
+**Результат:** частичное улучшение (1 треугольник → ромб), но bug не закрыт. `double_sided` не помог.
+
+**Следующий шаг:** вернуться к `mode='triangle'` + переприсваивать `self._tris` в каждом `apply_transform`; добавить debug-print для диагностики.
+
+**Участники:** Пользователь + Claude Sonnet 4.6
+
+---
+
+## 2026-05-26 (сессия 12) - BranchFamily + SurfaceManager + monitors.json
+
+**Что сделано:**
+- 🆕 `config/monitors.json` — конфиг мониторов вынесен из WindowManager; добавлено поле `margin` (для левого монитора `[-0.07, -0.0]`)
+- 🔄 `src/core/window_manager.py` — читает monitors.json, добавлен `get_margin()`, удалён хардкод `MONITORS`
+- 🔄 `main.py` — UI-элементы используют `window_manager.get_margin()`
+- 🗑️ `src/spores/ghost_spore_family.py` — удалён целиком (семья заменена веткой)
+- 🔄 `src/spores/boundary_ray_family.py` — полностью переписан как **`BranchFamily`**:
+  - Шаблон `((u1_sign, t1_sign), (u2_sign, t2_sign))`, u1 ≠ u2
+  - k=0..n_tau лучей (k=0 = чистая фаза-2, k=n_tau = чистая фаза-1)
+  - Вычисления векторизованы через numpy (нет Python-цикла по лучам)
+  - grid: iso-offset линии (j dtau после переключения)
+  - root_line, envelope, fan_surface
+- 🆕 `src/core/surface_manager.py` — фабрика `ScalableFanSurface`, dh=0.002 (z-fighting)
+- 🔄 `src/core/scalable_surface.py` — добавлен класс `ScalableFanSurface` (веер треугольников)
+- 🔄 `config/colors.json` — добавлены `surface_plus_u`, `surface_minus_u`
+- 🔄 `main.py` — n_u убран из params; два бранча `branch_plus/minus` с шаблонами `(+u,+t)→(-u,+t)` и `(-u,+t)→(+u,+t)`
+
+**Технические детали:**
+- `BranchFamily` независима от любой семьи — вычисляет boundary-узлы сама от root_spore
+- Граница поверхности: `positions[0,:]` + `positions[1:-1,-1]` + `positions[-1,::-1]` = 3*n_tau-1 точек
+- `SurfaceManager._count * dh` — offset по y для каждой поверхности
+
+**Незакрытый баг (исправлено сессия 14):**
+- `ScalableFanSurface` рендерит только линию от рута к одной угловой точке вместо полного веера. Скорее всего проблема в инициализации или порядке вершин треугольников.
+
+**Участники:** Пользователь + Claude Sonnet 4.6
+
+---
+
 ## 2026-04-24 (сессия 11) - Рёбра графа + BoundaryRayFamily
 
 **Что сделано:**
