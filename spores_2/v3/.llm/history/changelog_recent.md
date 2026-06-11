@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-12 (v3 сессия 2 / общая сессия 16)
 
-> Хранит последние 3 сессии. Если сессий стало > 3 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
+> Хранит последние 5 сессий. Если сессий стало > 5 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
 > Полная история → [changelog_archive.md](changelog_archive.md)
 
 ---
