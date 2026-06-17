@@ -1,12 +1,12 @@
 # Session Handoff
-[РУТИНА ВЫПОЛНЕНА — v4_circle сессия 1 / сессия 20]
+[РУТИНА НЕ ВЫПОЛНЕНА]
 
-Дата: 2026-06-12, v3 сессия 5 (сессия 19)
-Сделано: Toggle видимости веток (из сессии 18) перенесён с клавиш `1`-`8` на `control+1`-`control+8`, чтобы не конфликтовать с параметрами 1-4 (resize/tau/a_max/n_tau)
-Стоп на: main.py запускался без ошибок, пользователь проверил вручную — "вроде пашет"; рабочие файлы не закоммичены
-Следующий шаг: Новый агент коммитит рабочие файлы (см. ниже) + дописывает changelog_recent.md за сессию 19 + обновляет state/current.md и plan.md (упоминание клавиш 1-8 → control+1-8 для toggle веток); активной задачи в plan.md нет
-Грабли: В Ursina held_keys['control'] всегда 0 (события приходят как 'left control'/'right control'), поэтому ctrl-комбо детектируется через held_keys['left control'] or held_keys['right control']
-Не трогай: history/changelog_archive.md (append-only)
-Рабочие файлы: spores_2/v3/main.py, spores_2/v3/src/core/input_manager.py
-Архитектурные решения: нет
-Коммиты этой сессии: см. git log --oneline -3 (стартовая рутина s19: toggle веток s18 + token stats)
+Дата: 2026-06-17, v4_circle сессия 1 (сессия 20)
+Сделано: Новая парадигма v4_circle — CirclePattern (круг спор вокруг look_point) + 3 группы стрелок фазовой производной (u=-a_max/0/+a_max) + траектории интегрирования из каждой споры + ScalableTipArrow (наконечник на конце)
+Стоп на: Всё работает, пользователь подтвердил «кайф»; рабочие файлы не закоммичены
+Следующий шаг: Коммит рабочих файлов + обсуждение дальнейшего развития (расширение CirclePattern, другие модели)
+Грабли: Формула длины стрелки r/3*tanh(3/r*||f||) — мягкое насыщение без выхода за r/3; held_keys['control'] в Ursina всегда 0 — использовать 'left control'/'right control'
+Не трогай: .llm/history/changelog_archive.md (append-only)
+Рабочие файлы: spores_2/v4_circle/main.py, spores_2/v4_circle/src/spores/circle_pattern.py, spores_2/v4_circle/src/core/scalable_tip_arrow.py, spores_2/v4_circle/src/core/line_manager.py, spores_2/v4_circle/src/math/pendulum.py, spores_2/v4_circle/src/math/double_integrator.py, spores_2/v4_circle/config/colors.json, spores_2/v4_circle/.llm/AGENT_START_ROUTINE.md, spores_2/v4_circle/.llm/AGENT_END_ROUTINE.md, spores_2/v4_circle/.llm/state/current.md, spores_2/v4_circle/.llm/state/plan.md, spores_2/v4_circle/.llm/state/token_stats.md, spores_2/v4_circle/.llm/history/changelog_recent.md, spores_2/v4_circle/.llm/history/changelog_archive.md
+Архитектурные решения: CirclePattern как единый класс с _ControlGroup для 3 управлений; ScalableTipArrow — отдельный класс (не параметр ScalableArrow); derivative() добавлен в модели как отдельный метод (не через step с dt→0)
+Коммиты этой сессии: eeb6c6c [v4 s1]: стартовая рутина и token stats
