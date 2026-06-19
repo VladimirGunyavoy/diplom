@@ -1,9 +1,28 @@
 # Changelog - Последние сессии
 
-**Last updated:** 2026-06-17 (v3 сессия 5 / сессия 19 → v4_circle)
+**Last updated:** 2026-06-20 (v4_circle сессия 2 / общая сессия 21)
 
 > Хранит последние 5 сессий. Если сессий стало > 5 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
 > Полная история → [changelog_archive.md](changelog_archive.md)
+
+---
+
+## 2026-06-17 (v4_circle сессия 1 / сессия 20) - CirclePattern + ScalableTipArrow
+
+**Что сделано:**
+- 🆕 `src/spores/circle_pattern.py` — класс `CirclePattern`: n_circle спор по кругу радиуса radius вокруг look_point. 3 группы управлений (u=-a_max, 0, +a_max) через `_ControlGroup`, каждая с derivative-стрелками (ScalableTipArrow) и траекториями интегрирования (n_tau сегментов). `toggle_group(idx)` переключает видимость группы
+- 🆕 `src/core/scalable_tip_arrow.py` — класс `ScalableTipArrow` (наследник ScalableLine): треугольник-наконечник на конце (p2), а не в середине как ScalableArrow. `__setattr__` синхронизирует color/enabled
+- 🔄 `src/core/line_manager.py` — метод `create_tip_arrow()`
+- 🔄 `src/math/pendulum.py`, `src/math/double_integrator.py` — добавлен `derivative(x, v, u)` — вычисляет (dx/dt, dv/dt) напрямую, без step() с dt→0
+- 🔄 `main.py` — v4_circle: CirclePattern, параметры radius/n_circle/a_max/tau/n_tau (клавиши 1-6), ctrl+1/2/3 toggle групп управления
+- 🔄 `config/colors.json` — цвета `circle/node`, `circle/edge`, `circle/arrow_neg/zero/pos`
+
+**Технические детали:**
+- Длина стрелки: `r/3 * tanh(3/r * ||f||)` — мягкое насыщение, не выходит за r/3
+- Ursina: `held_keys['control']` всегда 0 — использовать `'left control'`/`'right control'`
+- `_rebuild()` вызывается автоматически при изменении n_circle или n_tau
+
+**Участники:** Пользователь + Claude Sonnet 4.6
 
 ---
 
@@ -75,28 +94,6 @@
 - Маятник: `θ̈ = sin(θ) + u` соответствует θ=0=верх (неустойчиво); для θ=0=низ (устойчиво) знак гравитационного члена меняется на `-sin(θ)`
 - Класс был изначально `InvertedPendulum`, переименован в `Pendulum` после смены конвенции (при θ=0=низ это уже не "перевёрнутый" маятник)
 - `model.step()` — общий интерфейс для `DoubleIntegrator`/`Pendulum`, диспетчеризуется через `shared_context.model`
-
-**Участники:** Пользователь + Claude Sonnet 4.6
-
----
-
-## 2026-05-27 (v3 сессия 1 / сессия 15) - ScalableArrow + семантические цвета + docs
-
-**Что сделано:**
-- 🆕 `src/core/scalable_arrow.py` — класс `ScalableArrow` (наследник ScalableLine): равнобедренный треугольник (leg=2×base) в середине линии, центр масс = середина сегмента; `t_sign` управляет направлением; `_tri_entity` всегда alpha=1; `__setattr__` синхронизирует color/enabled
-- 🔄 `src/core/line_manager.py` — метод `create_arrow()`, alpha=1 принудительно для линии и треугольника
-- 🔄 `src/spores/boundary_ray_family.py`:
-  - `_BranchRay` — per-segment цвет и t_sign (switch_k определяет фазу каждого сегмента)
-  - `BranchFamily._phase_edge()` — получает семантический цвет по (u_sign, t_sign)
-  - Root lines → `create_arrow` с корректным t_sign
-  - Grid линии **удалены** (упрощение визуализации)
-  - Поверхность y=0.01, линии/узлы y=0.03, треугольники y=0.05 (разделённые слои)
-- 🔄 `config/colors.json` — 4 семантических цвета: `edge_fwd_pos` (красный), `edge_fwd_neg` (синий), `edge_bwd_pos` (оранжевый), `edge_bwd_neg` (маджента); node_* alpha→1.0; surface_* alpha→0.5
-- 🆕 `docs/reachability.md` — алгоритм ветвей, связь с принципом максимума Понтрягина, прямое/обратное достижимые множества, таблица терминов
-
-**Технические детали:**
-- Проблема прозрачности треугольников: `Color` в Ursina содержит alpha → при `_tri_entity.color = color` alpha перезаписывалась. Решение: `tri.alpha = 1.0` после синхронизации цвета в `__setattr__`
-- Фаза сегмента j в луче с switch_k: фаза 1 если `j < switch_k - 1`, иначе фаза 2
 
 **Участники:** Пользователь + Claude Sonnet 4.6
 

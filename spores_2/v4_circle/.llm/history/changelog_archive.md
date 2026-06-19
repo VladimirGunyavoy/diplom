@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-05-27 (v3 сессия 1 / сессия 15) - ScalableArrow + семантические цвета + docs
+
+**Что сделано:**
+- 🆕 `src/core/scalable_arrow.py` — класс `ScalableArrow` (наследник ScalableLine): равнобедренный треугольник (leg=2×base) в середине линии, центр масс = середина сегмента; `t_sign` управляет направлением; `_tri_entity` всегда alpha=1; `__setattr__` синхронизирует color/enabled
+- 🔄 `src/core/line_manager.py` — метод `create_arrow()`, alpha=1 принудительно для линии и треугольника
+- 🔄 `src/spores/boundary_ray_family.py`:
+  - `_BranchRay` — per-segment цвет и t_sign (switch_k определяет фазу каждого сегмента)
+  - `BranchFamily._phase_edge()` — получает семантический цвет по (u_sign, t_sign)
+  - Root lines → `create_arrow` с корректным t_sign
+  - Grid линии **удалены** (упрощение визуализации)
+  - Поверхность y=0.01, линии/узлы y=0.03, треугольники y=0.05 (разделённые слои)
+- 🔄 `config/colors.json` — 4 семантических цвета: `edge_fwd_pos` (красный), `edge_fwd_neg` (синий), `edge_bwd_pos` (оранжевый), `edge_bwd_neg` (маджента); node_* alpha→1.0; surface_* alpha→0.5
+- 🆕 `docs/reachability.md` — алгоритм ветвей, связь с принципом максимума Понтрягина, прямое/обратное достижимые множества, таблица терминов
+
+**Технические детали:**
+- Проблема прозрачности треугольников: `Color` в Ursina содержит alpha → при `_tri_entity.color = color` alpha перезаписывалась. Решение: `tri.alpha = 1.0` после синхронизации цвета в `__setattr__`
+- Фаза сегмента j в луче с switch_k: фаза 1 если `j < switch_k - 1`, иначе фаза 2
+
+**Участники:** Пользователь + Claude Sonnet 4.6
+
+---
+
 ## 2026-05-26 (сессия 14) - Фикс ScalableFanSurface + BranchFamilyManager + 8 шаблонов
 
 **Что сделано:**

@@ -1,6 +1,6 @@
 # Current State - Текущее состояние проекта
 
-**Last updated:** 2026-06-17 (v4_circle сессия 1 / общая сессия 20)
+**Last updated:** 2026-06-20 (v4_circle сессия 2 / общая сессия 21)
 
 ---
 
@@ -28,6 +28,19 @@
 - ✅ **`SurfaceManager`** + **`ScalableFanSurface`** — grid-триангуляция, alpha=0.5
 - ✅ **Все 8 шаблонов** активны в main.py
 
+### v4_circle: CirclePattern (сессия 20):
+- ✅ **`CirclePattern`** в `src/spores/circle_pattern.py`
+  - n_circle спор по кругу радиуса radius вокруг look_point
+  - 3 группы управления через `_ControlGroup`: u=-a_max, u=0, u=+a_max
+  - Derivative arrows: `ScalableTipArrow` — длина `r/3 * tanh(3/r * ||f||)` (мягкое насыщение)
+  - Траектории: n_tau сегментов интегрирования через `model.step()`
+  - `toggle_group(idx)` — переключает видимость группы (ctrl+1/2/3)
+  - `_rebuild()` при изменении n_circle или n_tau
+- ✅ **`ScalableTipArrow`** в `src/core/scalable_tip_arrow.py` — наконечник на конце (p2), не в середине
+- ✅ **`model.derivative(x, v, u)`** — (dx/dt, dv/dt) как отдельный метод в `DoubleIntegrator` и `Pendulum`
+- ✅ Параметры: `1` size, `2` radius, `3` n_circle, `4` a_max, `5` tau, `6` n_tau
+- ✅ ctrl+1/2/3 — toggle групп u-/u0/u+
+
 ### Видимость веток (v3 сессия 4-5 / сессии 18-19):
 - ✅ Клавиши `control+1`-`control+8` — toggle видимости каждой из 8 веток целиком (споры, рёбра-стрелки, root-линии, envelope, fan_surface)
   - `BranchFamily.set_visible()/toggle()` — управляет всеми визуальными элементами ветки
@@ -53,14 +66,15 @@
 ### Документация:
 - ✅ **`docs/reachability.md`** — алгоритм ветвей, связь с принципом Понтрягина, термины
 
-### Параметры (актуальное):
-- `1` + scroll/Q-E — spore size + arrow size (синхронно, `_resize()` в main.py)
-- `2` + scroll/Q-E — tau
-- `3` + scroll/Q-E — a_max (min=0)
-- `4` + scroll/Q-E — n_tau (шаг 1, min=0)
-- `scroll`/`Q-E` — zoom (если не зажата клавиша параметра 1-4)
-- `control+1`..`control+8` — toggle видимости веток (ранее просто `1`-`8`)
-- *(n_u убран — концепция семьи удалена)*
+### Параметры (актуальное, v4_circle):
+- `1` + scroll/Q-E — spore size
+- `2` + scroll/Q-E — radius (шаг 0.1, min=0)
+- `3` + scroll/Q-E — n_circle (шаг 1, min=0)
+- `4` + scroll/Q-E — a_max (шаг 0.1, min=0)
+- `5` + scroll/Q-E — tau (exp)
+- `6` + scroll/Q-E — n_tau (шаг 1, min=0)
+- `scroll`/`Q-E` — zoom (если не зажата клавиша параметра 1-6)
+- `control+1`/`control+2`/`control+3` — toggle видимости групп u-/u0/u+
 
 ### Математика (модель — сессия 16):
 - ✅ `DoubleIntegrator` — 1D, stateless `step(x0,v0,u,dt) -> (x,v)`, a_max из SharedContext
@@ -84,8 +98,9 @@
 src/
   core/
     color_manager.py
+    frame.py
     line_manager.py
-    surface_manager.py    ← НОВЫЙ (сессия 12)
+    surface_manager.py
     window_manager.py     ← читает monitors.json
     input_manager.py
     update_manager.py
@@ -95,22 +110,28 @@ src/
     object_manager.py
     scalable.py
     scalable_line.py
-    scalable_arrow.py     ← НОВЫЙ (v3 сессия 1)
-    scalable_surface.py   ← добавлен ScalableFanSurface
+    scalable_arrow.py
+    scalable_tip_arrow.py ← НОВЫЙ (сессия 20): наконечник на конце
+    scalable_surface.py
     screen_manager.py
     zoom_manager.py
 
   spores/
     spore.py
     spore_manager.py
-    boundary_ray_family.py   ← BranchFamily
-    branch_family_manager.py ← НОВЫЙ (сессия 14)
-    *(ghost_spore_family.py удалён)*
+    circle_pattern.py        ← НОВЫЙ (сессия 20): CirclePattern
+    boundary_ray_family.py   ← BranchFamily (из v3)
+    branch_family_manager.py
+    trajectories.py
 
   math/
-    double_integrator.py
-    pendulum.py            ← НОВЫЙ (сессия 16)
+    double_integrator.py  ← + derivative()
+    pendulum.py           ← + derivative()
     spore_integrator.py
+
+  utils/
+    nb_logger.py
+    watcher.py
 ```
 
 ---

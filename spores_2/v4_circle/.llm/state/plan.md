@@ -1,12 +1,23 @@
 # Plan & Progress - План и прогресс
 
-**Last updated:** 2026-06-17 (v4_circle сессия 1 / общая сессия 20)
+**Last updated:** 2026-06-20 (v4_circle сессия 2 / общая сессия 21)
 
 ---
 
 ## 🎯 Текущая задача
 
-*(нет активной задачи — обсуждение новой парадигмы v4_circle)*
+*(нет активной задачи — обсуждение дальнейшего развития CirclePattern)*
+
+---
+
+## ✅ Сделано в v4_circle сессии 1 (сессия 20)
+
+- `src/spores/circle_pattern.py` — CirclePattern: круг спор вокруг look_point, 3 группы стрелок фазовой производной (u=-a_max/0/+a_max), траектории интегрирования из каждой споры
+- `src/core/scalable_tip_arrow.py` — ScalableTipArrow: наконечник на конце стрелки
+- `src/math/pendulum.py`, `src/math/double_integrator.py` — `derivative(x, v, u)` как отдельный метод
+- `src/core/line_manager.py` — `create_tip_arrow()`
+- `main.py` — v4_circle: параметры 1-6, ctrl+1/2/3 toggle групп
+- `config/colors.json` — цвета circle/node, circle/edge, circle/arrow_neg/zero/pos
 
 ---
 
