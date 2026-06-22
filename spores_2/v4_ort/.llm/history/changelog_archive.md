@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-05-26 (сессия 14) - Фикс ScalableFanSurface + BranchFamilyManager + 8 шаблонов
+
+**Что сделано:**
+- 🔄 `src/core/scalable_surface.py` — `ScalableFanSurface` полностью переписан: grid-триангуляция `positions[k,step]` вместо fan по boundary
+- 🔄 `src/core/surface_manager.py` — API: `n_pts` → `n_tau`, `curve_pts` → `positions_grid`
+- 🔄 `src/spores/boundary_ray_family.py` — dirty flag; `_root_line2`; узлы: GhostSpore → Spore
+- 🆕 `src/spores/branch_family_manager.py` — фабрика с авто-регистрацией tickable
+- 🔄 `main.py` — все 8 шаблонов через `BranchFamilyManager`
+- 🔄 `config/colors.json` — 8 цветовых наборов (ppp..mmm)
+
+**Участники:** Пользователь + Claude Sonnet 4.6
+
+---
+
 ## 2026-05-26 (сессия 13) - Диагностика ScalableFanSurface
 
 **Что сделано:**

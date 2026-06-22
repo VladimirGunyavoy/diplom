@@ -1,9 +1,34 @@
 # Changelog - Последние сессии
 
-**Last updated:** 2026-06-12 (v3 сессия 4 / сессия 18)
+**Last updated:** 2026-06-23 (v4_ort сессия 2 / сессия 21)
 
 > Хранит последние 5 сессий. Если сессий стало > 5 — самую старую перенести в конец [changelog_archive.md](changelog_archive.md)
 > Полная история → [changelog_archive.md](changelog_archive.md)
+
+---
+
+## 2026-06-20 (v4_ort сессия 1 / сессия 20) - OrthoGrid: flow-orthogonal сетка
+
+**Что сделано:**
+- 🆕 `src/spores/ortho_grid.py` — класс `OrthoGrid`: flow-orthogonal сетка в фазовом пространстве
+  - Три режима шага клонов: TIME (одинаковый dtau), ARC (match arc length центральной), ORTHO (optimize front ⊥ через scipy minimize_scalar)
+  - `_ortho_step()` — шаг ⊥ фазовой скорости с smooth fallback вблизи equilibria (exp-blending)
+  - `_integrate_by_arc()` — интеграция по arc length с sub-stepping
+  - `_integrate_by_ortho()` — оптимизация ⊥ фронтов к вектору поля соседней траектории
+  - Front lines на каждом time step, surfaces fwd/bwd (grid-триангуляция)
+  - Alpha fade для крайних траекторий
+  - Dirty flag: пересчёт при изменении look_point/a_max/tau/r_s
+- 🔄 `src/math/double_integrator.py`, `src/math/pendulum.py` — добавлен `deriv(x,v,u) -> (fx,fv)` как общий интерфейс
+- 🔄 `main.py` — два экземпляра OrthoGrid (grid_p +1, grid_m -1); _cycle_u() для переключения u_sign (+1/-1/±1); параметры n_s, r_s; клавиши 5-8
+- 🔄 `src/core/input_manager.py` — поддержка новых биндингов
+
+**Технические детали:**
+- OrthoGrid заменяет BranchFamily как основная визуализация
+- `deriv()` необходим для вычисления ⊥-направления (до этого модели имели только `step()`)
+- r_s фиксирует разброс (ds = r_s / n_s); два экземпляра для ±u_sign
+- scipy.optimize.minimize_scalar — зависимость для ORTHO режима
+
+**Участники:** Пользователь + Claude Sonnet 4.6
 
 ---
 
@@ -26,19 +51,10 @@
 ## 2026-06-12 (v3 сессия 3 / сессия 17) - Миграция .llm протокола v1 → v2 (Decision #20)
 
 **Что сделано:**
-- 🆕 `AGENT_START_ROUTINE.md` — новый файл: обработка handoff → обновление state/ → запись в changelog/decisions → git commit → токены. Выполняется в начале сессии, пока контекст почти пуст
-- 🔄 `AGENT_END_ROUTINE.md` — упрощён с 209 строк до handoff-only: спросить токены → записать `session_handoff.md` с пометкой `[РУТИНА НЕ ВЫПОЛНЕНА]` → закоммитить только его → спросить токены
-- 🔄 `AGENT_START.md` — указывает на новую стартовую рутину; убрана дублирующая секция про токены; добавлен блок «СТОП — спроси токены первым делом»: T_START спрашивается ДО любых tool calls (даже если файлы уже прочитаны в этом батче)
-- 🔄 `AGENT_START_ROUTINE.md` (шаг 0) — уточнён аналогично: спросить токены сразу после AGENT_START.md, до handoff, не параллельно с другими tool calls (иначе вопрос теряется среди вызовов)
-- 🆕 `state/session_handoff.md` — новый файл, в конце сессии помечается `[РУТИНА НЕ ВЫПОЛНЕНА]`, обрабатывается стартовой рутиной следующей сессии
-- 🔄 `state/token_stats.md` — новая схема на 4 точки (T_START/T_AFTER/T_BEFORE_END/T_END), сессии 9-16 переразмечены (T_AFTER = T_START, т.к. в v1 рутина была только в конце)
-- 🔄 `history/decisions.md` — добавлен Decision #20 (разделение рутины)
-- 🔄 `history/changelog_recent.md` — уточнено правило ротации: хранит 5 сессий
-
-**Технические детали:**
-- Причина: в v1 финишная рутина (changelog, decisions, state/, git commit) выполнялась поверх заполненного контекста сессии — стоила несоразмерно дорого (сессия 16: Работа=8%, Рутина↓=5%)
-- v2: тяжёлая часть переехала в начало следующей сессии (контекст почти пуст), финишная рутина = только запись handoff (1 файл, 1 коммит)
-- Задач разработки v3 (код player_zoom) в этой сессии не было — чисто протокольная миграция
+- 🆕 `AGENT_START_ROUTINE.md` — стартовая рутина: обработка handoff → state/ → changelog/decisions → git commit → токены
+- 🔄 `AGENT_END_ROUTINE.md` — упрощён до handoff-only
+- 🔄 `AGENT_START.md` — указывает на стартовую рутину; блок «СТОП — спроси токены»
+- 🆕 `state/session_handoff.md`, обновлён `state/token_stats.md`
 
 **Участники:** Пользователь + Claude Sonnet 4.6
 
@@ -47,20 +63,11 @@
 ## 2026-06-12 (v3 сессия 2 / сессия 16) - Pendulum + мягкая радуга + arrow_scale
 
 **Что сделано:**
-- 🆕 `src/math/pendulum.py` — класс `Pendulum`: RK4 (n_sub=10) для `θ̈ = -sin(θ) + u`, `θ=0` — нижнее устойчивое положение, нормировка g/l=1, m·l²=1; векторизован (np.sin поэлементно), интерфейс `step(x0,v0,u,dt) -> (θ,ω)`
-- 🔄 `src/math/double_integrator.py`, `src/math/__init__.py` — `DoubleIntegrator.step()` теперь возвращает `(x,v)` (был `np.array`), убран неиспользуемый `import numpy` — единый интерфейс с `Pendulum`
-- 🔄 `src/spores/boundary_ray_family.py` — `_recompute()` зовёт `self._ctx.model.step(x, v, u, dt)` вместо инлайн-формулы double integrator; убран прямой импорт `_step`
-- 🔄 `main.py` — новая секция `DYNAMICS MODEL`: `model = Pendulum(shared_context)`, `shared_context.bind('model', ...)` — переключение динамики = одна строка
-- 🔄 `config/colors.json` — новая палитра "мягкая радуга": `node/edge/surface_{ppp..mmm}` — 8 цветов равномерно по кругу оттенков (шаг 45°, S≈0.55, V≈0.82), единый RGB на ветку с alpha 1.0/0.6/0.4; 4 цвета фазовых рёбер (`edge_fwd/bwd_pos/neg`) приведены к той же тональности
-- 🆕 `src/core/scalable_arrow.py` — `size_factor` (default 1.0): `size = length/4 * size_factor`
-- 🔄 `src/core/line_manager.py` — `arrow_scale` + `increase/decrease_arrow_size()`, применяется в `create_arrow()` и ко всем существующим стрелкам
-- 🔄 `main.py` — `_resize()`: клавиша `1` (scroll/Q-E) меняет `spore_manager` и `line_manager.arrow_scale` одновременно
-- 🔄 `src/core/input_manager.py` — Q/E дублируют логику `scroll up/down` (held-keys 1-4 приоритетнее зума)
-
-**Технические детали:**
-- Маятник: `θ̈ = sin(θ) + u` соответствует θ=0=верх (неустойчиво); для θ=0=низ (устойчиво) знак гравитационного члена меняется на `-sin(θ)`
-- Класс был изначально `InvertedPendulum`, переименован в `Pendulum` после смены конвенции (при θ=0=низ это уже не "перевёрнутый" маятник)
-- `model.step()` — общий интерфейс для `DoubleIntegrator`/`Pendulum`, диспетчеризуется через `shared_context.model`
+- 🆕 `src/math/pendulum.py` — класс `Pendulum`: RK4 (n_sub=10), `θ̈ = -sin(θ) + u`
+- 🔄 `src/math/double_integrator.py` — единый интерфейс `step(x0,v0,u,dt) -> (x,v)`
+- 🔄 `config/colors.json` — "мягкая радуга": 8 цветов node/edge/surface
+- 🆕 `src/core/scalable_arrow.py` — `size_factor`
+- 🔄 `src/core/line_manager.py` — `arrow_scale` + increase/decrease
 
 **Участники:** Пользователь + Claude Sonnet 4.6
 
@@ -69,39 +76,11 @@
 ## 2026-05-27 (v3 сессия 1 / сессия 15) - ScalableArrow + семантические цвета + docs
 
 **Что сделано:**
-- 🆕 `src/core/scalable_arrow.py` — класс `ScalableArrow` (наследник ScalableLine): равнобедренный треугольник (leg=2×base) в середине линии, центр масс = середина сегмента; `t_sign` управляет направлением; `_tri_entity` всегда alpha=1; `__setattr__` синхронизирует color/enabled
-- 🔄 `src/core/line_manager.py` — метод `create_arrow()`, alpha=1 принудительно для линии и треугольника
-- 🔄 `src/spores/boundary_ray_family.py`:
-  - `_BranchRay` — per-segment цвет и t_sign (switch_k определяет фазу каждого сегмента)
-  - `BranchFamily._phase_edge()` — получает семантический цвет по (u_sign, t_sign)
-  - Root lines → `create_arrow` с корректным t_sign
-  - Grid линии **удалены** (упрощение визуализации)
-  - Поверхность y=0.01, линии/узлы y=0.03, треугольники y=0.05 (разделённые слои)
-- 🔄 `config/colors.json` — 4 семантических цвета: `edge_fwd_pos` (красный), `edge_fwd_neg` (синий), `edge_bwd_pos` (оранжевый), `edge_bwd_neg` (маджента); node_* alpha→1.0; surface_* alpha→0.5
-- 🆕 `docs/reachability.md` — алгоритм ветвей, связь с принципом максимума Понтрягина, прямое/обратное достижимые множества, таблица терминов
-
-**Технические детали:**
-- Проблема прозрачности треугольников: `Color` в Ursina содержит alpha → при `_tri_entity.color = color` alpha перезаписывалась. Решение: `tri.alpha = 1.0` после синхронизации цвета в `__setattr__`
-- Фаза сегмента j в луче с switch_k: фаза 1 если `j < switch_k - 1`, иначе фаза 2
-
-**Участники:** Пользователь + Claude Sonnet 4.6
-
----
-
-## 2026-05-26 (сессия 14) - Фикс ScalableFanSurface + BranchFamilyManager + 8 шаблонов
-
-**Что сделано:**
-- 🔄 `src/core/scalable_surface.py` — `ScalableFanSurface` полностью переписан: grid-триангуляция `positions[k,step]` вместо fan по boundary. Причина: boundary не была star-shaped относительно рута, что давало перекрытия треугольников и пятно. Подробнее → Decision #15
-- 🔄 `src/core/surface_manager.py` — API: `n_pts` → `n_tau`, `curve_pts` → `positions_grid`
-- 🔄 `src/spores/boundary_ray_family.py` — dirty flag (пересчёт только при изменении root_pos/a_max/tau); `_root_line2` (рут → positions[-1,0]); узлы: `GhostSpore` → `Spore` (GhostSpore.tick() перетирал real_position)
-- 🆕 `src/spores/branch_family_manager.py` — фабрика `BranchFamilyManager`, авто-регистрирует tickable при создании
-- 🔄 `main.py` — все 8 шаблонов через `BranchFamilyManager`
-- 🔄 `config/colors.json` — 8 цветовых наборов: `ppp` (зелёный), `ppm` (бирюзовый), `pmp` (голубой), `pmm` (фиолетовый), `mpp` (оранжевый), `mpm` (розовый), `mmp` (золотой), `mmm` (лососевый)
-
-**Технические детали:**
-- Grid-триангуляция: fan (root → col[0]) + квады между соседними лучами. `n_tau + 2*n_tau*(n_tau-1)` треугольников, нет перекрытий
-- Dirty flag: кешируем `root_pos.copy()`, `a_max`, `tau`; `np.array_equal` для сравнения
-- Суффикс `{u1}{t1}{t2}` (p=+1, m=−1): полностью кодирует шаблон
+- 🆕 `src/core/scalable_arrow.py` — ScalableArrow: треугольник в середине линии, t_sign
+- 🔄 `src/core/line_manager.py` — `create_arrow()`, alpha=1
+- 🔄 `src/spores/boundary_ray_family.py` — per-segment цвет и t_sign, root lines → arrows, grid линии удалены
+- 🔄 `config/colors.json` — 4 семантических цвета рёбер
+- 🆕 `docs/reachability.md` — алгоритм + теория достижимости
 
 **Участники:** Пользователь + Claude Sonnet 4.6
 
