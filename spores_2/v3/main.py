@@ -152,15 +152,15 @@ input_manager.bind('2', lambda sign: param_manager.tweak('tau',   sign), mode='s
 input_manager.bind('3', lambda sign: param_manager.tweak('a_max', sign), mode='scroll', description='a_max', value_getter=lambda: param_manager.a_max)
 input_manager.bind('4', lambda sign: param_manager.tweak('n_tau', sign), mode='scroll', description='n_tau', value_getter=lambda: param_manager.n_tau)
 
-# 1-8: toggle branches on/off (nodes, lines, arrows, surface)
-input_manager.bind('1', b_ppp.toggle, description='branch ppp')
-input_manager.bind('2', b_ppm.toggle, description='branch ppm')
-input_manager.bind('3', b_pmp.toggle, description='branch pmp')
-input_manager.bind('4', b_pmm.toggle, description='branch pmm')
-input_manager.bind('5', b_mpp.toggle, description='branch mpp')
-input_manager.bind('6', b_mpm.toggle, description='branch mpm')
-input_manager.bind('7', b_mmp.toggle, description='branch mmp')
-input_manager.bind('8', b_mmm.toggle, description='branch mmm')
+# ctrl+1-8: toggle branches on/off (nodes, lines, arrows, surface)
+input_manager.bind('control+1', b_ppp.toggle, description='branch ppp')
+input_manager.bind('control+2', b_ppm.toggle, description='branch ppm')
+input_manager.bind('control+3', b_pmp.toggle, description='branch pmp')
+input_manager.bind('control+4', b_pmm.toggle, description='branch pmm')
+input_manager.bind('control+5', b_mpp.toggle, description='branch mpp')
+input_manager.bind('control+6', b_mpm.toggle, description='branch mpm')
+input_manager.bind('control+7', b_mmp.toggle, description='branch mmp')
+input_manager.bind('control+8', b_mmm.toggle, description='branch mmm')
 
 
 # ===== BINDINGS HELP =====

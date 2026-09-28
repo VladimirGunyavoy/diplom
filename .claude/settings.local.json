@@ -20,9 +20,30 @@
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom reset HEAD src/__pycache__/)",
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom commit -m ' *)",
       "Bash(git -C c:/GitHub/diplom/spores_2/player_zoom rm -r --cached src/__pycache__/)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(python _test_branch.py)",
+      "Bash(del \"c:\\\\GitHub\\\\diplom\\\\spores_2\\\\v2\\\\player_zoom\\\\src\\\\spores\\\\ghost_spore_family.py\")",
+      "Bash(git rm *)",
+      "Bash(git commit -m ' *)",
+      "Bash(python -c \"import ursina; import os; print\\(os.path.dirname\\(ursina.__file__\\)\\)\")",
+      "Bash(pip list *)",
+      "Bash(python -c \"import ursina, os; print\\(os.path.dirname\\(ursina.__file__\\)\\)\")",
+      "Bash(pip show *)",
+      "Bash(python main.py)",
+      "PowerShell(& \"C:\\\\Users\\\\vladi\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\" -c \"import ursina; print\\('ok'\\)\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\GitHub\\\\diplom\\\\spores_2\\\\v2\\\\player_zoom\" -Recurse -Force)",
+      "Bash(Select-Object -First 30)",
+      "WebSearch",
+      "Bash(Remove-Item -Recurse -Force \"spores_2\\\\v3\\\\.git\")",
+      "Bash(rm -rf \"spores_2/v3/.git\" && git add spores_2/v3/ && git status --short | head -10)",
+      "Bash(python -m py_compile src/core/input_manager.py)",
+      "Bash(python -m py_compile src/math/double_integrator.py src/math/__init__.py)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\GitHub\\diplom\\spores_2\\v3\\.git",
+      "C:\\GitHub\\diplom\\spores_2\\v2\\player_zoom\\.git"
+    ]
   }
 }

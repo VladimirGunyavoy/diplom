@@ -112,8 +112,7 @@ param_manager = ParamManager()
 param_manager.add('radius',   0.5, mode='linear', step=0.1, min_val=0.0)
 param_manager.add('n_circle', 10,   mode='linear', step=1,   min_val=0)
 param_manager.add('a_max',    0.5, mode='linear', step=0.1, min_val=0.0)
-param_manager.add('tau',      1.5, mode='exp',                min_val=0.0)
-param_manager.add('n_tau',    4,   mode='linear', step=1,    min_val=0)
+param_manager.add('dtau',     0.1, mode='exp',                min_val=0.001)
 shared_context.bind('param_manager', lambda: param_manager, default=param_manager)
 
 
@@ -139,12 +138,10 @@ input_manager.bind('1', _resize, mode='scroll', description='size', value_getter
 input_manager.bind('2', lambda sign: param_manager.tweak('radius',   sign), mode='scroll', description='radius',   value_getter=lambda: param_manager.radius)
 input_manager.bind('3', lambda sign: param_manager.tweak('n_circle', sign), mode='scroll', description='n_circle', value_getter=lambda: param_manager.n_circle)
 input_manager.bind('4', lambda sign: param_manager.tweak('a_max',    sign), mode='scroll', description='a_max',    value_getter=lambda: param_manager.a_max)
-input_manager.bind('5', lambda sign: param_manager.tweak('tau',      sign), mode='scroll', description='tau',      value_getter=lambda: param_manager.tau)
-input_manager.bind('6', lambda sign: param_manager.tweak('n_tau',    sign), mode='scroll', description='n_tau',    value_getter=lambda: param_manager.n_tau)
+input_manager.bind('5', lambda sign: param_manager.tweak('dtau',     sign), mode='scroll', description='dtau',     value_getter=lambda: param_manager.dtau)
 
 input_manager.bind('control+1', lambda: circle.toggle_group(0), description='u- (neg)')
-input_manager.bind('control+2', lambda: circle.toggle_group(1), description='u0 (zero)')
-input_manager.bind('control+3', lambda: circle.toggle_group(2), description='u+ (pos)')
+input_manager.bind('control+2', lambda: circle.toggle_group(1), description='u+ (pos)')
 
 
 # ===== BINDINGS HELP =====

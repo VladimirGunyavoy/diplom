@@ -43,6 +43,9 @@ class ScalableArrow(ScalableLine):
         d = p2 - p1
         length = np.linalg.norm(d)
         if length < 1e-8:
+            z = Vec3(*((p1 + p2) / 2))
+            self._tri_entity.model.vertices = [z, z, z]
+            self._tri_entity.model.generate()
             return
         if self.t_sign < 0:
             d = -d

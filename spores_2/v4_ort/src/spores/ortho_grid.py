@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 
 Y_NODES = 0.03
+DEAD_ZONE = 1e-2
 
 
 class OrthoGrid:
@@ -172,16 +173,18 @@ class OrthoGrid:
             self._cached_root = np.full(2, np.nan)
 
     def _ortho_step(self, x, v, u, ds, sign):
-        """Step orthogonal to phase velocity. sign=+1 or -1."""
-        model = self._ctx.model
-        fx, fv = model.deriv(x, v, u)
+        """Step orthogonal to phase velocity. Returns None in dead zone."""
+        fx, fv = self._ctx.model.deriv(x, v, u)
         norm = np.sqrt(fx * fx + fv * fv)
-        if norm < 1e-10:
-            ox, ov = 0.0, sign * ds
-        else:
-            ox = -fv / norm * ds * sign
-            ov =  fx / norm * ds * sign
-        return x + ox, v + ov
+        if norm < DEAD_ZONE:
+            return None
+        orth_x = -fv / norm
+        orth_v =  fx / norm
+        return x + orth_x * ds * sign, v + orth_v * ds * sign
+
+    def _is_dead(self, x, v, u):
+        fx, fv = self._ctx.model.deriv(x, v, u)
+        return fx * fx + fv * fv < DEAD_ZONE * DEAD_ZONE
 
     def _integrate_trajectory(self, x0, v0, u, dtau, n, nodes, lines):
         model = self._ctx.model
@@ -190,11 +193,19 @@ class OrthoGrid:
 
         x, v = x0, v0
         for j in range(n):
+            if self._is_dead(x, v, u):
+                for k in range(j, n):
+                    pts[n + k + 1] = [x, Y_NODES, v]
+                break
             x, v = model.step(x, v, u, dtau)
             pts[n + j + 1] = [x, Y_NODES, v]
 
         x, v = x0, v0
         for j in range(n):
+            if self._is_dead(x, v, u):
+                for k in range(j, n):
+                    pts[n - k - 1] = [x, Y_NODES, v]
+                break
             x, v = model.step(x, v, u, -dtau)
             pts[n - j - 1] = [x, Y_NODES, v]
 
@@ -227,6 +238,11 @@ class OrthoGrid:
 
         for j in range(n):
             if stuck:
+                pts[j + 1] = [x, Y_NODES, v]
+                continue
+
+            if self._is_dead(x, v, u):
+                stuck = True
                 pts[j + 1] = [x, Y_NODES, v]
                 continue
 
@@ -272,6 +288,11 @@ class OrthoGrid:
         x, v = x0, v0
 
         for j in range(n):
+            if self._is_dead(x, v, u):
+                for k in range(j, n):
+                    pts[k + 1] = [x, Y_NODES, v]
+                break
+
             px, pv = prev_xv[j + 1]
             fpx, fpv = model.deriv(px, pv, u)
 
@@ -302,23 +323,48 @@ class OrthoGrid:
         lp = self._ctx.look_point
         x0, v0 = float(lp[0]), float(lp[1])
 
-        # build starting points: center at index ns, step ortho outward
         width = 2 * ns + 1
+        all_pts = [None] * width
+        dead_row = np.tile([x0, Y_NODES, v0], (2 * n + 1, 1))
+
+        # check center — if dead, collapse everything
+        if self._is_dead(x0, v0, u):
+            for oi in range(width):
+                all_pts[oi] = dead_row.copy()
+                self._update_visual(oi, all_pts[oi])
+            self._update_fronts_and_surfaces(all_pts, n, width)
+            return
+
+        # build starting points: center at index ns, step ortho outward
         starts = np.zeros((width, 2))
         starts[ns] = [x0, v0]
+        active = {ns}
 
         cx, cv = x0, v0
         for i in range(ns):
-            cx, cv = self._ortho_step(cx, cv, u, ds, +1)
+            result = self._ortho_step(cx, cv, u, ds, +1)
+            if result is None:
+                break
+            cx, cv = result
             starts[ns + i + 1] = [cx, cv]
+            active.add(ns + i + 1)
 
         cx, cv = x0, v0
         for i in range(ns):
-            cx, cv = self._ortho_step(cx, cv, u, ds, -1)
+            result = self._ortho_step(cx, cv, u, ds, -1)
+            if result is None:
+                break
+            cx, cv = result
             starts[ns - i - 1] = [cx, cv]
+            active.add(ns - i - 1)
+
+        # collapse inactive trajectories
+        for oi in range(width):
+            if oi not in active:
+                all_pts[oi] = dead_row.copy()
+                self._update_visual(oi, all_pts[oi])
 
         # integrate center trajectory (always by time)
-        all_pts = [None] * width
         center_pts = self._integrate_trajectory(
             starts[ns, 0], starts[ns, 1], u, dtau, n,
             self._traj_nodes[ns], self._traj_lines[ns])
@@ -329,7 +375,7 @@ class OrthoGrid:
         if mode == 0 or ns == 0:
             # TIME: all clones step by same dtau
             for oi in range(width):
-                if oi == ns:
+                if oi not in active or oi == ns:
                     continue
                 pts = self._integrate_trajectory(
                     starts[oi, 0], starts[oi, 1], u, dtau, n,
@@ -351,7 +397,7 @@ class OrthoGrid:
 
             sub_dt = abs(dtau) / 20
             for oi in range(width):
-                if oi == ns:
+                if oi not in active or oi == ns:
                     continue
                 sx, sv = starts[oi]
                 fwd_pts, _ = self._integrate_by_arc(sx, sv, u, dl_fwd, +1, sub_dt)
@@ -369,9 +415,13 @@ class OrthoGrid:
             # ORTHO: clones optimize front orthogonality, from center outward
             for dist in range(1, ns + 1):
                 for oi in [ns + dist, ns - dist]:
-                    if oi < 0 or oi >= width:
+                    if oi < 0 or oi >= width or oi not in active:
                         continue
                     prev_oi = oi - 1 if oi > ns else oi + 1
+                    if all_pts[prev_oi] is None:
+                        all_pts[oi] = dead_row.copy()
+                        self._update_visual(oi, all_pts[oi])
+                        continue
                     sx, sv = starts[oi]
 
                     prev_fwd_xv = all_pts[prev_oi][n:, [0, 2]]
@@ -388,12 +438,13 @@ class OrthoGrid:
                     self._update_visual(oi, pts)
                     all_pts[oi] = pts
 
-        # front lines at every time step
+        self._update_fronts_and_surfaces(all_pts, n, width)
+
+    def _update_fronts_and_surfaces(self, all_pts, n, width):
         for ti in range(2 * n + 1):
             for i, ln in enumerate(self._front_lines[ti]):
                 self._lm.update(ln, all_pts[i][ti], all_pts[i + 1][ti])
 
-        # surfaces
         Y_SURF = 0.01
         if self._surf_fwd:
             fwd_grid = np.zeros((width, n + 1, 3))
