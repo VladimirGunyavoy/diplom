@@ -37,13 +37,14 @@ def run(x0, v0, C, G, dt=0.01, tol=0.05):
     return t, T0, nsw, False
 
 rng = np.random.default_rng(0); starts = rng.uniform(-2, 2, (20, 2)); starts[0] = (-2, 0)
-out = {}
-for h in (0.4, 0.2, 0.1):
-    C, G = build(h, r=h/2, tau=h/2)
-    res = [run(x, v, C, G) for x, v in starts]
-    ok = [r_ for r_ in res if r_[3]]
-    rat = [r_[0]/r_[1] for r_ in ok]
-    out[h] = dict(arrived=len(ok), n=len(res), ratio_mean=float(np.mean(rat)), ratio_max=float(np.max(rat)),
-                  switches_mean=float(np.mean([r_[2] for r_ in ok])), first=res[0][:3])
-    print(h, out[h]); sys.stdout.flush()
-json.dump({str(k): v for k, v in out.items()}, open(__file__.replace('.py', '.json'), 'w'), indent=1, default=float)
+if __name__ == "__main__":
+    out = {}
+    for h in (0.4, 0.2, 0.1):
+        C, G = build(h, r=h/2, tau=h/2)
+        res = [run(x, v, C, G) for x, v in starts]
+        ok = [r_ for r_ in res if r_[3]]
+        rat = [r_[0]/r_[1] for r_ in ok]
+        out[h] = dict(arrived=len(ok), n=len(res), ratio_mean=float(np.mean(rat)), ratio_max=float(np.max(rat)),
+                      switches_mean=float(np.mean([r_[2] for r_ in ok])), first=res[0][:3])
+        print(h, out[h]); sys.stdout.flush()
+    json.dump({str(k): v for k, v in out.items()}, open(__file__.replace('.py', '.json'), 'w'), indent=1, default=float)
