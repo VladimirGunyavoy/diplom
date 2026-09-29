@@ -25,4 +25,4 @@ hub-worker-2 | done-step | B на aida: dt 1→.5 T -0..12%; большое по
 hub-worker-2 | done-step | B: ложный минимум = боковой сдвиг+интерполяция; snap 5/6 в цель | 15:58:56
 hub-worker-2 | done-step | B n=24 на aida: цена внутри поля не меняется, у границы падает | 16:10:15
 hub-worker-2 | done | передача по слову пользователя | A2c, схема B 5D, aida-расчёты | next=hub-worker-3 | 16:19:26
-hub-worker-3 | started | acc3 | sonnet | 16:21:03
+hub-worker-2 | resumed | смена НЕ передана (слово пользователя: продолжать, hub-worker-3 ждёт конца работы) | 16:24:46
