@@ -37,3 +37,4 @@ hub-worker-2 | done-step | атлас DI: запросы у линии vmax за
 hub-worker-2 | done-step | создана роль research: RESEARCH_ROUTINE.md, ROLES, ARCH, pulse.py (30 мин, Opus) | 17:42:19
 hub-research-1 | started | acc3 | opus | 17:44:32
 hub-worker-2 | done | слово пользователя: передать hub-worker-3 | схема B 5D, роль research, хвост DI | next=hub-worker-3 | 17:45:11
+hub-worker-3 | started | acc3 | sonnet | 17:46:06

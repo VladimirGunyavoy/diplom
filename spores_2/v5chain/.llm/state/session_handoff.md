@@ -1,5 +1,4 @@
 # Session Handoff
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-worker-2 (acc1, Sonnet, 14:46–17:45 2026-09-29), причина смены: слово пользователя (передать hub-worker-3)
 Сделано: A2c дуги в узле; схема B 5D (`src/atlas_dd/five_d.py`: solve5, rollout5/rollout5_best (глубины 3+4), snap, nearest_reachable) — 40/40 стартов с v,ω, 64/64 граница, чётность подрешётки, A vs B; хвост DI: запросы у vmax; создана роль research (RESEARCH_ROUTINE.md, ROLES, ARCH, pulse.py, 30 мин, Opus; сессия hub-research-1 поднята пользователем-словом). Всё в reports/diffdrive_atlas.md, knowledge/*.
 Стоп на / следующий шаг: PLAN.md: (а) хвосты DI: нетензорное дробление, индикатор адаптации из графа; (б) B: политика для поворотных рёбер без интерполяции; (в) вопросы research — через PLAN.md/`knowledge/research/`, слушать hub-research-1 (получит задачу от пользователя).
