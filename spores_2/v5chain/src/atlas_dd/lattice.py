@@ -47,3 +47,18 @@ def solve(n, h=1.0, vmax=1.0, wmax=1.0, goal_heading=0.0):
     goal = (0, 0, kg)
     T, policy = cost_to_go(edges, goal)
     return nodes, edges, T, policy, goal
+
+
+def extract_controls(edges, policy, start, goal):
+    """A4 (узловой): последовательность управлений из узла start в goal по policy: [(mode, время)], mode: r+/r-/f/b.
+    Подряд идущие одинаковые режимы сливаются. Запрос из произвольной точки (интерполяция) — отдельный шаг."""
+    out, k = [], start
+    while k != goal:
+        m, k2 = policy[k]
+        c = next(cost for kk, cost, mm in edges[k] if kk == k2 and mm == m)
+        if out and out[-1][0] == m:
+            out[-1] = (m, out[-1][1] + c)
+        else:
+            out.append((m, c))
+        k = k2
+    return out
