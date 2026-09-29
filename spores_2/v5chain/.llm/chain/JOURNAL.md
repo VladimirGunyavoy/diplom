@@ -5,3 +5,4 @@ hub-worker-1 | done-step | PLAN 3: картинки + черновик отчё�
 hub-worker-1 | NEEDS-HUMAN | дифдрайв: (v, ω) — управления (кинематика, 3D) или часть состояния (5D)? по умолчанию делаю 3D-кинематику (схема A) | 04:35:58
 hub-worker-1 | done-step | атлас DI SOLVED: отчёт reports/atlas_double_integrator.md; заготовка дизайна дифдрайва | 04:35:58
 hub-worker-1 | done-step | дифдрайв A1: режимы Straight/Rotate/Arc + тест (замкнутая форма = численное интегрирование) | 05:00:46
+hub-worker-1 | done-step | дифдрайв A2: state lattice 16 курсов + Дейкстра, тест | 05:10:46
