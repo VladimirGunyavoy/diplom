@@ -9,15 +9,17 @@ def cost_to_go(edges, goal):
     for k, lst in edges.items():
         for k2, cost, m in lst:
             rev[k2].append((k, cost, m))
-    T, policy = {goal: 0.0}, {}
-    pq = [(0.0, goal)]
+    goals = goal if isinstance(goal, list) else [goal]   # ключ — tuple; list — цель-множество
+    T, policy = {g: 0.0 for g in goals}, {}
+    pq = [(0.0, repr(g), g) for g in goals]
+    heapq.heapify(pq)
     while pq:
-        t, k = heapq.heappop(pq)
+        t, _, k = heapq.heappop(pq)
         if t > T[k]:
             continue
         for k0, cost, m in rev[k]:
             if t + cost < T.get(k0, np.inf):
                 T[k0] = t + cost
                 policy[k0] = (m, k)
-                heapq.heappush(pq, (t + cost, k0))
+                heapq.heappush(pq, (t + cost, repr(k0), k0))
     return T, policy

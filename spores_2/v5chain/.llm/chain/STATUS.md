@@ -5,7 +5,7 @@
 ## Сейчас
 Готово: PLAN п.1–2 — `src/atlas/` (coords, lattice, solve, interp, reference), `tests/test_atlas_core.py` (запуск `python3 tests/test_atlas_core.py`, pytest на хабе нет).
 Цифры = эталон АТЛАС §6: nodes 6561, reached 6561, node err 2.98e-08, interp (n=1712 из 2000 попали в сетку) mean 0.00985, max 0.2362.
-Готово п.3 (картинки, `reports/`). Следующий шаг — `PLAN.md` п.4 (складка v = 0).
+Готово: PLAN п.1–9 старого плана — атлас двойного интегратора (SOLVED по TASK.md): `reports/atlas_double_integrator.md`, замеры `reports/improvements.json`. Следующее — дифдрайв (`PLAN.md` п.1).
 
 ## Открытые проблемы
 нет
