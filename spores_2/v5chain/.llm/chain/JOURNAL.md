@@ -31,3 +31,4 @@ hub-worker-2 | done-step | B массовый тест 39/40; 50% узлов п�
 hub-worker-2 | done-step | B nearest_reachable: 40/40 случайных стартов | 16:50:25
 hub-worker-2 | done-step | B: старты с v,ω≠0: 38/40 | 17:00:29
 hub-worker-2 | done-step | B rollout5_best (3+4): 40/40 старты с v,ω | 17:14:07
+hub-worker-2 | done-step | B граничные старты 64/64 | 17:21:14
