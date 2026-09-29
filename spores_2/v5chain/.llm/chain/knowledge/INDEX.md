@@ -13,3 +13,4 @@
 - [research/v6_value_tau.md](research/v6_value_tau.md) — V по графу клеток v6: занижение от τ=h/2, лечение τ≈√h (обратный CFL)
 - [research/pendulum_plan.md](research/pendulum_plan.md) — маятник для v6: u_max 0.3/0.5, цилиндр, растяжение у седла, эталон мелкой сеткой
 - [research/diffdrive_v6_plan.md](research/diffdrive_v6_plan.md) — дифдрайв v6: клетки слоя = копии шаблона (SE(2)), U ромб + эталон Balkcom–Mason
+- [research/manipulator_plan.md](research/manipulator_plan.md) — манипулятор v6: 5 ступеней (кинематика T² с эталоном → динамика 6D), препятствия без C-space
