@@ -6,8 +6,9 @@
 - Атлас двойного интегратора — SOLVED (`reports/atlas_double_integrator.md`, `reports/improvements.json`, `src/atlas/`, `src/atlas/improve.py`).
 - Дифдрайв, схема A (v, ω — управления; решение агента 2026-09-29, `history/decisions.md`): `src/atlas_dd/` (modes, lattice, reference, plan), тесты `tests/test_atlas_dd_*.py`, сводка `reports/diffdrive_atlas.md`, факты `knowledge/diffdrive_atlas_design.md`.
   Финиш rollout_multi: xy 0.011, θ<0.005; дуги (интерполяционные) по h НЕ сошлись.
-- Коммиты локальные (последний 914f777), пуша нет.
+- A2c `arc_edges` (дуги в узле), схема B 5D `src/atlas_dd/five_d.py` (+`rollout5`), диагноз несходимости по h = интерполяция T вне узлов; всё в `reports/diffdrive_atlas.md`. Пользователь: не ждать, работать непрерывно.
+- Коммиты локальные, пуша нет.
 
 ## Открытые проблемы
-- Вопрос пользователю A/B (v, ω — управления или часть состояния, 5D) — `JOURNAL.md` NEEDS-HUMAN; ответа нет.
+- A/B закрыт: делаем обе схемы.
 - Цена с дугами не сошлась по h (`knowledge/diffdrive_atlas_design.md`).

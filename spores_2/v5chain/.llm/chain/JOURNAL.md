@@ -14,3 +14,4 @@ hub-worker-2 | started | acc1 | sonnet | 14:46:32
 hub-worker-2 | done-step | дифдрайв A2c: дуги в узле (arc_edges), сходимость не убывает | 14:47:39
 hub-worker-2 | done-step | схема B 5D: five_d.py, тест, сравнение с A; интерполяция завышает T (2.87 vs 2.0) | 14:58:07
 hub-worker-2 | done-step | индикатор адаптации A: ошибка равномерная, дробление по r не нужно | 14:58:38
+hub-worker-2 | done-step | B 5D rollout5 depth1-3: конец в 0.05-0.1 от цели, покой; T завышена интерполяцией | 15:14:41
