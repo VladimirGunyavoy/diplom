@@ -49,7 +49,7 @@
 | машины, VM, SSH, tmux, грабли | `~/claude-work/system/infra-rules/infra.md` |
 | что именно сказал пользователь | `knowledge/user_decisions.md` (проект), `~/claude-work/system/llm/user_decisions.md` (цепочка) |
 | открытые проблемы, NEEDS-HUMAN | `ISSUES.md` |
-| кто есть кто в цепочке | `~/claude-work/system/llm/ROLES.md`; протокол — `…/ARCHITECTURE_CURRENT.md`; роль — `…/routines/<РОЛЬ>_ROUTINE.md` |
+| кто есть кто в цепочке | `~/claude-work/system/llm/ROLES.md`; протокол — `…/ARCHITECTURE_CURRENT.md`; роль — `…/routines/<РОЛЬ>_ROUTINE.md` (в т.ч. `RESEARCH_ROUTINE.md` — рисерч/математика, Opus) |
 | почему цепочка так решила | `history/decisions.md` |
 | что делали прошлые звенья | `history/links_recent.md` (архивы — не читать без нужды) |
 
