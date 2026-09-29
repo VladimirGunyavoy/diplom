@@ -1,19 +1,22 @@
-"""Маятник v6 (θ̈ = −sin θ + u, |u| ≤ umax < 1 — раскачка): V по сетке спор (θ периодично), цель (π, 0) — клетка радиуса R_goal.
+"""Маятник v6 (θ̈ = −sin θ + u, |u| ≤ umax < 1 — раскачка): V по сетке спор (θ периодично), цель (goal_theta, 0), по умолчанию верх π — клетка радиуса R_goal.
 Q_k(c) = τ + V(выход клетки слоя k) — тот же шаг, что в DI (`value.py`), но поток RK4 (`gcell.rk4`). Агент — Q-жадный: u = argmin_k V(flow(x, u_k, τ_a))."""
 import numpy as np
 from .gcell import rk4, pendulum
 
 
 class PendAtlas:
-    def __init__(self, n_th=72, n_w=61, wmax=4.0, tau=0.3, umax=0.5, R_goal=0.5, g_over_l=1.0):
-        self.f = pendulum(g_over_l); self.umax, self.tau = umax, tau
+    def __init__(self, n_th=72, n_w=61, wmax=4.0, tau=0.3, umax=0.5, R_goal=0.5, g_over_l=1.0, goal_theta=np.pi):
+        self.f = pendulum(g_over_l); self.umax, self.tau, self.goal_theta = umax, tau, goal_theta
         self.th = np.arange(n_th) * 2 * np.pi / n_th - np.pi                 # θ ∈ [−π, π), цель у ±π
         self.w = np.linspace(-wmax, wmax, n_w); self.dth = 2 * np.pi / n_th; self.dw = self.w[1] - self.w[0]
         TH, W = np.meshgrid(self.th, self.w, indexing='ij')
-        self.goal = np.hypot(((TH % (2 * np.pi)) - np.pi), W) < R_goal       # расстояние до (π, 0) по кругу
+        self.goal = np.hypot(self._dth_goal(TH), W) < R_goal               # расстояние до (goal_theta, 0) по кругу
         X = np.stack([TH, W], -1)
         self.ends = [rk4(self.f, X, s * umax, tau) for s in (+1, -1)]
         self.V = np.full(TH.shape, 1e3); self.V[self.goal] = 0.0
+
+    def _dth_goal(self, th):
+        return (th - self.goal_theta + np.pi) % (2 * np.pi) - np.pi
 
     def interp(self, V, P):
         """Билинейно, θ периодично, ω вне сетки — BIG. P: (..., 2)."""
@@ -35,7 +38,7 @@ class PendAtlas:
         return float(self.interp(self.V, np.asarray(x, float)))
 
     def in_goal(self, x, R=0.5):
-        return np.hypot(((x[0] % (2 * np.pi)) - np.pi), x[1]) < R
+        return np.hypot(self._dth_goal(x[0]), x[1]) < R
 
     def run_agent(self, x, dt=0.02, T_max=60.0, R=0.5):
         """Q-жадный агент: раз в такт выбирает u_k, минимизирующее V(flow(x, u_k, τ)). Возвращает (время до цели или None, число переключений)."""
