@@ -87,3 +87,39 @@ def interp_T3(x, y, th, T, n, h=1.0):
             return np.nan
         return (1 - u) * (1 - w) * v[0] + u * (1 - w) * v[1] + (1 - u) * w * v[2] + u * w * v[3]
     return (1 - s) * bil(k) + s * bil(k1)
+
+
+def arc_sweeps(nodes, T, n, h=1.0, vmax=1.0, wmax=1.0, iters=50, tol=1e-9, goal=None):
+    """A2b: дуги (одновременные v, ω) между соседними курсами. Конец дуги — точно (Arc.from_chart), но не в узле →
+    T в конце берётся через interp_T3 на курсе назначения; итерации Беллмана (T только уменьшается) от решения Дейкстра.
+    Возвращает (новый T, число итераций, [изменение за итерацию])."""
+    from .modes import Arc
+    arcs = {}
+    for key_, (x, y, th) in nodes.items():
+        k = key_[2]; lst = []
+        for dk in (1, -1):
+            k2 = (k + dk) % NH
+            dth = (HEADINGS[k2] - HEADINGS[k] + pi) % (2 * pi) - pi          # знак = направление вращения
+            for sv in (1, -1):
+                m = Arc(sv, 1 if dth > 0 else -1, vmax, wmax)
+                lab, _ = m.to_chart((x, y, th))
+                xe, ye, _ = m.from_chart(lab, th + dth)
+                lst.append((abs(dth) / wmax, xe, ye, k2))
+        arcs[key_] = lst
+    T = dict(T); hist = []
+    for it in range(iters):
+        ch = 0.0
+        for key_, lst in arcs.items():
+            if key_ == goal:
+                continue
+            best = T[key_]
+            for c, xe, ye, k2 in lst:
+                t = interp_T3(xe, ye, HEADINGS[k2], T, n, h)
+                if not np.isnan(t) and c + t < best - 1e-12:
+                    best = c + t
+            if best < T[key_]:
+                ch = max(ch, T[key_] - best); T[key_] = best
+        hist.append(ch)
+        if ch < tol:
+            break
+    return T, len(hist), hist

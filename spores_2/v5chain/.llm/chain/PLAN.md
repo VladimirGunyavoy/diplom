@@ -2,7 +2,7 @@
 Цель и критерий — `TASK.md`; источник — `docs/spore_atlas_double_integrator.md` (АТЛАС).
 
 
-1. Дифдрайв (схема A): A1, A2 готовы (`src/atlas_dd/modes.py`, `lattice.py`; тесты `tests/test_atlas_dd_*.py`); дальше A2b (дуги — одновременные v, ω), A3 эталон, A4 запрос+управления. `knowledge/diffdrive_atlas_design.md` — шаги A1–A5 (`src/atlas_dd/`); неоднозначность A/B — вопрос пользователю (NEEDS-HUMAN в JOURNAL), пока делать A.
+1. Дифдрайв (схема A): A1, A2, A2b (дуги), A4 (запрос interp_T3) готовы (`src/atlas_dd/modes.py`, `lattice.py`; тесты `tests/test_atlas_dd_*.py`); дальше: A4 полностью (управления из произвольной точки с дугами), сходимость дуг по h, A5 адаптация. `knowledge/diffdrive_atlas_design.md` — шаги A1–A5 (`src/atlas_dd/`); неоднозначность A/B — вопрос пользователю (NEEDS-HUMAN в JOURNAL), пока делать A.
 2. Мелкие хвосты атласа (не блокеры): запросы у линии vmax; нетензорное дробление; индикатор адаптации из графа.
 
 ## Бэклог
