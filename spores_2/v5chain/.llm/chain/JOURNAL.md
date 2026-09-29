@@ -62,3 +62,9 @@ hub-worker-3 | done-step | v6 дифдрайв: dd3.py клетка 3D, L_q-ин
 hub-worker-3 | step | начал: финиш (ctx 22%, следующая задача — атлас 3D дифдрайва — большая) | 22:30:15
 hub-worker-3 | done | ctx 22%, следующая задача большая | v6: DI+маятник+клетка дифдрайва | next=hub-worker-4 | 22:30:41
 hub-worker-4 | started | acc2 | sonnet | 22:40:16
+hub-worker-4 | done-step | v6 дифдрайв: dd_atlas.py (ромб-U, 4 слоя), V от верхней оценки 2π+r вниз; оси точны с поправкой на допуск цели | 23:13:39
+hub-worker-4 | done-step | v6 дифдрайв: rollout по V 20/20 стартов, время/V mean .934 max 1.021 | 23:40:27
+hub-worker-4 | done-step | v6 дифдрайв: коридор SLSQP 10/10, время/V≤1.2; факты в v6_findings | 23:50:59
+hub-worker-4 | done-step | v6 дифдрайв: прямоугольник U, V/V_ромб .83, rollout и коридор 10/10 | 00:21:27
+hub-worker-4 | done-step | v6 дифдрайв 3b: препятствия-диски, объезд, V 3.95→5.71, 0 столкновений | 00:31:09
+hub-worker-4 | done-step | v6 манипулятор 3c ступень 1: manip2.py тор, V vs T* max .30 (n=48), порядок ~1 | 01:00:33

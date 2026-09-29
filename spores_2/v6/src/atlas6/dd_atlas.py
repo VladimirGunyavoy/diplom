@@ -79,8 +79,12 @@ def rollout(A, p0, dt=None, T_max=30.0):
 
 def corridor(A, p0, dt=None, min_len=0.15):
     """Если невязка ≥ 1e-6 (сегментов < 3 не хватает на 3 степени свободы), min_len уменьшается (0.15 → 0.05 → 0)."""
-    for dd in ((A['tau'] / 2, A['tau'] / 4) if dt is None else (dt,)):                  # шаг агента мельче, если SLSQP не сошёлся
-        for m, pad in ((min_len, False), (0.05, False), (0.0, False), (min_len, True)):
+    dds = (A['tau'] / 2, A['tau'] / 4) if dt is None else (dt,)
+    cfgs = [(min_len, False), (0.05, False), (0.0, False), (min_len, True)]
+    if A['obst']:                                                                # с препятствиями SLSQP дорогой — меньше попыток
+        dds, cfgs = dds[:1], [(min_len, False), (min_len, True)]
+    for dd in dds:                                                               # шаг агента мельче, если SLSQP не сошёлся
+        for m, pad in cfgs:
             res = _corridor(A, p0, dd, m, pad)
             if res[2] < 1e-6:
                 return res
@@ -128,8 +132,11 @@ def _corridor(A, p0, dt, min_len, pad=False):
         return np.array(g)
     cons = [{'type': 'eq', 'fun': ep}] + ([{'type': 'ineq', 'fun': clear}] if A['obst'] else [])
     r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0),
-                 constraints=cons, method='SLSQP', options={'maxiter': 300, 'ftol': 1e-12})
-    return [(float(d), k) for d, k in zip(r.x, ks)], float(r.x.sum()), float(np.linalg.norm(ep(r.x))), float(d0.sum())
+                 constraints=cons, method='SLSQP', options={'maxiter': 100 if A['obst'] else 300, 'ftol': 1e-12})
+    cor = [(float(d), k) for d, k in zip(r.x, ks)]; res = float(np.linalg.norm(ep(r.x)))
+    if A['obst'] and corridor_collides(A, p0, cor) > 0:                          # ограничения зазора не удержались — считаем неудачей (следующий запасной вариант)
+        res = 1e3
+    return cor, float(r.x.sum()), res, float(d0.sum())
 
 
 def corridor_collides(A, p0, cor, ds=0.02):
