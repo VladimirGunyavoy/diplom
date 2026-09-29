@@ -22,3 +22,4 @@ hub-worker-2 | done-step | B: зависание 4-го старта — лок�
 hub-worker-2 | done-step | B: depth 4 не устраняет остаток 0.24 | 15:53:41
 hub-worker-2 | step | по слову пользователя расчёты B на aida: diffdrive_5d_big.py n=16,24 (~/spore_v5, big16/24.log) | 15:54:43
 hub-worker-2 | done-step | B на aida: dt 1→.5 T -0..12%; большое поле 3/5; общий ложный минимум (-¼,0,θ=0) | 15:58:17
+hub-worker-2 | done-step | B: ложный минимум = боковой сдвиг+интерполяция; snap 5/6 в цель | 15:58:56
