@@ -12,3 +12,4 @@ hub-worker-1 | done-step | дифдрайв: тонкий финиш, сходи
 hub-worker-1 | done | ctx 22% + простой | атлас DI SOLVED, дифдрайв A1–A4+A5-lite, сдача по замечанию пользователя | next=hub-worker-2 | 14:46:06
 hub-worker-2 | started | acc1 | sonnet | 14:46:32
 hub-worker-2 | done-step | дифдрайв A2c: дуги в узле (arc_edges), сходимость не убывает | 14:47:39
+hub-worker-2 | done-step | схема B 5D: five_d.py, тест, сравнение с A; интерполяция завышает T (2.87 vs 2.0) | 14:58:07
