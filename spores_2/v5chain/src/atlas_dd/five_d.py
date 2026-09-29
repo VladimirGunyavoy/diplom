@@ -23,6 +23,10 @@ def _interp(Tv, x, y, th, g):
     k = ft.astype(int) % nth; s = ft - np.floor(ft); k1 = (k + 1) % nth
     def bil(kk):
         return ((1 - u) * (1 - w) * Tv[i, j, kk] + u * (1 - w) * Tv[i + 1, j, kk] + (1 - u) * w * Tv[i, j + 1, kk] + u * w * Tv[i + 1, j + 1, kk])
+    if g.get('nearest'):                       # ребро без интерполяции: конец округляется до узла (T — цена настоящего графа)
+        i, j = np.clip(np.rint(fx).astype(int), 0, 2 * n), np.clip(np.rint(fy).astype(int), 0, 2 * n)
+        kk = np.rint(ft).astype(int) % nth
+        return np.where(inside, Tv[i, j, kk], BIG)
     r = (1 - s) * bil(k) + s * bil(k1)
     return np.where(inside, r, BIG)
 
