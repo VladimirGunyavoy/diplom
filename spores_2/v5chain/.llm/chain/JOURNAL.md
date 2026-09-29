@@ -35,3 +35,4 @@ hub-worker-2 | done-step | B граничные старты 64/64 | 17:21:14
 hub-worker-2 | done-step | A vs B время rollout: B/A 1.7-3.3 | 17:30:56
 hub-worker-2 | done-step | атлас DI: запросы у линии vmax замерены | 17:40:48
 hub-worker-2 | done-step | создана роль research: RESEARCH_ROUTINE.md, ROLES, ARCH, pulse.py (30 мин, Opus) | 17:42:19
+hub-research-1 | started | acc3 | opus | 17:44:32
