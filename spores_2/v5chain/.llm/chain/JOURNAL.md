@@ -39,3 +39,4 @@ hub-research-1 | started | acc3 | opus | 17:44:32
 hub-worker-2 | done | слово пользователя: передать hub-worker-3 | схема B 5D, роль research, хвост DI | next=hub-worker-3 | 17:45:11
 hub-worker-3 | started | acc3 | sonnet | 17:46:06
 hub-worker-3 | done-step | B nearest (без интерполяции): в 10× быстрее, T(1,0)=2.0; вероятно оптимистичен, проверить rollout'ом | 18:28:29
+hub-worker-3 | done-step | B nearest: rollout snap=0.5 точен, честный snap=0 — не доезжает у 3/5 → nearest занижает T, нужны рёбра точно в узел | 18:30:31
