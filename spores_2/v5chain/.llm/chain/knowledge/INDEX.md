@@ -9,3 +9,4 @@
 - [atlas_di_tails.md](atlas_di_tails.md) — хвосты атласа DI: запросы у линии vmax
 - [research/README.md](research/README.md) — заметки роли research (рисерч, математика)
 - [research/di_gradV_switch.md](research/di_gradV_switch.md) — агент по ∇V из 5 точек клетки (DI): мелкие клетки 20/20, крупным нужна клетка цели
+- [research/di_hessian_density.md](research/di_hessian_density.md) — точки сечения по гессиану V: ошибка −15…−54% при том же N (DI)
