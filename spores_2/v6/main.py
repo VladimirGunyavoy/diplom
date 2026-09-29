@@ -43,6 +43,7 @@ from src.math import DoubleIntegrator, Pendulum
 from src.spores.spore import GhostSpore
 from src.spores.spore_manager import SporeManager
 from src.spores.ortho_grid import OrthoGrid
+from src.spores.atlas_view import AtlasView
 
 print("=" * 50)
 print("PLAYER ZOOM - Sandbox")
@@ -132,6 +133,9 @@ grid_m.set_active(False)
 object_manager.register_tickable(grid_p)
 object_manager.register_tickable(grid_m)
 
+atlas_view = AtlasView(shared_context)   # атлас v6 (numpy-ядро src/atlas6), клавиша 9
+object_manager.register_tickable(atlas_view)
+
 _u_mode = [0]  # 0=+1, 1=-1, 2=both
 def _cycle_u():
     _u_mode[0] = (_u_mode[0] + 1) % 3
@@ -161,6 +165,7 @@ def _cycle_mode():
     grid_m.cycle_mode()
 input_manager.bind('7', _cycle_mode, description='mode')
 input_manager.bind('8', _cycle_u, description='u_sign')
+input_manager.bind('9', atlas_view.toggle, description='atlas')
 
 
 # ===== BINDINGS HELP =====
