@@ -74,9 +74,19 @@ def _step5(st, iv, iw, da, dal, g):
     return (x + vb * dt * np.cos(thm), y + vb * dt * np.sin(thm), th + wb * dt, v2, w2), iv2, iw2
 
 
-def rollout5(state, T, g, max_steps=40, depth=1):
+def _snap(st, g, frac):
+    h, nth = g['h'], g['nth']; x, y, th, v, w = st
+    xs, ys = round(x / h) * h, round(y / h) * h
+    dth = 2 * np.pi / nth; ts = round(th / dth) * dth
+    if abs(x - xs) < frac * h: x = xs
+    if abs(y - ys) < frac * h: y = ys
+    if abs(th - ts) < frac * dth: th = ts
+    return (x, y, th, v, w)
+
+
+def rollout5(state, T, g, max_steps=40, depth=1, snap=0.0):
     """Жадно по T с перебором на depth шагов вперёд: минимизирует depth·dt + T(конец); выполняется первый шаг лучшей последовательности.
-    Возвращает (управления [(a,α)], траектория). Останов: в цели или max_steps; возвращается префикс до точки с наименьшей ошибкой (позиция+курс+v+ω)."""
+    snap>0: если (x,y,θ) ближе к узлу решётки, чем snap·шаг — состояние притягивается к узлу (лечит боковой сдвиг ~0.01, который интерполяция T раздувает: √ε). Возвращает (управления [(a,α)], траектория). Останов: в цели или max_steps; возвращается префикс до точки с наименьшей ошибкой (позиция+курс+v+ω)."""
     dt, mv, mw = g['dt'], g['mv'], g['mw']
     st = tuple(state)
     iv, iw = int(round(st[3] / g['dv'])) + mv, int(round(st[4] / g['dw'])) + mw
@@ -103,6 +113,8 @@ def rollout5(state, T, g, max_steps=40, depth=1):
             break
         t, da, dal = val(st, iv, iw, depth)
         st, iv, iw = _step5(st, iv, iw, da, dal, g)
+        if snap > 0:
+            st = _snap(st, g, snap)
         ctrl.append((da * g['amax'], dal * g['almax'])); tr.append(st)
     k = int(np.argmin([err(s) for s in tr]))                 # лучшая точка траектории (зависание/колебание отбрасываем)
     return ctrl[:k], tr[:k + 1]
