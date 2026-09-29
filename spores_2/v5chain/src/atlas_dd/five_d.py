@@ -140,3 +140,15 @@ def nearest_reachable(state, T, g):
         return state, None, None
     _, jx, jy, kk = best
     return ((jx - n) * h, (jy - n) * h, kk * 2 * np.pi / nth, v, w), np.hypot((jx - ix) * h, (jy - iy) * h), abs(((kk - k + nth / 2) % nth) - nth / 2) * 2 * np.pi / nth
+
+
+def rollout5_best(state, T, g, depths=(3, 4), **kw):
+    """Несколько глубин перебора, берётся траектория с наименьшей конечной ошибкой (при равной — короче). Глубина 3 и 4 останавливаются в разных местах."""
+    best = None
+    for d in depths:
+        c, tr = rollout5(state, T, g, depth=d, **kw)
+        e = tr[-1]
+        err = float(np.hypot(e[0], e[1]) + 2 * abs(np.sin(e[2] / 2)) + abs(e[3]) + abs(e[4]))
+        if best is None or (err, len(c)) < (best[0], len(best[1])):
+            best = (err, c, tr)
+    return best[1], best[2]

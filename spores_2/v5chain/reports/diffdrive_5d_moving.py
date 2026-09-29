@@ -3,8 +3,9 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import numpy as np
 from math import pi
-from src.atlas_dd.five_d import make_grid, rollout5, nearest_reachable
+from src.atlas_dd.five_d import make_grid, rollout5, rollout5_best, nearest_reachable
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 40
+DEPTH = int(sys.argv[2]) if len(sys.argv) > 2 else 3
 al = pi / 4; n = 16
 g = make_grid(n, 0.125, 64, wmax=3 * al * 0.5, almax=al, dt=0.5)
 T = np.load("T5_n16.npy"); mv, mw = g['mv'], g['mw']
@@ -17,7 +18,7 @@ for _ in range(N):
         st0, _, _ = nearest_reachable(st0, T, g)
     Tq = T[mv + iv, mw + iw, n + int(round(st0[0] / 0.125)), n + int(round(st0[1] / 0.125)), int(round(st0[2] / (2 * pi / 64))) % 64]
     if Tq >= 100: skipped += 1; continue
-    c, tr = rollout5(st0, T, g, depth=3, max_steps=60, snap=0.25); e = tr[-1]
+    c, tr = rollout5_best(st0, T, g, max_steps=60, snap=0.25) if DEPTH == 0 else rollout5(st0, T, g, depth=DEPTH, max_steps=60, snap=0.25); e = tr[-1]
     d = (e[2] + pi) % (2 * pi) - pi
     good = np.hypot(e[0], e[1]) < 0.05 and abs(d) < 0.1 and abs(e[3]) < 1e-9 and abs(e[4]) < 1e-9
     ok += good
