@@ -60,3 +60,32 @@ def solve5(g, iters=200, tol=1e-6, verbose=False):
         if ch < tol:
             break
     return T, it + 1
+
+
+def rollout5(state, T, g, max_steps=100):
+    """Жадно по T: из (x,y,θ,v,ω) (v, ω — на уровнях) выбирает (a, α) с минимумом dt+T(конец). Возвращает (управления [(a,α)], траектория)."""
+    dt, mv, mw = g['dt'], g['mv'], g['mw']
+    x, y, th, v, w = state
+    iv, iw = int(round(v / g['dv'])) + mv, int(round(w / g['dw'])) + mw
+    ctrl, tr = [], [state]
+    for _ in range(max_steps):
+        best = None
+        for da in (-1, 0, 1):
+            for dal in (-1, 0, 1):
+                iv2, iw2 = iv + da, iw + dal
+                if not (0 <= iv2 <= 2 * mv and 0 <= iw2 <= 2 * mw):
+                    continue
+                v2, w2 = (iv2 - mv) * g['dv'], (iw2 - mw) * g['dw']
+                vb, wb = (v + v2) / 2, (w + w2) / 2
+                thm = th + wb * dt / 2
+                c = (x + vb * dt * np.cos(thm), y + vb * dt * np.sin(thm), th + wb * dt)
+                t = float(_interp(T[iv2, iw2], np.array(c[0]), np.array(c[1]), np.array(c[2]), g))
+                if best is None or t < best[0]:
+                    best = (t, da, dal, iv2, iw2, v2, w2, c)
+        if best is None or best[0] >= T[iv, iw][int(round(x / g['h'])) + g['n'], int(round(y / g['h'])) + g['n'], 0] + 1e9:
+            break
+        t, da, dal, iv, iw, v, w, c = best
+        x, y, th = c; ctrl.append((da * g['amax'], dal * g['almax'])); tr.append((x, y, th, v, w))
+        if abs(x) < 1e-6 and abs(y) < 1e-6 and abs(v) < 1e-9 and abs(w) < 1e-9 and abs(np.sin(th / 2)) < 1e-6:
+            break
+    return ctrl, tr
