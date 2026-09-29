@@ -32,3 +32,4 @@ hub-worker-2 | done-step | B nearest_reachable: 40/40 случайных ста�
 hub-worker-2 | done-step | B: старты с v,ω≠0: 38/40 | 17:00:29
 hub-worker-2 | done-step | B rollout5_best (3+4): 40/40 старты с v,ω | 17:14:07
 hub-worker-2 | done-step | B граничные старты 64/64 | 17:21:14
+hub-worker-2 | done-step | A vs B время rollout: B/A 1.7-3.3 | 17:30:56
