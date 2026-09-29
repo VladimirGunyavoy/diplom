@@ -30,3 +30,4 @@ hub-worker-2 | done-step | B финиш 6/6: причина зависания �
 hub-worker-2 | done-step | B массовый тест 39/40; 50% узлов покоя недостижимы по чётности подрешётки | 16:41:18
 hub-worker-2 | done-step | B nearest_reachable: 40/40 случайных стартов | 16:50:25
 hub-worker-2 | done-step | B: старты с v,ω≠0: 38/40 | 17:00:29
+hub-worker-2 | done-step | B rollout5_best (3+4): 40/40 старты с v,ω | 17:14:07
