@@ -54,8 +54,8 @@ for _ in range(10):
     if blocked(p0, obs, 0.1):
         continue
     c, T, res, _ = corridor(C, p0); tot += 1
-    if res < 1e-6:
-        assert corridor_collides(C, p0, c) == 0                  # «сошёлся» ⇒ без столкновений (иначе corridor вернёт res=1e3)
-        good += 1
+    assert corridor_collides(C, p0, c) == 0                      # всегда без столкновений (несошедшийся SLSQP → откат на путь агента, res — невязка до точки)
+    assert res < 0.5, res
+    good += res < 1e-6
 print('коридор с препятствием: %d стартов, сошлись без столкновений %d' % (tot, good))
 assert good >= 6

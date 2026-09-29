@@ -88,10 +88,12 @@ def corridor(A, p0, dt=None, min_len=0.15):
             res = _corridor(A, p0, dd, m, pad)
             if res[2] < 1e-6:
                 return res
+    if A['obst']:                                                                # откат: путь агента без оптимизации (конец — в клетке цели, не в точке; невязка честно в res[2])
+        return _corridor(A, p0, A['tau'], 0.0, False, raw=True)
     return res
 
 
-def _corridor(A, p0, dt, min_len, pad=False):
+def _corridor(A, p0, dt, min_len, pad=False, raw=False):
     """Коридор (dt_i, слой_i): слои жадного агента, RLE (короткие сливаются), длительности — SLSQP: min Σdt при конец = точка цели (θ без свёртки)."""
     from scipy.optimize import minimize
     dt = A['tau'] / 2 if dt is None else dt; p = np.asarray(p0, float); seq = []; t = 0.0
@@ -131,6 +133,8 @@ def _corridor(A, p0, dt, min_len, pad=False):
             q = flow(q, A['layers'][k], di)
         return np.array(g)
     cons = [{'type': 'eq', 'fun': ep}] + ([{'type': 'ineq', 'fun': clear}] if A['obst'] else [])
+    if raw:                                                                      # без SLSQP: слои и длительности агента (без столкновений по построению)
+        return [(float(d), k) for d, k in zip(d0, ks)], float(d0.sum()), float(np.linalg.norm(ep(d0))), float(d0.sum())
     r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0),
                  constraints=cons, method='SLSQP', options={'maxiter': 100 if A['obst'] else 300, 'ftol': 1e-12})
     cor = [(float(d), k) for d, k in zip(r.x, ks)]; res = float(np.linalg.norm(ep(r.x)))
