@@ -24,11 +24,11 @@ class CellV:
         self.grad = np.linalg.lstsq(A, self.vals, rcond=None)[0][1:]      # (∂V/∂x, ∂V/∂v)
 
 
-def make_cells(h, xlim=(-4.0, 4.0), vlim=(-4.0, 4.0), r=None, tau=None, layer_u=+1.0):
+def make_cells(h, xlim=(-4.0, 4.0), vlim=(-4.0, 4.0), r=None, tau=None, layer_u=+1.0, V=T_star):
     """Споры на решётке шага h; r = τ = h/2 по умолчанию (как в research)."""
     r = h / 2 if r is None else r; tau = h / 2 if tau is None else tau
     xs = np.arange(xlim[0], xlim[1] + 1e-9, h); vs = np.arange(vlim[0], vlim[1] + 1e-9, h)
-    return [CellV(Cell((x, v), layer_u, r, tau)) for x in xs for v in vs]
+    return [CellV(Cell((x, v), layer_u, r, tau), V) for x in xs for v in vs]
 
 
 def run_agent(x, v, cells, R_goal, dt=0.01, tol=0.05, umax=1.0):
