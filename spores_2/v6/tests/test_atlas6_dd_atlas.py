@@ -11,3 +11,11 @@ for h in (0.5, 0.25):
     assert abs(V[j, i, kp] - (2 + np.pi / 2 - hth)) < 1e-6, V[j, i, kp]           # задом + поворот
     assert V.max() < 2 * np.pi + 5, V.max()
     print('h', h, 'iters', r['iters'], 'OK')
+
+from src.atlas6.dd_atlas import rollout, V_at
+A = solve_dd(h=0.25); rng = np.random.default_rng(0); ok = 0; ratios = []
+for _ in range(20):
+    p0 = np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]); path, t, done = rollout(A, p0)
+    ok += done; ratios.append(t / max(V_at(A, p0), 1e-9))
+print('rollout дошёл', ok, '/20; время/V: mean %.3f max %.3f' % (np.mean(ratios), np.max(ratios)))
+assert ok >= 18

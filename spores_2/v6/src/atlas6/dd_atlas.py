@@ -39,4 +39,23 @@ def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3
         Vn[goal] = 0.0; ch = float(np.max(V - Vn)); V = Vn
         if ch < tol:
             break
-    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau)
+    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau, lim=lim, R_goal=R_goal, Rth=Rth)
+
+
+def V_at(A, p):
+    """V в произвольной позе — трилинейно по 8 спорам (θ периодично)."""
+    xs, V, h, hth, lim = A['xs'], A['V'], A['h'], A['hth'], A['lim']; n, nth = len(xs), V.shape[2]
+    fx = np.clip((p[0] + lim) / h, 0, n - 1 - 1e-9); fy = np.clip((p[1] + lim) / h, 0, n - 1 - 1e-9); ft = ((p[2] + np.pi) / hth) % nth
+    i, j, k = int(fx), int(fy), int(ft); u, w, s = fx - i, fy - j, ft - k; k2 = (k + 1) % nth
+    return sum(a * b * c * V[i + di, j + dj, kk] for di, a in ((0, 1 - u), (1, u)) for dj, b in ((0, 1 - w), (1, w)) for kk, c in ((k, 1 - s), (k2, s)))
+
+
+def rollout(A, p0, dt=None, T_max=30.0):
+    """Агент: на каждом шаге слой с min V(flow(p, dt)) (ромб: 4 вершины). Возвращает (путь, время, дошёл)."""
+    dt = A['tau'] if dt is None else dt; p = np.asarray(p0, float); path = [p]; t = 0.0
+    while t < T_max:
+        d = (p[2] + np.pi) % (2 * np.pi) - np.pi
+        if np.hypot(p[0], p[1]) < A['R_goal'] and abs(d) < A['Rth']:
+            return np.array(path), t, True
+        cands = [flow(p, vw, dt) for vw in LAYERS]; p = min(cands, key=lambda e: V_at(A, e)); path.append(p); t += dt
+    return np.array(path), t, False
