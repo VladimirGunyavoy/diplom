@@ -11,7 +11,7 @@ def T_star2(q):
 
 
 def solve_manip2(h=2 * np.pi / 48, tau=None, Rg=None, iters=5000, tol=1e-10):
-    n = int(round(2 * np.pi / h)); h = 2 * np.pi / n; tau = h / 2 if tau is None else tau; Rg = h * 0.5 if Rg is None else Rg
+    n = int(round(2 * np.pi / h)); h = 2 * np.pi / n; tau = h if tau is None else tau; Rg = h * 0.5 if Rg is None else Rg
     g = -np.pi + h * np.arange(n); Q1, Q2 = np.meshgrid(g, g, indexing='ij')
     goal = (np.abs(wrap(Q1)) < Rg) & (np.abs(wrap(Q2)) < Rg)
     V = np.full(Q1.shape, 4 * np.pi); V[goal] = 0.0

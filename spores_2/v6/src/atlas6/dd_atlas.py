@@ -117,8 +117,18 @@ def _corridor(A, p0, dt, min_len, pad=False):
         for di, k in zip(d, ks):
             q = flow(q, A['layers'][k], max(di, 0.0))
         return q - target
+    def clear(d):                                                                # зазор до дисков в 8 точках каждого сегмента (≥ 0 — свободно)
+        q = np.asarray(p0, float); g = []
+        for di, k in zip(d, ks):
+            di = max(di, 0.0)
+            for f in np.linspace(0.125, 1.0, 8):
+                e = flow(q, A['layers'][k], f * di)
+                g += [np.hypot(e[0] - cx, e[1] - cy) - r - A['robot_r'] for cx, cy, r in A['obst']]
+            q = flow(q, A['layers'][k], di)
+        return np.array(g)
+    cons = [{'type': 'eq', 'fun': ep}] + ([{'type': 'ineq', 'fun': clear}] if A['obst'] else [])
     r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0),
-                 constraints=[{'type': 'eq', 'fun': ep}], method='SLSQP', options={'maxiter': 300, 'ftol': 1e-12})
+                 constraints=cons, method='SLSQP', options={'maxiter': 300, 'ftol': 1e-12})
     return [(float(d), k) for d, k in zip(r.x, ks)], float(r.x.sum()), float(np.linalg.norm(ep(r.x))), float(d0.sum())
 
 
