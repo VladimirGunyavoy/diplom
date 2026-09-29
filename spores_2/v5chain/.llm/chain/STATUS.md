@@ -1,11 +1,13 @@
 # STATUS — снимок цепочки (≤ 80 строк, заменять, не дописывать)
 Коридор ctx: по умолчанию (`~/claude-work/system/llm/ARCHITECTURE_CURRENT.md` §Коридоры); активный оверрайд — писать этой строкой.
-Модель воркеров — **Sonnet** (слово пользователя 2026-09-29). Работа только на хабе; не пушить.
+Модель воркеров — **Sonnet** (слово пользователя 2026-09-29); Opus — изредка, следить за недельным расходом (пользователю нужны токены на пятницу). Работа только на хабе; не пушить.
 
 ## Сейчас
-Готово: PLAN п.1–2 — `src/atlas/` (coords, lattice, solve, interp, reference), `tests/test_atlas_core.py` (запуск `python3 tests/test_atlas_core.py`, pytest на хабе нет).
-Цифры = эталон АТЛАС §6: nodes 6561, reached 6561, node err 2.98e-08, interp (n=1712 из 2000 попали в сетку) mean 0.00985, max 0.2362.
-Готово: PLAN п.1–9 старого плана — атлас двойного интегратора (SOLVED по TASK.md): `reports/atlas_double_integrator.md`, замеры `reports/improvements.json`. Следующее — дифдрайв (`PLAN.md` п.1).
+- Атлас двойного интегратора — SOLVED (`reports/atlas_double_integrator.md`, `reports/improvements.json`, `src/atlas/`, `src/atlas/improve.py`).
+- Дифдрайв, схема A (v, ω — управления; решение агента 2026-09-29, `history/decisions.md`): `src/atlas_dd/` (modes, lattice, reference, plan), тесты `tests/test_atlas_dd_*.py`, сводка `reports/diffdrive_atlas.md`, факты `knowledge/diffdrive_atlas_design.md`.
+  Финиш rollout_multi: xy 0.011, θ<0.005; дуги (интерполяционные) по h НЕ сошлись.
+- Коммиты локальные (последний 914f777), пуша нет.
 
 ## Открытые проблемы
-нет
+- Вопрос пользователю A/B (v, ω — управления или часть состояния, 5D) — `JOURNAL.md` NEEDS-HUMAN; ответа нет.
+- Цена с дугами не сошлась по h (`knowledge/diffdrive_atlas_design.md`).

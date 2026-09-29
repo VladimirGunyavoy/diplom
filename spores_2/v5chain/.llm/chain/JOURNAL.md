@@ -9,3 +9,4 @@ hub-worker-1 | done-step | дифдрайв A2: state lattice 16 курсов + 
 hub-worker-1 | done-step | дифдрайв A2b: дуги (arc_sweeps) + тест | 06:31:06
 hub-worker-1 | done-step | дифдрайв A4: rollout управлений из произвольной точки + тест | 06:41:06
 hub-worker-1 | done-step | дифдрайв: тонкий финиш, сходимость дуг (не сошлась), A5-lite, отчёт до/после | 07:35:22
+hub-worker-1 | done | ctx 22% + простой | атлас DI SOLVED, дифдрайв A1–A4+A5-lite, сдача по замечанию пользователя | next=hub-worker-2 | 14:46:06
