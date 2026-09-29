@@ -19,3 +19,11 @@ for _ in range(20):
     ok += done; ratios.append(t / max(V_at(A, p0), 1e-9))
 print('rollout дошёл', ok, '/20; время/V: mean %.3f max %.3f' % (np.mean(ratios), np.max(ratios)))
 assert ok >= 18
+
+from src.atlas6.dd_atlas import corridor
+rng = np.random.default_rng(1); r_ = []
+for _ in range(10):
+    p0 = np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]); c, T, res, T0 = corridor(A, p0)
+    assert res < 1e-6, res; r_.append(T / V_at(A, p0))
+print('коридор до точки цели: время/V mean %.3f max %.3f' % (np.mean(r_), np.max(r_)))
+assert np.max(r_) < 1.2
