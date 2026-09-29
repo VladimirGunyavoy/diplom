@@ -19,7 +19,7 @@ def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3
     layers = LAYERS if layers is None else layers
     obst = [tuple(map(float, o)) for o in obstacles]
     nth = nth or 4 * int(round(np.pi / (2 * h))); hth = 2 * np.pi / nth
-    tau = h / 2 if tau is None else tau
+    tau = h if tau is None else tau                                        # τ=h лучше h/2 (research 2026-09-30: V/эталон 1.037 vs 1.052); √h — хуже
     R_goal = h if R_goal is None else R_goal; Rth = hth if Rth is None else Rth
     xs = np.arange(-lim, lim + 1e-9, h); n = len(xs); ths = -np.pi + hth * np.arange(nth)
     X, Y, TH = np.meshgrid(xs, xs, ths, indexing='ij')
@@ -79,17 +79,18 @@ def rollout(A, p0, dt=None, T_max=30.0):
 
 def corridor(A, p0, dt=None, min_len=0.15):
     """Если невязка ≥ 1e-6 (сегментов < 3 не хватает на 3 степени свободы), min_len уменьшается (0.15 → 0.05 → 0)."""
-    for m in (min_len, 0.05, 0.0):
-        res = _corridor(A, p0, dt, m)
-        if res[2] < 1e-6:
-            break
+    for dd in ((A['tau'] / 2, A['tau'] / 4) if dt is None else (dt,)):                  # шаг агента мельче, если SLSQP не сошёлся
+        for m, pad in ((min_len, False), (0.05, False), (0.0, False), (min_len, True)):
+            res = _corridor(A, p0, dd, m, pad)
+            if res[2] < 1e-6:
+                return res
     return res
 
 
-def _corridor(A, p0, dt, min_len):
+def _corridor(A, p0, dt, min_len, pad=False):
     """Коридор (dt_i, слой_i): слои жадного агента, RLE (короткие сливаются), длительности — SLSQP: min Σdt при конец = точка цели (θ без свёртки)."""
     from scipy.optimize import minimize
-    dt = A['tau'] if dt is None else dt; p = np.asarray(p0, float); seq = []; t = 0.0
+    dt = A['tau'] / 2 if dt is None else dt; p = np.asarray(p0, float); seq = []; t = 0.0
     while t < 30.0:
         d = (p[2] + np.pi) % (2 * np.pi) - np.pi
         if np.hypot(p[0], p[1]) < A['R_goal'] and abs(d) < A['Rth']:
@@ -107,6 +108,8 @@ def _corridor(A, p0, dt, min_len):
             out.append([d, k])
     if not out:                                                                  # старт уже в клетке цели
         return [], 0.0, 0.0, 0.0
+    if pad:                                                                      # добавка коротких сегментов всех слоёв: степеней свободы ≥ 3
+        out = out + [[0.02, k] for k in range(len(A['layers']))]
     ks = [k for _, k in out]; d0 = np.array([d for d, _ in out]); target = np.array([0.0, 0.0, 2 * np.pi * round(p[2] / (2 * np.pi))])
 
     def ep(d):
