@@ -62,30 +62,47 @@ def solve5(g, iters=200, tol=1e-6, verbose=False):
     return T, it + 1
 
 
-def rollout5(state, T, g, max_steps=100):
-    """Жадно по T: из (x,y,θ,v,ω) (v, ω — на уровнях) выбирает (a, α) с минимумом dt+T(конец). Возвращает (управления [(a,α)], траектория)."""
+def _step5(st, iv, iw, da, dal, g):
+    mv, mw, dt = g['mv'], g['mw'], g['dt']
+    iv2, iw2 = iv + da, iw + dal
+    if not (0 <= iv2 <= 2 * mv and 0 <= iw2 <= 2 * mw):
+        return None
+    x, y, th, v, w = st
+    v2, w2 = (iv2 - mv) * g['dv'], (iw2 - mw) * g['dw']
+    vb, wb = (v + v2) / 2, (w + w2) / 2
+    thm = th + wb * dt / 2
+    return (x + vb * dt * np.cos(thm), y + vb * dt * np.sin(thm), th + wb * dt, v2, w2), iv2, iw2
+
+
+def rollout5(state, T, g, max_steps=40, depth=1):
+    """Жадно по T с перебором на depth шагов вперёд: минимизирует depth·dt + T(конец); выполняется первый шаг лучшей последовательности.
+    Возвращает (управления [(a,α)], траектория). Останов: в цели или max_steps; возвращается префикс до точки с наименьшей ошибкой (позиция+курс+v+ω)."""
     dt, mv, mw = g['dt'], g['mv'], g['mw']
-    x, y, th, v, w = state
-    iv, iw = int(round(v / g['dv'])) + mv, int(round(w / g['dw'])) + mw
-    ctrl, tr = [], [state]
-    for _ in range(max_steps):
+    st = tuple(state)
+    iv, iw = int(round(st[3] / g['dv'])) + mv, int(round(st[4] / g['dw'])) + mw
+    ctrl, tr = [], [st]
+    def val(s, a, b, d):
         best = None
         for da in (-1, 0, 1):
             for dal in (-1, 0, 1):
-                iv2, iw2 = iv + da, iw + dal
-                if not (0 <= iv2 <= 2 * mv and 0 <= iw2 <= 2 * mw):
+                r = _step5(s, a, b, da, dal, g)
+                if r is None:
                     continue
-                v2, w2 = (iv2 - mv) * g['dv'], (iw2 - mw) * g['dw']
-                vb, wb = (v + v2) / 2, (w + w2) / 2
-                thm = th + wb * dt / 2
-                c = (x + vb * dt * np.cos(thm), y + vb * dt * np.sin(thm), th + wb * dt)
-                t = float(_interp(T[iv2, iw2], np.array(c[0]), np.array(c[1]), np.array(c[2]), g))
+                s2, a2, b2 = r
+                if d == 1:
+                    t = dt + float(_interp(T[a2, b2], np.array(s2[0]), np.array(s2[1]), np.array(s2[2]), g))
+                else:
+                    t = dt + val(s2, a2, b2, d - 1)[0]
                 if best is None or t < best[0]:
-                    best = (t, da, dal, iv2, iw2, v2, w2, c)
-        if best is None or best[0] >= T[iv, iw][int(round(x / g['h'])) + g['n'], int(round(y / g['h'])) + g['n'], 0] + 1e9:
+                    best = (t, da, dal)
+        return best
+    def err(s):
+        return float(np.hypot(s[0], s[1]) + abs(np.sin(s[2] / 2)) * 2 + abs(s[3]) + abs(s[4]))
+    for _ in range(max_steps):
+        if err(st) < 1e-6:
             break
-        t, da, dal, iv, iw, v, w, c = best
-        x, y, th = c; ctrl.append((da * g['amax'], dal * g['almax'])); tr.append((x, y, th, v, w))
-        if abs(x) < 1e-6 and abs(y) < 1e-6 and abs(v) < 1e-9 and abs(w) < 1e-9 and abs(np.sin(th / 2)) < 1e-6:
-            break
-    return ctrl, tr
+        t, da, dal = val(st, iv, iw, depth)
+        st, iv, iw = _step5(st, iv, iw, da, dal, g)
+        ctrl.append((da * g['amax'], dal * g['almax'])); tr.append(st)
+    k = int(np.argmin([err(s) for s in tr]))                 # лучшая точка траектории (зависание/колебание отбрасываем)
+    return ctrl[:k], tr[:k + 1]

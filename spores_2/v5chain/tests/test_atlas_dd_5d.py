@@ -2,7 +2,7 @@
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import numpy as np
-from src.atlas_dd.five_d import make_grid, solve5
+from src.atlas_dd.five_d import make_grid, solve5, rollout5
 
 
 def test_5d():
@@ -13,6 +13,8 @@ def test_5d():
     # из покоя в (1,0,θ=0): не быстрее d/vmax
     t = T[mv, mw, n + 2, n, 0]
     assert 1.0 <= t < 100, t
+    c, tr = rollout5((1.0, 0.0, 0.0, 0, 0), T, g)                # управления доводят до цели (v=ω=0) не дольше T
+    assert c and abs(tr[-1][3]) < 1e-9 and np.hypot(tr[-1][0], tr[-1][1]) < 0.5 and len(c) * g['dt'] <= t + 1e-9
 
 
 if __name__ == "__main__":
