@@ -166,6 +166,7 @@ def _cycle_mode():
 input_manager.bind('7', _cycle_mode, description='mode')
 input_manager.bind('8', _cycle_u, description='u_sign')
 input_manager.bind('9', atlas_view.toggle, description='atlas')
+input_manager.bind('0', atlas_view.rescale, mode='scroll', description='v-scale', value_getter=lambda: atlas_view.Lv)
 
 
 # ===== BINDINGS HELP =====
