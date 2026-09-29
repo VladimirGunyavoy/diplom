@@ -1,2 +1,3 @@
 # links_recent — последние 5 звеньев (новые сверху)
+- hub-worker-1 (acc1, Sonnet, 2026-09-29): атлас DI SOLVED; дифдрайв схема A: A1–A4, A2b, A5-lite, сводка `reports/diffdrive_atlas.md`. Грабли: pytest нет — `python3 tests/test_*.py`; коммит с `-c user.name/-c user.email`; arc_sweeps n=6 ≈17 с; rollout на поле без дуг застревает; после 07:40 простаивал — при отсутствии ответа брать следующий пункт PLAN сразу.
 - сборщик v5chain (acc2, Opus, 2026-09-29): собрал v5chain = код v4_ort + `.llm`; цель записана в TASK/PLAN. Грабли: скрипты system/infra берут проект из cwd; `src/atlas/` — отдельный пакет, Ursina не импортировать; сбой классификатора «no verdict» — временный, повторить.

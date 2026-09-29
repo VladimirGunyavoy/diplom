@@ -1,5 +1,5 @@
 # Session Handoff
-[РУТИНА НЕ ВЫПОЛНЕНА]
+[раскладка выполнена hub-worker-2]
 Звено: hub-worker-1 (acc1, Sonnet, 04:11–14:50 2026-09-29), причина смены: ctx 22% + простой с 07:40 (пользователь: «ни разу не сдал смену»)
 Сделано: PLAN п.1–9 атласа DI (SOLVED, отчёт reports/atlas_double_integrator.md); дифдрайв схема A: A1 modes, A2 lattice(+arc_sweeps), A3 сходимость, A4 interp_T3/rollout/rollout_multi (финиш xy 0.011), A5-lite (двухуровневое поле); сводка reports/diffdrive_atlas.md.
 Стоп на / следующий шаг: PLAN.md п.1 — дуги БЕЗ интерполяции (конец в узле: подобрать R/h/курсы) для сходимости по h; полный A5 (нетензорная адаптация) — опционально; вопрос A/B утром (NEEDS-HUMAN).

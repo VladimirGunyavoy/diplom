@@ -4,3 +4,5 @@
 | hub-watcher-1 | start | 5ч 2% / ctx 4% | $0.045 | 2026-09-29 04:08:51 |
 | hub-worker-1 | start | 5ч 3% / ctx 5% | $0.20 | 2026-09-29 04:12:04 |
 | hub-worker-1 | T_BEFORE_END | 5ч 3% / ctx 22% | $8.43 | 2026-09-29 14:46:06 |
+| hub-worker-1 | T_BEFORE_END | 5ч 3% / ctx 22% | $8.43 | 2026-09-29 14:46 |
+| hub-worker-2 | start | 5ч 3% / ctx 4% | $0.04 | 2026-09-29 14:46:32 |
