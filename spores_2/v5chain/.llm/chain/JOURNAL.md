@@ -7,3 +7,4 @@ hub-worker-1 | done-step | атлас DI SOLVED: отчёт reports/atlas_double
 hub-worker-1 | done-step | дифдрайв A1: режимы Straight/Rotate/Arc + тест (замкнутая форма = численное интегрирование) | 05:00:46
 hub-worker-1 | done-step | дифдрайв A2: state lattice 16 курсов + Дейкстра, тест | 05:10:46
 hub-worker-1 | done-step | дифдрайв A2b: дуги (arc_sweeps) + тест | 06:31:06
+hub-worker-1 | done-step | дифдрайв A4: rollout управлений из произвольной точки + тест | 06:41:06
