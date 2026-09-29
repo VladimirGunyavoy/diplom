@@ -52,11 +52,18 @@ class Cell:
         a = u * d[1] / 2
         b = -q[1] * d[1] + u * d[0]
         cc = (q[0] - c[0]) * d[1] - (q[1] - c[1]) * d[0]
-        roots = np.roots([a, b, cc]) if abs(a) > 1e-14 else (np.array([-cc / b]) if abs(b) > 1e-14 else np.array([]))
-        roots = roots[np.abs(roots.imag) < 1e-9].real
-        if roots.size == 0:
+        if abs(a) > 1e-14:
+            D = b * b - 4 * a * cc
+            if D < 0:
+                return None
+            sq = D ** 0.5; roots = [(-b + sq) / (2 * a), (-b - sq) / (2 * a)]
+        elif abs(b) > 1e-14:
+            roots = [-cc / b]
+        else:
+            roots = []
+        if not roots:
             return None
-        t = float(roots[np.argmin(np.abs(roots))]); w = flow(q, u, -t)
+        t = min(roots, key=abs); w = flow(q, u, -t)
         s = float(np.dot(w - c, d) / np.dot(d, d))
         return s, t
 
