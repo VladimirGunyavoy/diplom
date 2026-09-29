@@ -14,3 +14,4 @@
 - [research/pendulum_plan.md](research/pendulum_plan.md) — маятник для v6: u_max 0.3/0.5, цилиндр, растяжение у седла, эталон мелкой сеткой
 - [research/diffdrive_v6_plan.md](research/diffdrive_v6_plan.md) — дифдрайв v6: клетки слоя = копии шаблона (SE(2)), U ромб + эталон Balkcom–Mason
 - [research/manipulator_plan.md](research/manipulator_plan.md) — манипулятор v6: 5 ступеней (кинематика T² с эталоном → динамика 6D), препятствия без C-space
+- [research/pendulum_lqr_goal.md](research/pendulum_lqr_goal.md) — LQR-клетка цели наверху маятника: R=10, эллипс 1.5·c, |φ| до 0.66/1.11 рад при u=.3/.5
