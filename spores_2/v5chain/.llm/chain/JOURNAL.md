@@ -23,3 +23,5 @@ hub-worker-2 | done-step | B: depth 4 не устраняет остаток 0.2
 hub-worker-2 | step | по слову пользователя расчёты B на aida: diffdrive_5d_big.py n=16,24 (~/spore_v5, big16/24.log) | 15:54:43
 hub-worker-2 | done-step | B на aida: dt 1→.5 T -0..12%; большое поле 3/5; общий ложный минимум (-¼,0,θ=0) | 15:58:17
 hub-worker-2 | done-step | B: ложный минимум = боковой сдвиг+интерполяция; snap 5/6 в цель | 15:58:56
+hub-worker-2 | done-step | B n=24 на aida: цена внутри поля не меняется, у границы падает | 16:10:15
+hub-worker-2 | done | передача по слову пользователя | A2c, схема B 5D, aida-расчёты | next=hub-worker-3 | 16:19:26

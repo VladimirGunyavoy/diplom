@@ -7,3 +7,4 @@
 | hub-worker-1 | T_BEFORE_END | 5ч 3% / ctx 22% | $8.43 | 2026-09-29 14:46 |
 | hub-worker-2 | start | 5ч 3% / ctx 4% | $0.04 | 2026-09-29 14:46:32 |
 | hub-fixer-1 | start | 5ч 6% / ctx 4% | $0.04 | 2026-09-29 14:50:35 |
+| hub-worker-2 | T_BEFORE_END | 5ч 20% / ctx 14% | $2.70 | 2026-09-29 16:19 |
