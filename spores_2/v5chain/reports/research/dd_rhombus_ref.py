@@ -27,9 +27,10 @@ def tgtgt(x, y, th, starts=40, rng=np.random.default_rng(0)):
         e = end(r.x)
         if np.hypot(e[0], e[1]) < 1e-5 and abs(wrap(e[2])) < 1e-5: best = min(best, cost(r.x))
     return best
-cases = [(1, 0, 0), (-1, 0, 0), (0, 0.3, 0), (0, 1, 0), (0, 0.3, np.pi/2), (1, 1, np.pi), (2, 0.5, 0.3), (0.2, 0.1, np.pi)]
-out = []
-for c in cases:
-    a, b = tgt(*c), tgtgt(*c); out.append(dict(start=c, TGT=a, TGTGT=b, gain=a - b))
-    print(c, f"TGT {a:.3f}  TGTGT {b:.3f}  выигрыш {a-b:+.3f}", flush=True)
-json.dump(out, open(__file__.replace('.py', '.json'), 'w'), indent=1, default=float)
+if __name__ == "__main__":
+    cases = [(1, 0, 0), (-1, 0, 0), (0, 0.3, 0), (0, 1, 0), (0, 0.3, np.pi/2), (1, 1, np.pi), (2, 0.5, 0.3), (0.2, 0.1, np.pi)]
+    out = []
+    for c in cases:
+        a, b = tgt(*c), tgtgt(*c); out.append(dict(start=c, TGT=a, TGTGT=b, gain=a - b))
+        print(c, f"TGT {a:.3f}  TGTGT {b:.3f}  выигрыш {a-b:+.3f}", flush=True)
+    json.dump(out, open(__file__.replace('.py', '.json'), 'w'), indent=1, default=float)
