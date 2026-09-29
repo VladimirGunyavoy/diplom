@@ -16,3 +16,4 @@
 - [research/manipulator_plan.md](research/manipulator_plan.md) — манипулятор v6: 5 ступеней (кинематика T² с эталоном → динамика 6D), препятствия без C-space
 - [research/pendulum_lqr_goal.md](research/pendulum_lqr_goal.md) — LQR-клетка цели наверху маятника: R=10, эллипс 1.5·c, |φ| до 0.66/1.11 рад при u=.3/.5
 - [research/ndim_plan.md](research/ndim_plan.md) — n-мерные: тройной интегратор (3D) и плоский DI |a|≤1 с K направлениями (потеря ≤1/√cos(π/K))
+- [research/dd_rhombus_ref.md](research/dd_rhombus_ref.md) — эталон дифдрайва (ромб-U): min(TGT, TGTGT), TGT завышает боковые сдвиги до 37%
