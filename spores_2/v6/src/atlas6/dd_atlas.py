@@ -117,3 +117,13 @@ def _corridor(A, p0, dt, min_len):
     r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0),
                  constraints=[{'type': 'eq', 'fun': ep}], method='SLSQP', options={'maxiter': 300, 'ftol': 1e-12})
     return [(float(d), k) for d, k in zip(r.x, ks)], float(r.x.sum()), float(np.linalg.norm(ep(r.x))), float(d0.sum())
+
+
+def corridor_collides(A, p0, cor, ds=0.02):
+    """Число точек пути коридора [(dt, k)] внутри препятствий (с запасом robot_r), шаг по времени ds."""
+    q = np.asarray(p0, float); n = 0
+    for d, k in cor:
+        for t in np.arange(ds, d + ds, ds):
+            n += int(blocked(flow(q, A['layers'][k], min(t, d)), A['obst'], A['robot_r']))
+        q = flow(q, A['layers'][k], d)
+    return n

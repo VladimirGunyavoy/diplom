@@ -46,3 +46,12 @@ path, t, done = rollout(C, p0)
 hit_n = int(blocked(path[:, :2] if False else path, obs, 0.1).sum())
 print('препятствие (1,0,r.4): V без %.3f с %.3f (объезд), rollout дошёл %s t=%.2f, точек в препятствии %d' % (Vb, Vc, done, t, hit_n))
 assert done and hit_n == 0 and Vc > Vb + 0.1
+
+from src.atlas6.dd_atlas import corridor_collides
+rng = np.random.default_rng(5); bad = 0; tot = 0; res_ok = 0
+for _ in range(10):
+    p0 = np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)])
+    if blocked(p0, obs, 0.1):
+        continue
+    c, T, res, _ = corridor(C, p0); tot += 1; res_ok += res < 1e-6; bad += corridor_collides(C, p0, c) > 0
+print('коридор с препятствием: %d стартов, невязка<1e-6 %d, со столкновением %d' % (tot, res_ok, bad))
