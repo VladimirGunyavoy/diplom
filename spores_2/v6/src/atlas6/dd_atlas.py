@@ -7,8 +7,17 @@ LAYERS = [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)]                     
 RECT = LAYERS + [(sv, sw) for sv in (1.0, -1.0) for sw in (1.0, -1.0)]         # прямоугольник |v|,|ω| ≤ 1: + 4 дуги-вершины
 
 
-def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3000, tol=1e-9, layers=None):
+def blocked(E, obst, rr=0.0):
+    E = np.asarray(E, float); m = np.zeros(E.shape[:-1], bool)
+    for cx, cy, r in obst:
+        m |= np.hypot(E[..., 0] - cx, E[..., 1] - cy) < r + rr
+    return m
+
+
+def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3000, tol=1e-9, layers=None, obstacles=(), robot_r=0.0, K=30.0):
+    """obstacles — диски (cx, cy, r) в xy (вытянуты по всем θ); ребро запрещено, если поток на τ/2, τ или узел ближе r+robot_r. С препятствиями старт итерации K (верхняя оценка 2π+r неверна)."""
     layers = LAYERS if layers is None else layers
+    obst = [tuple(map(float, o)) for o in obstacles]
     nth = nth or 4 * int(round(np.pi / (2 * h))); hth = 2 * np.pi / nth
     tau = h / 2 if tau is None else tau
     R_goal = h if R_goal is None else R_goal; Rth = hth if Rth is None else Rth
@@ -18,8 +27,10 @@ def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3
     ends = [flow(P, vw, tau) for vw in layers]
     dth = (TH + np.pi) % (2 * np.pi) - np.pi
     goal = (np.hypot(X, Y) < R_goal) & (np.abs(dth) < Rth)
-    ub = lambda E: 2 * np.pi + np.hypot(E[..., 0], E[..., 1])                     # верхняя оценка: повернуть, проехать, повернуть
-    V = ub(P); V[goal] = 0.0                                                     # итерация Беллмана идёт вниз от верхней оценки — без бесконечностей
+    hit = lambda E: blocked(E, obst, robot_r)
+    ub = (lambda E: K + 0 * E[..., 0]) if obst else (lambda E: 2 * np.pi + np.hypot(E[..., 0], E[..., 1]))                     # верхняя оценка: повернуть, проехать, повернуть
+    V = ub(P); V[goal] = 0.0; V[hit(P)] = K
+    bad = [hit(P) | hit(flow(P, vw, tau / 2)) | hit(flow(P, vw, tau)) for vw in layers]                                                     # итерация Беллмана идёт вниз от верхней оценки — без бесконечностей
 
     def interp(V, E):
         fx = (E[..., 0] + lim) / h; fy = (E[..., 1] + lim) / h; ft = (E[..., 2] + np.pi) / hth
@@ -36,12 +47,12 @@ def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3
 
     for it in range(iters):
         Vn = V.copy()
-        for E in ends:
-            Vn = np.minimum(Vn, tau + interp(V, E))
-        Vn[goal] = 0.0; ch = float(np.max(V - Vn)); V = Vn
+        for E, b in zip(ends, bad):
+            Vn = np.minimum(Vn, np.where(b, K, tau + interp(V, E)))
+        Vn[goal] = 0.0; Vn[hit(P)] = K; ch = float(np.max(V - Vn)); V = Vn
         if ch < tol:
             break
-    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau, layers=layers, lim=lim, R_goal=R_goal, Rth=Rth)
+    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau, layers=layers, obst=obst, robot_r=robot_r, lim=lim, R_goal=R_goal, Rth=Rth)
 
 
 def V_at(A, p):
@@ -59,7 +70,10 @@ def rollout(A, p0, dt=None, T_max=30.0):
         d = (p[2] + np.pi) % (2 * np.pi) - np.pi
         if np.hypot(p[0], p[1]) < A['R_goal'] and abs(d) < A['Rth']:
             return np.array(path), t, True
-        cands = [flow(p, vw, dt) for vw in A['layers']]; p = min(cands, key=lambda e: V_at(A, e)); path.append(p); t += dt
+        cands = [flow(p, vw, dt) for vw in A['layers'] if not (blocked(flow(p, vw, dt / 2), A['obst'], A['robot_r']) or blocked(flow(p, vw, dt), A['obst'], A['robot_r']))]
+        if not cands:
+            return np.array(path), t, False
+        p = min(cands, key=lambda e: V_at(A, e)); path.append(p); t += dt
     return np.array(path), t, False
 
 

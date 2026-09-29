@@ -38,3 +38,11 @@ for _ in range(10):
     c, T, res, _ = corridor(B, p0); assert res < 1e-6, res; rr.append(T / V_at(B, p0))
 print('прямоугольник: rollout %d/10, коридор время/V mean %.3f max %.3f' % (ok, np.mean(rr), np.max(rr)))
 assert ok >= 9
+
+from src.atlas6.dd_atlas import blocked
+obs = [(1.0, 0.0, 0.4)]; C = solve_dd(h=0.25, layers=RECT, obstacles=obs, robot_r=0.1)
+p0 = np.array([2.0, 0.0, np.pi]); Vc, Vb = V_at(C, p0), V_at(B, p0)
+path, t, done = rollout(C, p0)
+hit_n = int(blocked(path[:, :2] if False else path, obs, 0.1).sum())
+print('препятствие (1,0,r.4): V без %.3f с %.3f (объезд), rollout дошёл %s t=%.2f, точек в препятствии %d' % (Vb, Vc, done, t, hit_n))
+assert done and hit_n == 0 and Vc > Vb + 0.1
