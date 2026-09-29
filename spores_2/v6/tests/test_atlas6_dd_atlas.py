@@ -27,3 +27,14 @@ for _ in range(10):
     assert res < 1e-6, res; r_.append(T / V_at(A, p0))
 print('коридор до точки цели: время/V mean %.3f max %.3f' % (np.mean(r_), np.max(r_)))
 assert np.max(r_) < 1.2
+
+from src.atlas6.dd_atlas import RECT
+B = solve_dd(h=0.25, layers=RECT)
+assert np.all(B['V'] <= A['V'] + 1e-9)                       # прямоугольник ⊃ ромб — V не больше
+print('прямоугольник: V/V_ромб mean %.3f min %.3f, итераций %d' % ((B['V'] / np.maximum(A['V'], 1e-9))[A['V'] > 0.5].mean(), (B['V'] / np.maximum(A['V'], 1e-9))[A['V'] > 0.5].min(), B['iters']))
+rng = np.random.default_rng(4); ok = 0; rr = []
+for _ in range(10):
+    p0 = np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]); path, t, done = rollout(B, p0); ok += done
+    c, T, res, _ = corridor(B, p0); assert res < 1e-6, res; rr.append(T / V_at(B, p0))
+print('прямоугольник: rollout %d/10, коридор время/V mean %.3f max %.3f' % (ok, np.mean(rr), np.max(rr)))
+assert ok >= 9

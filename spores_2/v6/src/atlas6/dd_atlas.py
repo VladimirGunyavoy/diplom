@@ -3,17 +3,19 @@ Q_k(c) = τ + V(flow_k(c, τ)), V в выходе — трилинейно по 
 import numpy as np
 from .dd3 import flow
 
-LAYERS = [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)]
+LAYERS = [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)]                      # ромб
+RECT = LAYERS + [(sv, sw) for sv in (1.0, -1.0) for sw in (1.0, -1.0)]         # прямоугольник |v|,|ω| ≤ 1: + 4 дуги-вершины
 
 
-def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3000, tol=1e-9):
+def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3000, tol=1e-9, layers=None):
+    layers = LAYERS if layers is None else layers
     nth = nth or 4 * int(round(np.pi / (2 * h))); hth = 2 * np.pi / nth
     tau = h / 2 if tau is None else tau
     R_goal = h if R_goal is None else R_goal; Rth = hth if Rth is None else Rth
     xs = np.arange(-lim, lim + 1e-9, h); n = len(xs); ths = -np.pi + hth * np.arange(nth)
     X, Y, TH = np.meshgrid(xs, xs, ths, indexing='ij')
     P = np.stack([X, Y, TH], -1)
-    ends = [flow(P, vw, tau) for vw in LAYERS]
+    ends = [flow(P, vw, tau) for vw in layers]
     dth = (TH + np.pi) % (2 * np.pi) - np.pi
     goal = (np.hypot(X, Y) < R_goal) & (np.abs(dth) < Rth)
     ub = lambda E: 2 * np.pi + np.hypot(E[..., 0], E[..., 1])                     # верхняя оценка: повернуть, проехать, повернуть
@@ -39,7 +41,7 @@ def solve_dd(h=0.25, lim=3.0, nth=None, tau=None, R_goal=None, Rth=None, iters=3
         Vn[goal] = 0.0; ch = float(np.max(V - Vn)); V = Vn
         if ch < tol:
             break
-    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau, lim=lim, R_goal=R_goal, Rth=Rth)
+    return dict(xs=xs, ths=ths, V=V, iters=it + 1, h=h, hth=hth, tau=tau, layers=layers, lim=lim, R_goal=R_goal, Rth=Rth)
 
 
 def V_at(A, p):
@@ -57,7 +59,7 @@ def rollout(A, p0, dt=None, T_max=30.0):
         d = (p[2] + np.pi) % (2 * np.pi) - np.pi
         if np.hypot(p[0], p[1]) < A['R_goal'] and abs(d) < A['Rth']:
             return np.array(path), t, True
-        cands = [flow(p, vw, dt) for vw in LAYERS]; p = min(cands, key=lambda e: V_at(A, e)); path.append(p); t += dt
+        cands = [flow(p, vw, dt) for vw in A['layers']]; p = min(cands, key=lambda e: V_at(A, e)); path.append(p); t += dt
     return np.array(path), t, False
 
 
@@ -78,7 +80,7 @@ def _corridor(A, p0, dt, min_len):
         d = (p[2] + np.pi) % (2 * np.pi) - np.pi
         if np.hypot(p[0], p[1]) < A['R_goal'] and abs(d) < A['Rth']:
             break
-        k = int(np.argmin([V_at(A, flow(p, vw, dt)) for vw in LAYERS])); p = flow(p, LAYERS[k], dt); t += dt
+        k = int(np.argmin([V_at(A, flow(p, vw, dt)) for vw in A['layers']])); p = flow(p, A['layers'][k], dt); t += dt
         if seq and seq[-1][1] == k:
             seq[-1][0] += dt
         else:
@@ -89,12 +91,14 @@ def _corridor(A, p0, dt, min_len):
             out[-1][0] += d
         else:
             out.append([d, k])
+    if not out:                                                                  # старт уже в клетке цели
+        return [], 0.0, 0.0, 0.0
     ks = [k for _, k in out]; d0 = np.array([d for d, _ in out]); target = np.array([0.0, 0.0, 2 * np.pi * round(p[2] / (2 * np.pi))])
 
     def ep(d):
         q = np.asarray(p0, float)
         for di, k in zip(d, ks):
-            q = flow(q, LAYERS[k], max(di, 0.0))
+            q = flow(q, A['layers'][k], max(di, 0.0))
         return q - target
     r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0),
                  constraints=[{'type': 'eq', 'fun': ep}], method='SLSQP', options={'maxiter': 300, 'ftol': 1e-12})
