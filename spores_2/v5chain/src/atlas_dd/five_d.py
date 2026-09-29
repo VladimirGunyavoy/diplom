@@ -91,6 +91,8 @@ def rollout5(state, T, g, max_steps=40, depth=1, snap=0.0):
     st = tuple(state)
     iv, iw = int(round(st[3] / g['dv'])) + mv, int(round(st[4] / g['dw'])) + mw
     ctrl, tr = [], [st]
+    def err(s):
+        return float(np.hypot(s[0], s[1]) + abs(np.sin(s[2] / 2)) * 2 + abs(s[3]) + abs(s[4]))
     def val(s, a, b, d):
         best = None
         for da in (-1, 0, 1):
@@ -99,15 +101,15 @@ def rollout5(state, T, g, max_steps=40, depth=1, snap=0.0):
                 if r is None:
                     continue
                 s2, a2, b2 = r
-                if d == 1:
+                if err(s2) < 1e-6:                       # цель поглощает: дальше цена 0 (иначе «ждать» и «ехать сейчас» дают ничью и rollout топчется)
+                    t = dt
+                elif d == 1:
                     t = dt + float(_interp(T[a2, b2], np.array(s2[0]), np.array(s2[1]), np.array(s2[2]), g))
                 else:
                     t = dt + val(s2, a2, b2, d - 1)[0]
                 if best is None or t < best[0]:
                     best = (t, da, dal)
         return best
-    def err(s):
-        return float(np.hypot(s[0], s[1]) + abs(np.sin(s[2] / 2)) * 2 + abs(s[3]) + abs(s[4]))
     for _ in range(max_steps):
         if err(st) < 1e-6:
             break
