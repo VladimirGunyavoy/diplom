@@ -123,3 +123,44 @@ def arc_sweeps(nodes, T, n, h=1.0, vmax=1.0, wmax=1.0, iters=50, tol=1e-9, goal=
         if ch < tol:
             break
     return T, len(hist), hist
+
+
+def arc_edges(nodes, edges, h=1.0, vmax=1.0, wmax=1.0, M=4):
+    """A2c: дуги с концом ТОЧНО в узле (без интерполяции). Дуга между курсами k→k2 (поворот Δ<π, ω=±ωmax, время Δ/ωmax): хорда идёт вдоль
+    среднего курса φ и равна L = 2R·sin(Δ/2), R = |v|/ωmax; |v| ≤ vmax можно занижать (время то же) → хорда любой длины ≤ 2 sin(Δ/2)·vmax/ωmax.
+    Берём пары (k,k2), где φ (или φ+π для v<0) совпадает с направлением целочисленного вектора w=(p,q), |p|,|q|≤M, и длины m·h·|w|, m·w допустимой.
+    Возвращает новую копию edges с рёбрами mode 'a'."""
+    W = [(p, q) for p in range(-M, M + 1) for q in range(-M, M + 1) if (p, q) != (0, 0) and gcd(abs(p), abs(q)) == 1]
+    dirs = [(atan2(q, p), p, q) for p, q in W]
+    new = {k: list(v) for k, v in edges.items()}
+    pairs = []
+    for k in range(NH):
+        for k2 in range(NH):
+            if k2 == k:
+                continue
+            dth = (HEADINGS[k2] - HEADINGS[k] + pi) % (2 * pi) - pi             # знак = направление вращения
+            if abs(abs(dth) - pi) < 1e-9:
+                continue
+            phi = HEADINGS[k] + dth / 2
+            for sv in (1, -1):
+                ang = phi + (pi if sv < 0 else 0)
+                for a, p, q in dirs:
+                    if abs((a - ang + pi) % (2 * pi) - pi) < 1e-9:
+                        Lmax = 2 * np.sin(abs(dth) / 2) * vmax / wmax
+                        for m in range(1, 2 * M + 1):
+                            L = m * h * hypot(p, q)
+                            if L <= Lmax + 1e-12:
+                                pairs.append((k, k2, m * p, m * q, abs(dth) / wmax))
+    seen = set()
+    for k, k2, dx, dy, c in pairs:
+        if (k, k2, dx, dy) in seen:
+            continue
+        seen.add((k, k2, dx, dy))
+        for (i, j, kk) in nodes:
+            if kk != k:
+                continue
+            # хорда в сетке шагов h: dx, dy — в единицах h
+            t = (i + dx, j + dy, k2)
+            if t in nodes:
+                new[(i, j, k)].append((t, c, 'a'))
+    return new, len(seen)
