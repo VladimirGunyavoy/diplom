@@ -62,3 +62,28 @@ def extract_controls(edges, policy, start, goal):
             out.append((m, c))
         k = k2
     return out
+
+
+def interp_T3(x, y, th, T, n, h=1.0):
+    """Запрос T из произвольной точки: билинейно по (x, y) на двух соседних курсах, затем линейно по θ (циклически, курсы неравномерны).
+    nan вне поля или при недостижимом угле."""
+    fx, fy = x / h, y / h
+    i, j = int(np.floor(fx)), int(np.floor(fy))
+    if i < -n or j < -n or i >= n or j >= n:
+        return np.nan
+    u, w = fx - i, fy - j
+    th = (th + pi) % (2 * pi) - pi
+    k = int(np.searchsorted(HEADINGS, th, side='right')) - 1        # HEADINGS[k] ≤ th < HEADINGS[k+1]
+    k1 = (k + 1) % NH
+    hk = HEADINGS[k % NH]; hk1 = HEADINGS[k1] + (2 * pi if k1 == 0 or k < 0 else 0)
+    if k < 0:                                                         # th левее первого курса: пара (последний, первый)
+        k = NH - 1; hk = HEADINGS[k] - 2 * pi; hk1 = HEADINGS[0]; k1 = 0
+    elif k == NH - 1:
+        hk1 = HEADINGS[0] + 2 * pi
+    s = (th - hk) / (hk1 - hk)
+    def bil(kk):
+        v = [T.get((i + a, j + b, kk)) for a, b in ((0, 0), (1, 0), (0, 1), (1, 1))]
+        if any(t is None for t in v):
+            return np.nan
+        return (1 - u) * (1 - w) * v[0] + u * (1 - w) * v[1] + (1 - u) * w * v[2] + u * w * v[3]
+    return (1 - s) * bil(k) + s * bil(k1)
