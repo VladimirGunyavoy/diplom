@@ -120,3 +120,23 @@ def rollout5(state, T, g, max_steps=40, depth=1, snap=0.0):
         ctrl.append((da * g['amax'], dal * g['almax'])); tr.append(st)
     k = int(np.argmin([err(s) for s in tr]))                 # лучшая точка траектории (зависание/колебание отбрасываем)
     return ctrl[:k], tr[:k + 1]
+
+
+def nearest_reachable(state, T, g):
+    """Старт из покоя на недостижимом узле (T≥BIG/2, чётность подрешётки) → ближайший достижимый узел покоя по (x, y, θ) в индексах ±1. Возвращает (state', сдвиг xy, сдвиг θ)."""
+    n, h, nth, mv, mw = g['n'], g['h'], g['nth'], g['mv'], g['mw']
+    x, y, th, v, w = state
+    ix, iy, k = int(round(x / h)) + n, int(round(y / h)) + n, int(round(th / (2 * np.pi / nth))) % nth
+    best = None
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            for dk in (-1, 0, 1):
+                jx, jy, kk = ix + dx, iy + dy, (k + dk) % nth
+                if 0 <= jx <= 2 * n and 0 <= jy <= 2 * n and T[mv + int(round(v / g['dv'])), mw + int(round(w / g['dw'])), jx, jy, kk] < BIG / 2:
+                    c = abs(dx) + abs(dy) + abs(dk)
+                    if best is None or c < best[0]:
+                        best = (c, jx, jy, kk)
+    if best is None:
+        return state, None, None
+    _, jx, jy, kk = best
+    return ((jx - n) * h, (jy - n) * h, kk * 2 * np.pi / nth, v, w), np.hypot((jx - ix) * h, (jy - iy) * h), abs(((kk - k + nth / 2) % nth) - nth / 2) * 2 * np.pi / nth
