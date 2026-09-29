@@ -37,3 +37,4 @@ Grafana 11.2 в `~/grafana` (запуск: `./grafana-v11.2.0/bin/grafana server
 источник — `~/grafana/feeder.py` (:8770, отдаёт .claude/usage_log.jsonl проекта), дашборд `~/grafana/dash/usage.json`.
 Дека (`system/agentdeck`) проксирует `/grafana/*` на :3000 и показывает вкладку «📈 Графики» (iframe) в любом из 3 окон; по умолчанию 3 окна.
 Автозапуска нет. Бэкапы правок деки: /tmp/{server.py,app.js,index.html}.bak
+2026-09-29 15:55 пользователь в терминале: «пускай на аиду, там мощный комп» → тяжёлые расчёты на aida (~/spore_v5); отменяет «только хаб»
