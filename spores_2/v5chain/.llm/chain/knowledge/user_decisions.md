@@ -31,3 +31,9 @@ Read на PNG показывает картинку только агенту; `
 `[картинка: /home/rl/.agentdeck/uploads/<имя>.png]` — дека рисует миниатюру (клик — крупно). Для ответов агента это включено
 правкой `system/agentdeck/static/app.js:235` (пользователь разрешил менять деку); после правки страницу деки надо перезагрузить.
 Запасной вариант — HTML-страница через Artifact с data:-URI.
+
+## Grafana в деке (hub-fixer-1, 2026-09-29)
+Grafana 11.2 в `~/grafana` (запуск: `./grafana-v11.2.0/bin/grafana server --homepath ./grafana-v11.2.0 --config custom.ini cfg:default.paths.data=$HOME/grafana/data`),
+источник — `~/grafana/feeder.py` (:8770, отдаёт .claude/usage_log.jsonl проекта), дашборд `~/grafana/dash/usage.json`.
+Дека (`system/agentdeck`) проксирует `/grafana/*` на :3000 и показывает вкладку «📈 Графики» (iframe) в любом из 3 окон; по умолчанию 3 окна.
+Автозапуска нет. Бэкапы правок деки: /tmp/{server.py,app.js,index.html}.bak
