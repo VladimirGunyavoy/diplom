@@ -8,3 +8,4 @@
 | атлас спор (двойной интегратор → дифдрайв) | `../../../docs/spore_atlas_double_integrator.md` |
 - [atlas_di_tails.md](atlas_di_tails.md) — хвосты атласа DI: запросы у линии vmax
 - [research/README.md](research/README.md) — заметки роли research (рисерч, математика)
+- [research/di_gradV_switch.md](research/di_gradV_switch.md) — агент по ∇V из 5 точек клетки (DI): мелкие клетки 20/20, крупным нужна клетка цели
