@@ -11,3 +11,4 @@ hub-worker-1 | done-step | дифдрайв A4: rollout управлений и�
 hub-worker-1 | done-step | дифдрайв: тонкий финиш, сходимость дуг (не сошлась), A5-lite, отчёт до/после | 07:35:22
 hub-worker-1 | done | ctx 22% + простой | атлас DI SOLVED, дифдрайв A1–A4+A5-lite, сдача по замечанию пользователя | next=hub-worker-2 | 14:46:06
 hub-worker-2 | started | acc1 | sonnet | 14:46:32
+hub-worker-2 | done-step | дифдрайв A2c: дуги в узле (arc_edges), сходимость не убывает | 14:47:39
