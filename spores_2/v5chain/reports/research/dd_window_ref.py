@@ -1,0 +1,18 @@
+"""research: эталон дифдрайва (ромб-U) «до ОКНА цели» (|xy| ≤ R, |θ| ≤ Rθ), а не до точки — для честной сверки атласа с окном цели.
+ref_window(p) = min по позам g окна (сетка: nr колец × na углов по xy, nt по θ) времени TGT из p в g (перевод p в систему g).
+Плюс TGTGT в центр окна (змейка в точку иногда лучше TGT в окно: без неё окно/точка до 1.087).
+Верхняя оценка истинного минимума (дискретность выборки окна); с ростом nr/na/nt → сверху."""
+import numpy as np, importlib.util
+sp = importlib.util.spec_from_file_location('ref', __file__.replace('dd_window_ref.py', 'dd_rhombus_ref.py')); ref = importlib.util.module_from_spec(sp); sp.loader.exec_module(ref)
+def to_frame(p, g):                                   # поза p в системе позы g
+    c, s = np.cos(g[2]), np.sin(g[2]); dx, dy = p[0]-g[0], p[1]-g[1]
+    return (c*dx + s*dy, -s*dx + c*dy, ref.wrap(p[2]-g[2]))
+def ref_window(p, R=0.25, Rth=0.26, nr=4, na=12, nt=5, point=True):
+    G = [(0.0, 0.0, t) for t in np.linspace(-Rth, Rth, nt)]
+    G += [(r*np.cos(a), r*np.sin(a), t) for r in np.linspace(R/nr, R, nr) for a in np.linspace(0, 2*np.pi, na, endpoint=False) for t in np.linspace(-Rth, Rth, nt)]
+    w = min(ref.tgt(*to_frame(p, g)) for g in G)
+    return min(w, ref.tgtgt(*p)) if point else w      # центр окна — тоже поза окна: змейка в точку бывает лучше TGT в окно
+if __name__ == "__main__":
+    rng = np.random.default_rng(3); P = [np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]) for _ in range(20)]
+    pt = np.array([min(ref.tgt(*p), ref.tgtgt(*p)) for p in P]); w = np.array([ref_window(p) for p in P]); w2 = np.array([ref_window(p, nr=8, na=24, nt=9, point=False) for p in P]); w1 = np.array([ref_window(p, point=False) for p in P])
+    print(f"окно/точка: mean {np.mean(w/pt):.3f} min {np.min(w/pt):.3f} max {np.max(w/pt):.3f}; выборка ×8 плотнее меняет на max {np.max(np.abs(w2-w1)):.3f}")
