@@ -70,3 +70,5 @@ hub-worker-4 | done-step | v6 дифдрайв 3b: препятствия-дис
 hub-worker-4 | done-step | v6 манипулятор 3c ступень 1: manip2.py тор, V vs T* max .30 (n=48), порядок ~1 | 01:00:33
 hub-worker-4 | done-step | dd коридор с препятствием: зазор в SLSQP, 7/10 без столкновений, 3 честно не сошлись | 01:58:31
 hub-worker-4 | done-step | манипулятор 3c ступень 2: препятствия, V==Дейкстра (тождество графов при τ=h) | 02:00:35
+hub-worker-4 | done-step | H1 DI | 03:02:42
+hub-worker-4 | done | ctx 19% | v6: dd атлас+коридор+препятствия, manip2 ст.1–2, H1 DI | next=hub-worker-5 | 03:20:32
