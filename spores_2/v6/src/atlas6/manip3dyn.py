@@ -12,19 +12,19 @@ def _mats(n, m, ln):
     return A, S
 
 
-def accel(x, tau, m=MS, ln=L):
+def accel(x, tau, m=MS, ln=L, g=0.0):
     """q̈ для x (...,2n), tau (n,). M_θ θ̈ + [S_ij sin(θi−θj) θ̇_j²] = A^{-T} τ; q̈ = A^{-1} θ̈ (θ̈ = A q̈ при θ = A q)."""
     n = len(tau); m = np.asarray(m[:n]); ln = np.asarray(ln[:n]); A, S = _mats(n, m, ln)
     q, w = x[..., :n], x[..., n:]; th = q @ A.T; thd = w @ A.T
     d = th[..., :, None] - th[..., None, :]
     Mt = S * np.cos(d); h = np.einsum('ij,...ij,...j->...i', S, np.sin(d), thd ** 2)
-    Qt = np.linalg.solve(A.T, np.asarray(tau, float))
+    Qt = np.linalg.solve(A.T, np.asarray(tau, float)) - g * ln * np.cos(th) * np.array([m[i:].sum() for i in range(n)])     # g: гравитация (θ от горизонтали, вертикальная плоскость)
     tdd = np.linalg.solve(Mt, (Qt - h)[..., None])[..., 0]
     return np.linalg.solve(A, tdd[..., None])[..., 0]
 
 
-def f(x, tau):
-    n = len(tau); return np.concatenate([x[..., n:], accel(x, tau)], -1)
+def f(x, tau, g=0.0):
+    n = len(tau); return np.concatenate([x[..., n:], accel(x, tau, g=g)], -1)
 
 
 def flow(x, s, t, dt_max=0.02, n=3):
@@ -36,6 +36,8 @@ def flow(x, s, t, dt_max=0.02, n=3):
     return x
 
 
-def energy(x, m=MS, ln=L):
+def energy(x, m=MS, ln=L, g=0.0):
     n = x.shape[-1] // 2; A, S = _mats(n, np.asarray(m[:n]), np.asarray(ln[:n])); th = x[..., :n] @ A.T; thd = x[..., n:] @ A.T
-    Mt = S * np.cos(th[..., :, None] - th[..., None, :]); return 0.5 * np.einsum('...i,...ij,...j->...', thd, Mt, thd)
+    Mt = S * np.cos(th[..., :, None] - th[..., None, :]); mm = np.asarray(m[:n]); ln = np.asarray(ln[:n])
+    pot = g * sum(mm[k] * (ln[:k + 1] * np.sin(th[..., :k + 1])).sum(-1) for k in range(n))
+    return 0.5 * np.einsum('...i,...ij,...j->...', thd, Mt, thd) + pot

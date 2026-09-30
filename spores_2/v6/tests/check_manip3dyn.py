@@ -10,4 +10,7 @@ d = abs(M.energy(z) - M.energy(x)); print('дрейф E', d); assert d < 1e-9
 z = x.copy(); W = 0; tau = (1., -1., 1.)
 for _ in range(300): zn = rk(z, tau); W += h * np.dot(tau, (z[3:] + zn[3:]) / 2); z = zn
 r = abs(M.energy(z) - M.energy(x) - W) / abs(W); print('баланс мощности', r); assert r < 1e-3
+z = x.copy(); fg = lambda z: M.f(z, (0., 0., 0.), g=9.8); h = .0025
+for _ in range(1200): k1 = fg(z); k2 = fg(z + h / 2 * k1); k3 = fg(z + h / 2 * k2); k4 = fg(z + h * k3); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+d = abs(M.energy(z, g=9.8) - M.energy(x, g=9.8)); print('дрейф E с гравитацией', d); assert d < 1e-6
 print('OK')
