@@ -20,8 +20,10 @@ for _ in range(32):
 S = SysN(fl, 8, (np.pi, np.pi, np.pi, WM, WM, WM), ing, seeds, per=(2 * np.pi, 2 * np.pi, 2 * np.pi, 0, 0, 0), ok=lambda p: np.max(np.abs(p[3:])) <= WM)
 Q = [np.array([*rng.uniform(-np.pi, np.pi, 3), *rng.uniform(-1, 1, 3)]) for _ in range(4)]
 back = build_back(S, tau, NB, rho)
+from src.atlas6.adaptive_nd import back_heuristic
+HF = back_heuristic(S, back, wh=float(os.environ.get('WH', 3.0))) if os.environ.get('ASTAR') else None
 for x in Q:
-    t0 = time.time(); V = replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0]; b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K, tries=TR, kn=int(os.environ.get("KN", 8)))
+    t0 = time.time(); V = replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0]; b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=HF, kn=int(os.environ.get("KN", 8)))
     xe = None if b is None else np.array(x, float)
     if b is not None:
         for s, d in zip(b[1], b[2]): xe = flow(xe, s, d, dt_max=0.005, g=GG)

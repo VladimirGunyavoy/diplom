@@ -39,12 +39,12 @@ def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16):
     return (best[0] if ok else float(d0.sum())), seq, (best[1] if ok else d0), ok
 
 
-def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
+def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None, hfun=None):
     """Стыки → ([(hit, score, путь)] по (hit, score), число попаданий). Попадание: score = t; промах: t в точке наименьшего промаха + промах.
     Путь обрезан в момент входа в окно / в точке наименьшего промаха (хвост уводит конец с неустойчивого места). Сначала попадания, потом промахи.
     miss(X) — векторный: X (...,d) → расстояние до окна (...,), 0 внутри. Проигрыш всех пар (прямая спора × обратная) — одним батчем по слоям."""
     dt = tau / 2 if dt is None else dt; m = int(round(tau / dt))
-    Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True); out = []; pi_, pb_ = [], []
+    Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True, hfun=hfun); out = []; pi_, pb_ = [], []
     for i in range(len(Pf)):
         if S.in_goal(Pf[i]): out.append((0, Gf[i], _fpath(Pf, parf, layf, i, tau))); continue
         _, j = tree_query(S, tree, Pb, Pf[i], kn); pi_ += [i] * len(j); pb_ += list(j)
@@ -71,9 +71,9 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3):
+def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None):
     """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None."""
-    C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn); best = None
+    C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn, hfun=hfun); best = None
     for part in (C[:nh], C[nh:]):
         seen = set()
         for _, _, p in part:

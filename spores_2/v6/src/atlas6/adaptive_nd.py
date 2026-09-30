@@ -21,7 +21,7 @@ class SysN:
         return P
 
 
-def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True):
+def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
     """Дерево цепочек, switch-first. fwd: вперёд (выход слоя за τ) / назад. Возвращает списки: точки, время g, родитель, слой (слой, которым родитель→точка при fwd; точка→родитель при назад)."""
     key = lambda p, s: (s,) + tuple(int(np.floor(p[k] / (rho * S.scale[k]))) for k in range(S.d))
     seen = set(); P = []; G = []; par = []; lay = []; pq = []; cnt = 0
@@ -31,11 +31,15 @@ def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True):
         seen.add(k); P.append(p); G.append(g); par.append(pa); lay.append(ls); return len(P) - 1
     def push(i, ns, ls):
         nonlocal cnt
+        ch = []
         for s in range(S.L):
             e = S.wrap(S.flow(P[i], s, tau if fwd else -tau))
             if not S.ok(e) or S.blocked(e) or S.blocked(S.flow(P[i], s, (tau if fwd else -tau) / 2)): continue      # ребро и середина дуги свободны
+            ch.append((s, e))
+        hh = hfun(np.array([e for _, e in ch])) if (hfun is not None and ch) else [0.0] * len(ch)      # A*: эвристика «до обратного дерева» (hub-research-4)
+        for (s, e), hv in zip(ch, hh):
             n2 = ns + (1 if (ls >= 0 and s != ls) else 0); cnt += 1
-            heapq.heappush(pq, (sw_w * n2 + G[i] + tau, cnt, s, e, G[i] + tau, n2, i))
+            heapq.heappush(pq, (sw_w * n2 + G[i] + tau + hv, cnt, s, e, G[i] + tau, n2, i))
     for st in starts:
         i = add(S.wrap(st), -1, 0.0, -1, -1); push(i, 0, -1)
     while pq and len(P) < N:
@@ -112,6 +116,14 @@ def _images(S, P):
 
 
 def _scaled(S, Z): return Z / S.scale
+
+
+def back_heuristic(S, back, wh=3.0, kap=1.0):
+    """h(E) = wh·(Gb[ближайшая обратная спора] + kap·|E−b|_scaled) для A*-приоритета прямого дерева (hub-research-4: 6D NF800 2/4 → 3/4)."""
+    Pb, Gb, tree = np.asarray(back[0]), np.asarray(back[1]), back[5]
+    def h(E):
+        d, j = tree.query(np.atleast_2d(E) / S.scale, k=1); return wh * (Gb[np.asarray(j) % len(Pb)] + kap * d)
+    return h
 
 
 def tree_query(S, tree, Pb, q, kn):
