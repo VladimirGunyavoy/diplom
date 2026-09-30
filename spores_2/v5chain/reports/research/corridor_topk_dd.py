@@ -15,7 +15,9 @@ fl = lambda P, s, t: flow(P, LAYERS[s], t)
 dth = lambda th: (th + np.pi) % (2 * np.pi) - np.pi
 ing = lambda P: (np.hypot(P[..., 0], P[..., 1]) < R) & (np.abs(dth(P[..., 2])) < Rth)
 g = lambda x: np.array([R ** 2 - x[0] ** 2 - x[1] ** 2, Rth ** 2 - dth(x[2]) ** 2])
-S = SysN(fl, 4, (1.0, 1.0, np.pi), ing, [(0.0, 0.0, 0.0)], per=(0, 0, 2 * np.pi), ok=lambda p: abs(p[0]) <= 3 and abs(p[1]) <= 3)
+SEEDS = int(os.environ.get('SEEDS', '0'))   # 0 — центр окна; m — m точек окружности R × θ ∈ {−Rθ, 0, +Rθ} (граница окна, как у маятника)
+goal = [(0.0, 0.0, 0.0)] if SEEDS == 0 else [(R * .999 * np.cos(a), R * .999 * np.sin(a), th) for a in np.linspace(0, 2 * np.pi, SEEDS, endpoint=False) for th in (-Rth * .999, 0.0, Rth * .999)]
+S = SysN(fl, 4, (1.0, 1.0, np.pi), ing, goal, per=(0, 0, 2 * np.pi), ok=lambda p: abs(p[0]) <= 3 and abs(p[1]) <= 3)
 
 
 def candidates(x0, back):
@@ -53,5 +55,5 @@ for q, (x, e) in enumerate(zip(Q, E)):
     if best1 is None: print(q, 'нет допустимой топологии', len(seen)); continue
     r1.append(best1 / e); rK.append(bestK / e); sol.append(bsol); print(q, 'топологий', len(seen), 'T1/ref %.3f TK/ref %.3f' % (r1[-1], rK[-1]), seen[:3], flush=True)
 r1, rK = np.array(r1), np.array(rK)
-print(('miss ' if MISS else '') + 'NB %d NF %d K %d: допустимо %d/%d; top-1 mean %.3f max %.3f; top-%d mean %.3f max %.3f; доля ≤1.001: %d/%d' % (NB, NF, K, len(rK), M, r1.mean(), r1.max(), K, rK.mean(), rK.max(), (rK <= 1.001).sum(), len(rK)))
-json.dump(dict(NB=NB, NF=NF, K=K, top1=r1.tolist(), topK=rK.tolist(), sol=sol), open(os.path.join(HERE, 'corridor_topk_dd%s.json' % ('_miss' if MISS else '')), 'w'), indent=1)
+print(('miss ' if MISS else '') + ('seeds %d ' % SEEDS if SEEDS else '') + 'NB %d NF %d K %d: допустимо %d/%d; top-1 mean %.3f max %.3f; top-%d mean %.3f max %.3f; доля ≤1.001: %d/%d' % (NB, NF, K, len(rK), M, r1.mean(), r1.max(), K, rK.mean(), rK.max(), (rK <= 1.001).sum(), len(rK)))
+json.dump(dict(NB=NB, NF=NF, K=K, top1=r1.tolist(), topK=rK.tolist(), sol=sol), open(os.path.join(HERE, 'corridor_topk_dd%s%s.json' % ('_miss' if MISS else '', '_seeds%d' % SEEDS if SEEDS else '')), 'w'), indent=1)
