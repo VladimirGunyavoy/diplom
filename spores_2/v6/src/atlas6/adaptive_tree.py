@@ -150,3 +150,55 @@ def build_until_junction(S, tau, x0, rho, dmax=None, sw_w=10.0, N0=40, Nmax=3000
     N1 = int(len(P) * (1 + extra)); P = build_tree(S, tau, [x0], N1, rho, sw_w=sw_w, back_share=back_share)
     sc = Scattered(S, P, tau, dmax=dmax); sc.solve()
     return (P, sc) if sc.V[0] < 0.9 * sc.K else (P0, sc0)
+
+
+def bidir_value(S, tau, x0, NB, NF, rho_b, rho_f, lam=1.0, halo=None):
+    """Стыковка (research №1/№2): обратное дерево от цели — Дейкстра, V(b) точные по построению (V(пред) = τ + V(след), без интерполяции);
+    прямое дерево от старта — A* с приоритетом g + оценка до ближайшей обратной споры, оценка(p) = min_b [V(b) + lam·|p−b|] (|·| в масштабе, гало ≤ halo).
+    V(старт) = min по прямым спорам [g(p) + оценка(p)] — чистая минимизация по графу (верхняя оценка при lam ≥ реальной «цены расстояния»), монотонна по NB, NF.
+    Возвращает (V, число обратных, число прямых)."""
+    from scipy.spatial import cKDTree
+    def core_keys(rho):
+        return lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1]))))
+    # обратное дерево
+    kb = core_keys(rho_b); seen = set(); B = []; VB = []; pq = []; cnt = 0
+    for g in S.goal_pts:
+        g = S.wrap(g); seen.add(kb(g, -2)); B.append(g); VB.append(0.0)
+        for s in range(S.L):
+            e = S.wrap(S.flow(g, s, -tau))
+            if S.ok(e): cnt += 1; heapq.heappush(pq, (tau, cnt, s, e))
+    while pq and len(B) < NB:
+        v, _, s, e = heapq.heappop(pq); k = kb(e, s)
+        if k in seen: continue
+        seen.add(k); B.append(e); VB.append(v)
+        for s2 in range(S.L):
+            e2 = S.wrap(S.flow(e, s2, -tau))
+            if S.ok(e2): cnt += 1; heapq.heappush(pq, (v + tau, cnt, s2, e2))
+    B = np.array(B); VB = np.array(VB)
+    if S.per:
+        Bc = np.vstack([B, B + [S.per, 0], B - [S.per, 0]]); Vc = np.tile(VB, 3)
+    else:
+        Bc, Vc = B, VB
+    tree = cKDTree(Bc / S.scale)
+    def est(p):
+        # ближайшие обратные споры: минимум V(b)+lam·d по k=6 соседям (V растёт вдоль цепочки; ближайший не всегда лучший)
+        d, i = tree.query(p / S.scale, k=min(8, len(Bc)))
+        d = np.atleast_1d(d); i = np.atleast_1d(i)
+        m = np.inf if halo is None else halo
+        val = Vc[i] + lam * d; val = np.where(d <= m, val, np.inf)
+        return float(np.min(val))
+    # прямое дерево A*
+    kf = core_keys(rho_f); seenf = set(); x0 = S.wrap(x0); seenf.add(kf(x0, -1)); best = est(x0); nf = 1
+    pq = []; cnt = 0
+    def push(p, g):
+        nonlocal cnt
+        for s in range(S.L):
+            e = S.wrap(S.flow(p, s, tau))
+            if S.ok(e):
+                cnt += 1; heapq.heappush(pq, (g + tau + min(est(e), 1e6 if np.isinf(est(e)) else est(e)), cnt, s, e, g + tau))
+    push(x0, 0.0)
+    while pq and nf < NF:
+        f, _, s, e, g = heapq.heappop(pq); k = kf(e, s)
+        if k in seenf: continue
+        seenf.add(k); nf += 1; best = min(best, g + est(e)); push(e, g)
+    return best, len(B), nf
