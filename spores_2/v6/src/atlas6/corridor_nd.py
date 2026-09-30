@@ -26,7 +26,7 @@ def refine(flow, x0, path, g, tries=3, seed=0):
     con = {'type': 'ineq', 'fun': lambda d: np.atleast_1d(g(endpoint(flow, x0, seq, d)))}
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
-        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0), constraints=[con],
+        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 3 * d0.sum() + 1)] * len(d0), constraints=[con],
                      method='SLSQP', options=dict(maxiter=300, ftol=1e-9))
         if np.all(con['fun'](r.x) >= -1e-6) and r.x.sum() < best[0]: best = (float(r.x.sum()), r.x)
     ok = best[1] is not None
@@ -58,7 +58,7 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8):
     seen = set(); best = None
     for _, p in candidates(S, x0, back, tau, NF, rho, miss, kn):
         sq = tuple(merge(p)[0])
-        if sq in seen: continue
+        if sq in seen or not sq: continue
         seen.add(sq); T, s, d, ok = refine(flow, x0, p, g)
         if ok and (best is None or T < best[0]): best = (T, s, d)
         if len(seen) >= K: break
