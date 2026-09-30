@@ -22,3 +22,4 @@
 - [research/docking_nd.md](research/docking_nd.md) — стыковка в nD: листы из семейств обратных цепочек от границы окна цели + проверка проигрышем
 - [research/multiquery_corridor.md](research/multiquery_corridor.md) — многозапросность + коридор на дереве: NB 1200 + NF 10 → 30/30, T/эталон 1.004 (дд 3D); топологии с промахом, top-5, SLSQP
 - [research/manip_dyn_corridor.md](research/manip_dyn_corridor.md) — манипулятор 4D: коридор 5/8 → 8/8 при NB 2400/NF 400, T = эталону перебором топологий
+- [research/query_speed.md](research/query_speed.md) — почему запросы медленные: SLSQP зовёт numpy-rk4 точкой (×13–22 на math), maxiter 80, зазор последовательно; хаб ≈10× медленнее aida (VM); манипулятор 124 с → 1.2 с
