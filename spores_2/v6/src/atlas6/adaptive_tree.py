@@ -212,7 +212,7 @@ def _seg_x(A, B, C, D):
     return (s, r) if (0 <= s <= 1 and 0 <= r <= 1) else None
 
 
-def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5):
+def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, sw_wb=None):
     """Точная стыковка (research №4): обратное дерево хранит дуги (подотрезки dt) с ТОЧНЫМИ V (V(родитель)+время назад);
     из каждой прямой споры каждым слоем интегрируем шаг τ подотрезками и ищем ПЕРЕСЕЧЕНИЕ с обратной дугой — стык = t + V(×) — реальная траектория ⇒ верхняя оценка.
     Также: вход в клетку цели. Прямые споры — build_tree-порядок (мало переключений раньше). Возвращает (V, nb, nf)."""
@@ -234,17 +234,20 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5):
     for g in S.goal_pts:
         g = S.wrap(g); seen.add(k_(g, -2)); B.append(g)
         for s in range(S.L):
-            cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0))
+            cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0, -1, 0))
+    swb = sw_w if sw_wb is None else sw_wb
     while pq and len(B) < NB:
-        v, _, s, p, vp = heapq.heappop(pq)
+        _, _, s, p, vp, ls, ns = heapq.heappop(pq); v = vp + tau
         e = S.wrap(S.flow(p, s, -tau))
         if not S.ok(e): continue
         kk = k_(e, s)
         if kk in seen: continue
         seen.add(kk); B.append(e); arcs(p, s, vp)
         for s2 in range(S.L):
-            cnt += 1; heapq.heappush(pq, (v + tau, cnt, s2, e, v))
+            n2 = ns + (1 if (ls >= 0 and s2 != s) else 0)               # переключение в обратной цепочке (слой меняется)
+            cnt += 1; heapq.heappush(pq, (swb * n2 + v + tau, cnt, s2, e, v, s, n2))
     best = np.inf
+    SC = np.array([q[0] for q in segs]); SD = np.array([q[1] for q in segs]); SVC = np.array([q[2] for q in segs]); SVD = np.array([q[3] for q in segs])
     def near(A):
         c = cellk(S.wrap(A)); out = set()
         for di in (-1, 0, 1):
@@ -263,13 +266,21 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5):
         Pf = np.array([S.flow(p, s, dt * j) for j in range(m + 1)])
         for j in range(m + 1):
             if S.in_goal(S.wrap(Pf[j])): best = min(best, g + j * dt); return
+        idx = None
         for j in range(m):
             A, Bp = Pf[j], Pf[j + 1]
-            for i in near(A):
-                C, D, VC, VD = segs[i]
-                sh = wrapd(A[0] - C[0]) - (A[0] - C[0]) if S.per else 0.0        # ближайший образ обратного отрезка
-                C2 = C + [sh, 0]; D2 = D + [sh, 0]; x = _seg_x(A, Bp, C2, D2)
-                if x: best = min(best, g + (j + x[0]) * dt + VC + x[1] * (VD - VC))
+            ids = list(near(A))
+            if not ids: continue
+            C = SC[ids]; D = SD[ids]; VC = SVC[ids]; VD = SVD[ids]
+            if S.per:
+                dx = A[0] - C[:, 0]; sh = (dx + S.per / 2) % S.per - S.per / 2 - dx
+                C = C + np.stack([sh, 0 * sh], 1); D = D + np.stack([sh, 0 * sh], 1)
+            d1 = Bp - A; d2 = D - C; den = d1[0] * d2[:, 1] - d1[1] * d2[:, 0]; w = C - A
+            with np.errstate(divide='ignore', invalid='ignore'):
+                sp = (w[:, 0] * d2[:, 1] - w[:, 1] * d2[:, 0]) / den; rp = (w[:, 0] * d1[1] - w[:, 1] * d1[0]) / den
+            ok = (np.abs(den) > 1e-14) & (sp >= 0) & (sp <= 1) & (rp >= 0) & (rp <= 1)
+            if ok.any():
+                best = min(best, float(np.min(g + (j + sp[ok]) * dt + VC[ok] + rp[ok] * (VD[ok] - VC[ok]))))
     kf = kb(rho_f); seenf = set(); x0 = S.wrap(x0); seenf.add(kf(x0, -1)); nf = 1; pq = []; cnt = 0
     def push(p, g, ls, ns):
         nonlocal cnt

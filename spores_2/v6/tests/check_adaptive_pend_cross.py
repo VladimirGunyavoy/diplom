@@ -9,16 +9,16 @@ dth = lambda th: (th - np.pi + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: rk4(f, P, u * (1 if s == 0 else -1), t)
 gd = lambda P: np.hypot(dth(P[..., 0]), P[..., 1])
 gp = [(np.pi + Rg * c * np.cos(a), Rg * c * np.sin(a)) for c in (0, 1) for a in np.arange(0, 2 * np.pi, np.pi / 4)]
-S = Sys(fl, 2, (1.0, u), lambda P: np.where(gd(P) < Rg, 0.0, np.nan), lambda P: gd(P) < Rg, gp, per=2 * np.pi, lim=4.0)
+S = Sys(fl, 2, (np.pi, np.pi), lambda P: np.where(gd(P) < Rg, 0.0, np.nan), lambda P: gd(P) < Rg, gp, per=2 * np.pi, lim=4.0)
 t0 = time.time(); F = PendAtlas(n_th=252, n_w=241, wmax=4.0, tau=tau, umax=u, R_goal=Rg); F.solve(iters=1500); print('мелкая V %.0f с' % (time.time() - t0), flush=True)
 rng = np.random.default_rng(1); Q = []
 while len(Q) < 8:
     x = np.array([rng.uniform(-np.pi, np.pi), rng.uniform(-1.5, 1.5)])
     if gd(x) > 1.0 and F.value(x) < 40: Q.append(x)
 Vf = [F.value(x) for x in Q]; print('V мелкая на запросах:', np.round(Vf, 2))
-for NB in (100, 200, 400, 800):
-  for NF in (25, 50, 100, 200):
-    r = []
+for rho in (0.03, 0.05):
+  for NB, NF in ((200, 200), (400, 400), (800, 800), (1600, 1600)):
+    r = []; t0 = time.time()
     for x, v in zip(Q, Vf):
-        V, nb, nf = cross_value(S, tau, x, NB, NF, 0.15, 0.15); r.append(V / v)
-    print('cross NB %d NF %d: mean %.3f min %.3f max %.3f' % (NB, NF, np.mean(r), np.min(r), np.max(r)), np.round(r, 2), flush=True)
+        V, nb, nf = cross_value(S, tau, x, NB, NF, rho, rho); r.append(V / v)
+    print('cross rho %.2f NB %d NF %d: mean %.3f max %.3f (%.0f с)' % (rho, NB, NF, np.mean(r), np.max(r), time.time() - t0), np.round(r, 2), flush=True)
