@@ -27,11 +27,11 @@ def f(x, tau, g=0.0):
     n = len(tau); return np.concatenate([x[..., n:], accel(x, tau, g=g)], -1)
 
 
-def flow(x, s, t, dt_max=0.02, n=3):
+def flow(x, s, t, dt_max=0.02, n=3, g=0.0):
     tau = LAYERS6[s][:n] if n == 3 else tuple(1.0 if (s >> i) & 1 else -1.0 for i in range(n))
     x = np.array(x, float); k = max(1, int(np.ceil(abs(t) / dt_max))); h = t / k
     for _ in range(k):
-        k1 = f(x, tau); k2 = f(x + h / 2 * k1, tau); k3 = f(x + h / 2 * k2, tau); k4 = f(x + h * k3, tau)
+        k1 = f(x, tau, g); k2 = f(x + h / 2 * k1, tau, g); k3 = f(x + h / 2 * k2, tau, g); k4 = f(x + h * k3, tau, g)
         x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return x
 
