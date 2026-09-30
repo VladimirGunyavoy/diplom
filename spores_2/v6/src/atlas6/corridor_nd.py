@@ -24,13 +24,12 @@ def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16):
     """flow(P, s, t); g(x) ≥ 0 внутри окна. → (T, seq, dts, ok); T — лучший ДОПУСТИМЫЙ."""
     seq, d0 = merge(path); rng = np.random.default_rng(seed); best = (np.inf, None)
     def gg(d):
-        v = np.atleast_1d(g(endpoint(flow, x0, seq, d)))
-        if clear is None: return v
+        if clear is None: return np.atleast_1d(g(endpoint(flow, x0, seq, d)))
         x = np.array(x0, float); pts = []
-        for sg, t in zip(seq, d):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt)
+        for sg, t in zip(seq, d):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt); конец сегмента — последняя точка (один проход)
             for k in range(1, ns + 1): pts.append(flow(x, sg, t * k / ns))
             x = pts[-1]
-        return np.concatenate([v, np.ravel(clear(np.array(pts)))])
+        return np.concatenate([np.atleast_1d(g(x)), np.ravel(clear(np.array(pts)))])
     con = {'type': 'ineq', 'fun': gg}
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
