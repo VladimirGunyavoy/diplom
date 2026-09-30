@@ -8,9 +8,10 @@ from scipy.spatial import cKDTree
 
 
 class SysN:
-    def __init__(self, flow, L, scale, in_goal, goal_pts, per=None, ok=None):
+    def __init__(self, flow, L, scale, in_goal, goal_pts, per=None, ok=None, blocked=None):
         self.flow, self.L, self.scale = flow, L, np.asarray(scale, float); self.d = len(self.scale)
         self.per = np.zeros(self.d) if per is None else np.asarray(per, float)
+        self.blocked = blocked or (lambda P: np.zeros(np.asarray(P).shape[:-1], bool))          # препятствия: P (...,d) → bool
         self.in_goal, self.goal_pts, self.ok = in_goal, np.asarray(goal_pts, float), (ok or (lambda p: True))
 
     def wrap(self, P):
@@ -32,7 +33,7 @@ def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True):
         nonlocal cnt
         for s in range(S.L):
             e = S.wrap(S.flow(P[i], s, tau if fwd else -tau))
-            if not S.ok(e): continue
+            if not S.ok(e) or S.blocked(e) or S.blocked(S.flow(P[i], s, (tau if fwd else -tau) / 2)): continue      # ребро и середина дуги свободны
             n2 = ns + (1 if (ls >= 0 and s != ls) else 0); cnt += 1
             heapq.heappush(pq, (sw_w * n2 + G[i] + tau, cnt, s, e, G[i] + tau, n2, i))
     for st in starts:
@@ -67,6 +68,7 @@ def replay_value(S, tau, x0, NB, NF, rho_b, rho_f, sw_w=10.0, kn=8, dt=None, bac
                 for s in range(S.L):
                     sel = act & np.array([step < len(seqs[b]) and seqs[b][step] == s for b in j])
                     if sel.any(): X[sel] = S.wrap(S.flow(X[sel], s, dt))
+                alive &= ~S.blocked(X)                                    # проигрыш не проходит сквозь препятствие
                 th = Gf[i] + t + (sub + 1) * dt if False else None
                 ing = S.in_goal(X) & act
                 tt = Gf[i] + step * tau + (sub + 1) * dt
