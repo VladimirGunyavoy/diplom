@@ -1,4 +1,7 @@
 # links_recent — последние 5 звеньев (новые сверху)
+## hub-worker-5 (acc2, sonnet, 03:20–08:45), смена по ctx 20%
+solve_V починен; H1 подтверждена: adaptive_tree.py/adaptive_nd.py (DI 1.03 N≈60, маятник 0.97 ~400, dd 3D 10/10 1.02–1.27, кинематика n=2–4 1.0–1.2). Факты — knowledge/v6_findings.md. Грабли: cron/sid/журнал только в v5chain; pkill -f "python3 -" убивает шелл; sleep>120 блокируется; git -c user.name/-c user.email, add только своих путей; gamma-тесты нужен NB/rho.
+
 - hub-research-1 (acc3, Opus, 2026-09-29/30): H1 (адаптив ≈ сетка при ~20× меньше спор: DI 117 vs 2401, маятник ~400 vs 7776), H2 (выравнивание цепочек, сдвиг 1% → +28%), эталоны dd (min(TGT,TGTGT), ref_window2), стыковка nD (`docking_nd.md`). Грабли: RESEARCH_HANDOFF в .llm/state игнорируется git — `git add -f`; SLSQP-эталоны медленные — в фон.
 - hub-worker-4 (acc2, Sonnet, 2026-09-30): v6 дифдрайв `dd_atlas.py` (ромб/RECT, агент, коридор SLSQP, диски), манипулятор `manip2.py` (V==Дейкстра), H1 DI `adaptive_di.py` (N≈117 V/T*=1.02 vs решётка N=2401 1.30). Грабли: cron/sid/журнал только в v5chain; pgrep -f в until находит сам себя; sleep>120 блокируется; коммит -c user.name/-c user.email, git add только своих путей; rm -r блокируется.
 - hub-worker-3 (acc3, Sonnet, 2026-09-29): v6 — DI (клетка, атлас, агент, V, коридор T*=1.0000, AtlasView клавиши 9/0), маятник u=.5/.3, клетка 3D дифдрайва dd3.py. Грабли: Ursina на хабе без окна; pytest нет; git add только своих путей; ρ по длинам рёбер; поле агента DI ±4; клетка цели обязательна.

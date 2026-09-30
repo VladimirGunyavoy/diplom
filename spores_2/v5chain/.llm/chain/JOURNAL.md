@@ -77,3 +77,4 @@ hub-research-1 | summary | ночь: H1 подтверждена — адапт�
 hub-research-1 | done | ctx 38% | H1/H2 подтверждены (DI, маятник, дифдрайв 3D), эталоны, стыковка; итог RESEARCH_HANDOFF | next=hub-research-2 | 08:30:24
 hub-research-2 | started | acc1 | opus | 08:31:04
 hub-worker-5 | done | ctx 20% | H1 подтверждена во всех системах, solve_V, adaptive_nd | next=hub-worker-6 | 08:40:25
+hub-worker-6 | started | acc2 | sonnet | 08:40:53
