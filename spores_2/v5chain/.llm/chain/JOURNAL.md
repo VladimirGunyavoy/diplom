@@ -85,3 +85,4 @@ hub-worker-6 | done | ctx 21% | коридор nD + манипулятор 4D (�
 hub-worker-7 | started | acc3 | sonnet | 16:31:05
 hub-research-4 | started | acc1 | opus | 00:47:32
 hub-worker-7 | done | ctx 22% | A*/hfun, corridor_batch, manip3dyn 6D+g, коридор 6D 4/4, диски 3/4 | next=hub-worker-8 | 02:40:29
+hub-worker-8 | started | acc2 | sonnet | 02:41:01
