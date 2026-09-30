@@ -1,0 +1,14 @@
+{'q': 0, 'V_fine': 5.744739383255493, 'V_replay': 1.0661928403319518, 'T_corr': 1.053624003248316, 'end_dist': 0.4999999999083673, 'seq': [1, 0, 1], 'sec': 91.6038875579834}
+{'q': 1, 'V_fine': 3.3715994182950815, 'V_replay': 1.0010085960053459, 'T_corr': 0.9478413821842457, 'end_dist': 0.4999999999502546, 'seq': [0, 1, 0], 'sec': 59.704368591308594}
+{'q': 2, 'V_fine': 7.227978469505078, 'V_replay': 1.262455337754322, 'T_corr': 1.0724808699246324, 'end_dist': 0.5000000002782313, 'seq': [1, 0, 1], 'sec': 132.01918721199036}
+{'q': 3, 'V_fine': 3.922599799893213, 'V_replay': 0.9878652418494211, 'T_corr': 0.9557098293773365, 'end_dist': 0.5000000000568895, 'seq': [0, 1, 0], 'sec': 57.51626253128052}
+{'q': 4, 'V_fine': 3.7205733059516244, 'V_replay': 0.8399243189217871, 'T_corr': 0.8367448608578563, 'end_dist': 0.49999999989531324, 'seq': [1, 0, 1], 'sec': 60.24524998664856}
+{'q': 5, 'V_fine': 4.183459115294363, 'V_replay': 0.9860261296493512, 'T_corr': 0.9606335680857314, 'end_dist': 0.4999999999488649, 'seq': [1, 0], 'sec': 67.84308171272278}
+Traceback (most recent call last):
+  File "/home/rl/claude-work/projects/spore/spores_2/v6/../v5chain/reports/research/corridor_pend.py", line 52, in <module>
+    C, nhit = candidates(x, back); best = np.inf; bs = None
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/projects/spore/spores_2/v6/../v5chain/reports/research/corridor_pend.py", line 44, in candidates
+    return [(sc, p) for _, sc, p in sorted(out, key=lambda c: (c[0], c[1]))], sum(1 for c in out if c[0] == 0)
+                        ^^^^^^^^
+ValueError: not enough values to unpack (expected 3, got 2)
