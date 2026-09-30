@@ -20,10 +20,18 @@ def endpoint(flow, x0, seq, dts):
     return x
 
 
-def refine(flow, x0, path, g, tries=3, seed=0):
+def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16):
     """flow(P, s, t); g(x) ≥ 0 внутри окна. → (T, seq, dts, ok); T — лучший ДОПУСТИМЫЙ."""
     seq, d0 = merge(path); rng = np.random.default_rng(seed); best = (np.inf, None)
-    con = {'type': 'ineq', 'fun': lambda d: np.atleast_1d(g(endpoint(flow, x0, seq, d)))}
+    def gg(d):
+        v = np.atleast_1d(g(endpoint(flow, x0, seq, d)))
+        if clear is None: return v
+        x = np.array(x0, float); pts = []
+        for sg, t in zip(seq, d):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt)
+            for k in range(1, ns + 1): pts.append(flow(x, sg, t * k / ns))
+            x = pts[-1]
+        return np.concatenate([v, np.ravel(clear(np.array(pts)))])
+    con = {'type': 'ineq', 'fun': gg}
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
         r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 1.5 * d0.sum() + 1)] * len(d0), constraints=[con],
@@ -46,17 +54,18 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
         pi_ = np.array(pi_); pb_ = np.array(pb_); X = np.array([Pf[i] for i in pi_]); G0 = np.array([Gf[i] for i in pi_]); n = len(pi_)
         ln = np.array([len(seqs[b]) for b in pb_]); Sm = np.full((n, max(ln.max(), 1)), -1, int)
         for r, b in enumerate(pb_): Sm[r, :ln[r]] = seqs[b]
-        hit = np.zeros(n, bool); hit_k = np.zeros(n, int); m0 = miss(X).astype(float); cut_k = np.zeros(n, int); k = 0
+        dead = np.zeros(n, bool); hit = np.zeros(n, bool); hit_k = np.zeros(n, int); m0 = miss(X).astype(float); cut_k = np.zeros(n, int); k = 0
         for step in range(Sm.shape[1]):
             for sub in range(m):
-                act = ~hit & (step < ln)
+                act = ~hit & ~dead & (step < ln)
                 if not act.any(): break
                 for s_ in range(S.L):
                     sel = act & (Sm[:, step] == s_)
                     if sel.any(): X[sel] = S.wrap(S.flow(X[sel], s_, dt))
-                k += 1; ing = S.in_goal(X) & act; hit_k[ing] = k; hit |= ing
+                k += 1; dead |= S.blocked(X) & act; act = act & ~dead; ing = S.in_goal(X) & act; hit_k[ing] = k; hit |= ing
                 mm = np.where(act & ~ing, miss(X), np.inf); better = mm < m0; m0[better] = mm[better]; cut_k[better] = k
         for r in range(n):
+            if dead[r]: continue
             steps = [(Sm[r, q], dt) for q in range(ln[r]) for _ in range(m)]        # по dt-подшагам, как в цикле выше (k считает только активные подшаги)
             fp = _fpath(Pf, parf, layf, pi_[r], tau)
             if hit[r]: kk = hit_k[r]; out.append((0, G0[r] + kk * dt, fp + steps[:kk]))
@@ -64,7 +73,7 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2):
+def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None):
     """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None."""
     C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn); best = None
     for part in (C[:nh], C[nh:]):
@@ -73,7 +82,7 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2)
             if not p: continue
             sq = tuple(merge(p)[0])
             if sq in seen: continue
-            seen.add(sq); T, sqr, d, ok = refine(flow, x0, p, g, tries=3)
+            seen.add(sq); T, sqr, d, ok = refine(flow, x0, p, g, tries=3, clear=clear)
             if ok and (best is None or T < best[0]): best = (T, sqr, d)
             if len(seen) >= K: break
     for _ in range(neigh if best else 0):        # локальный поиск по топологиям: соседи лучшей (сегмент другого слоя в начале/конце dt0=.3, без первого), SLSQP каждой
@@ -81,6 +90,6 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2)
         nb = [([a] + sq0, [0.3] + d0) for a in range(S.L) if a != sq0[0]] + [(sq0 + [a], d0 + [0.3]) for a in range(S.L) if a != sq0[-1]]
         nb += [(sq0[1:], d0[1:])] if len(sq0) > 1 else []
         for sqn, dn in nb:
-            T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1)
+            T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1, clear=clear)
             if ok and T < best[0]: best = (T, sqr, d)
     return best
