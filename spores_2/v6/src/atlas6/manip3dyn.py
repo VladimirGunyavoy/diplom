@@ -68,3 +68,18 @@ def energy(x, m=MS, ln=L, g=0.0):
     Mt = S * np.cos(th[..., :, None] - th[..., None, :]); mm = np.asarray(m[:n]); ln = np.asarray(ln[:n])
     pot = g * sum(mm[k] * (ln[:k + 1] * np.sin(th[..., :k + 1])).sum(-1) for k in range(n))
     return 0.5 * np.einsum('...i,...ij,...j->...', thd, Mt, thd) + pot
+
+
+def clearance(P, obstacles, ln=L):
+    """Зазор звеньев n-звенника до дисков ((cx,cy),r): min по звеньям и дискам (dist − r); P (...,≥n) — относительные углы q (n = len(ln)); <0 — столкновение."""
+    P = np.asarray(P, float); n = len(ln); th = np.cumsum(P[..., :n], -1)
+    pts = [np.zeros(P.shape[:-1] + (2,))]
+    for i in range(n): pts.append(pts[-1] + ln[i] * np.stack([np.cos(th[..., i]), np.sin(th[..., i])], -1))
+    def seg(a, b, c):
+        d = b - a; u = np.clip(np.sum((c - a) * d, -1) / np.maximum(np.sum(d * d, -1), 1e-12), 0, 1)
+        return np.linalg.norm(a + u[..., None] * d - c, axis=-1)
+    out = np.full(P.shape[:-1], np.inf)
+    for c, r in obstacles:
+        c = np.array(c, float)
+        for i in range(n): out = np.minimum(out, seg(pts[i], pts[i + 1], c) - r)
+    return out
