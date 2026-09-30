@@ -73,7 +73,7 @@
 | `ISSUES.md` | только открытое + счётчики попыток | решённое одной строкой → `history/issues_resolved.md` при > ~30 строк | worker |
 | `JOURNAL.md` | последние ~60 событий | > ~100 строк → старшее в `history/journal_archive.md` (`>>`) | worker на §Старт |
 | `tick.log` (пишет `reap_idle.py`) | последние ~100 строк | старшее → `history/tick_archive.log` | watcher на §Старт |
-| `WATCHER_NOTES.md` / `META_NOTES.md` | записи текущей смены | на смене → `history/watcher_archive.md` / `meta_archive.md` | watcher / meta |
+| `DISPATCHER_NOTES.md` / `META_NOTES.md` | записи текущей смены | на смене → `history/watcher_archive.md` / `meta_archive.md` | watcher / meta |
 | `history/links_recent.md` | последние 5 звеньев | старшее → `links_archive.md` | worker на §Старт п.2 |
 | handoff'ы ролей | живой — последний по каждой роли | прошлые → `history/handoffs/` | заступающий |
 | `knowledge/user_decisions.md` | свежие решения | секции > ~15 → `history/user_decisions_archive.md` | meta на ревизии |

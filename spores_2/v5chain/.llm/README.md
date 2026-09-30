@@ -33,7 +33,7 @@ v5chain/                         папка проекта: отсюда зап�
 │   └── chain/                   «файлы цепочки»: пути в рутинах ролей вида TASK.md, knowledge/… — отсюда
 │       ├── TASK.md              цель, правила, где что лежит (точка входа звена)
 │       ├── STATUS.md PLAN.md ISSUES.md JOURNAL.md
-│       ├── WATCHER_NOTES.md META_NOTES.md tick.log
+│       ├── DISPATCHER_NOTES.md META_NOTES.md tick.log
 │       ├── knowledge/           INDEX.md + факты проекта (один факт — одно место)
 │       └── history/             decisions, token_stats, links_*, архивы, handoffs/
 ├── journals/                    пульс-журналы агентов и служебные файлы скриптов (_sentinel/), в .gitignore
