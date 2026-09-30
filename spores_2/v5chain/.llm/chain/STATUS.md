@@ -14,6 +14,6 @@
 - **v6 (сейчас):** `spores_2/v6/src/atlas6/`: DI/маятник (cell, atlas, agent, value, corridor, gcell, pend, gcorridor), дифдрайв `dd3.py`+**`dd_atlas.py`** (ромб 4 слоя/RECT 8, τ=h, V от верхней оценки, агент, коридор SLSQP+откат, препятствия-диски; эталон min(TGT,TGTGT) mean 1.05), манипулятор 2 звена кинематика **`manip2.py`** (тор, препятствия, V==Дейкстра), **`adaptive_di.py`** (H1: адаптив N≈117 V/T*=1.02 vs решётка N=2401 1.30, один запрос). Тесты `tests/test_atlas6_*.py`, проверки `tests/check_*.py`. Факты — `knowledge/v6_findings.md`.
 
 ## Открытые проблемы
-- `value.py: solve_V` (DI) — max-фолбэк занижает V (V/T* 0.5…83); починить как в dd (верхняя оценка вниз); H1 без общих цепочек и без коридора.
+- H1 без общих цепочек и без коридора (solve_V починен hub-worker-5).
 - A/B закрыт: делаем обе схемы.
 - Цена с дугами не сошлась по h (`knowledge/diffdrive_atlas_design.md`).

@@ -13,7 +13,7 @@ def solve_V(h, lim=4.0, tau=None, R_goal=None, umax=1.0, iters=2000, tol=1e-9):
     ends = [flow(np.stack([X, Vv], -1), s * umax, tau) for s in (+1, -1)]
     goal = np.hypot(X, Vv) < R_goal
     Tg = np.vectorize(T_star)(X, Vv)                                       # клетка цели — своя точная формула (source_doc §4)
-    V = np.full(X.shape, 1e3); V[goal] = Tg[goal]
+    K = 3 * float(Tg.max()); V = np.full(X.shape, K); V[goal] = Tg[goal]                # верхняя оценка K, итерации идут вниз (как в dd_atlas)
 
     def interp(V, P):
         fx = (P[..., 0] + lim) / h; fv = (P[..., 1] + lim) / h
@@ -21,11 +21,9 @@ def solve_V(h, lim=4.0, tau=None, R_goal=None, umax=1.0, iters=2000, tol=1e-9):
         fx = np.clip(fx, 0, n - 1 - 1e-9); fv = np.clip(fv, 0, n - 1 - 1e-9)
         i, j = fx.astype(int), fv.astype(int); u, w = fx - i, fv - j
         W = [(1 - u) * (1 - w), u * (1 - w), (1 - u) * w, u * w]; Q = [V[i, j], V[i + 1, j], V[i, j + 1], V[i + 1, j + 1]]
-        fin = [qk < 1e2 for qk in Q]
-        full = sum(wk * np.where(f, qk, 0.0) for wk, qk, f in zip(W, Q, fin))          # билинейно, если все 4 угла посчитаны
-        mx = np.max([np.where(f, qk, -1.0) for qk, f in zip(Q, fin)], axis=0)         # иначе — максимум посчитанных (консервативно, не занижает)
-        r = np.where(np.all(fin, axis=0), full, np.where(mx >= 0, mx, 1e3))
-        return np.where(inside, r, 1e3)
+        r = sum(wk * qk for wk, qk in zip(W, Q))                                       # билинейно, все узлы конечны (старт с K)
+        r = np.where(inside, r, K)
+        return r
 
     for it in range(iters):
         Vn = np.minimum(V, np.minimum(*[tau + interp(V, e) for e in ends])); Vn[goal] = Tg[goal]
