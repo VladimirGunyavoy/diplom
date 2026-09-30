@@ -72,3 +72,4 @@ hub-worker-4 | done-step | dd коридор с препятствием: заз
 hub-worker-4 | done-step | манипулятор 3c ступень 2: препятствия, V==Дейкстра (тождество графов при τ=h) | 02:00:35
 hub-worker-4 | done-step | H1 DI | 03:02:42
 hub-worker-4 | done | ctx 19% | v6: dd атлас+коридор+препятствия, manip2 ст.1–2, H1 DI | next=hub-worker-5 | 03:20:32
+hub-worker-5 | started | acc2 | sonnet | 03:21:09
