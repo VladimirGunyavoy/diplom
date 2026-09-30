@@ -27,8 +27,7 @@ def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16):
         if clear is None: return np.atleast_1d(g(endpoint(flow, x0, seq, d)))
         x = np.array(x0, float); pts = []
         for sg, t in zip(seq, d):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt); конец сегмента — последняя точка (один проход)
-            for k in range(1, ns + 1): pts.append(flow(x, sg, t * k / ns))
-            x = pts[-1]
+            for _ in range(ns): x = flow(x, sg, t / ns); pts.append(x)      # последовательно: p_j = flow(p_{j-1}, t/ns) (×ns/2 меньше шагов rk4)
         return np.concatenate([np.atleast_1d(g(x)), np.ravel(clear(np.array(pts)))])
     con = {'type': 'ineq', 'fun': gg}
     for k in range(tries):
