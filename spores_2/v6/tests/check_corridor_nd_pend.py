@@ -12,10 +12,10 @@ gd = lambda P: np.hypot(dth(P[..., 0]), P[..., 1])
 g = lambda x: np.array([Rg ** 2 - gd(x) ** 2])
 MW = float(sys.argv[1]) if len(sys.argv) > 1 else 5; KK = int(sys.argv[2]) if len(sys.argv) > 2 else 12
 miss = lambda X: MW * max(gd(X) - Rg, 0)
-S = SysN(fl, 2, (np.pi, np.pi), lambda P: gd(P) < Rg, [(np.pi, 0.0)], per=(2 * np.pi, 0.0), ok=lambda p: abs(p[1]) <= 4.0)
+S = SysN(fl, 2, (np.pi, np.pi), lambda P: gd(P) < Rg, [(np.pi + Rg * 0.999 * np.cos(a), Rg * 0.999 * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)], per=(2 * np.pi, 0.0), ok=lambda p: abs(p[1]) <= 4.0)
 F = PendAtlas(n_th=252, n_w=241, wmax=4.0, tau=tau, umax=u, R_goal=Rg); F.solve(iters=1500)
 rng = np.random.default_rng(1); Q = []
-while len(Q) < 4:
+while len(Q) < 8:
     x = np.array([rng.uniform(-np.pi, np.pi), rng.uniform(-1.5, 1.5)])
     if gd(x) > 1.0 and F.value(x) < 40: Q.append(x)
 for NB, NF in ((400, 50),):
