@@ -14,9 +14,9 @@ spw = importlib.util.spec_from_file_location('wref', '../v5chain/reports/researc
 def eref_pt(p):
     a = ref.tgt(*p); b = ref.tgtgt(*p); b = b[0] if isinstance(b, tuple) else b; return min(a, b)
 rng = np.random.default_rng(3); Q = [np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]) for _ in range(10)]
-E = [wref.ref_window(p, R=R, Rth=Rth) for p in Q]; E0 = [eref_pt(p) for p in Q]; print('эталон до окна', np.round(E, 2), 'до точки', np.round(E0, 2), flush=True)
-for rho in (0.1, 0.06):
-  for NB, NF in ((300, 300), (1000, 1000)):
+E = [(wref.ref_window2(p) if hasattr(wref, "ref_window2") else wref.ref_window(p, R=R, Rth=Rth)) for p in Q]; E0 = [eref_pt(p) for p in Q]; print('эталон до окна', np.round(E, 2), 'до точки', np.round(E0, 2), flush=True)
+for rho in (0.08,):
+  for NB, NF in ((600, 600),):
     t0 = time.time(); back = build_back(S, tau, NB, rho); r = []
     for x, e in zip(Q, E):
         V, nb, nf, path = replay_value(S, tau, x, NB, NF, rho, rho, back=back); r.append(V / e)
