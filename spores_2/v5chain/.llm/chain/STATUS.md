@@ -11,8 +11,9 @@
 - Схема B доведена: rollout5_best 40/40 (v,ω≠0), 64/64 граница, привязка к достижимой подрешётке (чётность), A vs B по времени B/A≈2.4; хвост DI: запросы у vmax (`knowledge/atlas_di_tails.md`). Новая роль research (`hub-research-1` поднят, acc3, Opus) — `RESEARCH_ROUTINE.md`.
 - Коммиты локальные, пуша нет.
 
-- **v6 (сейчас):** `spores_2/v6`: `src/atlas6/` (cell, atlas, agent, value, corridor, gcell, pend, gcorridor, dd3), тесты `tests/test_atlas6_*.py` (python3, pytest нет), `src/spores/atlas_view.py` + клавиши 9/0 в `main.py`. DI: коридор время/T*=1.0000; маятник: агент≈V, коридор на 2–6% короче мелкой V; дифдрайв: клетка 3D (L_q-инвариантность 4e-16). Факты — `knowledge/v6_findings.md`.
+- **v6 (сейчас):** `spores_2/v6/src/atlas6/`: DI/маятник (cell, atlas, agent, value, corridor, gcell, pend, gcorridor), дифдрайв `dd3.py`+**`dd_atlas.py`** (ромб 4 слоя/RECT 8, τ=h, V от верхней оценки, агент, коридор SLSQP+откат, препятствия-диски; эталон min(TGT,TGTGT) mean 1.05), манипулятор 2 звена кинематика **`manip2.py`** (тор, препятствия, V==Дейкстра), **`adaptive_di.py`** (H1: адаптив N≈117 V/T*=1.02 vs решётка N=2401 1.30, один запрос). Тесты `tests/test_atlas6_*.py`, проверки `tests/check_*.py`. Факты — `knowledge/v6_findings.md`.
 
 ## Открытые проблемы
+- `value.py: solve_V` (DI) — max-фолбэк занижает V (V/T* 0.5…83); починить как в dd (верхняя оценка вниз); H1 без общих цепочек и без коридора.
 - A/B закрыт: делаем обе схемы.
 - Цена с дугами не сошлась по h (`knowledge/diffdrive_atlas_design.md`).
