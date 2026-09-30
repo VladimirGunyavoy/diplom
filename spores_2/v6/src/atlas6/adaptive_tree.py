@@ -212,13 +212,15 @@ def _seg_x(A, B, C, D):
     return (s, r) if (0 <= s <= 1 and 0 <= r <= 1) else None
 
 
-def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, sw_wb=None):
-    """Точная стыковка (research №4): обратное дерево хранит дуги (подотрезки dt) с ТОЧНЫМИ V (V(родитель)+время назад);
-    из каждой прямой споры каждым слоем интегрируем шаг τ подотрезками и ищем ПЕРЕСЕЧЕНИЕ с обратной дугой — стык = t + V(×) — реальная траектория ⇒ верхняя оценка.
-    Также: вход в клетку цели. Прямые споры — build_tree-порядок (мало переключений раньше). Возвращает (V, nb, nf)."""
-    dt = tau / 5 if dt is None else dt; m = int(round(tau / dt))
+_BC = {}
+
+
+def _back(S, tau, NB, rho_b, dt, cell, swb):
+    """Общее обратное дерево цели (Дейкстра, switch-first) с дугами-подотрезками и точным V; кэш — один раз на цель для многих запросов."""
+    ck = (id(S), tau, NB, rho_b, dt, cell, swb)
+    if ck in _BC: return _BC[ck]
+    m = int(round(tau / dt))
     kb = lambda rho: (lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1])))))
-    wrapd = (lambda dx: (dx + S.per / 2) % S.per - S.per / 2) if S.per else (lambda dx: dx)
     hsh = {}; segs = []
     def cellk(p): return (int(np.floor(p[0] / cell)), int(np.floor(p[1] / cell)))
     def add_arc(p, s, v):                                           # обратная дуга от p (V=v) слоем s назад на τ
@@ -235,7 +237,6 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, 
         g = S.wrap(g); seen.add(k_(g, -2)); B.append(g)
         for s in range(S.L):
             cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0, -1, 0))
-    swb = sw_w if sw_wb is None else sw_wb
     while pq and len(B) < NB:
         _, _, s, p, vp, ls, ns = heapq.heappop(pq); v = vp + tau
         e = S.wrap(S.flow(p, s, -tau))
@@ -246,8 +247,20 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, 
         for s2 in range(S.L):
             n2 = ns + (1 if (ls >= 0 and s2 != s) else 0)               # переключение в обратной цепочке (слой меняется)
             cnt += 1; heapq.heappush(pq, (swb * n2 + v + tau, cnt, s2, e, v, s, n2))
-    best = np.inf
     SC = np.array([q[0] for q in segs]); SD = np.array([q[1] for q in segs]); SVC = np.array([q[2] for q in segs]); SVD = np.array([q[3] for q in segs])
+    _BC[ck] = (hsh, cellk, B, SC, SD, SVC, SVD)
+    return _BC[ck]
+
+
+def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, sw_wb=None):
+    """Точная стыковка (research №4): обратное дерево хранит дуги (подотрезки dt) с ТОЧНЫМИ V (V(родитель)+время назад);
+    из каждой прямой споры каждым слоем интегрируем шаг τ подотрезками и ищем ПЕРЕСЕЧЕНИЕ с обратной дугой — стык = t + V(×) — реальная траектория ⇒ верхняя оценка.
+    Также: вход в клетку цели. Прямые споры — build_tree-порядок (мало переключений раньше). Возвращает (V, nb, nf)."""
+    dt = tau / 5 if dt is None else dt; m = int(round(tau / dt))
+    kb = lambda rho: (lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1])))))
+    wrapd = (lambda dx: (dx + S.per / 2) % S.per - S.per / 2) if S.per else (lambda dx: dx)
+    hsh, cellk, B, SC, SD, SVC, SVD = _back(S, tau, NB, rho_b, dt, cell, sw_w if sw_wb is None else sw_wb)
+    best = np.inf
     def near(A):
         c = cellk(S.wrap(A)); out = set()
         for di in (-1, 0, 1):
