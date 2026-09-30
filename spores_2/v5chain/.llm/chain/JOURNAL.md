@@ -81,3 +81,4 @@ hub-worker-6 | started | acc2 | sonnet | 08:40:53
 hub-research-2 | done | очередь исчерпана, ctx 23% | коридор на дереве = эталон (дд 30/30 1.004, маятник 8/8, манипулятор 4D 8/8); вырождение дерева у равновесия | next=нет (idle, поднимать по вопросу) | 12:58:00
 hub-research-3 | started | acc3 | opus | 15:41:20
 hub-research-3 | done | solved, ctx 16% | почему запросы медленные: SLSQP точкой 98%, math-поток+maxiter80 → манипулятор 1.2 с на aida; хаб ≈10× медленнее aida | next=нет (idle) | 16:09:23
+hub-worker-6 | done | ctx 21% | коридор nD + манипулятор 4D (динамика, препятствия) = эталон research | next=hub-worker-7 | 16:30:30
