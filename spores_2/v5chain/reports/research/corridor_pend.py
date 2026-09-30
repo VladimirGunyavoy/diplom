@@ -59,13 +59,21 @@ for q, (x, vf) in enumerate(zip(Q, Vf)):
             seen.append(sq); T, sqr, d, ok = refine(fl, x, p, g, tries=1)
             if ok and T < best: best = T; bs = (list(map(int, sqr)), list(map(float, d)))
             if len(seen) >= K: break
+    if os.environ.get('NEIGH') and bs:             # локальный поиск по топологиям: соседи лучшей (±сегмент в начале/конце), 2 прохода
+        for _ in range(2):
+            sq0, d0 = bs; alt = [l for l in range(S.L)]
+            nb = [([a] + sq0, [0.3] + d0) for a in alt if a != sq0[0]] + [(sq0 + [a], d0 + [0.3]) for a in alt if a != sq0[-1]]
+            nb += [(sq0[1:], d0[1:])] if len(sq0) > 1 else []
+            for sqn, dn in nb:
+                T, sqr, d, ok = refine(fl, x, list(zip(sqn, dn)), g, tries=1)
+                if ok and T < best: best = T; bs = (list(map(int, sqr)), list(map(float, d)))
     # независимая проверка: мелкий rk4 (dt 0.001) по найденному коридору
     chk = None
     if bs:
         X = np.array(x, float)
         for s, d in zip(*bs): X = rk4(f, X, u * (1 if s == 0 else -1), d, dt_max=0.001)
         chk = float(gd(X))
-    rows.append(dict(q=q, V_fine=vf, V_replay=V / vf, T_corr=best / vf, end_dist=chk, seq=bs[0] if bs else None, sec=time.time() - t0)); print(rows[-1], flush=True)
+    rows.append(dict(q=q, V_fine=vf, V_replay=V / vf, T_corr=best / vf, end_dist=chk, seq=bs[0] if bs else None, d=bs[1] if bs else None, sec=time.time() - t0)); print(rows[-1], flush=True)
 T = np.array([r['T_corr'] for r in rows]); V = np.array([r['V_replay'] for r in rows])
 print('маятник NB %d NF %d K %d: проигрыш V/Vf mean %.3f max %.3f; коридор T/Vf mean %.3f min %.3f max %.3f; допустимо %d/%d' % (NB, NF, K, V[np.isfinite(V)].mean(), V[np.isfinite(V)].max(), T[np.isfinite(T)].mean(), T[np.isfinite(T)].min(), T[np.isfinite(T)].max(), np.isfinite(T).sum(), len(T)))
 json.dump(dict(NB=NB, NF=NF, K=K, rows=rows), open(os.path.join(HERE, 'corridor_pend_%d_%d.json' % (NB, NF)), 'w'), indent=1)
