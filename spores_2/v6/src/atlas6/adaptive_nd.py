@@ -118,3 +118,38 @@ def tree_query(S, tree, Pb, q, kn):
     d, j = tree.query(q / S.scale, k=min(kn * (1 + 2 * int((S.per > 0).sum())), len(tree.data)))
     j = np.asarray(j) % len(Pb); u, first = np.unique(j, return_index=True)
     order = np.sort(first)[:kn]; return d, j[order]
+
+
+def replay_value_fast(S, tau, x0, NB, NF, rho_b, rho_f, sw_w=10.0, kn=8, dt=None, back=None):
+    """То же, что replay_value, но проигрыш всех пар (прямая спора × ближайшая обратная) одним батчем по слоям (без Python-цикла по спорам)."""
+    dt = tau / 2 if dt is None else dt; m = int(round(tau / dt))
+    if back is None: back = build_back(S, tau, NB, rho_b, sw_w)
+    Pb, Gb, parb, layb, seqs, tree = back
+    Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho_f, sw_w, True)
+    best = np.inf; bpath = None; bi = -1; pi_, pb_ = [], []
+    for i in range(len(Pf)):
+        if S.in_goal(Pf[i]):
+            if Gf[i] < best: best = Gf[i]; bi = i; bpath = _fpath(Pf, parf, layf, i, tau)
+            continue
+        _, j = tree_query(S, tree, Pb, Pf[i], kn); pi_ += [i] * len(j); pb_ += list(j)
+    if pi_:
+        pi_ = np.array(pi_); pb_ = np.array(pb_); X = np.array([Pf[i] for i in pi_]); G0 = np.array([Gf[i] for i in pi_])
+        ln = np.array([len(seqs[b]) for b in pb_]); alive = np.ones(len(pi_), bool); tin = np.full(len(pi_), np.inf)
+        S_mat = np.full((len(pi_), max(ln.max(), 1)), -1, int)
+        for r, b in enumerate(pb_): S_mat[r, :ln[r]] = seqs[b]
+        for step in range(S_mat.shape[1]):
+            act = alive & (step < ln)
+            if not act.any(): break
+            for sub in range(m):
+                act = alive & (step < ln)
+                if not act.any(): break
+                for s in range(S.L):
+                    sel = act & (S_mat[:, step] == s)
+                    if sel.any(): X[sel] = S.wrap(S.flow(X[sel], s, dt))
+                alive &= ~S.blocked(X)
+                ing = S.in_goal(X) & act
+                new = ing & np.isinf(tin); tin[new] = G0[new] + step * tau + (sub + 1) * dt; alive &= ~ing
+        k = int(np.argmin(tin))
+        if tin[k] < best:
+            best = float(tin[k]); bpath = _fpath(Pf, parf, layf, pi_[k], tau) + [(s, tau) for s in seqs[pb_[k]]]
+    return best, len(Pb), len(Pf), bpath
