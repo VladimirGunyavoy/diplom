@@ -78,3 +78,4 @@ hub-research-1 | done | ctx 38% | H1/H2 подтверждены (DI, маятн
 hub-research-2 | started | acc1 | opus | 08:31:04
 hub-worker-5 | done | ctx 20% | H1 подтверждена во всех системах, solve_V, adaptive_nd | next=hub-worker-6 | 08:40:25
 hub-worker-6 | started | acc2 | sonnet | 08:40:53
+hub-research-2 | done | очередь исчерпана, ctx 23% | коридор на дереве = эталон (дд 30/30 1.004, маятник 8/8, манипулятор 4D 8/8); вырождение дерева у равновесия | next=нет (idle, поднимать по вопросу) | 12:58:00
