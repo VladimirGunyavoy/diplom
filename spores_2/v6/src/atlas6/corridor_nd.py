@@ -91,3 +91,14 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
             T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1, clear=clear)
             if ok and T < best[0]: best = (T, sqr, d)
     return best
+
+
+_JOB = None
+def _run(i): S, flow, X, back, tau, NF, rho, g, miss, kw = _JOB; return corridor_query(S, flow, X[i], back, tau, NF, rho, g, miss, **kw)
+
+
+def corridor_batch(S, flow, X, back, tau, NF, rho, g, miss, procs=16, **kw):
+    """Серия запросов параллельно (fork: back строится до вызова и наследуется). → список результатов corridor_query."""
+    import multiprocessing as mp
+    global _JOB; _JOB = (S, flow, X, back, tau, NF, rho, g, miss, kw)
+    with mp.get_context('fork').Pool(min(procs, len(X))) as p: return p.map(_run, range(len(X)), chunksize=1)
