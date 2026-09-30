@@ -4,6 +4,7 @@ import numpy as np
 from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.corridor_nd import corridor_query
 from src.atlas6.manip3dyn import flow
+TR = int(sys.argv[4]) if len(sys.argv) > 4 else 3
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (1500, 200, 3)
 tau = 0.4; Rq = 0.3; Rw = 0.6; WM = 3.0; rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
@@ -18,7 +19,7 @@ S = SysN(fl, 8, (np.pi, np.pi, np.pi, WM, WM, WM), ing, seeds, per=(2 * np.pi, 2
 Q = [np.array([*rng.uniform(-np.pi, np.pi, 3), *rng.uniform(-1, 1, 3)]) for _ in range(4)]
 back = build_back(S, tau, NB, rho)
 for x in Q:
-    t0 = time.time(); V = replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0]; b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K)
+    t0 = time.time(); V = replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0]; b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K, tries=TR)
     xe = None if b is None else np.array(x, float)
     if b is not None:
         for s, d in zip(b[1], b[2]): xe = flow(xe, s, d, dt_max=0.005)
