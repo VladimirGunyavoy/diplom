@@ -58,20 +58,24 @@ def build_tree(S, tau, x0s, N, rho, h=lambda p: 0.0, back=True, back_share=0.5, 
 
 
 class Scattered:
-    def __init__(self, S, P, tau, K=None):
-        self.S, self.tau = S, tau; P = S.wrap(P); self.P = P
+    def __init__(self, S, P, tau, K=None, dmax=None):
+        self.S, self.tau, self.dmax = S, tau, dmax; P = S.wrap(P); self.P = P
         self.Q = np.vstack([P, P + [S.per, 0], P - [S.per, 0]]) if S.per else P
         self.tri = Delaunay(self.Q); self.n = len(P)
         gv = S.goal_val(P); self.goal = ~np.isnan(gv); self.gv = gv
         self.K = K if K is not None else 3 * 60.0
+        if dmax is not None:                                           # гало: интерполируем только в малых симплексах (диаметр ≤ dmax в масштабе), иначе — не оцениваем
+            Z = self.Q / S.scale; T = Z[self.tri.simplices]; d = np.max([np.hypot(*(T[:, i] - T[:, j]).T) for i in range(3) for j in range(i + 1, 3)], axis=0); self.ok_s = d <= dmax
         self.ends = [S.wrap(S.flow(P, s, tau)) for s in range(S.L)]
         self.V = np.full(self.n, self.K); self.V[self.goal] = gv[self.goal]
 
     def _interp(self, V, E):
         Vq = np.tile(V, 3) if self.S.per else V
         lin = LinearNDInterpolator(self.tri, Vq)(E)
+        if self.dmax is not None:
+            si = self.tri.find_simplex(E); lin = np.where((si >= 0) & self.ok_s[np.maximum(si, 0)], lin, np.nan)
         if np.any(np.isnan(lin)):
-            near = NearestNDInterpolator(self.Q, Vq)(E); lin = np.where(np.isnan(lin), near + 1.0, lin)
+            near = NearestNDInterpolator(self.Q, Vq)(E); lin = np.where(np.isnan(lin), near + 1.0 + (self.K if self.dmax is not None else 0.0), lin)
         return lin
 
     def solve(self, iters=2000, tol=1e-9):
@@ -133,3 +137,16 @@ def build_adaptive(S, tau, x0, N, rho, batch=8, wb=1.0, lam=1.0):
             add(c[2], c[3], c[4], c[1])
         if len(P) == n0: break
     return np.array(P)
+
+
+def build_until_junction(S, tau, x0, rho, dmax=None, sw_w=10.0, N0=40, Nmax=3000, extra=0.3, back_share=0.5):
+    """Без горизонта-оракула (предложение research №3): удваиваем N, пока V(старт) не станет конечной (стыковка прямой и обратной цепочек), затем +extra спор."""
+    N = N0
+    while N <= Nmax:
+        P = build_tree(S, tau, [x0], N, rho, sw_w=sw_w, back_share=back_share); sc = Scattered(S, P, tau, dmax=dmax); sc.solve()
+        if sc.V[1 if False else 0] < 0.9 * sc.K: break        # P[0] — старт
+        N *= 2
+    P0, sc0 = P, sc                                                 # набор на момент стыковки; при расширении back_share-лимиты меняются — берём расширенный, только если стык сохранился
+    N1 = int(len(P) * (1 + extra)); P = build_tree(S, tau, [x0], N1, rho, sw_w=sw_w, back_share=back_share)
+    sc = Scattered(S, P, tau, dmax=dmax); sc.solve()
+    return (P, sc) if sc.V[0] < 0.9 * sc.K else (P0, sc0)
