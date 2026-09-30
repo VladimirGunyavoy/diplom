@@ -21,11 +21,12 @@ def endpoint(flow, x0, seq, dts):
 
 def refine(flow, x0, path, g, tries=3, seed=0):
     """flow(P, s, t); g(x) → массив ≥ 0 внутри окна. Возвращает (T, seq, dts, ok). Старт — длительности пути и их возмущения; лучший допустимый."""
+    # верхняя граница dt обязательна: без неё SLSQP пробует огромные длительности, а rk4 делает t/dt_max шагов (маятник подвисал)
     seq, d0 = merge(path); rng = np.random.default_rng(seed); best = (np.inf, None)
     con = {'type': 'ineq', 'fun': lambda d: np.atleast_1d(g(endpoint(flow, x0, seq, d)))}
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
-        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, None)] * len(d0), constraints=[con],
+        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 1.5 * d0.sum() + 1.0)] * len(d0), constraints=[con],
                      method='SLSQP', options=dict(maxiter=300, ftol=1e-9))
         if np.all(con['fun'](r.x) >= -1e-6) and r.x.sum() < best[0]: best = (float(r.x.sum()), r.x)
     ok = best[1] is not None

@@ -27,30 +27,38 @@ def candidates(x0, back):
     Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True); out = []
     for i in range(len(Pf)):
         fp = _fpath(Pf, parf, layf, i, tau)
-        if S.in_goal(Pf[i]): out.append((Gf[i], fp)); continue
+        if S.in_goal(Pf[i]): out.append((0, Gf[i], fp)); continue
         _, j = tree_query(S, tree, Pb, Pf[i], kn)
         for b in j:
-            X = np.array(Pf[i]); t = Gf[i]; hit = False; miss = np.inf
+            X = np.array(Pf[i]); t = Gf[i]; hit = False; miss = max(gd(X) - Rg, 0); tm = t; done = []; cut = []
             for s in seqs[b]:
                 for _ in range(2):
-                    X = S.wrap(S.flow(X, s, dt)); t += dt
+                    X = S.wrap(S.flow(X, s, dt)); t += dt; done.append((s, dt))
                     if S.in_goal(X): hit = True; break
-                    miss = min(miss, max(gd(X) - Rg, 0))
+                    m = max(gd(X) - Rg, 0)
+                    if m < miss: miss = m; tm = t; cut = list(done)
                 if hit: break
-            out.append((t if hit else t + miss, fp + [(s2, tau) for s2 in seqs[b]]))
-    return sorted(out, key=lambda c: c[0])
+            # путь ОБРЕЗАН в момент входа (или в точке наименьшего промаха): полный хвост уводит конец с неустойчивого верха
+            out.append((0, t, fp + done) if hit else (1, tm + miss, fp + cut))
+    # сначала попадания (по t), потом промахи (по t + промах): у маятника промах 1.4 стоит целого качания — единая шкала топит попадания
+    return [(sc, p) for _, sc, p in sorted(out, key=lambda c: (c[0], c[1]))], sum(1 for c in out if c[0] == 0)
 
 
 back = build_back(S, tau, NB, rho); rows = []
+ONLY = [int(a) for a in os.environ.get('ONLY', '').split(',') if a]
 for q, (x, vf) in enumerate(zip(Q, Vf)):
+    if ONLY and q not in ONLY: continue
     t0 = time.time(); V = replay_value(S, tau, x, NB, NF, rho, rho, back=back)[0]
-    C = candidates(x, back); seen = []; best = np.inf; bs = None
-    for sc, p in C:
-        sq = tuple(merge(p)[0])
-        if sq in seen: continue
-        seen.append(sq); T, sqr, d, ok = refine(fl, x, p, g, tries=1)
-        if ok and T < best: best = T; bs = (list(map(int, sqr)), list(map(float, d)))
-        if len(seen) >= K: break
+    C, nhit = candidates(x, back); best = np.inf; bs = None
+    for part in (C[:nhit], C[nhit:]):                      # K разных топологий из попаданий + K из промахов
+        seen = []
+        for sc, p in part:
+            if not p: continue
+            sq = tuple(merge(p)[0])
+            if sq in seen: continue
+            seen.append(sq); T, sqr, d, ok = refine(fl, x, p, g, tries=1)
+            if ok and T < best: best = T; bs = (list(map(int, sqr)), list(map(float, d)))
+            if len(seen) >= K: break
     # независимая проверка: мелкий rk4 (dt 0.001) по найденному коридору
     chk = None
     if bs:
