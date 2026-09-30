@@ -14,3 +14,4 @@
 08:58 · сторож пинговал hub-worker-5 (сдал смену 08:40, next=worker-6; есть и hub-research-2) · сторож и пульс переключены на worker-6, finished_hub-worker-5 стоит · ок
 15:38 · по слову пользователя роль watcher→dispatcher: скрипты (pulse/sentinel/machine/agents_plot) принимают оба имени, документация system/ и проект обновлены, бэкап /tmp/claude-1000/system_backup_before_dispatcher_1538; мою живую сессию/файлы не переименовывал
 15:40 · по слову пользователя: задача research «почему запросы медленные» записана в PLAN.md, поднят hub-research-3 (opus) · ждать его старта и пульсов
+15:41 · слово пользователя: research → скилл deep-research · добавил в RESEARCH_ROUTINE.md (без субагентов в этом проекте), сообщил hub-research-3
