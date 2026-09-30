@@ -55,7 +55,7 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8):
+def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2):
     """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None."""
     C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn); best = None
     for part in (C[:nh], C[nh:]):
@@ -67,4 +67,11 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8):
             seen.add(sq); T, sqr, d, ok = refine(flow, x0, p, g, tries=3)
             if ok and (best is None or T < best[0]): best = (T, sqr, d)
             if len(seen) >= K: break
+    for _ in range(neigh if best else 0):        # локальный поиск по топологиям: соседи лучшей (сегмент другого слоя в начале/конце dt0=.3, без первого), SLSQP каждой
+        sq0, d0 = list(best[1]), list(best[2])
+        nb = [([a] + sq0, [0.3] + d0) for a in range(S.L) if a != sq0[0]] + [(sq0 + [a], d0 + [0.3]) for a in range(S.L) if a != sq0[-1]]
+        nb += [(sq0[1:], d0[1:])] if len(sq0) > 1 else []
+        for sqn, dn in nb:
+            T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1)
+            if ok and T < best[0]: best = (T, sqr, d)
     return best
