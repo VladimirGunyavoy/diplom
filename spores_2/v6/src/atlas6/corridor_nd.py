@@ -26,7 +26,7 @@ def refine(flow, x0, path, g, tries=3, seed=0):
     con = {'type': 'ineq', 'fun': lambda d: np.atleast_1d(g(endpoint(flow, x0, seq, d)))}
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
-        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 3 * d0.sum() + 1)] * len(d0), constraints=[con],
+        r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 1.5 * d0.sum() + 1)] * len(d0), constraints=[con],
                      method='SLSQP', options=dict(maxiter=300, ftol=1e-9))
         if np.all(con['fun'](r.x) >= -1e-6) and r.x.sum() < best[0]: best = (float(r.x.sum()), r.x)
     ok = best[1] is not None
@@ -34,32 +34,37 @@ def refine(flow, x0, path, g, tries=3, seed=0):
 
 
 def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
-    """Стыки → [(score, путь)] по score. miss(X) — расстояние до окна (0 внутри); вошёл: score = t, иначе t + промах."""
+    """Стыки → ([(hit, score, путь)] по (hit, score), число попаданий). Попадание: score = t; промах: t в точке наименьшего промаха + промах.
+    Путь обрезан в момент входа в окно / в точке наименьшего промаха (хвост уводит конец с неустойчивого места). Сначала попадания, потом промахи."""
     dt = tau / 2 if dt is None else dt
     Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True); out = []
     for i in range(len(Pf)):
         fp = _fpath(Pf, parf, layf, i, tau)
-        if S.in_goal(Pf[i]): out.append((Gf[i], fp)); continue
+        if S.in_goal(Pf[i]): out.append((0, Gf[i], fp)); continue
         _, j = tree_query(S, tree, Pb, Pf[i], kn)
         for b in j:
-            X = np.array(Pf[i]); t = Gf[i]; hit = False; m = np.inf
+            X = np.array(Pf[i]); t = Gf[i]; hit = False; m0 = miss(X); tm = t; done = []; cut = []
             for s in seqs[b]:
                 for _ in range(2):
-                    X = S.wrap(S.flow(X, s, dt)); t += dt
+                    X = S.wrap(S.flow(X, s, dt)); t += dt; done.append((s, dt))
                     if S.in_goal(X): hit = True; break
-                    m = min(m, miss(X))
+                    m = miss(X)
+                    if m < m0: m0 = m; tm = t; cut = list(done)
                 if hit: break
-            out.append((t if hit else t + m, fp + [(s2, tau) for s2 in seqs[b]]))
-    return sorted(out, key=lambda c: c[0])
+            out.append((0, t, fp + done) if hit else (1, tm + m0, fp + cut))
+    out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
 def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8):
-    """→ (T, seq, dts) лучший допустимый среди K разных топологий, либо None."""
-    seen = set(); best = None
-    for _, p in candidates(S, x0, back, tau, NF, rho, miss, kn):
-        sq = tuple(merge(p)[0])
-        if sq in seen or not sq: continue
-        seen.add(sq); T, s, d, ok = refine(flow, x0, p, g)
-        if ok and (best is None or T < best[0]): best = (T, s, d)
-        if len(seen) >= K: break
+    """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None."""
+    C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn); best = None
+    for part in (C[:nh], C[nh:]):
+        seen = set()
+        for _, _, p in part:
+            if not p: continue
+            sq = tuple(merge(p)[0])
+            if sq in seen: continue
+            seen.add(sq); T, sqr, d, ok = refine(flow, x0, p, g, tries=3)
+            if ok and (best is None or T < best[0]): best = (T, sqr, d)
+            if len(seen) >= K: break
     return best

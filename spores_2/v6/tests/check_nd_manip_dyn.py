@@ -2,7 +2,7 @@
 Запуск из v6: python3 tests/check_nd_manip_dyn.py"""
 import sys, time; sys.path.insert(0, '.')
 import numpy as np
-from src.atlas6.adaptive_nd import SysN, build_back, replay_value
+from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.manip2dyn import flow4
 tau = 0.4; Rq = 0.3; Rw = 0.5; WM = 3.0; rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
@@ -14,5 +14,5 @@ S = SysN(flow4, 4, (np.pi, np.pi, WM, WM), ing, seeds, per=(2 * np.pi, 2 * np.pi
 Q = [np.array([*rng.uniform(-np.pi, np.pi, 2), *rng.uniform(-1, 1, 2)]) for _ in range(8)]
 for NB, NF in ((200, 200), (600, 600), (1500, 1500)):
     t0 = time.time(); back = build_back(S, tau, NB, rho); V = []
-    for x in Q: V.append(replay_value(S, tau, x, NB, NF, rho, rho, back=back)[0])
+    for x in Q: V.append(replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0])
     print('NB %d NF %d (%d спор back): V' % (NB, NF, len(back[0])), np.round(V, 2), '(%.0f с)' % (time.time() - t0), flush=True)

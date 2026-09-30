@@ -10,8 +10,8 @@ dth = lambda th: (th - np.pi + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: rk4(f, P, u * (1 if s == 0 else -1), t, dt_max=0.05)
 gd = lambda P: np.hypot(dth(P[..., 0]), P[..., 1])
 g = lambda x: np.array([Rg ** 2 - gd(x) ** 2])
-MW = float(sys.argv[1]) if len(sys.argv) > 1 else 5; KK = int(sys.argv[2]) if len(sys.argv) > 2 else 12
-miss = lambda X: MW * max(gd(X) - Rg, 0)
+KK = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+miss = lambda X: max(gd(X) - Rg, 0)
 S = SysN(fl, 2, (np.pi, np.pi), lambda P: gd(P) < Rg, [(np.pi + Rg * 0.999 * np.cos(a), Rg * 0.999 * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)], per=(2 * np.pi, 0.0), ok=lambda p: abs(p[1]) <= 4.0)
 F = PendAtlas(n_th=252, n_w=241, wmax=4.0, tau=tau, umax=u, R_goal=Rg); F.solve(iters=1500)
 rng = np.random.default_rng(1); Q = []
