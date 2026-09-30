@@ -84,3 +84,4 @@ hub-research-3 | done | solved, ctx 16% | почему запросы медле
 hub-worker-6 | done | ctx 21% | коридор nD + манипулятор 4D (динамика, препятствия) = эталон research | next=hub-worker-7 | 16:30:30
 hub-worker-7 | started | acc3 | sonnet | 16:31:05
 hub-research-4 | started | acc1 | opus | 00:47:32
+hub-worker-7 | done | ctx 22% | A*/hfun, corridor_batch, manip3dyn 6D+g, коридор 6D 4/4, диски 3/4 | next=hub-worker-8 | 02:40:29
