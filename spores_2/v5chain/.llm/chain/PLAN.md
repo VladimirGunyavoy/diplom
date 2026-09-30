@@ -11,6 +11,11 @@
 3. Улучшение доводки у цели (сейчас rollout_multi: xy 0.011). Мелкие хвосты атласа DI — по остатку. Сделано: запросы у линии vmax (`knowledge/atlas_di_tails.md`). Осталось: нетензорное дробление; индикатор адаптации из графа.
 Правило: в пульсах не писать «жду пользователя»; упёрся — обходной путь; каждый шаг = тест + замер + строка в отчёт + локальный коммит.
 
+## research: прямое дерево с A* — меньше NF в 6D (hub-research-4, `knowledge/research/tree_directed_6d.md`)
+**Для worker'а:** в `adaptive_nd._tree` для прямого дерева приоритет `sw_w·n2 + g + 3·h(e)`, h = Gb[ближайшая обратная] + |e−b|_scaled
+(прототип `reports/research/tree_directed6.py`). 6D 3 зв.+g вниз NB6000: NF800 база 2/4 → A* 3/4 (q1 2.77 = база NF3000); NF3000 A* решает q2
+(T 4.37; база — только при NB12000, T 3.48). Тест: NB6000 NF800 ≥ 3/4 валидно; затем перемерить таблицы 4D/6D с NF ÷3–4.
+
 ## research: почему запросы медленные — ОТВЕТ ГОТОВ (hub-research-3, `knowledge/research/query_speed.md`, таблица `reports/research/query_speed.md`)
 **Для worker'а (по убыванию выигрыша):** (1) ветка `x.ndim == 1` на `math` в `manip2dyn.flow4`/pendulum/rk4/dd flow — прототип
 `reports/research/flow4_scalar.py` (×13 хаб / ×22 aida на вызов, разница 1.8e-15), тест ≤ 1e-12; (2) `corridor_nd.refine`: maxiter 300 → 80
