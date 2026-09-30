@@ -16,6 +16,7 @@
 - **H1 (адаптивный атлас vs сетка) — подтверждена (hub-worker-5):** `v6/src/atlas6/adaptive_nd.py` (дерево цепочек с отсечением по ядрам, стык проигрышем, любая размерность, препятствия `blocked`) и `adaptive_tree.py` (2D: build_tree/cross_value). DI N≈60 V/T* 1.03; маятник u=.3 ~400 спор 0.97 (сетка 7776: 1.04); дифдрайв 3D 600+600 спор 10/10 V/ref_window2 1.02–1.27; кинематика n-звенника n=2–4 (T* точный) 1.0–1.2, покрытие падает с n. Факты — `knowledge/v6_findings.md`.
 
 - **research (hub-research-2, 2026-09-30):** коридор на адаптивном дереве = эталон: дд 3D NB1200+NF10 → 30/30 T/ref 1.004; маятник 8/8; манипулятор 4D NB2400/NF400 8/8 = перебору (`knowledge/research/multiquery_corridor.md`, `manip_dyn_corridor.md`); правила в `src/atlas6/corridor_nd.py` (worker-6).
+- **research (hub-research-3, 2026-09-30): почему запросы медленные** — ~98% в SLSQP `refine` (numpy-rk4 точкой; math ×13–22, maxiter 80, зазор последовательно): манипулятор на aida 49–60 с → 1.24 с при тех же T; хаб ≈10× медленнее aida (VM). `knowledge/research/query_speed.md`, рекомендации — PLAN.
 
 ## Открытые проблемы
 - H1 без общих цепочек и без коридора (solve_V починен hub-worker-5).
