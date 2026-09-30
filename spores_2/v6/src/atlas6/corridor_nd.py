@@ -33,7 +33,7 @@ def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16):
     for k in range(tries):
         di = d0 if k == 0 else d0 * rng.uniform(0.8, 1.2, len(d0))
         r = minimize(lambda d: d.sum(), di, jac=lambda d: np.ones_like(d), bounds=[(0, 1.5 * d0.sum() + 1)] * len(d0), constraints=[con],
-                     method='SLSQP', options=dict(maxiter=300, ftol=1e-9))
+                     method='SLSQP', options=dict(maxiter=80, ftol=1e-9))
         if np.all(con['fun'](r.x) >= -1e-6) and r.x.sum() < best[0]: best = (float(r.x.sum()), r.x)
     ok = best[1] is not None
     return (best[0] if ok else float(d0.sum())), seq, (best[1] if ok else d0), ok
