@@ -10,10 +10,11 @@ fl = lambda P, s, t: flow(P, LAYERS[s], t)
 dth = lambda th: (th + np.pi) % (2 * np.pi) - np.pi
 ing = lambda P: (np.hypot(P[..., 0], P[..., 1]) < R) & (np.abs(dth(P[..., 2])) < Rth)
 S = SysN(fl, 4, (1.0, 1.0, np.pi), ing, [(0.0, 0.0, 0.0)], per=(0, 0, 2 * np.pi), ok=lambda p: abs(p[0]) <= 3 and abs(p[1]) <= 3)
-def eref(p):
+spw = importlib.util.spec_from_file_location('wref', '../v5chain/reports/research/dd_window_ref.py'); wref = importlib.util.module_from_spec(spw); spw.loader.exec_module(wref)
+def eref_pt(p):
     a = ref.tgt(*p); b = ref.tgtgt(*p); b = b[0] if isinstance(b, tuple) else b; return min(a, b)
 rng = np.random.default_rng(3); Q = [np.array([*rng.uniform(-2, 2, 2), rng.uniform(-np.pi, np.pi)]) for _ in range(10)]
-E = [eref(p) for p in Q]; print('эталон', np.round(E, 2), flush=True)
+E = [wref.ref_window(p, R=R, Rth=Rth) for p in Q]; E0 = [eref_pt(p) for p in Q]; print('эталон до окна', np.round(E, 2), 'до точки', np.round(E0, 2), flush=True)
 for rho in (0.1, 0.06):
   for NB, NF in ((300, 300), (1000, 1000)):
     t0 = time.time(); back = build_back(S, tau, NB, rho); r = []
