@@ -4,7 +4,7 @@ import numpy as np
 from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.corridor_nd import corridor_query
 from src.atlas6.manip2dyn import flow4
-NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 100, 3)
+NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 300, 3)
 tau = 0.4; Rq = 0.3; Rw = 0.5; WM = 3.0; rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: flow4(P, s, t, dt_max=0.05)
