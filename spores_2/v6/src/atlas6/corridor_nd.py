@@ -35,23 +35,32 @@ def refine(flow, x0, path, g, tries=3, seed=0):
 
 def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None):
     """Стыки → ([(hit, score, путь)] по (hit, score), число попаданий). Попадание: score = t; промах: t в точке наименьшего промаха + промах.
-    Путь обрезан в момент входа в окно / в точке наименьшего промаха (хвост уводит конец с неустойчивого места). Сначала попадания, потом промахи."""
-    dt = tau / 2 if dt is None else dt
-    Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True); out = []
+    Путь обрезан в момент входа в окно / в точке наименьшего промаха (хвост уводит конец с неустойчивого места). Сначала попадания, потом промахи.
+    miss(X) — векторный: X (...,d) → расстояние до окна (...,), 0 внутри. Проигрыш всех пар (прямая спора × обратная) — одним батчем по слоям."""
+    dt = tau / 2 if dt is None else dt; m = int(round(tau / dt))
+    Pb, Gb, parb, layb, seqs, tree = back; Pf, Gf, parf, layf = _tree(S, tau, [x0], NF, rho, 10.0, True); out = []; pi_, pb_ = [], []
     for i in range(len(Pf)):
-        fp = _fpath(Pf, parf, layf, i, tau)
-        if S.in_goal(Pf[i]): out.append((0, Gf[i], fp)); continue
-        _, j = tree_query(S, tree, Pb, Pf[i], kn)
-        for b in j:
-            X = np.array(Pf[i]); t = Gf[i]; hit = False; m0 = miss(X); tm = t; done = []; cut = []
-            for s in seqs[b]:
-                for _ in range(2):
-                    X = S.wrap(S.flow(X, s, dt)); t += dt; done.append((s, dt))
-                    if S.in_goal(X): hit = True; break
-                    m = miss(X)
-                    if m < m0: m0 = m; tm = t; cut = list(done)
-                if hit: break
-            out.append((0, t, fp + done) if hit else (1, tm + m0, fp + cut))
+        if S.in_goal(Pf[i]): out.append((0, Gf[i], _fpath(Pf, parf, layf, i, tau))); continue
+        _, j = tree_query(S, tree, Pb, Pf[i], kn); pi_ += [i] * len(j); pb_ += list(j)
+    if pi_:
+        pi_ = np.array(pi_); pb_ = np.array(pb_); X = np.array([Pf[i] for i in pi_]); G0 = np.array([Gf[i] for i in pi_]); n = len(pi_)
+        ln = np.array([len(seqs[b]) for b in pb_]); Sm = np.full((n, max(ln.max(), 1)), -1, int)
+        for r, b in enumerate(pb_): Sm[r, :ln[r]] = seqs[b]
+        hit = np.zeros(n, bool); hit_k = np.zeros(n, int); m0 = miss(X).astype(float); cut_k = np.zeros(n, int); k = 0
+        for step in range(Sm.shape[1]):
+            for sub in range(m):
+                act = ~hit & (step < ln)
+                if not act.any(): break
+                for s_ in range(S.L):
+                    sel = act & (Sm[:, step] == s_)
+                    if sel.any(): X[sel] = S.wrap(S.flow(X[sel], s_, dt))
+                k += 1; ing = S.in_goal(X) & act; hit_k[ing] = k; hit |= ing
+                mm = np.where(act & ~ing, miss(X), np.inf); better = mm < m0; m0[better] = mm[better]; cut_k[better] = k
+        for r in range(n):
+            steps = [(Sm[r, q], dt) for q in range(ln[r]) for _ in range(m)]        # по dt-подшагам, как в цикле выше (k считает только активные подшаги)
+            fp = _fpath(Pf, parf, layf, pi_[r], tau)
+            if hit[r]: kk = hit_k[r]; out.append((0, G0[r] + kk * dt, fp + steps[:kk]))
+            else: kk = cut_k[r]; out.append((1, G0[r] + kk * dt + m0[r], fp + steps[:kk]))
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 

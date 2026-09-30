@@ -10,7 +10,7 @@ wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: flow4(P, s, t, dt_max=0.05)
 ing = lambda P: (np.max(np.abs(wr(P[..., :2])), -1) < Rq) & (np.max(np.abs(P[..., 2:]), -1) < Rw)
 g = lambda x: np.array([Rq ** 2 - wr(x[0]) ** 2, Rq ** 2 - wr(x[1]) ** 2, Rw ** 2 - x[2] ** 2, Rw ** 2 - x[3] ** 2])
-miss = lambda X: max(np.max(np.abs(wr(X[:2]))) - Rq, 0) + max(np.max(np.abs(X[2:])) - Rw, 0)
+miss = lambda X: np.maximum(np.max(np.abs(wr(X[..., :2])), -1) - Rq, 0) + np.maximum(np.max(np.abs(X[..., 2:]), -1) - Rw, 0)
 rng = np.random.default_rng(0); seeds = []
 for _ in range(32):
     v = rng.uniform(-1, 1, 4); v = v / np.max(np.abs(v)) * 0.99; seeds.append(v * np.array([Rq, Rq, Rw, Rw]))
