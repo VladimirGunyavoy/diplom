@@ -8,7 +8,8 @@ NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 300,
 tau = 0.4; Rq = 0.3; Rw = 0.5; WM = 3.0; rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 GG = 0.3; fl = lambda P, s, t: _fl(P, s, t, dt_max=0.05, n=2, g=GG)
-UP = np.array([np.pi / 2, 0.0, 0.0, 0.0])
+import os
+UP = np.array([-np.pi / 2 if os.environ.get("DOWN") else np.pi / 2, 0.0, 0.0, 0.0])
 ing = lambda P: (np.max(np.abs(wr(P[..., :2] - UP[:2])), -1) < Rq) & (np.max(np.abs(P[..., 2:]), -1) < Rw)
 g = lambda x: np.array([Rq ** 2 - wr(x[0] - UP[0]) ** 2, Rq ** 2 - wr(x[1]) ** 2, Rw ** 2 - x[2] ** 2, Rw ** 2 - x[3] ** 2])
 miss = lambda X: np.maximum(np.max(np.abs(wr(X[..., :2] - UP[:2])), -1) - Rq, 0) + np.maximum(np.max(np.abs(X[..., 2:]), -1) - Rw, 0)
