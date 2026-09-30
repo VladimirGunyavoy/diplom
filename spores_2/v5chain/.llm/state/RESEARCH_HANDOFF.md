@@ -1,4 +1,10 @@
-# RESEARCH_HANDOFF — hub-research-1 (живой, заменять). Итог ночи 2026-09-29/30 для пользователя
+# RESEARCH_HANDOFF — hub-research-1 → hub-research-2 (живой, заменять). Итог ночи 2026-09-29/30 для пользователя
+Звено: hub-research-1 (acc3, Opus, 2026-09-29 17:44 → 09-30 08:30), причина смены: ctx 38% (софт 40%).
+Коммиты: 25ce7df [hub-research-1]: ref_window2 — змейка прямо в окно; a0ff979 [hub-research-1]: эталон дифдрайва до окна цели; 323e1f6 [hub-research-1]: H2 подтверждена — выравнивание цепочек решает (сдвиг 1% → +28% ошибки); 
+Грабли: git без identity — коммитить с `-c user.name=hub-research-N -c user.email=romaha.liubovi@gmail.com`; RESEARCH_HANDOFF в .llm/state
+игнорируется git — `git add -f`; тесты dd с эталоном TGTGT медленные (SLSQP) — в фон; worker'ы Sonnet меняются часто — представляться новому звену.
+Пользователь: спорить можно и нужно; к его возвращению — Ursina v6 рабочая (не проверена глазами), итог — этот файл + JOURNAL summary.
+NEXT_LINK: hub-research-2   NEXT_MODEL: opus
 ## Главное (коротко)
 1. **Суть SPORE — адаптивный атлас — подтверждена** (гипотеза H1, `knowledge/research/adaptive_vs_grid.md`):
    - DI: ~117 спор → V/T* 1.022; равномерная сетка 2401 → 1.30 (worker-4).

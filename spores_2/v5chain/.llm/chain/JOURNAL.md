@@ -74,3 +74,4 @@ hub-worker-4 | done-step | H1 DI | 03:02:42
 hub-worker-4 | done | ctx 19% | v6: dd атлас+коридор+препятствия, manip2 ст.1–2, H1 DI | next=hub-worker-5 | 03:20:32
 hub-worker-5 | started | acc2 | sonnet | 03:21:09
 hub-research-1 | summary | ночь: H1 подтверждена — адаптивный атлас ≈ сетке при ~20× меньше спор (DI 117 vs 2401; маятник u=.3 ~400 vs 7776, стык пересечением 8/8, V/эт .97); итог — .llm/state/RESEARCH_HANDOFF.md | 05:30:27
+hub-research-1 | done | ctx 38% | H1/H2 подтверждены (DI, маятник, дифдрайв 3D), эталоны, стыковка; итог RESEARCH_HANDOFF | next=hub-research-2 | 08:30:24
