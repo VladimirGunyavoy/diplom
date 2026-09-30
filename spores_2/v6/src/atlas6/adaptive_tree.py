@@ -202,3 +202,86 @@ def bidir_value(S, tau, x0, NB, NF, rho_b, rho_f, lam=1.0, halo=None):
         if k in seenf: continue
         seenf.add(k); nf += 1; best = min(best, g + est(e)); push(e, g)
     return best, len(B), nf
+
+
+def _seg_x(A, B, C, D):
+    """Пересечение отрезков AB и CD (2D). Возвращает (s∈[0,1] по AB, r∈[0,1] по CD) или None."""
+    d1 = B - A; d2 = D - C; den = d1[0] * d2[1] - d1[1] * d2[0]
+    if abs(den) < 1e-14: return None
+    w = C - A; s = (w[0] * d2[1] - w[1] * d2[0]) / den; r = (w[0] * d1[1] - w[1] * d1[0]) / den
+    return (s, r) if (0 <= s <= 1 and 0 <= r <= 1) else None
+
+
+def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5):
+    """Точная стыковка (research №4): обратное дерево хранит дуги (подотрезки dt) с ТОЧНЫМИ V (V(родитель)+время назад);
+    из каждой прямой споры каждым слоем интегрируем шаг τ подотрезками и ищем ПЕРЕСЕЧЕНИЕ с обратной дугой — стык = t + V(×) — реальная траектория ⇒ верхняя оценка.
+    Также: вход в клетку цели. Прямые споры — build_tree-порядок (мало переключений раньше). Возвращает (V, nb, nf)."""
+    dt = tau / 5 if dt is None else dt; m = int(round(tau / dt))
+    kb = lambda rho: (lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1])))))
+    wrapd = (lambda dx: (dx + S.per / 2) % S.per - S.per / 2) if S.per else (lambda dx: dx)
+    hsh = {}; segs = []
+    def cellk(p): return (int(np.floor(p[0] / cell)), int(np.floor(p[1] / cell)))
+    def add_arc(p, s, v):                                           # обратная дуга от p (V=v) слоем s назад на τ
+        pts = S.flow(p, s, -dt * np.arange(m + 1)[:, None] if False else 0)  # заглушка
+    # обратное дерево (Дейкстра) с дугами
+    k_ = kb(rho_b); seen = set(); B = []; pq = []; cnt = 0
+    def arcs(p, s, v):
+        t = -dt * np.arange(m + 1); P = np.array([S.flow(p, s, tt) for tt in t])      # P[k]: назад на k·dt, V = v + k·dt
+        for k in range(m):
+            i = len(segs); segs.append((P[k], P[k + 1], v + k * dt, v + (k + 1) * dt))
+            for c in {cellk(S.wrap(P[k])), cellk(S.wrap(P[k + 1]))}:
+                hsh.setdefault(c, []).append(i)
+    for g in S.goal_pts:
+        g = S.wrap(g); seen.add(k_(g, -2)); B.append(g)
+        for s in range(S.L):
+            cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0))
+    while pq and len(B) < NB:
+        v, _, s, p, vp = heapq.heappop(pq)
+        e = S.wrap(S.flow(p, s, -tau))
+        if not S.ok(e): continue
+        kk = k_(e, s)
+        if kk in seen: continue
+        seen.add(kk); B.append(e); arcs(p, s, vp)
+        for s2 in range(S.L):
+            cnt += 1; heapq.heappush(pq, (v + tau, cnt, s2, e, v))
+    best = np.inf
+    def near(A):
+        c = cellk(S.wrap(A)); out = set()
+        for di in (-1, 0, 1):
+            for dj in (-1, 0, 1):
+                cc = (c[0] + di, c[1] + dj)
+                if cc in hsh: out.update(hsh[cc])
+        if S.per:
+            per_c = int(round(S.per / cell))
+            for di in (-1, 0, 1):
+                for dj in (-1, 0, 1):
+                    cc = ((c[0] + di + per_c // 2) % per_c - per_c // 2, c[1] + dj)
+                    if cc in hsh: out.update(hsh[cc])
+        return out
+    def scan(p, s, g):
+        nonlocal best
+        Pf = np.array([S.flow(p, s, dt * j) for j in range(m + 1)])
+        for j in range(m + 1):
+            if S.in_goal(S.wrap(Pf[j])): best = min(best, g + j * dt); return
+        for j in range(m):
+            A, Bp = Pf[j], Pf[j + 1]
+            for i in near(A):
+                C, D, VC, VD = segs[i]
+                sh = wrapd(A[0] - C[0]) - (A[0] - C[0]) if S.per else 0.0        # ближайший образ обратного отрезка
+                C2 = C + [sh, 0]; D2 = D + [sh, 0]; x = _seg_x(A, Bp, C2, D2)
+                if x: best = min(best, g + (j + x[0]) * dt + VC + x[1] * (VD - VC))
+    kf = kb(rho_f); seenf = set(); x0 = S.wrap(x0); seenf.add(kf(x0, -1)); nf = 1; pq = []; cnt = 0
+    def push(p, g, ls, ns):
+        nonlocal cnt
+        for s in range(S.L):
+            e = S.wrap(S.flow(p, s, tau)); n2 = ns + (1 if (ls >= 0 and s != ls) else 0)
+            if S.ok(e): cnt += 1; heapq.heappush(pq, (sw_w * n2 + g + tau, cnt, s, e, g + tau, n2, p))
+    for s in range(S.L): scan(x0, s, 0.0)
+    push(x0, 0.0, -1, 0)
+    while pq and nf < NF:
+        _, _, s, e, g, n2, par = heapq.heappop(pq); k = kf(e, s)
+        if k in seenf: continue
+        seenf.add(k); nf += 1
+        for s2 in range(S.L): scan(e, s2, g)
+        push(e, g, s, n2)
+    return best, len(B), nf
