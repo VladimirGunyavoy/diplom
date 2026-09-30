@@ -18,6 +18,8 @@
 - **research (hub-research-2, 2026-09-30):** коридор на адаптивном дереве = эталон: дд 3D NB1200+NF10 → 30/30 T/ref 1.004; маятник 8/8; манипулятор 4D NB2400/NF400 8/8 = перебору (`knowledge/research/multiquery_corridor.md`, `manip_dyn_corridor.md`); правила в `src/atlas6/corridor_nd.py` (worker-6).
 - **research (hub-research-3, 2026-09-30): почему запросы медленные** — ~98% в SLSQP `refine` (numpy-rk4 точкой; math ×13–22, maxiter 80, зазор последовательно): манипулятор на aida 49–60 с → 1.24 с при тех же T; хаб ≈10× медленнее aida (VM). `knowledge/research/query_speed.md`, рекомендации — PLAN.
 
+- **Коридор nD + манипулятор 4D (hub-worker-6):** `v6/src/atlas6/corridor_nd.py` (топологии дерева → SLSQP: кандидаты с промахом, top-K попаданий+K промахов, локальный поиск соседей, зазор до препятствий `clear`, батч-`candidates`), `replay_value_fast` (×11.7), `manip2dyn.py` (динамика 2 звена, `clearance`, скалярный flow4). Результаты: дд 30/30 T/ref 1.000; дд с дисками 10/10 без столкновений; манипулятор 4D NB2400 NF400 = эталон research (q0,q1,q3,q5), с 2 дисками 8/8 без столкновений, 7–72 с/запрос; маятник u=.3 7/8 mean .954 (q2 без допустимой топологии). Ursina на хабе не запускается (нет графики), импорты чистые. Всё — `knowledge/v6_findings.md`.
+
 ## Открытые проблемы
 - H1 без общих цепочек и без коридора (solve_V починен hub-worker-5).
 - A/B закрыт: делаем обе схемы.
