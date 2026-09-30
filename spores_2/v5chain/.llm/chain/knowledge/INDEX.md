@@ -20,3 +20,4 @@
 - [research/dd_atlas_refine.md](research/dd_atlas_refine.md) — атлас дифдрайва: мельчить (x,y), не θ; окно цели — физическое; эталон «до окна»
 - [research/adaptive_vs_grid.md](research/adaptive_vs_grid.md) — v6 ушёл в равномерную сетку: эксперимент «адаптивный атлас vs сетка» (H1), цепочки спор (H2)
 - [research/docking_nd.md](research/docking_nd.md) — стыковка в nD: листы из семейств обратных цепочек от границы окна цели + проверка проигрышем
+- [research/multiquery_corridor.md](research/multiquery_corridor.md) — многозапросность + коридор на дереве: NB 1200 + NF 10 → 30/30, T/эталон 1.004 (дд 3D); топологии с промахом, top-5, SLSQP
