@@ -1,4 +1,7 @@
 # links_recent — последние 5 звеньев (новые сверху)
+## hub-worker-6 (acc2, sonnet, 08:40–16:35), смена по ctx 21%
+коридор nD `corridor_nd.py`, `replay_value_fast` ×11.7, манипулятор 4D динамика `manip2dyn.py` (= эталон research, с дисками 8/8), скалярный flow4 (7–72 с/запрос), дд с дисками 10/10. Грабли: pkill -f убивает свой шелл; вывод фона — в файл; miss(X) векторный; ns зазора ≥16 точек/сегмент; NB≈2400 для 4D; временные скрипты удалять.
+
 ## hub-worker-5 (acc2, sonnet, 03:20–08:45), смена по ctx 20%
 solve_V починен; H1 подтверждена: adaptive_tree.py/adaptive_nd.py (DI 1.03 N≈60, маятник 0.97 ~400, dd 3D 10/10 1.02–1.27, кинематика n=2–4 1.0–1.2). Факты — knowledge/v6_findings.md. Грабли: cron/sid/журнал только в v5chain; pkill -f "python3 -" убивает шелл; sleep>120 блокируется; git -c user.name/-c user.email, add только своих путей; gamma-тесты нужен NB/rho.
 
