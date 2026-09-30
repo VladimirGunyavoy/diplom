@@ -221,46 +221,46 @@ def _back(S, tau, NB, rho_b, dt, cell, swb):
     if ck in _BC: return _BC[ck]
     m = int(round(tau / dt))
     kb = lambda rho: (lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1])))))
-    hsh = {}; segs = []
+    hsh = {}; segs = []; Bpar = []; Bls = []; sinfo = []
     def cellk(p): return (int(np.floor(p[0] / cell)), int(np.floor(p[1] / cell)))
     def add_arc(p, s, v):                                           # обратная дуга от p (V=v) слоем s назад на τ
         pts = S.flow(p, s, -dt * np.arange(m + 1)[:, None] if False else 0)  # заглушка
     # обратное дерево (Дейкстра) с дугами
     k_ = kb(rho_b); seen = set(); B = []; pq = []; cnt = 0
-    def arcs(p, s, v):
+    def arcs(p, s, v, pi):
         t = -dt * np.arange(m + 1); P = np.array([S.flow(p, s, tt) for tt in t])      # P[k]: назад на k·dt, V = v + k·dt
         for k in range(m):
-            i = len(segs); segs.append((P[k], P[k + 1], v + k * dt, v + (k + 1) * dt))
+            i = len(segs); segs.append((P[k], P[k + 1], v + k * dt, v + (k + 1) * dt)); sinfo.append((pi, s, k))
             for c in {cellk(S.wrap(P[k])), cellk(S.wrap(P[k + 1]))}:
                 hsh.setdefault(c, []).append(i)
     for g in S.goal_pts:
-        g = S.wrap(g); seen.add(k_(g, -2)); B.append(g)
+        g = S.wrap(g); seen.add(k_(g, -2)); B.append(g); Bpar.append(-1); Bls.append(-1); gi = len(B) - 1
         for s in range(S.L):
-            cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0, -1, 0))
+            cnt += 1; heapq.heappush(pq, (tau, cnt, s, g, 0.0, -1, 0, gi))
     while pq and len(B) < NB:
-        _, _, s, p, vp, ls, ns = heapq.heappop(pq); v = vp + tau
+        _, _, s, p, vp, ls, ns, pi = heapq.heappop(pq); v = vp + tau
         e = S.wrap(S.flow(p, s, -tau))
         if not S.ok(e): continue
         kk = k_(e, s)
         if kk in seen: continue
-        seen.add(kk); B.append(e); arcs(p, s, vp)
+        seen.add(kk); B.append(e); arcs(p, s, vp, pi); Bpar.append(pi); Bls.append(s); ei = len(B) - 1
         for s2 in range(S.L):
             n2 = ns + (1 if (ls >= 0 and s2 != s) else 0)               # переключение в обратной цепочке (слой меняется)
-            cnt += 1; heapq.heappush(pq, (swb * n2 + v + tau, cnt, s2, e, v, s, n2))
+            cnt += 1; heapq.heappush(pq, (swb * n2 + v + tau, cnt, s2, e, v, s, n2, ei))
     SC = np.array([q[0] for q in segs]); SD = np.array([q[1] for q in segs]); SVC = np.array([q[2] for q in segs]); SVD = np.array([q[3] for q in segs])
-    _BC[ck] = (hsh, cellk, B, SC, SD, SVC, SVD)
+    _BC[ck] = (hsh, cellk, B, SC, SD, SVC, SVD, Bpar, Bls, sinfo)
     return _BC[ck]
 
 
-def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, sw_wb=None):
+def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, sw_wb=None, want_path=False):
     """Точная стыковка (research №4): обратное дерево хранит дуги (подотрезки dt) с ТОЧНЫМИ V (V(родитель)+время назад);
     из каждой прямой споры каждым слоем интегрируем шаг τ подотрезками и ищем ПЕРЕСЕЧЕНИЕ с обратной дугой — стык = t + V(×) — реальная траектория ⇒ верхняя оценка.
     Также: вход в клетку цели. Прямые споры — build_tree-порядок (мало переключений раньше). Возвращает (V, nb, nf)."""
     dt = tau / 5 if dt is None else dt; m = int(round(tau / dt))
     kb = lambda rho: (lambda p, s: (s, int(np.floor(p[0] / (rho * S.scale[0]))), int(np.floor(p[1] / (rho * S.scale[1])))))
     wrapd = (lambda dx: (dx + S.per / 2) % S.per - S.per / 2) if S.per else (lambda dx: dx)
-    hsh, cellk, B, SC, SD, SVC, SVD = _back(S, tau, NB, rho_b, dt, cell, sw_w if sw_wb is None else sw_wb)
-    best = np.inf
+    hsh, cellk, B, SC, SD, SVC, SVD, Bpar, Bls, sinfo = _back(S, tau, NB, rho_b, dt, cell, sw_w if sw_wb is None else sw_wb)
+    best = np.inf; bpath = None
     def near(A):
         c = cellk(S.wrap(A)); out = set()
         for di in (-1, 0, 1):
@@ -274,11 +274,13 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, 
                     cc = ((c[0] + di + per_c // 2) % per_c - per_c // 2, c[1] + dj)
                     if cc in hsh: out.update(hsh[cc])
         return out
-    def scan(p, s, g):
-        nonlocal best
+    def scan(p, s, g, hist):
+        nonlocal best, bpath
         Pf = np.array([S.flow(p, s, dt * j) for j in range(m + 1)])
         for j in range(m + 1):
-            if S.in_goal(S.wrap(Pf[j])): best = min(best, g + j * dt); return
+            if S.in_goal(S.wrap(Pf[j])):
+                if g + j * dt < best: best = g + j * dt; bpath = hist + ((s, j * dt),)
+                return
         idx = None
         for j in range(m):
             A, Bp = Pf[j], Pf[j + 1]
@@ -293,19 +295,32 @@ def cross_value(S, tau, x0, NB, NF, rho_b, rho_f, dt=None, sw_w=10.0, cell=0.5, 
                 sp = (w[:, 0] * d2[:, 1] - w[:, 1] * d2[:, 0]) / den; rp = (w[:, 0] * d1[1] - w[:, 1] * d1[0]) / den
             ok = (np.abs(den) > 1e-14) & (sp >= 0) & (sp <= 1) & (rp >= 0) & (rp <= 1)
             if ok.any():
-                best = min(best, float(np.min(g + (j + sp[ok]) * dt + VC[ok] + rp[ok] * (VD[ok] - VC[ok]))))
+                val = g + (j + sp[ok]) * dt + VC[ok] + rp[ok] * (VD[ok] - VC[ok]); q = int(np.argmin(val))
+                if val[q] < best:
+                    best = float(val[q]); si = np.array(ids)[ok][q]; pi, sl, k = sinfo[si]; r = rp[ok][q]
+                    tail = [(sl, (k + r) * dt)]; jj = pi                       # дуга слоя sl до конца (V убывает к споре pi), затем вверх по родителям к цели
+                    while Bpar[jj] >= 0: tail.append((Bls[jj], tau)); jj = Bpar[jj]
+                    bpath = hist + ((s, (j + sp[ok][q]) * dt),) + tuple(tail)
     kf = kb(rho_f); seenf = set(); x0 = S.wrap(x0); seenf.add(kf(x0, -1)); nf = 1; pq = []; cnt = 0
-    def push(p, g, ls, ns):
+    def push(p, g, ls, ns, hist):
         nonlocal cnt
         for s in range(S.L):
             e = S.wrap(S.flow(p, s, tau)); n2 = ns + (1 if (ls >= 0 and s != ls) else 0)
-            if S.ok(e): cnt += 1; heapq.heappush(pq, (sw_w * n2 + g + tau, cnt, s, e, g + tau, n2, p))
-    for s in range(S.L): scan(x0, s, 0.0)
-    push(x0, 0.0, -1, 0)
+            if S.ok(e): cnt += 1; heapq.heappush(pq, (sw_w * n2 + g + tau, cnt, s, e, g + tau, n2, hist + ((s, tau),)))
+    for s in range(S.L): scan(x0, s, 0.0, ())
+    push(x0, 0.0, -1, 0, ())
     while pq and nf < NF:
-        _, _, s, e, g, n2, par = heapq.heappop(pq); k = kf(e, s)
+        _, _, s, e, g, n2, hist = heapq.heappop(pq); k = kf(e, s)
         if k in seenf: continue
         seenf.add(k); nf += 1
-        for s2 in range(S.L): scan(e, s2, g)
-        push(e, g, s, n2)
-    return best, len(B), nf
+        for s2 in range(S.L): scan(e, s2, g, hist)
+        push(e, g, s, n2, hist)
+    return (best, len(B), nf, bpath) if want_path else (best, len(B), nf)
+
+
+def play(S, x0, path):
+    """Проигрыш пути [(слой, длительность)…] из x0: возвращает (конечная точка, время, вошли ли в клетку цели). Проверка честности стыковки (docking_nd, шаг 5)."""
+    x = S.wrap(np.asarray(x0, float)); t = 0.0
+    for s, d in path:
+        x = S.wrap(S.flow(x, s, d)); t += d
+    return x, t, bool(S.in_goal(x))
