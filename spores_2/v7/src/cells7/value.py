@@ -14,7 +14,7 @@ def _nodes(C):
 
 class Field:
     def __init__(self, S, layers, goal, eps=0.06, halo=1.0):
-        self.S, self.layers, self.eps = S, layers, eps
+        self.S, self.layers, self.eps, self.halo = S, layers, eps, halo
         self.cells = [(k, C) for k, L in enumerate(layers) for C in L]; n = len(self.cells)
         self.Y = np.zeros((n, NSV, NTV, 2)); self.k = np.array([k for k, _ in self.cells])
         for i, (k, C) in enumerate(self.cells): self.Y[i] = _nodes(C)[2]
@@ -54,10 +54,10 @@ class Field:
             if np.max(np.abs(np.where(V < 1e8, V, 0) - np.where(old < 1e8, old, 0))) < 1e-9 and ((V < 1e8) == (old < 1e8)).all(): break
         self.V = V.reshape(n, NSV, NTV); self.sweeps = it + 1; return self
 
-    def query(self, y):
+    def query(self, y, halo=None):
         best = np.inf
         for j, (k, C) in enumerate(self.cells):
-            s, t, ins = C.locate(y, 1.0)
+            s, t, ins = C.locate(y, self.halo if halo is None else halo)
             if ins[0]:
                 idx, w = self._interp(j, C, s[0], t[0]); v = float((self.V.reshape(-1)[idx] * w).sum()); best = min(best, v)
         return best
