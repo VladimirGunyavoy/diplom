@@ -7,7 +7,7 @@ from src.atlas6.manip3dyn import flow as _fl
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 300, 3)
 tau = 0.4; Rq = 0.3; Rw = 0.5; WM = 3.0; rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
-GG = 0.3; fl = lambda P, s, t: _fl(P, s, t, dt_max=0.05, n=2, g=GG)
+GG = 0.3; fl = lambda P, s, t: _fl(P, s, t, dt_max=float(__import__('os').environ.get('DT', 0.05)), n=2, g=GG)
 import os
 UP = np.array([-np.pi / 2 if os.environ.get("DOWN") else np.pi / 2, 0.0, 0.0, 0.0])
 ing = lambda P: (np.max(np.abs(wr(P[..., :2] - UP[:2])), -1) < Rq) & (np.max(np.abs(P[..., 2:]), -1) < Rw)
@@ -21,7 +21,7 @@ NQ = int(os.environ.get('NQ', 32)); Q = [np.array([*rng.uniform(-np.pi, np.pi, 2
 back = build_back(S, tau, NB, rho)
 from src.atlas6.adaptive_nd import back_heuristic
 from src.atlas6.corridor_nd import corridor_batch
-t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=3, hfun=back_heuristic(S, back), kn=8); tt = time.time() - t0
+t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TR', 3)), hfun=(back_heuristic(S, back, wh=float(os.environ.get('WH', 3.0))) if os.environ.get('WH') != '0' else None), kn=int(os.environ.get('KN', 8))); tt = time.time() - t0
 out = []
 for x, b in zip(Q, R):
     ok = False
