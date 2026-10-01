@@ -8,7 +8,7 @@ TR = int(sys.argv[4]) if len(sys.argv) > 4 else 3
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (1500, 200, 3)
 tau = 0.4; Rq = 0.3; Rw = 0.6; WM = 3.0; rho = 0.15
 import os
-GG = float(os.environ.get('G', 0)); C3 = np.array([-np.pi / 2 if os.environ.get('DOWN') else 0.0, 0, 0, 0, 0, 0])
+GG = float(os.environ.get('G', 0)); C3 = np.array([-np.pi / 2 if os.environ.get('DOWN') else (np.pi / 2 if os.environ.get('UP') else 0.0), 0, 0, 0, 0, 0])
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: flow(P, s, t, dt_max=float(os.environ.get("DT", 0.05)), g=GG)
 ing = lambda P: (np.max(np.abs(wr(P[..., :3] - C3[:3])), -1) < Rq) & (np.max(np.abs(P[..., 3:]), -1) < Rw)
