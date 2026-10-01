@@ -39,3 +39,4 @@
 - [research/v7_faces.md](research/v7_faces.md) — v7 п.3 без бокового перехода: общая сеть сечений (клетка = грань × слой, V на гранях); DI T/T* 1.137→1.011 (h .4→.05), O(h); нужна адаптивность граней
 - [research/lit_bangbang_cost.md](research/lit_bangbang_cost.md) — литобзор: bang-bang дифдрайва (Balkcom–Mason 2002: все дуги на вершинах), L1/L2-цена (bang-off-bang / насыщ.-непрерывное) (searcher-1)
 - [research/pend_faces_front.md](research/pend_faces_front.md) — маятник на гранях: 60% «недостижимых» — застой фронта строгой интерполяции, не физика; BIG-конечное → 99–100%
+- [research/v7_spore_cells.md](research/v7_spore_cells.md) — v7 клетки из точных траекторий + гало 10% + свободное переключение: DI 100%, T/T* 1.02–1.04; оценка только после шага Δt (без 0-переходов)

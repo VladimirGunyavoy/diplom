@@ -1,0 +1,74 @@
+[
+ {
+  "tau": 0.4,
+  "r": 0.1,
+  "cells": 1209,
+  "nodes": 76167,
+  "pairs": 1115291,
+  "iters": 705,
+  "finV": 0.809,
+  "cores_per_pt_per_layer": 2.64,
+  "covered_both_layers": 0.997,
+  "reach": 1.0,
+  "T_Tstar": {
+   "mean": 1.041,
+   "med": 1.0315,
+   "max": 1.44,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 8,
+   "solve": 84,
+   "roll": 3
+  }
+ },
+ {
+  "tau": 0.4,
+  "r": 0.05,
+  "cells": 1992,
+  "nodes": 125496,
+  "pairs": 1529995,
+  "iters": 285,
+  "finV": 0.813,
+  "cores_per_pt_per_layer": 2.23,
+  "covered_both_layers": 0.985,
+  "reach": 1.0,
+  "T_Tstar": {
+   "mean": 1.0407,
+   "med": 1.0302,
+   "max": 1.71,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 12,
+   "solve": 85,
+   "roll": 5
+  }
+ },
+ {
+  "tau": 0.2,
+  "r": 0.05,
+  "cells": 3090,
+  "nodes": 194670,
+  "pairs": 1992677,
+  "iters": 255,
+  "finV": 0.822,
+  "cores_per_pt_per_layer": 1.81,
+  "covered_both_layers": 0.949,
+  "reach": 0.998,
+  "T_Tstar": {
+   "mean": 1.0259,
+   "med": 1.0157,
+   "max": 1.957,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 17,
+   "solve": 249,
+   "roll": 15
+  }
+ }
+]

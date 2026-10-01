@@ -1,0 +1,83 @@
+[
+ {
+  "tau": 0.4,
+  "r": 0.1,
+  "ovl": 0.1,
+  "cells": 842,
+  "nodes": 53046,
+  "pairs": 540598,
+  "iters": 226,
+  "finV": 0.81,
+  "cores_per_pt_per_layer": 1.83,
+  "core_overlap_share": 0.607,
+  "core_covered": 0.94,
+  "covered_both_layers": 0.994,
+  "reach": 1.0,
+  "T_Tstar": {
+   "mean": 1.0437,
+   "med": 1.033,
+   "max": 1.44,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 30,
+   "solve": 20,
+   "roll": 2
+  }
+ },
+ {
+  "tau": 0.4,
+  "r": 0.1,
+  "ovl": 0.2,
+  "cells": 825,
+  "nodes": 51975,
+  "pairs": 515315,
+  "iters": 173,
+  "finV": 0.817,
+  "cores_per_pt_per_layer": 1.81,
+  "core_overlap_share": 0.62,
+  "core_covered": 0.936,
+  "covered_both_layers": 0.996,
+  "reach": 1.0,
+  "T_Tstar": {
+   "mean": 1.0642,
+   "med": 1.0313,
+   "max": 6.93,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 33,
+   "solve": 16,
+   "roll": 2
+  }
+ },
+ {
+  "tau": 0.2,
+  "r": 0.05,
+  "ovl": 0.1,
+  "cells": 3268,
+  "nodes": 205884,
+  "pairs": 2152350,
+  "iters": 307,
+  "finV": 0.837,
+  "cores_per_pt_per_layer": 1.9,
+  "core_overlap_share": 0.647,
+  "core_covered": 0.933,
+  "covered_both_layers": 0.993,
+  "reach": 1.0,
+  "T_Tstar": {
+   "mean": 1.0205,
+   "med": 1.0142,
+   "max": 1.196,
+   "min": 1.0
+  },
+  "sw_med": 3.0,
+  "sec": {
+   "cover": 100,
+   "solve": 267,
+   "roll": 16
+  }
+ }
+]
