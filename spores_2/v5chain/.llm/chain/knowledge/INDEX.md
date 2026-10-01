@@ -3,7 +3,10 @@
 |---|---|
 | решения пользователя по проекту | `user_decisions.md` |
 | решения пользователя по цепочке (общие) | `~/claude-work/system/llm/user_decisions.md` |
-| машины, VM, SSH, tmux, Colab, грабли | `~/claude-work/system/infra-rules/infra.md` |
+| общие грабли (tmux, crontab, pick_account, воскрешение сессии) | `~/claude-work/system/infra-rules/infra.md` |
+| машины: hub, aida, yoga (железо, доступ, грабли) | `~/claude-work/system/infra/machines/<машина>/README.md` |
+| пакеты и headless-запуск v6 на хабе (ursina, scipy) | `../../context/hub_env.md` |
+| память ролей (хендоффы, последние смены) | `../../roles/README.md` |
 | код: архитектура, менеджеры, ввод | `../../context/architecture.md`, `../../context/input_manager_guide.md` |
 | атлас спор (двойной интегратор → дифдрайв) | `../../../docs/spore_atlas_double_integrator.md` |
 - [atlas_di_tails.md](atlas_di_tails.md) — хвосты атласа DI: запросы у линии vmax

@@ -27,7 +27,8 @@ v5chain/                         папка проекта: отсюда зап�
 │   ├── AGENT_END_ROUTINE.md     финишная рутина (интерактивные сессии)
 │   ├── .llmignore
 │   ├── context/                 архитектура кода, сниппеты, зависимости (редко меняется)
-│   ├── state/                   current / plan / issues / session_handoff / token_stats / YOGA_HANDOFF
+│   ├── state/                   интерактивные сессии: current / plan / issues / session_handoff / token_stats
+│   ├── roles/<роль>/            память ролей цепочки: HANDOFF.md (живой), recent.md (5 смен), archive.md — см. roles/README.md
 │   ├── history/                 changelog_recent / changelog_archive / decisions (проект)
 │   ├── tools/                   update_changelog.py
 │   └── chain/                   «файлы цепочки»: пути в рутинах ролей вида TASK.md, knowledge/… — отсюда
@@ -35,7 +36,7 @@ v5chain/                         папка проекта: отсюда зап�
 │       ├── STATUS.md PLAN.md ISSUES.md JOURNAL.md
 │       ├── DISPATCHER_NOTES.md META_NOTES.md tick.log
 │       ├── knowledge/           INDEX.md + факты проекта (один факт — одно место)
-│       └── history/             decisions, token_stats, links_*, архивы, handoffs/
+│       └── history/             decisions, token_stats, plan_archive, journal_archive, прочие архивы
 ├── journals/                    пульс-журналы агентов и служебные файлы скриптов (_sentinel/), в .gitignore
 ├── .claude/usage_log.jsonl      телеметрия statusLine (пишется сама, в .gitignore)
 └── docs/ src/ main.py …         код и документы проекта

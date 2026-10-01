@@ -61,7 +61,7 @@
 | открытые проблемы, NEEDS-HUMAN | `ISSUES.md` |
 | кто есть кто в цепочке | `~/claude-work/system/llm/ROLES.md`; протокол — `…/ARCHITECTURE_CURRENT.md`; роль — `…/routines/<РОЛЬ>_ROUTINE.md` (в т.ч. `RESEARCH_ROUTINE.md` — рисерч/математика, Opus) |
 | почему цепочка так решила | `history/decisions.md` |
-| что делали прошлые звенья | `history/links_recent.md` (архивы — не читать без нужды) |
+| что делали прошлые звенья | `.llm/roles/worker/recent.md` (архивы — не читать без нужды) |
 
 ## 📚 Как устроены знания и ротация (правила ведения — для всех ролей)
 Принцип: в корне лежит **текущее**, история — в `history/`; до факта добираются по `knowledge/INDEX.md` (вопрос → файл →
@@ -73,11 +73,12 @@
 | `ISSUES.md` | только открытое + счётчики попыток | решённое одной строкой → `history/issues_resolved.md` при > ~30 строк | worker |
 | `JOURNAL.md` | последние ~60 событий | > ~100 строк → старшее в `history/journal_archive.md` (`>>`) | worker на §Старт |
 | `tick.log` (пишет `reap_idle.py`) | последние ~100 строк | старшее → `history/tick_archive.log` | watcher на §Старт |
-| `DISPATCHER_NOTES.md` / `META_NOTES.md` | записи текущей смены | на смене → `history/watcher_archive.md` / `meta_archive.md` | watcher / meta |
-| `history/links_recent.md` | последние 5 звеньев | старшее → `links_archive.md` | worker на §Старт п.2 |
-| handoff'ы ролей | живой — последний по каждой роли | прошлые → `history/handoffs/` | заступающий |
+| `DISPATCHER_NOTES.md` / `META_NOTES.md` | записи текущей смены | на смене → `.llm/roles/dispatcher/archive.md` / `.llm/roles/meta/archive.md` | dispatcher / meta |
+| `.llm/roles/worker/recent.md` | последние 5 звеньев | старшее → `.llm/roles/worker/archive.md` | worker на §Старт п.2 |
+| handoff'ы ролей | `.llm/roles/<роль>/HANDOFF.md` — живой, один на роль | сводка смены → `recent.md` (5 шт.), старшее → `archive.md` (`.llm/roles/README.md`) | заступающий |
+| `PLAN.md` | активные задачи + ~10 последних выполненных | остальное выполненное → `history/plan_archive.md` | worker на §Финиш |
 | `knowledge/user_decisions.md` | свежие решения | секции > ~15 → `history/user_decisions_archive.md` | meta на ревизии |
 | `knowledge/*` | один факт — одно место, правка на месте | файл > ~25 КБ → разбить по темам в папку + строка в `INDEX.md` | кто заметил |
 - Установил факт — впиши в нужный файл одной-двумя строками **и** строку в `INDEX.md`, если появился новый раздел; при
   ревизии meta сверяет. `token_stats.md` — только дописывать. Отчёты `reports/` — только результаты.
-- Handoff звена (`.llm/state/session_handoff.md`) — ≤ 100 строк; раскладывает его по файлам **следующее** звено.
+- Handoff звена (`.llm/roles/worker/HANDOFF.md`) — ≤ 100 строк; раскладывает его по файлам **следующее** звено.
