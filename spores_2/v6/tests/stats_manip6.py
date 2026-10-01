@@ -27,16 +27,16 @@ back = build_back(S, tau, NB, rho)
 from src.atlas6.adaptive_nd import back_heuristic
 from src.atlas6.corridor_nd import corridor_batch
 HF = back_heuristic(S, back, wh=(float(os.environ['WH']) if os.environ.get('WH') else None)) if os.environ.get('WH') != '0' else None
-t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=HF, clear=clear, kn=int(os.environ.get('KN', 8)), fs=int(os.environ.get('FS', 0)), neigh=int(os.environ.get('NEIGH', 2))); tt = time.time() - t0
+t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=HF, clear=clear, kn=int(os.environ.get('KN', 8)), fs=int(os.environ.get('FS', 0)), neigh=int(os.environ.get('NEIGH', 2)), wlim=((slice(3, 6), WM) if os.environ.get('WLIM') else None)); tt = time.time() - t0
 out = []
 for x, b in zip(Q, R):
-    ok = False; mc = None
+    ok = False; mc = None; wm = None
     if b is not None:
-        xe = np.array(x, float); mc = clear0(xe)
+        xe = np.array(x, float); mc = clear0(xe); wm = float(np.max(np.abs(xe[3:])))
         for s, d in zip(b[1], b[2]):
-            for _ in range(8): xe = flow(xe, s, d / 8, dt_max=0.005, g=GG); mc = min(mc, clear0(xe))
+            for _ in range(8): xe = flow(xe, s, d / 8, dt_max=0.005, g=GG); mc = min(mc, clear0(xe)); wm = max(wm, float(np.max(np.abs(xe[3:]))))
         ok = bool(np.all(g(xe) > -1e-4)) and bool(mc >= 0)
-    out.append(dict(T=None if b is None else float(b[0]), ok=ok, minclear=None if mc is None else float(mc), seq=None if b is None else [int(s) for s in b[1]], dts=None if b is None else [float(d) for d in b[2]]))
+    out.append(dict(wmax=(None if b is None else wm), T=None if b is None else float(b[0]), ok=ok, minclear=None if mc is None else float(mc), seq=None if b is None else [int(s) for s in b[1]], dts=None if b is None else [float(d) for d in b[2]]))
 Ts = [o['T'] for o in out if o['ok']]
 print('NAME', os.environ.get('NAME'), 'NB', NB, 'NF', NF, 'решено валидно %d/%d' % (len(Ts), NQ), 'медиана T %.2f' % (np.median(Ts) if Ts else -1), 'время серии %.0f с' % tt, flush=True)
 import json; json.dump(dict(NB=NB, NF=NF, K=K, tries=TR, tsec=tt, res=out), open('reports/stats_%s.json' % os.environ.get('NAME', 'x'), 'w'))
