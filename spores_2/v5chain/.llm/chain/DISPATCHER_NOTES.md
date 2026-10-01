@@ -18,3 +18,4 @@
 23:31 · research-7: OOM-killer (fixer-4) · поднял заново с правилом systemd-run MemoryMax=3G / aida
 23:38 · research-7 ответил по п.3 (v7_faces.md) · переслал worker-11 с правилом памяти
 00:30 · worker-11 done (ctx28), worker-12 поднят · cron переключён на worker-12
+01:50 · сторож: тишина worker-12 18 мин · пейн: идёт ход 10 мин, транскрипт свежий, ложная тревога · ничего не делал

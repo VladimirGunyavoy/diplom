@@ -23,8 +23,8 @@ def lines_graded(a, ratio, n_side, periodic=False, d0=None):
 
 
 class Faces:
-    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0, front=False):
-        self.front = front
+    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0, front=False, bigfin=False):
+        self.front = front; self.bigfin = bigfin
         self.S, self.lx, self.lv, self.m, self.per = S, np.asarray(lx, float), np.asarray(lv, float), m, periodic_x
         self.dtfac, self.tmax = dtfac, tmax
         sub = lambda ln: np.unique(np.round(np.concatenate([ln[:-1, None] + np.diff(ln)[:, None] * np.arange(m)[None, :] / m]).ravel().tolist() + [ln[-1]], 13))
@@ -110,7 +110,22 @@ class Faces:
         base = np.where(kind == 1, li * len(PX), self.n1 + li * len(PV))
         return base + i0, base + i0 + 1, w
 
+    def solve_bigfin(self, it=200000, tol=1e-9, B=BIG):
+        """Неизвестное = большое КОНЕЧНОЕ B, обычная линейная интерполяция (без строгости fa&fb), Якоби сверху вниз до сходимости; в конце V>B/2 → inf.
+        Строгая интерполяция стопорит фронт (hub-research-7: выход между конечной пробой и пробой фронта → inf навсегда)."""
+        P = self.P; N = len(P); G = self.goal_mask(P[:, 0], P[:, 1]); V = np.full(N, B); V[G] = 0; E = []
+        for k in (0, 1):
+            t, e, kd, out = self.hit(P, k); i0, i1, w = self._interp(np.where(out[:, None], 0.0, e), kd); E.append((t, i0, i1, w, out | ~np.isfinite(t)))
+        self.E = E; self.G = G
+        for n in range(it):
+            Vn = np.full(N, B)
+            for t, i0, i1, w, out in E: Vn = np.minimum(Vn, np.where(out, B, t + (1 - w) * V[i0] + w * V[i1]))
+            Vn[G] = 0; Vn = np.minimum(Vn, B); d = np.max(np.abs(Vn - V)); V = Vn
+            if d < tol: break
+        self.V = np.where(V > B / 2, np.inf, V); self.iters = n; return self.V
+
     def solve(self, it=400000, tol=1e-10, log=None):
+        if self.bigfin: return self.solve_bigfin(it, tol)
         P = self.P; N = len(P); V = np.full(N, BIG); G = self.goal_mask(P[:, 0], P[:, 1]); V[G] = 0; E = []
         for k in (0, 1):
             t, e, kd, out = self.hit(P, k); i0, i1, w = self._interp(np.where(out[:, None], 0.0, e), kd); E.append((t, i0, i1, w, out))
