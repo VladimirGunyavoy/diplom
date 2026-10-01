@@ -1,11 +1,11 @@
 """СТАТИСТИКА hub-worker-8: 40 запросов (corridor_batch), маятник u=.3; ref — мелкая V PendAtlas. env NQ, NAME. Коридор на адаптивном дереве, маятник u=.3 (цель верх, окно Rg=.5): T коридора / мелкая V. Запуск из v6."""
-import sys, time; sys.path.insert(0, '.')
+import sys, os, time; sys.path.insert(0, '.')
 import numpy as np
 from src.atlas6.adaptive_nd import SysN, build_back
 from src.atlas6.corridor_nd import corridor_query
 from src.atlas6.pend import PendAtlas
 from src.atlas6.gcell import rk4, pendulum
-u = 0.3; tau = 0.25; Rg = 0.5; rho = 0.05; f = pendulum(1.0)
+u = float(os.environ.get('U', 0.3)); tau = 0.25; Rg = 0.5; rho = 0.05; f = pendulum(1.0)
 dth = lambda th: (th - np.pi + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: rk4(f, P, u * (1 if s == 0 else -1), t, dt_max=0.05)
 gd = lambda P: np.hypot(dth(P[..., 0]), P[..., 1])
