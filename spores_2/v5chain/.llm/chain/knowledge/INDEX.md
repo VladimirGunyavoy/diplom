@@ -24,3 +24,4 @@
 - [research/manip_dyn_corridor.md](research/manip_dyn_corridor.md) — манипулятор 4D: коридор 5/8 → 8/8 при NB 2400/NF 400, T = эталону перебором топологий
 - [research/query_speed.md](research/query_speed.md) — почему запросы медленные: SLSQP зовёт numpy-rk4 точкой (×13–22 на math), maxiter 80, зазор последовательно; хаб ≈10× медленнее aida (VM); манипулятор 124 с → 1.2 с
 - [research/tree_directed_6d.md](research/tree_directed_6d.md) — прямое дерево с A* по обратному (g+3h внутри уровня переключений): 6D+g NF800 решает q1 (как база NF3000), NB6000 решает q2
+- [research/ref_6d.md](research/ref_6d.md) — эталон T 6D: OCP CasADi/IPOPT мультистарт (ref6d_ocp.py, ref6d_T.json, 32 запроса вниз/вверх); коридор NB12000 = эталон×1.00–1.04; refine не держит |w|≤WM (вверх до +18%)
