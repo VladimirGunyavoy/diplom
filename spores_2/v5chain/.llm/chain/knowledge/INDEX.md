@@ -30,3 +30,4 @@
 - [research/cell_model_size.md](research/cell_model_size.md) — размер клетки v7 с локальной моделью: квадратичная + tol 1e-2 → τ=1 почти везде; манипуляторы при tol 1e-3 — r=0.1
 - [research/lit_control_spectrum.md](research/lit_control_spectrum.md) — литобзор «спектр управлений»: Chen–Fliess/зонотопы, воронки, примитивы, сингулярные дуги, sum-up rounding (searcher-1)
 - [research/control_spectrum.md](research/control_spectrum.md) — спектр управлений: образ U за τ по 3 слоям/канал (+диагональ при G(x)); у цели спектр+LQR держит (остаток ×100–1000 меньше вершин), в быстродействии выигрыша нет
+- [research/branch2pi.md](research/branch2pi.md) — ветвь 2π в 6D вверх: только 2/5 худших (q14, q9, +22–26%); 3/5 — топология внутри ветви (+22–31%)
