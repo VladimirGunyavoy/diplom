@@ -31,3 +31,4 @@
 - [research/lit_control_spectrum.md](research/lit_control_spectrum.md) — литобзор «спектр управлений»: Chen–Fliess/зонотопы, воронки, примитивы, сингулярные дуги, sum-up rounding (searcher-1)
 - [research/control_spectrum.md](research/control_spectrum.md) — спектр управлений: образ U за τ по 3 слоям/канал (+диагональ при G(x)); у цели спектр+LQR держит (остаток ×100–1000 меньше вершин), в быстродействии выигрыша нет
 - [research/branch2pi.md](research/branch2pi.md) — ветвь 2π в 6D вверх: только 2/5 худших (q14, q9, +22–26%); 3/5 — топология внутри ветви (+22–31%)
+- [research/blind_di_heuristic.md](research/blind_di_heuristic.md) — слепая DI-эвристика V: допустима, h/V медиана 0.41/0.59 (маятник u .3/.5); A* с весом 1.5–3
