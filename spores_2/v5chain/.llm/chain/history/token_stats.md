@@ -55,3 +55,5 @@
 | hub-research-7 | start | 5ч 0% / ctx 4% | $0.14 | 2026-10-01 22:31:38 |
 | hub-research-7 | end | 5ч 16% / ctx 11% | $1.59 | 2026-10-01 23:38:55 |
 | hub-worker-11 | T_END | 5ч 13% / ctx 27% | $6.4 | 2026-10-02 00:07:47 |
+| hub-worker-12 | start | 5ч 17% / ctx 4% | $0.10 | 2026-10-02 00:08:22 |
+| hub-worker-11 | T_BEFORE_END/T_END | 5ч 13% / ctx 27% | $6.4 | 00:40 |
