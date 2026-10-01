@@ -1,0 +1,22 @@
+{
+ "layer0": {
+  "cells": 578,
+  "covered": 1.0,
+  "kernel_overlap": 0.191875,
+  "halo_overlap": 0.281875,
+  "r_mean": 0.054006654671280276,
+  "tau_mean": 0.07748539792387542,
+  "exit_in_other_kernel": 0.3546712802768166,
+  "sec": 171.3195276260376
+ },
+ "layer1": {
+  "cells": 593,
+  "covered": 1.0,
+  "kernel_overlap": 0.185,
+  "halo_overlap": 0.2725,
+  "r_mean": 0.056444740640809433,
+  "tau_mean": 0.07425219561551431,
+  "exit_in_other_kernel": 0.33220910623946037,
+  "sec": 171.7233853340149
+ }
+}
