@@ -1,0 +1,546 @@
+[
+ {
+  "fam": "v",
+  "h": 0.4,
+  "m": 1,
+  "samples": 400,
+  "finite": 0.635,
+  "iters": 83,
+  "sec": 0.01,
+  "V_Tstar_nodes": [
+   1.1759,
+   0.8189,
+   46.4735
+  ],
+  "roll15": {
+   "reach": 0.7265,
+   "mean": 1.1855,
+   "med": 1.1355,
+   "max": 3.174,
+   "dT_mean": 0.2971,
+   "dT_max": 0.791,
+   "min_ratio": 0.9922,
+   "sw_med": 1.0
+  },
+  "roll3": {
+   "reach": 0.637,
+   "mean": 1.1317,
+   "med": 1.0967,
+   "max": 1.925,
+   "dT_mean": 0.3269,
+   "dT_max": 0.809,
+   "min_ratio": 0.9968,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.4,
+  "m": 4,
+  "samples": 1540,
+  "finite": 0.6545454545454545,
+  "iters": 23,
+  "sec": 0.01,
+  "V_Tstar_nodes": [
+   1.1122,
+   1.0,
+   45.8105
+  ],
+  "roll15": {
+   "reach": 0.9365,
+   "mean": 1.2399,
+   "med": 1.1795,
+   "max": 4.738,
+   "dT_mean": 0.3483,
+   "dT_max": 0.951,
+   "min_ratio": 0.9922,
+   "sw_med": 1.0
+  },
+  "roll3": {
+   "reach": 0.81,
+   "mean": 1.1459,
+   "med": 1.1116,
+   "max": 3.888,
+   "dT_mean": 0.3603,
+   "dT_max": 0.98,
+   "min_ratio": 0.9968,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.2,
+  "m": 1,
+  "samples": 1600,
+  "finite": 0.64875,
+  "iters": 119,
+  "sec": 0.02,
+  "V_Tstar_nodes": [
+   1.1368,
+   0.6631,
+   58.1305
+  ],
+  "roll15": {
+   "reach": 0.7155,
+   "mean": 1.1194,
+   "med": 1.0776,
+   "max": 1.865,
+   "dT_mean": 0.2006,
+   "dT_max": 0.725,
+   "min_ratio": 0.9917,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.607,
+   "mean": 1.0814,
+   "med": 1.0514,
+   "max": 1.805,
+   "dT_mean": 0.2042,
+   "dT_max": 0.76,
+   "min_ratio": 0.9994,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.2,
+  "m": 4,
+  "samples": 6280,
+  "finite": 0.6598726114649681,
+  "iters": 58,
+  "sec": 0.03,
+  "V_Tstar_nodes": [
+   1.0525,
+   0.9325,
+   28.1309
+  ],
+  "roll15": {
+   "reach": 0.9435,
+   "mean": 1.1082,
+   "med": 1.0865,
+   "max": 3.019,
+   "dT_mean": 0.1772,
+   "dT_max": 0.405,
+   "min_ratio": 0.9917,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.8205,
+   "mean": 1.0669,
+   "med": 1.0526,
+   "max": 1.54,
+   "dT_mean": 0.1818,
+   "dT_max": 0.448,
+   "min_ratio": 0.9994,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.1,
+  "m": 1,
+  "samples": 6400,
+  "finite": 0.655625,
+  "iters": 202,
+  "sec": 0.06,
+  "V_Tstar_nodes": [
+   1.1216,
+   0.5575,
+   60.3998
+  ],
+  "roll15": {
+   "reach": 0.2575,
+   "mean": 1.0894,
+   "med": 1.0548,
+   "max": 1.88,
+   "dT_mean": 0.1495,
+   "dT_max": 0.559,
+   "min_ratio": 0.995,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.1865,
+   "mean": 1.0683,
+   "med": 1.0565,
+   "max": 1.411,
+   "dT_mean": 0.191,
+   "dT_max": 0.627,
+   "min_ratio": 0.9978,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.1,
+  "m": 4,
+  "samples": 25360,
+  "finite": 0.6612776025236593,
+  "iters": 128,
+  "sec": 0.17,
+  "V_Tstar_nodes": [
+   1.0324,
+   0.9802,
+   18.0402
+  ],
+  "roll15": {
+   "reach": 0.964,
+   "mean": 1.0527,
+   "med": 1.042,
+   "max": 1.561,
+   "dT_mean": 0.0902,
+   "dT_max": 0.213,
+   "min_ratio": 0.995,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.831,
+   "mean": 1.0329,
+   "med": 1.0271,
+   "max": 1.26,
+   "dT_mean": 0.0927,
+   "dT_max": 0.207,
+   "min_ratio": 0.9978,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.05,
+  "m": 1,
+  "samples": 25600,
+  "finite": 0.660859375,
+  "iters": 340,
+  "sec": 0.39,
+  "V_Tstar_nodes": [
+   1.1031,
+   0.6489,
+   59.0645
+  ],
+  "roll15": {
+   "reach": 0.015,
+   "mean": 0.9997,
+   "med": 1.0,
+   "max": 1.0,
+   "dT_mean": -0.0,
+   "dT_max": -0.0,
+   "min_ratio": 0.995,
+   "sw_med": 0.0
+  },
+  "roll3": {
+   "reach": 0.0055,
+   "mean": 1.0,
+   "med": 1.0,
+   "max": 1.0,
+   "dT_mean": -0.0,
+   "dT_max": -0.0,
+   "min_ratio": 0.9998,
+   "sw_med": 0.0
+  }
+ },
+ {
+  "fam": "v",
+  "h": 0.05,
+  "m": 4,
+  "samples": 101920,
+  "finite": 0.6639128728414443,
+  "iters": 213,
+  "sec": 1.28,
+  "V_Tstar_nodes": [
+   1.0224,
+   0.9767,
+   15.7606
+  ],
+  "roll15": {
+   "reach": 0.949,
+   "mean": 1.0257,
+   "med": 1.0205,
+   "max": 1.463,
+   "dT_mean": 0.0449,
+   "dT_max": 0.103,
+   "min_ratio": 0.995,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.828,
+   "mean": 1.0165,
+   "med": 1.0134,
+   "max": 1.132,
+   "dT_mean": 0.047,
+   "dT_max": 0.11,
+   "min_ratio": 0.9998,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.4,
+  "m": 1,
+  "samples": 800,
+  "finite": 0.645,
+  "iters": 96,
+  "sec": 0.01,
+  "V_Tstar_nodes": [
+   1.3354,
+   0.8189,
+   82.4687
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.2008,
+   "med": 1.1724,
+   "max": 2.83,
+   "dT_mean": 0.3079,
+   "dT_max": 0.785,
+   "min_ratio": 0.9922,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.7895,
+   "mean": 1.1417,
+   "med": 1.1146,
+   "max": 2.581,
+   "dT_mean": 0.3384,
+   "dT_max": 0.82,
+   "min_ratio": 0.9968,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.4,
+  "m": 4,
+  "samples": 3080,
+  "finite": 0.6610389610389611,
+  "iters": 53,
+  "sec": 0.02,
+  "V_Tstar_nodes": [
+   1.0814,
+   0.5656,
+   59.0575
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.1369,
+   "med": 1.1046,
+   "max": 1.838,
+   "dT_mean": 0.2026,
+   "dT_max": 0.655,
+   "min_ratio": 0.9922,
+   "sw_med": 1.0
+  },
+  "roll3": {
+   "reach": 0.8345,
+   "mean": 1.0718,
+   "med": 1.0427,
+   "max": 1.841,
+   "dT_mean": 0.1623,
+   "dT_max": 0.656,
+   "min_ratio": 0.9968,
+   "sw_med": 2.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.2,
+  "m": 1,
+  "samples": 3200,
+  "finite": 0.64875,
+  "iters": 147,
+  "sec": 0.03,
+  "V_Tstar_nodes": [
+   1.2252,
+   0.6631,
+   67.5769
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.1563,
+   "med": 1.134,
+   "max": 1.902,
+   "dT_mean": 0.2571,
+   "dT_max": 0.479,
+   "min_ratio": 0.9917,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.823,
+   "mean": 1.104,
+   "med": 1.0871,
+   "max": 1.924,
+   "dT_mean": 0.273,
+   "dT_max": 0.531,
+   "min_ratio": 0.9994,
+   "sw_med": 5.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.2,
+  "m": 4,
+  "samples": 12560,
+  "finite": 0.664171974522293,
+  "iters": 109,
+  "sec": 0.08,
+  "V_Tstar_nodes": [
+   1.0408,
+   0.4167,
+   56.5559
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.0656,
+   "med": 1.0426,
+   "max": 1.858,
+   "dT_mean": 0.0976,
+   "dT_max": 0.353,
+   "min_ratio": 0.9917,
+   "sw_med": 1.0
+  },
+  "roll3": {
+   "reach": 0.8485,
+   "mean": 1.0319,
+   "med": 1.0194,
+   "max": 1.553,
+   "dT_mean": 0.0759,
+   "dT_max": 0.337,
+   "min_ratio": 0.9994,
+   "sw_med": 3.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.1,
+  "m": 1,
+  "samples": 12800,
+  "finite": 0.656875,
+  "iters": 251,
+  "sec": 0.15,
+  "V_Tstar_nodes": [
+   1.1709,
+   0.5575,
+   69.6107
+  ],
+  "roll15": {
+   "reach": 0.404,
+   "mean": 1.1566,
+   "med": 1.1381,
+   "max": 1.896,
+   "dT_mean": 0.2661,
+   "dT_max": 0.439,
+   "min_ratio": 0.995,
+   "sw_med": 7.0
+  },
+  "roll3": {
+   "reach": 0.34,
+   "mean": 1.1135,
+   "med": 1.1015,
+   "max": 1.398,
+   "dT_mean": 0.3138,
+   "dT_max": 0.501,
+   "min_ratio": 0.9978,
+   "sw_med": 9.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.1,
+  "m": 4,
+  "samples": 50720,
+  "finite": 0.6636435331230284,
+  "iters": 223,
+  "sec": 0.65,
+  "V_Tstar_nodes": [
+   1.0259,
+   0.333,
+   36.5093
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.0252,
+   "med": 1.0168,
+   "max": 1.561,
+   "dT_mean": 0.0383,
+   "dT_max": 0.171,
+   "min_ratio": 0.995,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.8555,
+   "mean": 1.0148,
+   "med": 1.0111,
+   "max": 1.287,
+   "dT_mean": 0.0396,
+   "dT_max": 0.157,
+   "min_ratio": 0.9978,
+   "sw_med": 5.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.05,
+  "m": 1,
+  "samples": 51200,
+  "finite": 0.66109375,
+  "iters": 441,
+  "sec": 1.13,
+  "V_Tstar_nodes": [
+   1.1286,
+   0.6489,
+   63.3475
+  ],
+  "roll15": {
+   "reach": 0.016,
+   "mean": 1.0045,
+   "med": 1.0,
+   "max": 1.14,
+   "dT_mean": 0.0008,
+   "dT_max": 0.026,
+   "min_ratio": 0.995,
+   "sw_med": 0.0
+  },
+  "roll3": {
+   "reach": 0.0055,
+   "mean": 1.0,
+   "med": 1.0,
+   "max": 1.0,
+   "dT_mean": -0.0,
+   "dT_max": -0.0,
+   "min_ratio": 0.9998,
+   "sw_med": 0.0
+  }
+ },
+ {
+  "fam": "xv",
+  "h": 0.05,
+  "m": 4,
+  "samples": 203840,
+  "finite": 0.6649332810047096,
+  "iters": 411,
+  "sec": 7.24,
+  "V_Tstar_nodes": [
+   1.0187,
+   0.5546,
+   26.8723
+  ],
+  "roll15": {
+   "reach": 1.0,
+   "mean": 1.0105,
+   "med": 1.0059,
+   "max": 1.463,
+   "dT_mean": 0.0156,
+   "dT_max": 0.166,
+   "min_ratio": 0.995,
+   "sw_med": 3.0
+  },
+  "roll3": {
+   "reach": 0.8595,
+   "mean": 1.0065,
+   "med": 1.0045,
+   "max": 1.172,
+   "dT_mean": 0.0172,
+   "dT_max": 0.131,
+   "min_ratio": 0.9998,
+   "sw_med": 7.0
+  }
+ }
+]
