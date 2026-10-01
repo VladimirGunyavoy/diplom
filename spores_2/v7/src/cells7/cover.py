@@ -9,7 +9,7 @@ def probe(S, m):
     return np.stack(np.meshgrid(g0, g1, indexing='ij'), -1).reshape(-1, 2)
 
 
-def kernel_samples(C, ns=5, nt=7):
+def kernel_samples(C, ns=7, nt=11):
     s = np.linspace(-C.r, C.r, ns) * 0.98; t = np.linspace(0, C.tau, nt) * 0.98 + 0.01 * C.tau
     X = np.array([np.interp(t, C.ts, C.X[:, i]) for i in range(2)]).T; V = np.array([np.interp(t, C.ts, C.V[:, i]) for i in range(2)]).T
     return (X[None, :, :] + s[:, None, None] * V[None, :, :]).reshape(-1, 2)
@@ -22,15 +22,19 @@ def cover_layer(S, k, m=120, seed=0, order='random', max_cells=4000, log=None):
         if covered[i]: continue
         if len(cells) >= max_cells: break
         C = Cell(S, k, P[i])
-        for _ in range(12):                              # укорачивание ядра до непересечения с ядрами слоя
+        for _ in range(16):                              # укорачивание ядра до непересечения с ядрами слоя (симметрично: точки C в D и точки D в C)
             Z = kernel_samples(C); hit = False
-            for D in cells[-400:] if len(cells) > 400 else cells:
-                if np.min(np.sum(S.wrap(D.c - C.c) ** 2)) > (2.5 * (D.tau + C.tau) + 1) ** 2: continue
-                if D.locate(Z, 1.0)[2].any(): hit = True; break
+            if cells:
+                cc = np.array([D.c for D in cells]); rad = np.array([D.tau for D in cells])
+                near = np.nonzero(np.sum(S.wrap(cc - C.c) ** 2, 1) <= (2.5 * (rad + C.tau) + 1) ** 2)[0]
+                for jd in near:
+                    D = cells[jd]
+                    if D.locate(Z, 1.0)[2].any() or C.locate(D.Z, 1.0)[2].any(): hit = True; break
             if not hit: break
             if C.tau > 0.05: C.tau *= 0.6
             else: C.r *= 0.6
             C._build()
+        C.Z = kernel_samples(C)
         cells.append(C)
         rem = np.nonzero(~covered)[0]; covered[rem[C.locate(P[rem], 1.0)[2]]] = True
         if log and len(cells) % 100 == 0: log(len(cells), covered.mean())
