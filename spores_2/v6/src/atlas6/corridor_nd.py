@@ -71,9 +71,18 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None, hfun=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None):
-    """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None."""
+def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None, fs=0):
+    """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None.
+    fs>0: ещё прямые деревья с принудительным первым сегментом каждого слоя (NF=fs на ветку) — разные ветви раскачки/2π (hub-worker-9)."""
     C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn, hfun=hfun); best = None
+    if fs:
+        Ch, Cm = C[:nh], C[nh:]
+        for a in range(S.L):
+            x1 = S.wrap(S.flow(np.array(x0, float), a, tau))
+            if S.blocked(x1) or not S.ok(x1): continue
+            Ca, na = candidates(S, x1, back, tau, fs, rho, miss, kn, hfun=hfun); pre = [(a, tau)]
+            Ch += [(h, sc + tau, pre + p) for h, sc, p in Ca[:na]]; Cm += [(h, sc + tau, pre + p) for h, sc, p in Ca[na:]]
+        Ch.sort(key=lambda c: c[1]); Cm.sort(key=lambda c: c[1]); C = Ch + Cm; nh = len(Ch)
     for part in (C[:nh], C[nh:]):
         seen = set()
         for _, _, p in part:
