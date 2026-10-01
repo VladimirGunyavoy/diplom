@@ -3,6 +3,7 @@
 |---|---|
 | решения пользователя по проекту | `user_decisions.md` |
 | решения пользователя по цепочке (общие) | `~/claude-work/system/llm/user_decisions.md` |
+| как менять документацию и протокол (сверять каждую правку) | `~/claude-work/system/llm/DOC_CHANGES.md` |
 | общие грабли (tmux, crontab, pick_account, воскрешение сессии) | `~/claude-work/system/infra-rules/infra.md` |
 | машины: hub, aida, yoga (железо, доступ, грабли) | `~/claude-work/system/infra/machines/<машина>/README.md` |
 | пакеты и headless-запуск v6 на хабе (ursina, scipy) | `../../context/hub_env.md` |
