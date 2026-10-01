@@ -1,5 +1,5 @@
 # Session Handoff
-[РУТИНА НЕ ВЫПОЛНЕНА]
+
 Звено: hub-worker-9 (acc3, Sonnet, 09:20–16:50), причина смены: ctx ≈22% (прогноз ≥25%)
 Сделано: `corridor_query(fs=,neigh=,wlim=)`, refine предел |w|≤WM (0/64 нарушений); v6_summary: WM3/6, neigh8, dd+диски 40/40 при NB4800, маятник u=.2/.15, G .6/1.0, 8D, двойной маятник g=1/1.5/2 (+диски, T 5.28; g=2 нужен WM=6); v7 каркас `spores_2/v7/src/cells7/` (systems, cell, cover) + `tests/run_cover.py`.
 Стоп на / следующий шаг: (1) собрать с aida `~/spore_v5/w9/v7/{di.log,reports/cells_di.json,figures/cells_di.png}` (DI m=40, слои 0/1, метрики перекрытия ядер/гало/выход в ядро) — scp в `v7/reports`, строка в v7-отчёт; (2) ускорить cover_layer (order вдоль потока, не random; кэш локейта; metrics O(N²)); (3) маятник `run_cover.py pend 60`; (4) PLAN 0з п.3 агент/граф V по модели, п.5 эллипс+прямое/обратное дерево+общий пул, 32 запроса маятника; сравнить с v6. Код на aida — только `~/spore_v5/w9/v7` (не в git до scp).
