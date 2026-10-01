@@ -86,3 +86,5 @@ hub-worker-7 | started | acc3 | sonnet | 16:31:05
 hub-research-4 | started | acc1 | opus | 00:47:32
 hub-worker-7 | done | ctx 22% | A*/hfun, corridor_batch, manip3dyn 6D+g, коридор 6D 4/4, диски 3/4 | next=hub-worker-8 | 02:40:29
 hub-worker-8 | started | acc2 | sonnet | 02:41:01
+hub-worker-8 | note | эталон T 6D: полная сетка невозможна; нужна идея от research (нижняя оценка T по релаксации/ограничению |v|, или сравнение NB↑ сходимостью). Пока T = сходимость по NB/NF
+hub-research-5 | started | acc2 | opus | 05:00:59 | тема: эталон T 6D (PLAN, диспетчер 05:00)
