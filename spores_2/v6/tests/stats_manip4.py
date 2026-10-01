@@ -18,7 +18,7 @@ for _ in range(32):
 S = SysN(fl, 2 ** n, (np.pi,) * n + (WM,) * n, ing, seeds, per=(2 * np.pi,) * n + (0,) * n, ok=lambda p: np.max(np.abs(p[n:])) <= WM)
 NQ = int(os.environ.get('NQ', 4)); Q = [np.array([*rng.uniform(-np.pi, np.pi, n), *rng.uniform(-1, 1, n)]) for _ in range(NQ)]
 t0 = time.time(); back = build_back(S, tau, NB, rho); tb = time.time() - t0
-t0 = time.time(); Rr = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=back_heuristic(S, back), kn=8); tt = time.time() - t0
+t0 = time.time(); Rr = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=(back_heuristic(S, back, wh=(float(os.environ['WH']) if os.environ.get('WH') else None)) if os.environ.get('WH') != '0' else None), kn=int(os.environ.get('KN', 8))); tt = time.time() - t0
 out = []
 for x, b in zip(Q, Rr):
     ok = False
