@@ -97,3 +97,4 @@ hub-worker-9 | done | ctx 21% | refine wlim, WM/neigh/двойной маятн�
 hub-worker-10 | started | acc3 | sonnet | 16:44:54
 hub-worker-9: DI результат добавлен в handoff (перекрытие ядер 19%, выход в ядро 35% — не по спеку)
 hub-worker-9 | note | v7 п.6 записан в PLAN 0з: итеративное покрытие, V=евклид в норм. коорд., ω/√(g/l)
+hub-worker-9 | note | v7 п.5а в PLAN 0з: спавн только в кольце между прежним и новым эллипсом
