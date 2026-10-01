@@ -92,3 +92,4 @@ hub-research-5 | NEEDS-HUMAN | 07:16:29 | 6D: |w|≤3 (WM) — физическ�
 hub-research-5 | done | solved | эталон T 6D: OCP мультистарт+тёплый старт, 64 запроса, ref_6d.md; NEEDS-HUMAN по WM | next=нет (нет вопросов) | 08:00:31
 hub-worker-8 | done | ctx 22% | (а)–(д) ночных экспериментов: статистика 3зв/2зв/dd/маятник, 8D 100k 8/8, sweep, адаптив vs сетка, v6_summary | next=hub-worker-9 | 09:20:28
 hub-worker-9 | started | acc3 | sonnet | 09:20:58
+hub-research-4 | NEEDS-HUMAN закрыт | 14:53:20 | пользователь: |ω|≤WM физичен → ограничение в refine; новая задача — двойной маятник (2 мотора), PLAN 0ж
