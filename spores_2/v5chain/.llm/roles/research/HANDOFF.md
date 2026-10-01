@@ -15,5 +15,5 @@
   `systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=0 python3 …` (`infra.md`). Транскрипты: 1-я сессия ~/.claude, далее ~/.claude-vladimirgun26.
 - `grep` в пайпе фонового прогона буферизует — `--line-buffered`, иначе вывода нет до конца.
 Коммиты: da2bd0f (v7_faces), e28e28c (старт). Не пушил (пуш по STATUS не делается).
-Токены: T_START (рестарт 3) 5ч 13% / ctx 5% / $0.18; T_BEFORE_END — last_usage без записей.
+Токены: T_START (рестарт 3) 5ч 13% / ctx 5% / $0.18; T_BEFORE_END 5ч 16% / ctx 11% / $1.59.
 NEXT_LINK: нет (idle)   NEXT_MODEL: opus
