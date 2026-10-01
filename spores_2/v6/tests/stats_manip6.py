@@ -1,12 +1,12 @@
 """СТАТИСТИКА (hub-worker-8): NQ случайных запросов параллельно (corridor_batch), 3 звена 6D. env: G, DOWN/UP, NQ, OBST=1, NAME. Запуск из v6: python3 tests/stats_manip6.py NB NF K [tries]; JSON — reports/stats_<NAME>.json. Коридор на адаптивном дереве, манипулятор 3 звена 6D (динамика): T коридора vs V проигрыша (NB, NF). Запуск из v6: python3 tests/check_corridor_manip_dyn.py [NB NF K]"""
-import sys, time; sys.path.insert(0, '.')
+import sys, os, time; sys.path.insert(0, '.')
 import numpy as np
 from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.corridor_nd import corridor_query
 from src.atlas6.manip3dyn import flow, clearance
 TR = int(sys.argv[4]) if len(sys.argv) > 4 else 3
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (1500, 200, 3)
-tau = 0.4; Rq = 0.3; Rw = 0.6; WM = 3.0; rho = 0.15
+tau = 0.4; Rq = 0.3; Rw = 0.6; WM = float(os.environ.get('WM', 3.0)); rho = 0.15
 import os
 GG = float(os.environ.get('G', 0)); C3 = np.array([-np.pi / 2 if os.environ.get('DOWN') else (np.pi / 2 if os.environ.get('UP') else 0.0), 0, 0, 0, 0, 0])
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
