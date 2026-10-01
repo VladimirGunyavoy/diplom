@@ -23,7 +23,7 @@ def lines_graded(a, ratio, n_side, periodic=False, d0=None):
 
 
 class Faces:
-    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0, front=False, bigfin=False):
+    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0, front=False, bigfin=True):
         self.front = front; self.bigfin = bigfin
         self.S, self.lx, self.lv, self.m, self.per = S, np.asarray(lx, float), np.asarray(lv, float), m, periodic_x
         self.dtfac, self.tmax = dtfac, tmax
