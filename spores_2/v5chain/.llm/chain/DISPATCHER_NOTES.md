@@ -17,3 +17,4 @@
 23:30 · hub-research-7 пропал второй раз (~23:15), не reap · вызвал fixer (причина убийства tmux); заново не поднимал, чтобы не повторять
 23:31 · research-7: OOM-killer (fixer-4) · поднял заново с правилом systemd-run MemoryMax=3G / aida
 23:38 · research-7 ответил по п.3 (v7_faces.md) · переслал worker-11 с правилом памяти
+00:30 · worker-11 done (ctx28), worker-12 поднят · cron переключён на worker-12

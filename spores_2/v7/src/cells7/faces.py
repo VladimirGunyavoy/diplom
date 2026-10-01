@@ -45,6 +45,9 @@ class Faces:
         """Первое пересечение линии сети потоком слоя k из точек Y (N,2). Возвращает t, Yexit (N,2), kind (1: v-линия, 0: x-линия), out (вышел из области / не дошёл за tmax)."""
         S = self.S; Y = np.array(Y, float); N = len(Y); lx, lv = self.lx, self.lv
         if self.per: Y[:, 0] = np.where(Y[:, 0] >= 1 - 1e-11, Y[:, 0] - 2.0, Y[:, 0])
+        for c, ln_ in ((0, lx), (1, lv)):                                            # привязка к линии сети (округление 1e-16 ломало ячейку и зеркальную симметрию)
+            j = np.clip(np.searchsorted(ln_, Y[:, c]), 1, len(ln_) - 1); jn = np.where(np.abs(ln_[j - 1] - Y[:, c]) < np.abs(ln_[j] - Y[:, c]), j - 1, j)
+            Y[:, c] = np.where(np.abs(ln_[jn] - Y[:, c]) < 1e-11, ln_[jn], Y[:, c])
         f0 = S.f(Y, k); eps = 1e-10
         if self.per: Y[:, 0] = np.where((Y[:, 0] <= -1 + 1e-11) & (f0[:, 0] < 0), Y[:, 0] + 2.0, Y[:, 0])
         # начальная ячейка: точка на линии — ячейка по направлению скорости
