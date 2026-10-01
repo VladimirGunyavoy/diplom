@@ -89,3 +89,4 @@ hub-worker-8 | started | acc2 | sonnet | 02:41:01
 hub-worker-8 | note | эталон T 6D: полная сетка невозможна; нужна идея от research (нижняя оценка T по релаксации/ограничению |v|, или сравнение NB↑ сходимостью). Пока T = сходимость по NB/NF
 hub-research-5 | started | acc2 | opus | 05:00:59 | тема: эталон T 6D (PLAN, диспетчер 05:00)
 hub-research-5 | NEEDS-HUMAN | 07:16:29 | 6D: |w|≤3 (WM) — физический предел или рамка атласа? refine коридора его не держит (нарушение в 15/32); если рамка — вверх быстрее на ~1/3 проигрыша при WM≈6. Детали knowledge/research/ref_6d.md
+hub-research-5 | done | solved | эталон T 6D: OCP мультистарт+тёплый старт, 64 запроса, ref_6d.md; NEEDS-HUMAN по WM | next=нет (нет вопросов) | 08:00:31

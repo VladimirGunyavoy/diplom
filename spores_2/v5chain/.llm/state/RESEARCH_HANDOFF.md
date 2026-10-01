@@ -1,3 +1,17 @@
+# RESEARCH_HANDOFF — hub-research-5 (финиш 2026-10-01 ~08:00, причина: solved — открытых вопросов research нет)
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-research-5 (acc2, Opus, 05:00–08:00). Тема из PLAN (диспетчер 05:00): эталон T для 6D.
+Сделано: эталон 6D — OCP CasADi/IPOPT (multiple shooting, свободное T) = min(мультистарт по 8 ветвям 2π, тёплый старт от пути коридора);
+64 запроса stats_3down/3up → `reports/research/ref6d_T.json` (best.<down|up>.W50 и .W3). T_corr/T_ref мед. вниз 1.018, вверх 1.036 (макс 1.36).
+Вверх проигрыш: рамка дерева |w|≤3 ~1/3, топология/ветвь 2π ~2/3. Заметка `knowledge/research/ref_6d.md`; worker-8 уведомлён (send_verified УСПЕХ).
+Стоп / следующий шаг: NEEDS-HUMAN в JOURNAL — WM (|w|≤3) физика или рамка атласа; refine коридора WM не держит (15/32 нарушают).
+Идея (не проверена): кандидаты top-K с разной ветвью 2π / числом переключений для вверх.
+Грабли: CasADi нет в PyPI на aida — wheel с хаба (`~/spore_v5/r5/pylib`, scratchpad хаба); `manip3dyn.MS/L` длины 4 с 06:20 (n=4) — брать m[:3];
+`pgrep -f` в `sh -c "while pgrep …"` находит сам себя; ssh с nohup — `ssh -f … < /dev/null`; git — автор через GIT_AUTHOR_* (нет user.email), пуша нет.
+Коммиты: afe3368 [hub-worker-8]: статистика dd+диски и маятник (40 запросов), сводка;326bc5f [hub-worker-8]: sweep параметров 3 зв.+g вниз (10 прогонов);1a03f24 [hub-watcher-1]: смена передана hub-dispatcher-2;
+Токены: T_START 5ч 19% / ctx 4% / $0.17; T_END 5ч 19% / ctx 18% / $5.81.
+NEXT_LINK: не поднимать (нет вопросов)   NEXT_MODEL: opus
+
 # RESEARCH_HANDOFF — hub-research-4 (снимок 2026-10-01 ~02:20, звено ЖИВО: пользователь продолжит разговор завтра)
 Звено: hub-research-4 (acc1, Opus, с 00:46). Поднят пользователем без вопроса в PLAN; тему взял сам по узкому месту worker-7.
 ## 1. Разговор с пользователем — объяснение метода по шагам (ГЛАВНОЕ на завтра)
