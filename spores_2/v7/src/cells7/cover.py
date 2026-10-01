@@ -54,3 +54,39 @@ def metrics(S, cells, P, covered):
         inn[j] = any(ins)
     r['exit_in_other_kernel'] = float(inn.mean())
     return r
+
+
+def _shrink_to_free(S, C, cells):
+    for _ in range(16):
+        Z = kernel_samples(C); hit = False
+        if cells:
+            cc = np.array([D.c for D in cells]); rad = np.array([D.tau for D in cells])
+            near = np.nonzero(np.sum(S.wrap(cc - C.c) ** 2, 1) <= (2.5 * (rad + C.tau) + 1) ** 2)[0]
+            for jd in near:
+                D = cells[jd]
+                if D.locate(Z, 1.0)[2].any() or C.locate(D.Z, 1.0)[2].any(): hit = True; break
+        if not hit: break
+        if C.tau > 0.05: C.tau *= 0.6
+        else: C.r *= 0.6
+        C._build()
+    C.Z = kernel_samples(C)
+
+
+def cover_tubes(S, k, m=14, seed=0, max_len=30, max_cells=4000, free=True):
+    """Покрытие трубками: непокрытая проба → клетка, затем следующая клетка В ТОЧКЕ ВЫХОДА предыдущей (центр = выход, шов s=0,t=0) — пока выход в пределах области
+    и не в ядре существующей клетки (там связь даст ребро переключения). Цепочки клеток вдоль потока → V течёт по рёбрам без бокового сдвига."""
+    P = probe(S, m); rng = np.random.default_rng(seed); idx = rng.permutation(len(P)); covered = np.zeros(len(P), bool); cells = []; (a0, b0), (a1, b1) = S.box
+    def inside(y): return all((S.per[i] > 0) or (lo - 0.05 <= y[i] <= hi + 0.05) for i, (lo, hi) in enumerate(S.box))
+    for i in idx:
+        if covered[i] or len(cells) >= max_cells: continue
+        c = P[i]
+        for _ in range(max_len):
+            C = Cell(S, k, c)
+            if free: C.Z = kernel_samples(C)
+            else: _shrink_to_free(S, C, cells)
+            cells.append(C)
+            rem = np.nonzero(~covered)[0]; covered[rem[C.locate(P[rem], 1.0)[2]]] = True
+            c = S.wrap(C.exit[None])[0] if False else C.exit
+            if not inside(c) or C.tau < 1e-2: break
+            if any(((lambda s, tt, ins: ins[0] and abs(s[0]) <= 0.3 * D.r)(*D.locate(c[None], 1.0))) for D in cells[:-1]): break
+    return cells, P, covered

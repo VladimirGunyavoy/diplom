@@ -49,7 +49,8 @@ class Field:
             old = V.copy(); Vc = V.reshape(n, NSV, NTV)
             nxt = np.full_like(Vc, 1e9); nxt[:, :, :-1] = Vc[:, :, 1:] + self.dt[:, None, None]       # вдоль потока
             fin = (V[idx] < 1e8) & (w > 1e-12); ws = np.where(fin, w, 0).sum(1)                       # билинейно по конечным углам (остальные не учитываются)
-            sw = np.where(has & (ws > 1e-12), (np.where(fin, V[idx] * w, 0).sum(1)) / np.maximum(ws, 1e-12), 1e9)   # переключение/выход
+            allfin = ((V[idx] < 1e8) | (w <= 1e-12)).all(1) if getattr(self, 'strict', False) else True
+            sw = np.where(has & (ws > 1e-12) & allfin, (np.where(fin, V[idx] * w, 0).sum(1)) / np.maximum(ws, 1e-12), 1e9)   # переключение/выход
             V = np.minimum(np.minimum(nxt.reshape(-1), sw), V); V[goal] = 0
             if np.max(np.abs(np.where(V < 1e8, V, 0) - np.where(old < 1e8, old, 0))) < 1e-9 and ((V < 1e8) == (old < 1e8)).all(): break
         self.V = V.reshape(n, NSV, NTV); self.sweeps = it + 1; return self
