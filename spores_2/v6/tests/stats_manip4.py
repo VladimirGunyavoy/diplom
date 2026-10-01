@@ -5,7 +5,7 @@ from src.atlas6.adaptive_nd import SysN, build_back, back_heuristic
 from src.atlas6.corridor_nd import corridor_batch
 from src.atlas6.manip3dyn import flow
 n = 4; NB, NF, K = [int(a) for a in sys.argv[1:4]]; TR = int(sys.argv[4]) if len(sys.argv) > 4 else 3
-tau = 0.4; Rq = 0.3; Rw = 0.6; WM = 3.0; rho = 0.15; GG = float(os.environ.get('G', .3))
+tau = 0.4; Rq = 0.3; Rw = 0.6; WM = float(os.environ.get('WM', 3.0)); rho = 0.15; GG = float(os.environ.get('G', .3))
 C = np.zeros(2 * n); C[0] = -np.pi / 2
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 fl = lambda P, s, t: flow(P, s, t, dt_max=float(os.environ.get('DT', 0.02)), n=n, g=GG)
@@ -18,7 +18,7 @@ for _ in range(32):
 S = SysN(fl, 2 ** n, (np.pi,) * n + (WM,) * n, ing, seeds, per=(2 * np.pi,) * n + (0,) * n, ok=lambda p: np.max(np.abs(p[n:])) <= WM)
 NQ = int(os.environ.get('NQ', 4)); Q = [np.array([*rng.uniform(-np.pi, np.pi, n), *rng.uniform(-1, 1, n)]) for _ in range(NQ)]
 t0 = time.time(); back = build_back(S, tau, NB, rho); tb = time.time() - t0
-t0 = time.time(); Rr = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=(back_heuristic(S, back, wh=(float(os.environ['WH']) if os.environ.get('WH') else None)) if os.environ.get('WH') != '0' else None), kn=int(os.environ.get('KN', 8))); tt = time.time() - t0
+t0 = time.time(); Rr = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=(back_heuristic(S, back, wh=(float(os.environ['WH']) if os.environ.get('WH') else None)) if os.environ.get('WH') != '0' else None), neigh=int(os.environ.get('NEIGH', 2)), kn=int(os.environ.get('KN', 8))); tt = time.time() - t0
 out = []
 for x, b in zip(Q, Rr):
     ok = False
