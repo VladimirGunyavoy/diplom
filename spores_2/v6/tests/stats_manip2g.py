@@ -3,7 +3,7 @@ import sys, os, time; sys.path.insert(0, '.')
 import numpy as np
 from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.corridor_nd import corridor_query
-from src.atlas6.manip3dyn import flow as _fl
+from src.atlas6.manip3dyn import flow as _fl, clearance, L
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 300, 3)
 tau = 0.4; Rq = 0.3; Rw = 0.5; WM = float(__import__('os').environ.get('WM', 3.0)); rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
@@ -16,20 +16,24 @@ miss = lambda X: np.maximum(np.max(np.abs(wr(X[..., :2] - UP[:2])), -1) - Rq, 0)
 rng = np.random.default_rng(0); seeds = []
 for _ in range(32):
     v = rng.uniform(-1, 1, 4); v = v / np.max(np.abs(v)) * 0.99; seeds.append(UP + v * np.array([Rq, Rq, Rw, Rw]))
-S = SysN(fl, 4, (np.pi, np.pi, WM, WM), ing, seeds, per=(2 * np.pi, 2 * np.pi, 0, 0), ok=lambda p: np.max(np.abs(p[2:])) <= WM)
+OB = [((1.0, -1.5), 0.3), ((-1.0, -1.0), 0.3)] if os.environ.get('OBST') else [((9.0, 9.0), 0.1)]; clear0 = lambda P: clearance(P, OB, ln=L[:2]); clear = lambda P: clear0(P) - 0.02; blk = lambda P: clear0(np.asarray(P)) < 0
+S = SysN(fl, 4, (np.pi, np.pi, WM, WM), ing, seeds, per=(2 * np.pi, 2 * np.pi, 0, 0), ok=lambda p: np.max(np.abs(p[2:])) <= WM, blocked=blk)
 NQ = int(os.environ.get('NQ', 32)); Q = [np.array([*rng.uniform(-np.pi, np.pi, 2), *rng.uniform(-1, 1, 2)]) for _ in range(NQ)]
+Q = [q for q in Q if clear0(q) > 0.05]; Q += [Q[-1]] * (NQ - len(Q)) if Q else []
 Q[0] = np.array([-np.pi / 2, 0.0, 0.0, 0.0])      # q0: висит вниз в покое (двойной маятник: старт для цели вверх)
 back = build_back(S, tau, NB, rho)
 from src.atlas6.adaptive_nd import back_heuristic
 from src.atlas6.corridor_nd import corridor_batch
-t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TR', 3)), hfun=(back_heuristic(S, back, wh=float(os.environ.get('WH', 3.0))) if os.environ.get('WH') != '0' else None), kn=int(os.environ.get('KN', 8)), wlim=((slice(2, 4), WM) if os.environ.get('WLIM') else None)); tt = time.time() - t0
+t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TR', 3)), hfun=(back_heuristic(S, back, wh=float(os.environ.get('WH', 3.0))) if os.environ.get('WH') != '0' else None), kn=int(os.environ.get('KN', 8)), wlim=((slice(2, 4), WM) if os.environ.get('WLIM') else None), clear=(clear if os.environ.get('OBST') else None)); tt = time.time() - t0
 out = []
 for x, b in zip(Q, R):
     ok = False
     if b is not None:
         xe = np.array(x, float)
-        for s_, d in zip(b[1], b[2]): xe = _fl(xe, s_, d, dt_max=0.005, n=2, g=GG)
-        ok = bool(np.all(g(xe) > -1e-4))
+        mc = clear0(xe)
+        for s_, d in zip(b[1], b[2]):
+            for _ in range(8): xe = _fl(xe, s_, d / 8, dt_max=0.005, n=2, g=GG); mc = min(mc, clear0(xe))
+        ok = bool(np.all(g(xe) > -1e-4)) and bool(mc >= 0)
     out.append(dict(T=None if b is None else float(b[0]), ok=ok, seq=None if b is None else [int(q) for q in b[1]], dts=None if b is None else [float(q) for q in b[2]]))
 Ts = [o['T'] for o in out if o['ok']]
 print('NAME', os.environ.get('NAME'), 'NB', NB, 'NF', NF, 'решено валидно %d/%d' % (len(Ts), NQ), 'медиана T %.2f' % (np.median(Ts) if Ts else -1), 'время серии %.0f с' % tt, flush=True)
