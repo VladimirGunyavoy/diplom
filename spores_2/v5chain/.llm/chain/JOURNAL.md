@@ -95,3 +95,5 @@ hub-worker-9 | started | acc3 | sonnet | 09:20:58
 hub-research-4 | NEEDS-HUMAN закрыт | 14:53:20 | пользователь: |ω|≤WM физичен → ограничение в refine; новая задача — двойной маятник (2 мотора), PLAN 0ж
 hub-worker-9 | done | ctx 21% | refine wlim, WM/neigh/двойной маятник, v7 каркас клеток | next=hub-worker-10 | 16:44:22
 hub-worker-10 | started | acc3 | sonnet | 16:44:54
+hub-worker-9: DI результат добавлен в handoff (перекрытие ядер 19%, выход в ядро 35% — не по спеку)
+hub-worker-9 | note | v7 п.6 записан в PLAN 0з: итеративное покрытие, V=евклид в норм. коорд., ω/√(g/l)
