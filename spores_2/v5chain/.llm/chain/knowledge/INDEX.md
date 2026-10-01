@@ -37,3 +37,4 @@
 - [research/branch2pi.md](research/branch2pi.md) — ветвь 2π в 6D вверх: только 2/5 худших (q14, q9, +22–26%); 3/5 — топология внутри ветви (+22–31%)
 - [research/blind_di_heuristic.md](research/blind_di_heuristic.md) — слепая DI-эвристика V: допустима, h/V медиана 0.41/0.59 (маятник u .3/.5); A* с весом 1.5–3
 - [research/v7_faces.md](research/v7_faces.md) — v7 п.3 без бокового перехода: общая сеть сечений (клетка = грань × слой, V на гранях); DI T/T* 1.137→1.011 (h .4→.05), O(h); нужна адаптивность граней
+- [research/lit_bangbang_cost.md](research/lit_bangbang_cost.md) — литобзор: bang-bang дифдрайва (Balkcom–Mason 2002: все дуги на вершинах), L1/L2-цена (bang-off-bang / насыщ.-непрерывное) (searcher-1)
