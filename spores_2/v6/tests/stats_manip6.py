@@ -26,8 +26,8 @@ while len(Q) < NQ:
 back = build_back(S, tau, NB, rho)
 from src.atlas6.adaptive_nd import back_heuristic
 from src.atlas6.corridor_nd import corridor_batch
-HF = back_heuristic(S, back)
-t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=HF, clear=clear, kn=8); tt = time.time() - t0
+HF = back_heuristic(S, back, wh=(float(os.environ['WH']) if os.environ.get('WH') else None)) if os.environ.get('WH') != '0' else None
+t0 = time.time(); R = corridor_batch(S, fl, Q, back, tau, NF, rho, g, miss, K=K, tries=TR, hfun=HF, clear=clear, kn=int(os.environ.get('KN', 8))); tt = time.time() - t0
 out = []
 for x, b in zip(Q, R):
     ok = False; mc = None
