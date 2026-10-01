@@ -5,7 +5,7 @@ from src.atlas6.adaptive_nd import SysN, build_back, replay_value_fast
 from src.atlas6.corridor_nd import corridor_query
 from src.atlas6.manip3dyn import flow as _fl
 NB, NF, K = [int(a) for a in sys.argv[1:4]] if len(sys.argv) > 3 else (600, 300, 3)
-tau = 0.4; Rq = 0.3; Rw = 0.5; WM = 3.0; rho = 0.15
+tau = 0.4; Rq = 0.3; Rw = 0.5; WM = float(__import__('os').environ.get('WM', 3.0)); rho = 0.15
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
 GG = 0.3; fl = lambda P, s, t: _fl(P, s, t, dt_max=float(__import__('os').environ.get('DT', 0.05)), n=2, g=GG)
 import os
