@@ -1,22 +1,22 @@
 {
  "layer0": {
-  "cells": 578,
+  "cells": 624,
   "covered": 1.0,
-  "kernel_overlap": 0.191875,
-  "halo_overlap": 0.281875,
-  "r_mean": 0.054006654671280276,
-  "tau_mean": 0.07748539792387542,
-  "exit_in_other_kernel": 0.3546712802768166,
-  "sec": 171.3195276260376
+  "kernel_overlap": 0.0,
+  "halo_overlap": 0.073125,
+  "r_mean": 0.036101767351794864,
+  "tau_mean": 0.06695528205128204,
+  "exit_in_other_kernel": 0.21634615384615385,
+  "sec": 58.01847505569458
  },
  "layer1": {
-  "cells": 593,
+  "cells": 647,
   "covered": 1.0,
-  "kernel_overlap": 0.185,
-  "halo_overlap": 0.2725,
-  "r_mean": 0.056444740640809433,
-  "tau_mean": 0.07425219561551431,
-  "exit_in_other_kernel": 0.33220910623946037,
-  "sec": 171.7233853340149
+  "kernel_overlap": 0.0,
+  "halo_overlap": 0.0725,
+  "r_mean": 0.03718581521805254,
+  "tau_mean": 0.06505001545595053,
+  "exit_in_other_kernel": 0.21792890262751158,
+  "sec": 63.725618839263916
  }
 }
