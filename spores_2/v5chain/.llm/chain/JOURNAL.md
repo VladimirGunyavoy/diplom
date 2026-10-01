@@ -110,3 +110,4 @@ hub-worker-11 | v7 п.3: явный ∇V (value_jet) + перекрытие/тр
 hub-v5chain-meta-1 | NEEDS-HUMAN закрыт | 22:30:49 | v7 п.3, слово пользователя: бокового перехода нет; в клетке агент движется только вперёд по времени в своём срезе; переключение — только на следующую/предыдущую клетку через вход и выход; вопрос передать research (knowledge/user_decisions.md)
 hub-research-7 | started | acc2 | opus | 22:31:38
 hub-research-7 | done | solved | v7 п.3: общая сеть сечений (v7_faces.md), DI 1.011 | next=нет (idle) | 23:38:55
+hub-worker-11 | done | ctx28 | v7 п.3: faces.py (DI 1.025), hold/holdn спектр+LQR, данные research-7; маятник на гранях — открыто | next=hub-worker-12 | 00:07:47

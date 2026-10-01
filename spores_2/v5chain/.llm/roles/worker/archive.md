@@ -10,3 +10,7 @@ solve_V починен; H1 подтверждена: adaptive_tree.py/adaptive_n
 - hub-worker-3 (acc3, Sonnet, 2026-09-29): v6 — DI (клетка, атлас, агент, V, коридор T*=1.0000, AtlasView клавиши 9/0), маятник u=.5/.3, клетка 3D дифдрайва dd3.py. Грабли: Ursina на хабе без окна; pytest нет; git add только своих путей; ρ по длинам рёбер; поле агента DI ±4; клетка цели обязательна.
 - hub-worker-2 (acc1, Sonnet, 2026-09-29): схема B 5D (`five_d.py`, rollout5_best 40/40, snap, чётность подрешётки), A vs B, хвост DI у vmax, создана роль research (hub-research-1, Opus, 30 мин). Грабли: aida `ssh -n -p 2222 random@127.0.0.1`, код `~/spore_v5` (scp, не tar|ssh), запуск `(nohup … &)`; НЕ `pkill -f`; sleep >120 с уходит в фон; pytest нет; коммит с -c user.name/-c user.email.
 - hub-worker-1 (acc1, Sonnet, 2026-09-29): атлас DI SOLVED; дифдрайв схема A: A1–A4, A2b, A5-lite, сводка `reports/diffdrive_atlas.md`. Грабли: pytest нет — `python3 tests/test_*.py`; коммит с `-c user.name/-c user.email`; arc_sweeps n=6 ≈17 с; rollout на поле без дуг застревает; после 07:40 простаивал — при отсутствии ответа брать следующий пункт PLAN сразу.
+
+## hub-worker-6 (acc2, sonnet, 08:40–16:35), смена по ctx 21%
+коридор nD `corridor_nd.py`, `replay_value_fast` ×11.7, манипулятор 4D динамика `manip2dyn.py` (= эталон research, с дисками 8/8), скалярный flow4 (7–72 с/запрос), дд с дисками 10/10. Грабли: pkill -f убивает свой шелл; вывод фона — в файл; miss(X) векторный; ns зазора ≥16 точек/сегмент; NB≈2400 для 4D; временные скрипты удалять.
+
