@@ -25,3 +25,5 @@
 - [research/query_speed.md](research/query_speed.md) — почему запросы медленные: SLSQP зовёт numpy-rk4 точкой (×13–22 на math), maxiter 80, зазор последовательно; хаб ≈10× медленнее aida (VM); манипулятор 124 с → 1.2 с
 - [research/tree_directed_6d.md](research/tree_directed_6d.md) — прямое дерево с A* по обратному (g+3h внутри уровня переключений): 6D+g NF800 решает q1 (как база NF3000), NB6000 решает q2
 - [research/ref_6d.md](research/ref_6d.md) — эталон T 6D: OCP CasADi/IPOPT мультистарт (ref6d_ocp.py, ref6d_T.json, 32 запроса вниз/вверх); 32 запроса: T_corr/T_ref вниз мед. 1.018, вверх мед. 1.036 (макс 1.36, ~1/3 — не та топология); refine не держит |w|≤WM
+- [research/pend_energy_vs_opt.md](research/pend_energy_vs_opt.md) — маятник из низа: энергонакачка+LQR 13.8/9.66 с против оптимума 12.32/7.44 (u=.3/.5): +12%/+30%, не эталон
+- [research/explanation_log.md](research/explanation_log.md) — ЖУРНАЛ РАССКАЗА пользователю: шаги 1–12 сделаны, следующий — 13 манипуляторы

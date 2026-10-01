@@ -19,13 +19,15 @@ def lqr_ok(x, T=15):
 x = np.array([0.0, 0.0]); t = 0.0; arcs = []; cur = U; d0 = 0.0; mode = 'pump'
 while t < 60 and dist(x) >= EPS:
     if mode == 'pump':
-        if int(round(t / H)) % 25 == 0 and lqr_ok(x.copy()): mode = 'lqr'; arcs.append((cur, t - d0))
+        near = abs(wr(x[0] - np.pi)) < 0.7 and abs(x[1]) < 0.7
+        if near and int(round(t / H)) % 10 == 0 and lqr_ok(x.copy()): mode = 'lqr'; arcs.append((cur, t - d0))
         else:
-            u = U if x[1] >= 0 else -U
+            E = x[1] ** 2 / 2 - np.cos(x[0])            # классика Åström–Furuta: качать до энергии верха (E=1), выше — тормозить
+            u = U * np.sign(x[1] * (1.0 - E)) if abs(x[1]) > 1e-9 else U
             if u != cur: arcs.append((cur, t - d0)); d0 = t; cur = u
             x = step(x, u); t += H; continue
     x = step(x, float(np.clip(-K @ np.array([wr(x[0] - np.pi), x[1]]), -U, U))); t += H
-T_heur = t; print('энергонакачка + LQR: T = %.2f, дуг накачки %d, длительности %s' % (T_heur, len(arcs), [round(d, 2) for _, d in arcs]))
+T_heur = t; print('энергонакачка (sign(ω(1−E))) + LQR (захват |φ|,|ω|<0.7): T = %.2f, дуг накачки %d, длительности %s' % (T_heur, len(arcs), [round(d, 2) for _, d in arcs]))
 # 2) оптимум: bang-bang N дуг, первая u0 = ±U, знаки чередуются; SLSQP по длительностям; конец в шаре EPS
 def end(d, u0, h=0.01):
     x = np.array([0.0, 0.0]); u = u0
@@ -35,7 +37,7 @@ def end(d, u0, h=0.01):
         u = -u
     return x
 best = None
-for N in range(2, 9):
+for N in ([] if len(sys.argv) > 2 else range(2, 9)):
     for u0 in (U, -U):
         for seed in range(6):
             rng = np.random.default_rng(seed); d0 = rng.uniform(0.8, 3.5, N)
@@ -45,4 +47,4 @@ for N in range(2, 9):
             if r.success and dist(end(r.x, u0, 0.002)) < EPS * 1.05 and (best is None or r.x.sum() < best[0]):
                 best = (r.x.sum(), N, u0, np.round(r.x, 2))
     print('N=%d: лучший пока %s' % (N, None if best is None else '%.3f (N=%d, u0=%+.1f, дуги %s)' % best), flush=True)
-print('ИТОГ U=%.2f: энергонакачка+LQR %.2f с, оптимум bang-bang %.2f с, отношение %.3f' % (U, T_heur, best[0], T_heur / best[0]))
+if best: print('ИТОГ U=%.2f: энергонакачка+LQR %.2f с, оптимум bang-bang %.2f с, отношение %.3f' % (U, T_heur, best[0], T_heur / best[0]))
