@@ -28,3 +28,4 @@
 - [research/pend_energy_vs_opt.md](research/pend_energy_vs_opt.md) — маятник из низа: энергонакачка+LQR 13.8/9.66 с против оптимума 12.32/7.44 (u=.3/.5): +12%/+30%, не эталон
 - [research/explanation_log.md](research/explanation_log.md) — ЖУРНАЛ РАССКАЗА пользователю: шаги 1–12 сделаны, следующий — 13 манипуляторы
 - [research/cell_model_size.md](research/cell_model_size.md) — размер клетки v7 с локальной моделью: квадратичная + tol 1e-2 → τ=1 почти везде; манипуляторы при tol 1e-3 — r=0.1
+- [research/lit_control_spectrum.md](research/lit_control_spectrum.md) — литобзор «спектр управлений»: Chen–Fliess/зонотопы, воронки, примитивы, сингулярные дуги, sum-up rounding (searcher-1)
