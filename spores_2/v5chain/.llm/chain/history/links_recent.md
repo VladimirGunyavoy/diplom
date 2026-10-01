@@ -1,5 +1,8 @@
 # links_recent — последние 5 звеньев (новые сверху)
 
+## hub-worker-10 (acc3, sonnet, 16:44–21:40), смена: human (NEEDS-HUMAN п.3)
+v7: locate предфильтр ×2, симметричная проверка ядер, nD-клетка celln.py, покрытие 9 систем (v7_summary.md), п.5 эллипс+пул (ellipse.py), картинки dd/m2g. V по клеткам (граф/решётка/гало) не работает — v7_cells.md. Грабли: v6 импортируется по именам файлов; nD-метрики O(N²), 8D≈20 мин; sleep>120 блокируется; git -c user.email обязателен; не пушить. Код v7 на aida ~/spore_v5/w10/v7.
+
 ## hub-worker-9 (acc3, sonnet, 09:20–16:50), смена по ctx 21%
 `corridor_query(fs,neigh,wlim)`, refine |w|≤WM; v6_summary (WM3/6, neigh8, dd+диски 40/40, маятник, двойной маятник g=1/1.5/2); v7 каркас `spores_2/v7/src/cells7` (systems, cell, cover) + tests/run_cover.py. Грабли: ssh -f + setsid nohup; sleep>120 блокируется; casadi нет; pkill -f убивает шелл; git add только своих путей. Код v7 на aida `~/spore_v5/w9/v7`.
 
@@ -13,11 +16,3 @@ corridor_nd maxiter 80, corridor_batch (Pool), tries=, hfun= (A*); manip3dyn.py 
 ## hub-worker-6 (acc2, sonnet, 08:40–16:35), смена по ctx 21%
 коридор nD `corridor_nd.py`, `replay_value_fast` ×11.7, манипулятор 4D динамика `manip2dyn.py` (= эталон research, с дисками 8/8), скалярный flow4 (7–72 с/запрос), дд с дисками 10/10. Грабли: pkill -f убивает свой шелл; вывод фона — в файл; miss(X) векторный; ns зазора ≥16 точек/сегмент; NB≈2400 для 4D; временные скрипты удалять.
 
-
-## hub-worker-5 (acc2, sonnet, 03:20–08:45), смена по ctx 20%
-solve_V починен; H1 подтверждена: adaptive_tree.py/adaptive_nd.py (DI 1.03 N≈60, маятник 0.97 ~400, dd 3D 10/10 1.02–1.27, кинематика n=2–4 1.0–1.2). Факты — knowledge/v6_findings.md. Грабли: cron/sid/журнал только в v5chain; pkill -f "python3 -" убивает шелл; sleep>120 блокируется; git -c user.name/-c user.email, add только своих путей; gamma-тесты нужен NB/rho.
-
-- hub-research-1 (acc3, Opus, 2026-09-29/30): H1 (адаптив ≈ сетка при ~20× меньше спор: DI 117 vs 2401, маятник ~400 vs 7776), H2 (выравнивание цепочек, сдвиг 1% → +28%), эталоны dd (min(TGT,TGTGT), ref_window2), стыковка nD (`docking_nd.md`). Грабли: RESEARCH_HANDOFF в .llm/state игнорируется git — `git add -f`; SLSQP-эталоны медленные — в фон.
-- hub-worker-3 (acc3, Sonnet, 2026-09-29): v6 — DI (клетка, атлас, агент, V, коридор T*=1.0000, AtlasView клавиши 9/0), маятник u=.5/.3, клетка 3D дифдрайва dd3.py. Грабли: Ursina на хабе без окна; pytest нет; git add только своих путей; ρ по длинам рёбер; поле агента DI ±4; клетка цели обязательна.
-- hub-worker-2 (acc1, Sonnet, 2026-09-29): схема B 5D (`five_d.py`, rollout5_best 40/40, snap, чётность подрешётки), A vs B, хвост DI у vmax, создана роль research (hub-research-1, Opus, 30 мин). Грабли: aida `ssh -n -p 2222 random@127.0.0.1`, код `~/spore_v5` (scp, не tar|ssh), запуск `(nohup … &)`; НЕ `pkill -f`; sleep >120 с уходит в фон; pytest нет; коммит с -c user.name/-c user.email.
-- hub-worker-1 (acc1, Sonnet, 2026-09-29): атлас DI SOLVED; дифдрайв схема A: A1–A4, A2b, A5-lite, сводка `reports/diffdrive_atlas.md`. Грабли: pytest нет — `python3 tests/test_*.py`; коммит с `-c user.name/-c user.email`; arc_sweeps n=6 ≈17 с; rollout на поле без дуг застревает; после 07:40 простаивал — при отсутствии ответа брать следующий пункт PLAN сразу.
