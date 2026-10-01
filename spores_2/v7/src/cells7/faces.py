@@ -23,7 +23,8 @@ def lines_graded(a, ratio, n_side, periodic=False, d0=None):
 
 
 class Faces:
-    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0):
+    def __init__(self, S, lx, lv, m=4, periodic_x=False, dtfac=0.08, tmax=6.0, front=False):
+        self.front = front
         self.S, self.lx, self.lv, self.m, self.per = S, np.asarray(lx, float), np.asarray(lv, float), m, periodic_x
         self.dtfac, self.tmax = dtfac, tmax
         sub = lambda ln: np.unique(np.round(np.concatenate([ln[:-1, None] + np.diff(ln)[:, None] * np.arange(m)[None, :] / m]).ravel().tolist() + [ln[-1]], 13))
@@ -121,7 +122,7 @@ class Faces:
             vn = V[idx].copy()
             for (t, i0, i1, w, out) in E:
                 va, vb, ww = V[i0[idx]], V[i1[idx]], w[idx]; fa, fb = va < BIG / 2, vb < BIG / 2
-                vi = np.where(fa & fb, (1 - ww) * va + ww * vb, np.where(fa & (ww < 0.5), va, np.where(fb & (ww >= 0.5), vb, BIG)))    # на фронте: ближайшая конечная проба
+                vi = np.where(fa & fb, (1 - ww) * va + ww * vb, np.where(fa & (ww < 0.5) & self.front, va, np.where(fb & (ww >= 0.5) & self.front, vb, BIG)))    # на фронте: ближайшая конечная проба
                 val = t[idx] + vi; val = np.where(out[idx] | ~np.isfinite(t[idx]), BIG, val); vn = np.minimum(vn, val)
             vn = np.where(G[idx], 0.0, np.where(vn > BIG / 2, BIG, vn)); dch = vn < V[idx] - tol
             ch = np.zeros(N, bool); ch[idx[dch]] = True; V[idx] = vn
