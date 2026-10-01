@@ -3,7 +3,7 @@
 Параметры (решение агента): длины 1, массы звеньев MS = (1.5, 1.0, 0.5) для n=3 (тяжелее у основания)."""
 import math
 import numpy as np
-L = np.ones(3); MS = np.array([1.5, 1.0, 0.5])
+L = np.ones(4); MS = np.array([1.5, 1.0, 0.5, 0.25])      # n=4: добавлена масса 0.25 (hub-worker-8); n≤3 как прежде
 LAYERS6 = [tuple(1.0 if (s >> i) & 1 else -1.0 for i in range(3)) for s in range(8)]
 
 
@@ -70,7 +70,7 @@ def energy(x, m=MS, ln=L, g=0.0):
     return 0.5 * np.einsum('...i,...ij,...j->...', thd, Mt, thd) + pot
 
 
-def clearance(P, obstacles, ln=L):
+def clearance(P, obstacles, ln=L[:3]):
     """Зазор звеньев n-звенника до дисков ((cx,cy),r): min по звеньям и дискам (dist − r); P (...,≥n) — относительные углы q (n = len(ln)); <0 — столкновение."""
     P = np.asarray(P, float); n = len(ln); th = np.cumsum(P[..., :n], -1)
     pts = [np.zeros(P.shape[:-1] + (2,))]
