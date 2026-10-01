@@ -57,7 +57,14 @@ class Cell:
     def locate(self, Y, halo=1.0, it=6):
         """Для точек Y (N,2): (s, t, внутри) по модели; внутри — |s|≤halo·r и −(halo−1)τ ≤ t ≤ halo·τ. Ньютон по (s,t)."""
         S = self.S; Y = np.atleast_2d(Y); N = len(Y)
-        d = S.wrap(Y[:, None, :] - self.X[None, :, :]); j = np.argmin(np.sum(d * d, -1), 1); t = self.ts[j].copy(); s = np.zeros(N)
+        d = S.wrap(Y[:, None, :] - self.X[None, :, :]); d2 = np.sum(d * d, -1); j0 = np.argmin(d2, 1)
+        thr = 1.5 * (max(halo, 1.0) * self.r * np.max(np.linalg.norm(self.V, axis=1)) + (self.ts[1] - self.ts[0]) * np.max(np.linalg.norm(self.Xd, axis=1))) + 1e-9
+        near = d2[np.arange(N), j0] < thr * thr
+        if not near.any(): return np.zeros(N), np.zeros(N), np.zeros(N, bool)
+        if not near.all():                                   # предфильтр: Ньютон только для точек рядом с центральной траекторией
+            s_, t_, in_ = self.locate(Y[near], halo, it); s = np.zeros(N); t = np.zeros(N); inside = np.zeros(N, bool); s[near], t[near], inside[near] = s_, t_, in_
+            return s, t, inside
+        j = j0; t = self.ts[j].copy(); s = np.zeros(N)
         for _ in range(it):
             tt = np.clip(t, 0, self.tau); X, Xp = herm(tt, self.ts, self.X, self.Xd); V, Vp = herm(tt, self.ts, self.V, self.Vd)
             res = S.wrap(X + s[:, None] * V - Y); a = Xp + s[:, None] * Vp; b = V; det = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]; det = np.where(np.abs(det) < 1e-12, 1e-12, det)
