@@ -27,3 +27,4 @@
 - [research/ref_6d.md](research/ref_6d.md) — эталон T 6D: OCP CasADi/IPOPT мультистарт (ref6d_ocp.py, ref6d_T.json, 32 запроса вниз/вверх); 32 запроса: T_corr/T_ref вниз мед. 1.018, вверх мед. 1.036 (макс 1.36, ~1/3 — не та топология); refine не держит |w|≤WM
 - [research/pend_energy_vs_opt.md](research/pend_energy_vs_opt.md) — маятник из низа: энергонакачка+LQR 13.8/9.66 с против оптимума 12.32/7.44 (u=.3/.5): +12%/+30%, не эталон
 - [research/explanation_log.md](research/explanation_log.md) — ЖУРНАЛ РАССКАЗА пользователю: шаги 1–12 сделаны, следующий — 13 манипуляторы
+- [research/cell_model_size.md](research/cell_model_size.md) — размер клетки v7 с локальной моделью: квадратичная + tol 1e-2 → τ=1 почти везде; манипуляторы при tol 1e-3 — r=0.1

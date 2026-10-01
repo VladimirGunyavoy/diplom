@@ -98,3 +98,5 @@ hub-worker-10 | started | acc3 | sonnet | 16:44:54
 hub-worker-9: DI результат добавлен в handoff (перекрытие ядер 19%, выход в ядро 35% — не по спеку)
 hub-worker-9 | note | v7 п.6 записан в PLAN 0з: итеративное покрытие, V=евклид в норм. коорд., ω/√(g/l)
 hub-worker-9 | note | v7 п.5а в PLAN 0з: спавн только в кольце между прежним и новым эллипсом
+hub-worker-10 | v7: покрытие DI/маятник m=40 — ядра 0%, гало 7–9%, выход в ядро 15–22% (v7/reports/v7_cells.md) | 17:10:41
+hub-research-4 | done | ctx 36% | A*-дерево 6D; объяснение пользователю шаги 1–12 (explanation_log.md); v7-задачи от пользователя (PLAN 0ж/0з/0з-7); роль searcher; cell_model_size, pend_energy_vs_opt | next=hub-research-6 (спектр управлений) | 17:31:03
