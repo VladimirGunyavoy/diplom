@@ -114,7 +114,7 @@ class Faces:
         P = self.P; N = len(P); V = np.full(N, BIG); G = self.goal_mask(P[:, 0], P[:, 1]); V[G] = 0; E = []
         for k in (0, 1):
             t, e, kd, out = self.hit(P, k); i0, i1, w = self._interp(np.where(out[:, None], 0.0, e), kd); E.append((t, i0, i1, w, out))
-        self.E = E; self.G = G
+        self.E = E; self.G = G; dead = E[0][4] & E[1][4] & ~G                  # проба на границе области с исходящим потоком обоих слоёв: V=BIG навсегда, соседа не отравляет
         ch = np.ones(N, bool); ch[:] = G                                      # изменившиеся на прошлом шаге (старт — цель)
         I0 = [e[1] for e in E]; I1 = [e[2] for e in E]
         for n in range(it):
@@ -125,7 +125,7 @@ class Faces:
             vn = V[idx].copy()
             for (t, i0, i1, w, out) in E:
                 va, vb, ww = V[i0[idx]], V[i1[idx]], w[idx]; fa, fb = va < BIG / 2, vb < BIG / 2
-                vi = np.where(fa & fb, (1 - ww) * va + ww * vb, np.where(fa & (ww < 0.5) & self.front, va, np.where(fb & (ww >= 0.5) & self.front, vb, BIG)))    # на фронте: ближайшая конечная проба
+                vi = np.where(fa & fb, (1 - ww) * va + ww * vb, np.where(fa & (dead[i1[idx]] | (ww < 0.5) & self.front), va, np.where(fb & (dead[i0[idx]] | (ww >= 0.5) & self.front), vb, BIG)))    # на фронте: ближайшая конечная проба
                 val = t[idx] + vi; val = np.where(out[idx] | ~np.isfinite(t[idx]), BIG, val); vn = np.minimum(vn, val)
             vn = np.where(G[idx], 0.0, np.where(vn > BIG / 2, BIG, vn)); dch = vn < V[idx] - tol
             ch = np.zeros(N, bool); ch[idx[dch]] = True; V[idx] = vn
