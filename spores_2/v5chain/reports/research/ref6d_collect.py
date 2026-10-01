@@ -17,7 +17,7 @@ for n, ws in res.items():
 # best: лучшее известное T_ref (min по прогонам; решение W3 допустимо и для W50) — для сравнения с коридором брать best.<набор>.W50
 mn = lambda *L: [min([t for t in ts if t is not None], default=None) for ts in zip(*L)]
 J = json.load(open(sys.argv[2] if len(sys.argv) > 2 else 'ref6d_T.json')); T = J['T']; B = {}
-if 's32down' in T: B['down'] = dict(W50=mn(T['s32down']['W50'], T['s32down']['W3'], T.get('c4g3', {}).get('W50', []) + [None] * 28), W3=T['s32down']['W3'])
-if 's32up' in T: B['up'] = dict(W50=mn(T['s32up']['W50'], T['s32up']['W3'], T.get('s32upNS8', {}).get('W50', [None] * 32)), W3=T['s32up']['W3'])
+if 's32down' in T: B['down'] = dict(W50=mn(T['s32down']['W50'], T['s32down']['W3'], T.get('c4g3', {}).get('W50', []) + [None] * 28, T.get('s32downNS16', {}).get('W50', [None] * 32)), W3=T['s32down']['W3'])
+if 's32up' in T: B['up'] = dict(W50=mn(T['s32up']['W50'], T['s32up']['W3'], T.get('s32upNS8', {}).get('W50', [None] * 32), T.get('s32upNS16', {}).get('W50', [None] * 32)), W3=T['s32up']['W3'])
 J['best'] = B; J['doc'] += ' best — лучшее известное (вверх: мультистарт не сошёлся на 7/31, неопределённость до ~6%; вниз NS3=NS6).'
 json.dump(J, open(sys.argv[2] if len(sys.argv) > 2 else 'ref6d_T.json', 'w'), indent=1)

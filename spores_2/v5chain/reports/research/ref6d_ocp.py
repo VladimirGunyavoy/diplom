@@ -22,7 +22,7 @@ def starts(nq=4):
 
 
 def f_ca(x, u, g=GG, m=MS, ln=L):
-    n = 3; q, w = x[:n], x[n:]
+    n = 3; q, w = x[:n], x[n:]; m = np.asarray(m[:n]); ln = np.asarray(ln[:n])      # MS/L в manip3dyn теперь длины 4 (n=4, worker-8)
     th = [ca.sum1(q[:i + 1]) for i in range(n)]; thd = [ca.sum1(w[:i + 1]) for i in range(n)]
     S = [[float(m[max(i, j):].sum() * ln[i] * ln[j]) for j in range(n)] for i in range(n)]
     M = ca.SX(n, n); rhs = ca.SX(n, 1)
@@ -90,6 +90,29 @@ def solve_query(x0, N=50, M=4, nstart=4, seed=0, solver=None):
             res.append((ok, T, br, s, st, time.time() - t0))
             if ok and (best is None or T < best[0]): best = (T, U, br)
     return best, res
+
+
+def warm_start(x0, seq, dts, N=40, M=4, solver=None):
+    """Тёплый старт от пути коридора: слои seq (индекс угла коробки, бит i → τ_i = ±1) и длительности dts → затравка U/X/T.
+    Ветвь 2π — по концу пути. → (T, U) допустимое (проверка rk4) или None; T ≤ T_corr, если IPOPT не ушёл в худший минимум."""
+    S, lbx, ubx, lbg, ubg = solver or make_solver(N, M)
+    T0 = float(np.sum(dts)); tb = np.concatenate([[0], np.cumsum(dts)]); tc = (np.arange(N) + 0.5) * T0 / N
+    lay = np.array([[1.0 if (s >> i) & 1 else -1.0 for i in range(3)] for s in seq])
+    Ug = lay[np.clip(np.searchsorted(tb, tc, side='right') - 1, 0, len(seq) - 1)]
+    Xg = [np.array(x0, float)]; h = T0 / N / M
+    for k in range(N):
+        x = Xg[-1]
+        for _ in range(M):
+            k1 = f_np(x, Ug[k], GG); k2 = f_np(x + h / 2 * k1, Ug[k], GG); k3 = f_np(x + h / 2 * k2, Ug[k], GG); k4 = f_np(x + h * k3, Ug[k], GG)
+            x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+        Xg.append(x)
+    Xg = np.array(Xg); tgt = Xg[-1, :3] + wr(C3 - Xg[-1, :3])                    # ветвь: центр окна рядом с концом пути
+    r = S(x0=np.concatenate([Xg.ravel(), Ug.ravel(), [T0]]), p=np.concatenate([x0, tgt, np.zeros(3)]), lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg)
+    w = np.array(r['x']).ravel(); T = w[-1]; U = w[6 * (N + 1):6 * (N + 1) + 3 * N].reshape(N, 3); xe, wmax = simulate(x0, U, T)
+    ok = S.stats()['return_status'] in ('Solve_Succeeded', 'Solved_To_Acceptable_Level') and np.all(np.abs(wr(xe[:3] - C3)) < Rq + 1e-3) \
+        and np.all(np.abs(xe[3:]) < Rw + 1e-3) and wmax <= WM + 1e-2
+    if os.environ.get('DBG'): print('warm:', S.stats()['return_status'], 'T %.4f' % T, 'конец', np.round(wr(xe[:3] - C3), 4), np.round(xe[3:], 4), 'wmax %.3f' % wmax)
+    return (T, U) if ok else None
 
 
 if __name__ == '__main__':
