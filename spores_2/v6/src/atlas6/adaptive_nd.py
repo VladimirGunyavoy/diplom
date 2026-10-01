@@ -11,6 +11,7 @@ class SysN:
     def __init__(self, flow, L, scale, in_goal, goal_pts, per=None, ok=None, blocked=None):
         self.flow, self.L, self.scale = flow, L, np.asarray(scale, float); self.d = len(self.scale)
         self.per = np.zeros(self.d) if per is None else np.asarray(per, float)
+        self.has_obst = blocked is not None
         self.blocked = blocked or (lambda P: np.zeros(np.asarray(P).shape[:-1], bool))          # препятствия: P (...,d) → bool
         self.in_goal, self.goal_pts, self.ok = in_goal, np.asarray(goal_pts, float), (ok or (lambda p: True))
 
@@ -118,8 +119,9 @@ def _images(S, P):
 def _scaled(S, Z): return Z / S.scale
 
 
-def back_heuristic(S, back, wh=3.0, kap=1.0):
+def back_heuristic(S, back, wh=None, kap=1.0):
     """h(E) = wh·(Gb[ближайшая обратная спора] + kap·|E−b|_scaled) для A*-приоритета прямого дерева (hub-research-4: 6D NF800 2/4 → 3/4)."""
+    if wh is None: wh = 1.5 if S.has_obst else 3.0      # с препятствиями эвристика врёт (не видит их): WH=1–2 даёт 3/4 vs WH=3 1/4 (hub-worker-8)
     Pb, Gb, tree = np.asarray(back[0]), np.asarray(back[1]), back[5]
     def h(E):
         d, j = tree.query(np.atleast_2d(E) / S.scale, k=1); return wh * (Gb[np.asarray(j) % len(Pb)] + kap * d)
