@@ -1,6 +1,6 @@
 """Системы 0з-7 для CellN: нормированные координаты, flow(y,k,t) батч. Манипуляторы/дифдрайв берутся из v6 (src/atlas6), нормировка: углы/угл. скорости в рад и рад/с-собственных (масштаб 1), |ω|≤WM."""
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'v6'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'v6', 'src', 'atlas6'))   # модули v6 по именам файлов (пакет src у v7 свой)
 import numpy as np
 from .celln import SysN
 from .systems import di, pend
@@ -11,14 +11,14 @@ def from2(S2):
 
 
 def dd(layers='rhomb'):
-    from src.atlas6.dd3 import flow
-    from src.atlas6.dd_atlas import LAYERS, RECT
+    from dd3 import flow
+    LAYERS = [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)]; RECT = LAYERS + [(sv, sw) for sv in (1.0, -1.0) for sw in (1.0, -1.0)]
     L = LAYERS if layers == 'rhomb' else RECT; sc = np.array([2.0, 2.0, np.pi])
     return SysN('dd_' + layers, 3, len(L), lambda y, k, t: flow(y * sc, L[k], t) / sc, ((-1, -1, -1), (1, 1, 1)), per=(0, 0, 2.0))
 
 
 def manip(n, g=0.0, WM=3.0, dt=0.05):
-    from src.atlas6.manip3dyn import flow
+    from manip3dyn import flow
     lo = [-np.pi] * n + [-WM] * n; hi = [np.pi] * n + [WM] * n
     return SysN('manip%d_g%.1f' % (n, g), 2 * n, 2 ** n, lambda y, k, t: flow(y, k, t, dt_max=dt, n=n, g=g), (lo, hi), per=[2 * np.pi] * n + [0] * n)
 
