@@ -17,10 +17,10 @@ def rk4v(S, k, Y, T, n=12):
 
 
 class SporeV:
-    def __init__(self, S, cells, goal, m=None, nt=None, halo=1.1, dt_edge=None, hs=0.02, ht=0.02, mmax=41):
+    def __init__(self, S, cells, goal, m=None, nt=None, halo=1.1, dt_edge=None, hs=0.02, ht=0.02, mmax=41, blend=False):
         """cells — список Cell (оба слоя, поле .k); goal(Y)->bool-маска цели в нормированных координатах.
         Густота узлов адаптивна: шаг по s ≈ hs (норм. ед.), по t ≈ ht·(τ-единица времени); m/nt заданы числом — одинаковы для всех (тест)."""
-        self.S, self.cells, self.goal, self.halo = S, cells, goal, halo; self.dt_edge = dt_edge
+        self.S, self.cells, self.goal, self.halo = S, cells, goal, halo; self.dt_edge = dt_edge; self.blend = blend
         K = len(cells); self.K = K
         self.r = np.array([c.r for c in cells]); self.tau = np.array([c.tau for c in cells]); self.kk = np.array([c.k for c in cells]); self.cen = np.array([c.c for c in cells])
         self.mc = np.full(K, m) if m else np.clip(np.ceil(2 * halo * self.r / hs).astype(int) + 1, 5, mmax)
@@ -43,7 +43,7 @@ class SporeV:
         qt = cKDTree(Qi); lst = qt.query_ball_point(self.cen, self.rad)                                  # по клеткам — точки в её радиусе (память ∝ числу реальных пар)
         CI = np.repeat(np.arange(self.K), [len(l) for l in lst]); QI = np.concatenate([np.array(l, int) for l in lst]).astype(int) if len(CI) else np.zeros(0, int)
         QI = QI % n0; pk = np.unique(QI.astype(np.int64) * self.K + CI); QI, CI = pk // self.K, pk % self.K                      # образы → исходные точки, без дублей
-        o = np.argsort(CI, kind='stable'); QI, CI = QI[o], CI[o]; bnd = np.nonzero(np.diff(CI))[0] + 1; out = ([], [], [], [])
+        o = np.argsort(CI, kind='stable'); QI, CI = QI[o], CI[o]; bnd = np.nonzero(np.diff(CI))[0] + 1; out = ([], [], [], [], [])
         for a, b in zip(np.r_[0, bnd], np.r_[bnd, len(CI)]):
             if a == b: continue
             c = CI[a]; q = QI[a:b]; s, t, ins = self.cells[c].locate(Q[q], self.halo)
@@ -54,11 +54,16 @@ class SporeV:
             j = np.clip(np.floor(fs).astype(int), 0, mc - 2); i = np.clip(np.floor(ft).astype(int), 0, nc - 2); u = np.clip(fs - j, 0, 1); v = np.clip(ft - i, 0, 1)
             b0 = self.off[c] + j * nc + i; out[0].append(q); out[1].append(np.full(len(q), c))
             out[2].append(np.stack([b0, b0 + 1, b0 + nc, b0 + nc + 1], 1)); out[3].append(np.stack([(1 - u) * (1 - v), (1 - u) * v, u * (1 - v), u * v], 1))
-        if not out[0]: return np.zeros(0, int), np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4))
+            wb = np.maximum(0, 1 - (s / (self.r[c] * self.halo)) ** 2) * np.maximum(0, 1 - ((t - self.tau[c] / 2) / (self.tau[c] * self.halo / 2 + 1e-12)) ** 2); out[4].append(wb + 1e-6)
+        if not out[0]: return np.zeros(0, int), np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0)
         return tuple(np.concatenate(x) for x in out)
 
     def _vmin(self, V, npts, pr):
-        qi, _, idx, w = pr; val = np.sum(V[idx] * w, 1); out = np.full(npts, BIG); np.minimum.at(out, qi, val); return out
+        qi, _, idx, w, wb = pr; val = np.sum(V[idx] * w, 1)
+        if getattr(self, 'blend', False):                               # взвешенное среднее по конечным оценкам клеток (бугор) вместо min: min шумных оценок смещён вниз
+            fin = val < BIG / 2; num = np.zeros(npts); den = np.zeros(npts); np.add.at(num, qi[fin], (val * wb)[fin]); np.add.at(den, qi[fin], wb[fin])
+            out = np.where(den > 0, num / np.maximum(den, 1e-30), BIG); return out
+        out = np.full(npts, BIG); np.minimum.at(out, qi, val); return out
 
     def _Tn(self):
         """Шаг по времени ребра узла: свой dtc клетки или заданный dt_edge (полулагранжева диффузия ∝ h²/dt — при мелких клетках шаг надо брать крупнее)."""
