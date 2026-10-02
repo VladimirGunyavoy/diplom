@@ -66,13 +66,13 @@ class Cell:
             return s, t, inside
         j = j0; t = self.ts[j].copy(); s = np.zeros(N)
         for _ in range(it):
-            tt = np.clip(t, 0, self.tau); X, Xp = herm(tt, self.ts, self.X, self.Xd); V, Vp = herm(tt, self.ts, self.V, self.Vd)
+            tt = np.clip(t, -0.3 * self.tau, 1.3 * self.tau); X, Xp = herm(tt, self.ts, self.X, self.Xd); V, Vp = herm(tt, self.ts, self.V, self.Vd)
             res = S.wrap(X + s[:, None] * V - Y); a = Xp + s[:, None] * Vp; b = V; det = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]; det = np.where(np.abs(det) < 1e-12, 1e-12, det)
             dt = -(res[:, 0] * b[:, 1] - res[:, 1] * b[:, 0]) / det; ds = -(a[:, 0] * res[:, 1] - a[:, 1] * res[:, 0]) / det
             t = np.clip(t + dt, -0.3 * self.tau, 1.3 * self.tau); s = np.clip(s + ds, -3 * self.r, 3 * self.r)
-        tt = np.clip(t, 0, self.tau); X, _ = herm(tt, self.ts, self.X, self.Xd); V, _ = herm(tt, self.ts, self.V, self.Vd)
+        tt = np.clip(t, -0.3 * self.tau, 1.3 * self.tau); X, _ = herm(tt, self.ts, self.X, self.Xd); V, _ = herm(tt, self.ts, self.V, self.Vd)
         ok_res = np.max(np.abs(S.wrap(X + s[:, None] * V - Y)), 1) < 5e-3
-        inside = ok_res & (np.abs(s) <= halo * self.r) & (t >= -(halo - 1) * self.tau) & (t <= halo * self.tau)
+        e_ = 2e-2; inside = ok_res & (np.abs(s) <= halo * self.r * (1 + e_)) & (t >= -(halo - 1) * self.tau - e_ * self.tau) & (t <= halo * self.tau * (1 + e_))   # допуск на краях гало: узлы сетки лежат ровно на границе
         return s, t, inside
 
     def outline(self, m=24):
