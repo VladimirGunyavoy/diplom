@@ -1,0 +1,5 @@
+grid 20 iter 1057
+{"mode": "P0", "reach": 1.0, "T_mean": 5.253, "sw_med": 33.0, "sw_max": 46, "sec": 9}
+{"mode": "P3:0.5", "reach": 1.0, "T_mean": 5.165, "sw_med": 3.0, "sw_max": 6, "sec": 311}
+{"mode": "P3:0.5", "vs_P0": {"mean": 0.975, "med": 0.9661, "min": 0.93, "max": 1.131}}
+g_hat последнего старта 1.0 наблюдений 0
