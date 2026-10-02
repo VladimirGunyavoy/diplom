@@ -1,0 +1,18 @@
+bands [6299340, 6299340] sec 10
+10 sec 22
+20 sec 32
+30 sec 43
+40 sec 55
+50 sec 65
+60 sec 76
+70 sec 87
+80 sec 97
+90 sec 108
+100 sec 118
+{"found": 0.94, "shoot_over_best_known": {"n": 94, "mean": 0.982, "med": 0.9845, "min": 0.9072, "max": 1.0452}, "shoot_better": 68, "shoot_over_Vchar": {"n": 94, "mean": 1.0182, "med": 1.008, "min": 0.9983, "max": 1.3229}, "ref": {"note": "ref = min(shoot, best_known)", "butterfly5000_over_ref": {"n": 100, "mean": 1.0382, "med": 1.0374, "min": 1.0, "max": 1.1247}, "Vchar_over_ref": {"n": 100, "mean": 0.9824, "med": 0.9932, "min": 0.7559, "max": 1.0054}}, "sec": 118}
+5 [2.59 0.16] shoot [inf  0.  0.  0.  0.] best 10.85 Vchar 9.24
+48 [-2.61 -0.34] shoot [ 8.885 -1.     2.96   5.48   0.445] best 9.04 Vchar 8.38
+61 [-1.89 -0.28] shoot [ 7.62 -1.    1.8   4.26  1.56] best 7.929 Vchar 5.76
+62 [-2.57 -0.04] shoot [inf  0.  0.  0.  0.] best 11.209 Vchar 9.1
+65 [ 1.08 -0.76] shoot [2.625 1.    0.    2.14  0.485] best 2.67 Vchar 2.28
+84 [-0.54  0.86] shoot [ 5.365 -1.     0.02   2.26   3.085] best 5.53 Vchar 5.28
