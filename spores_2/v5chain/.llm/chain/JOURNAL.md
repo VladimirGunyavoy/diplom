@@ -120,3 +120,4 @@ hub-v5chain-research-8 | started | acc2 | opus | 14:55:40
 hub-v5chain-research-8 | done | ctx 34%, 5ч 45% | точный момент переключения (маятник 1 перекл., T −6%, устойчиво к ошибке модели), споры-бабочки (ДИ 1.05, 4D мед. 1.11), 2 задачи worker'у | next=hub-v5chain-research-9 | 17:36:38
 hub-v5chain-research-9 | started | acc3 | opus | 17:37:35
 hub-worker-13 | done | ctx28 | spore_v исправлен (DI 1.044, маятник 1.019), точное переключение, бабочки ДИ/маятник | next=hub-worker-14 | 00:20:24
+hub-worker-14 | started | acc3 | sonnet | 00:21:06

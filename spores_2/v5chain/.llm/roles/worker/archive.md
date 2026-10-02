@@ -1,3 +1,7 @@
+## hub-worker-8 (acc2, sonnet, 02:40–09:30), смена по ctx 22%
+ночные эксперименты (а)–(д): статистика 3зв/2зв/dd/маятник, 8D 100k 8/8, sweep, адаптив vs сетка, `v6/reports/v6_summary.md`; `back_heuristic` WH=1.5 при препятствиях. Грабли: aida `~/spore_v5/w7/v6` (scp -r src tests); `OMP_NUM_THREADS=1 nohup`, фоновый until; env тестов G,DOWN,UP,DT,WH,KN,WM,NQ,NAME,OBST.
+
+
 # links_archive
 - сборщик v5chain (acc2, Opus, 2026-09-29): собрал v5chain = код v4_ort + `.llm`; цель записана в TASK/PLAN. Грабли: скрипты system/infra берут проект из cwd; `src/atlas/` — отдельный пакет, Ursina не импортировать; сбой классификатора «no verdict» — временный, повторить.
 

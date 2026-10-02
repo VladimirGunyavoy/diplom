@@ -1,3 +1,9 @@
+## hub-worker-13 (2026-10-02, acc2 Sonnet, ctx 28%)
+Звено: hub-worker-13 (acc2, Sonnet, 10:11–02:45), причина смены: ctx 28% (софт 30%, идл)
+Сделано: spore_v исправлен и измерен (отчёт `v7/reports/spore_v_di.md`, всё в PLAN): `Cell.locate` (допуск гало, экстраполяция Эрмита, предфильтр по t → 99.9% узлов находят свою клетку), `dt_edge`=шаг агента, густота узлов: DI T/T* 1.044 (5→3 перекл.), маятник hs=.008 T/Ta 1.019; LQR-зона hc=.1; спектр u в агенте ≤1%; точное переключение (research-8/9) на spore_v: P3:.5+EST=1+EPS=.02 sw 18→3, u·.95: 1.027; бабочки (research-8): ДИ ×100 (`cells7/butterfly_di.py`), маятник 100%/1.036/4 перекл. при 35k узлов (`cells7/butterfly_pend.py`, окно .3); против строгого эталона pend_ref_T: spore_v 1.075, бабочки 1.077.
+Грабли: `pkill -f` убивает шелл (дважды наступил) — kill по pid; на хабе всего 7 ГБ RAM — тяжёлое с `systemd-run --user --scope -p MemoryMax=4G`, в фоне `setsid nohup … & disown`; V.build у маятника hs=.008 ~11 мин, SporeV(...) init ~5–10 мин; кэши /tmp/claude-1000/{pend_V6.npy (hs.008,dt_edge.06), bp_V4.npy (бабочки окно .3), pend_cells_filled.pkl, di_cells_filled.pkl}; скрипты /tmp/claude-1000/{q*,s9,bp*,es_run*,es_head*}.py (в /tmp — могут пропасть); git: нет user.name → `git -c user.name=hub-worker-N -c user.email=a@b commit`; STATUS велит не пушить — не пушил; бабочки: агент без wrap φ накручивает обороты.
+Решения цепочки: рекомендуемые настройки агента spore_v — history/decisions.md.
+
 # links_recent — последние 5 звеньев (новые сверху)
 
 ## hub-worker-12 (acc1, Sonnet, 00:08–10:15), причина смены: ctx 28% (софт 30%)
@@ -17,8 +23,4 @@ v7: locate предфильтр ×2, симметричная проверка �
 
 ## hub-worker-9 (acc3, sonnet, 09:20–16:50), смена по ctx 21%
 `corridor_query(fs,neigh,wlim)`, refine |w|≤WM; v6_summary (WM3/6, neigh8, dd+диски 40/40, маятник, двойной маятник g=1/1.5/2); v7 каркас `spores_2/v7/src/cells7` (systems, cell, cover) + tests/run_cover.py. Грабли: ssh -f + setsid nohup; sleep>120 блокируется; casadi нет; pkill -f убивает шелл; git add только своих путей. Код v7 на aida `~/spore_v5/w9/v7`.
-
-## hub-worker-8 (acc2, sonnet, 02:40–09:30), смена по ctx 22%
-ночные эксперименты (а)–(д): статистика 3зв/2зв/dd/маятник, 8D 100k 8/8, sweep, адаптив vs сетка, `v6/reports/v6_summary.md`; `back_heuristic` WH=1.5 при препятствиях. Грабли: aida `~/spore_v5/w7/v6` (scp -r src tests); `OMP_NUM_THREADS=1 nohup`, фоновый until; env тестов G,DOWN,UP,DT,WH,KN,WM,NQ,NAME,OBST.
-
 
