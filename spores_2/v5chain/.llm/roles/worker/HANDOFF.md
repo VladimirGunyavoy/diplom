@@ -1,2 +1,10 @@
 # Session Handoff
-(принят hub-worker-13; запись в recent.md)
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-worker-13 (acc2, Sonnet, 10:11–02:45), причина смены: ctx 28% (софт 30%, идл)
+Сделано: spore_v исправлен и измерен (отчёт `v7/reports/spore_v_di.md`, всё в PLAN): `Cell.locate` (допуск гало, экстраполяция Эрмита, предфильтр по t → 99.9% узлов находят свою клетку), `dt_edge`=шаг агента, густота узлов: DI T/T* 1.044 (5→3 перекл.), маятник hs=.008 T/Ta 1.019; LQR-зона hc=.1; спектр u в агенте ≤1%; точное переключение (research-8/9) на spore_v: P3:.5+EST=1+EPS=.02 sw 18→3, u·.95: 1.027; бабочки (research-8): ДИ ×100 (`cells7/butterfly_di.py`), маятник 100%/1.036/4 перекл. при 35k узлов (`cells7/butterfly_pend.py`, окно .3); против строгого эталона pend_ref_T: spore_v 1.075, бабочки 1.077.
+Стоп на / следующий шаг: очередь пуста. Открыто: (1) гибрид «бабочки + финиш стрельбой (exact_switch P3)» для стартов у цели (+0.2 с); (2) EST=3 (шум датчика) на spore_v; (3) бабочки: 4D и DI на тех же стартах, что spore_v; (4) ответ hub-research-7 про сверку spore_v vs v7_spore_di.py (не отправлен, всё в отчёте); (5) двойной маятник g=2 — покрытие (research-7: путь есть T=7.636, траектория `~/spore_v5/r7/refdp_G2_W3_N80.npy` на aida).
+Грабли: `pkill -f` убивает шелл (дважды наступил) — kill по pid; на хабе всего 7 ГБ RAM — тяжёлое с `systemd-run --user --scope -p MemoryMax=4G`, в фоне `setsid nohup … & disown`; V.build у маятника hs=.008 ~11 мин, SporeV(...) init ~5–10 мин; кэши /tmp/claude-1000/{pend_V6.npy (hs.008,dt_edge.06), bp_V4.npy (бабочки окно .3), pend_cells_filled.pkl, di_cells_filled.pkl}; скрипты /tmp/claude-1000/{q*,s9,bp*,es_run*,es_head*}.py (в /tmp — могут пропасть); git: нет user.name → `git -c user.name=hub-worker-N -c user.email=a@b commit`; STATUS велит не пушить — не пушил; бабочки: агент без wrap φ накручивает обороты.
+Решения цепочки: рекомендуемые настройки агента spore_v — history/decisions.md.
+Коммиты: b9848a3, c706e73, 91a7a3d (локальные, без пуша).
+Токены: T_START 5ч 0% / ctx 4% / $0.05 (10:11) / T_BEFORE_END 5ч 8% / ctx 28% / $11.8 (02:45)
+NEXT_LINK: hub-worker-14   NEXT_MODEL: sonnet
