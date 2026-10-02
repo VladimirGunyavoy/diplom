@@ -1,0 +1,7 @@
+Running as unit: run-rc30cb687a10b4f3d8040a2cfceca382e.scope; invocation ID: 7c682f9d7cd343eb8518c3e3b9b960b3
+cover 0.1 1209 92
+{"rho": 0.1, "agent": "вершины", "V": "клетки", "arrived": 1.0, "T_over_Tstar": 1.0564, "hold_max_med": 0.12, "sw_med": 43.5}
+{"rho": 0.1, "agent": "спектр+V", "V": "клетки", "arrived": 1.0, "T_over_Tstar": 1.0402, "hold_max_med": 0.13, "sw_med": 12.5}
+cover 0.02 1209 92
+{"rho": 0.02, "agent": "вершины", "V": "клетки", "arrived": 0.667, "T_over_Tstar": 1.0991, "hold_max_med": 0.08, "sw_med": 52.0}
+{"rho": 0.02, "agent": "спектр+V", "V": "клетки", "arrived": 1.0, "T_over_Tstar": 1.1059, "hold_max_med": 0.032, "sw_med": 3.0}
