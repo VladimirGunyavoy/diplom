@@ -17,25 +17,23 @@ def rk4v(S, k, Y, T, n=12):
 
 
 class SporeV:
-    def __init__(self, S, cells, goal, m=7, nt=9, halo=1.1, dt_edge=None):
-        """cells — список Cell (оба слоя, поле .k); goal(Y)->bool-маска цели в нормированных координатах."""
-        self.S, self.cells, self.goal, self.m, self.nt, self.halo = S, cells, goal, m, nt, halo; self.dt_edge = dt_edge
+    def __init__(self, S, cells, goal, m=None, nt=None, halo=1.1, dt_edge=None, hs=0.02, ht=0.02, mmax=41):
+        """cells — список Cell (оба слоя, поле .k); goal(Y)->bool-маска цели в нормированных координатах.
+        Густота узлов адаптивна: шаг по s ≈ hs (норм. ед.), по t ≈ ht·(τ-единица времени); m/nt заданы числом — одинаковы для всех (тест)."""
+        self.S, self.cells, self.goal, self.halo = S, cells, goal, halo; self.dt_edge = dt_edge
         K = len(cells); self.K = K
-        self.sg = np.linspace(-1, 1, m); self.tg = np.linspace(-(halo - 1), halo, nt)          # доли r и τ
-        self.r = np.array([c.r for c in cells]); self.tau = np.array([c.tau for c in cells]); self.kk = np.array([c.k for c in cells])
-        self.cen = np.array([c.c for c in cells])
-        sj = self.sg[None, :, None] * self.r[:, None, None] * halo; ti = self.tg[None, None, :] * self.tau[:, None, None]
-        n_ = np.array([c.n for c in cells])
-        base = self.cen[:, None, None, :] + sj[..., None] * n_[:, None, None, :]                   # (K,m,1,2)
-        base = np.broadcast_to(base, (K, m, nt, 2)); T = np.broadcast_to(ti, (K, m, nt))
-        P = np.empty((K, m, nt, 2))
-        for k in (0, 1):
-            msk = self.kk == k
-            if msk.any(): P[msk] = rk4v(S, k, base[msk].reshape(-1, 2), T[msk].ravel(), n=24).reshape(-1, m, nt, 2)
-        self.P = P.reshape(-1, 2); self.N = len(self.P)
-        d = np.linalg.norm(S.wrap(P - self.cen[:, None, None, :]), axis=-1).reshape(K, -1); self.rad = d.max(1) * 1.05 + 1e-6
+        self.r = np.array([c.r for c in cells]); self.tau = np.array([c.tau for c in cells]); self.kk = np.array([c.k for c in cells]); self.cen = np.array([c.c for c in cells])
+        self.mc = np.full(K, m) if m else np.clip(np.ceil(2 * halo * self.r / hs).astype(int) + 1, 5, mmax)
+        self.ntc = np.full(K, nt) if nt else np.clip(np.ceil((2 * halo - 1) * self.tau / ht).astype(int) + 1, 5, mmax)
+        self.cnt = self.mc * self.ntc; self.off = np.r_[0, np.cumsum(self.cnt)]; self.N = int(self.off[-1])
+        self.P = np.empty((self.N, 2)); self.rad = np.empty(K)
+        for c, cell in enumerate(cells):
+            mc, nc = self.mc[c], self.ntc[c]; sj = np.linspace(-1, 1, mc) * self.r[c] * halo; ti = np.linspace(-(halo - 1), halo, nc) * self.tau[c]
+            base = cell.c[None, None, :] + sj[:, None, None] * cell.n[None, None, :]; base = np.broadcast_to(base, (mc, nc, 2)).reshape(-1, 2); T = np.broadcast_to(ti[None, :], (mc, nc)).ravel()
+            self.P[self.off[c]:self.off[c + 1]] = rk4v(S, cell.k, base, T, n=24)
+            self.rad[c] = np.linalg.norm(S.wrap(self.P[self.off[c]:self.off[c + 1]] - cell.c), axis=1).max() * 1.05 + 1e-6
         self.tree = cKDTree(self.cen); self.Rmax = self.rad.max()
-        self.dtc = (self.tau * halo - (-(halo - 1) * self.tau)) / (nt - 1)                          # шаг узлов по t в клетке
+        self.dtc = (self.tau * (2 * halo - 1)) / (self.ntc - 1)                                     # шаг узлов по t в клетке
         self.G = goal(self.P)
 
     def _pairs(self, Q):
@@ -48,10 +46,11 @@ class SporeV:
             c = CI[a]; q = QI[a:b]; s, t, ins = self.cells[c].locate(Q[q], self.halo)
             if not ins.any(): continue
             q, s, t = q[ins], s[ins], t[ins]
-            fs = (s / (self.r[c] * self.halo) + 1) / 2 * (self.m - 1); ft = (t / self.tau[c] + (self.halo - 1)) / (2 * self.halo - 1) * (self.nt - 1)
-            j = np.clip(np.floor(fs).astype(int), 0, self.m - 2); i = np.clip(np.floor(ft).astype(int), 0, self.nt - 2); u = np.clip(fs - j, 0, 1); v = np.clip(ft - i, 0, 1)
-            b0 = (c * self.m + j) * self.nt + i; out[0].append(q); out[1].append(np.full(len(q), c))
-            out[2].append(np.stack([b0, b0 + 1, b0 + self.nt, b0 + self.nt + 1], 1)); out[3].append(np.stack([(1 - u) * (1 - v), (1 - u) * v, u * (1 - v), u * v], 1))
+            mc, nc = self.mc[c], self.ntc[c]
+            fs = (s / (self.r[c] * self.halo) + 1) / 2 * (mc - 1); ft = (t / self.tau[c] + (self.halo - 1)) / (2 * self.halo - 1) * (nc - 1)
+            j = np.clip(np.floor(fs).astype(int), 0, mc - 2); i = np.clip(np.floor(ft).astype(int), 0, nc - 2); u = np.clip(fs - j, 0, 1); v = np.clip(ft - i, 0, 1)
+            b0 = self.off[c] + j * nc + i; out[0].append(q); out[1].append(np.full(len(q), c))
+            out[2].append(np.stack([b0, b0 + 1, b0 + nc, b0 + nc + 1], 1)); out[3].append(np.stack([(1 - u) * (1 - v), (1 - u) * v, u * (1 - v), u * v], 1))
         if not out[0]: return np.zeros(0, int), np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4))
         return tuple(np.concatenate(x) for x in out)
 
@@ -60,7 +59,7 @@ class SporeV:
 
     def _Tn(self):
         """Шаг по времени ребра узла: свой dtc клетки или заданный dt_edge (полулагранжева диффузия ∝ h²/dt — при мелких клетках шаг надо брать крупнее)."""
-        return np.full(self.N, self.dt_edge) if self.dt_edge else np.repeat(self.dtc, self.m * self.nt)
+        return np.full(self.N, self.dt_edge) if self.dt_edge else np.repeat(self.dtc, self.cnt)
 
     def build(self, log=None):
         """Рёбра: для каждого узла и слоя k — точка φ_k(узел, Δt клетки) и её пары (клетка, веса)."""
