@@ -116,3 +116,4 @@ hub-worker-12 | done | ctx28 | spore_v на DI 100%/T/T* 1.15, маятник 98
 hub-worker-13 | started | acc2 | sonnet | 10:11:37
 hub-research-7 | done | solved | v7 п.3 клетки+гало+своб. переключение (DI 1.04, маятник 1.02 у worker), спектр/цена | next=нет (idle) | 13:00:38
 hub-research-7 | done | ctx 46% | эталон двойного маятника, прибытие без LQR, точный момент переключения (хрупок) | next=hub-v5chain-research-8 | 14:54:55
+hub-v5chain-research-8 | started | acc2 | opus | 14:55:40
