@@ -112,3 +112,4 @@ hub-research-7 | started | acc2 | opus | 22:31:38
 hub-research-7 | done | solved | v7 п.3: общая сеть сечений (v7_faces.md), DI 1.011 | next=нет (idle) | 23:38:55
 hub-worker-11 | done | ctx28 | v7 п.3: faces.py (DI 1.025), hold/holdn спектр+LQR, данные research-7; маятник на гранях — открыто | next=hub-worker-12 | 00:07:47
 hub-worker-12 | started | acc1 | sonnet | 00:08:22
+hub-worker-12 | done | ctx28 | spore_v на DI 100%/T/T* 1.15, маятник 98%/T/Ta 1.32; blend в работе | next=hub-worker-13 | 10:10:40
