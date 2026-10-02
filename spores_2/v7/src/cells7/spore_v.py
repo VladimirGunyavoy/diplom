@@ -93,3 +93,17 @@ class SporeV:
             ch = (last[ia] >= 0) & (kb != last[ia]) & ok; sw[ia[ch]] += 1; last[ia] = np.where(ok, kb, last[ia])
             Y[ia] = np.where(kb[:, None] == 0, Yn[0], Yn[1]); t += dt; fin = self.goal(Y[ia]); T[ia[fin]] = t; act[ia[fin]] = False; act[ia[~ok]] = False
         return T, sw
+
+
+def fill_gaps(S, cells, goal, Cell, lo=-1.0, hi=1.0, n=30000, rounds=3, seed=5, log=None):
+    """Заполнение дыр покрытия: точки вне ядра+гало ВСЕХ клеток → новая клетка (слои по очереди); точки внутри неё выбывают.
+    Без этого точка вне клеток получает V=BIG и агент обрывается (DI: 5% точек, дошли 83% → после заполнения 100%)."""
+    rng = np.random.default_rng(seed)
+    for rnd in range(rounds):
+        Vt = SporeV(S, cells, goal, hs=0.05, ht=0.05); Qa = rng.uniform(lo, hi, (n, 2)); qi = Vt._pairs(Qa)[0]; unc = np.nonzero(np.bincount(qi, minlength=len(Qa)) == 0)[0]
+        if log: log('раунд', rnd, 'клеток', len(cells), 'дыр', len(unc))
+        if len(unc) < n // 1000: break
+        add = 0
+        while len(unc):
+            c = Cell(S, add % 2, Qa[unc[0]]); cells.append(c); add += 1; unc = unc[~c.locate(Qa[unc], 1.1)[2]]
+    return cells
