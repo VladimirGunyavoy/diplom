@@ -1,3 +1,10 @@
 Running as unit: run-r4d53dd5479854da485a83ceabd5ba944.scope; invocation ID: 3c969928bf954d678911a02878089da2
 grid 27 iter 1057
 {"mode": "P0", "reach": 1.0, "T_mean": 5.253, "sw_med": 33.0, "sw_max": 46, "sec": 14}
+{"mode": "P3:0.2", "reach": 1.0, "T_mean": 6.445, "sw_med": 2.0, "sw_max": 7, "sec": 375}
+{"mode": "P3:0.2", "vs_P0": {"mean": 1.2512, "med": 0.9974, "min": 0.971, "max": 2.478}}
+Traceback (most recent call last):
+  File "/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/exact_switch_pend.py", line 130, in <module>
+    np.save('exact_switch_pend_%s%s%s.npy' % ('_'.join(res).replace(':', ''), '_g%s' % GAIN if GAIN != 1 else '', '_bot' if os.environ.get('BOTTOM') else '') .replace('.npy', '') + ('_rp%g' % RP if RP != .1 else ''), np.array([res[m][0] for m in res] + [res[m][1] for m in res]))
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'tuple' object has no attribute 'replace'

@@ -127,4 +127,4 @@ if __name__ == '__main__':
     for m in [m for m in res if m != 'P0']:
         ok = np.isfinite(T0) & np.isfinite(res[m][0]); r = res[m][0][ok] / T0[ok]
         print(json.dumps(dict(mode=m, vs_P0=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), min=round(float(r.min()), 3), max=round(float(r.max()), 3)))), flush=True)
-    np.save('exact_switch_pend_%s%s%s.npy' % ('_'.join(res).replace(':', ''), '_g%s' % GAIN if GAIN != 1 else '', '_bot' if os.environ.get('BOTTOM') else '') .replace('.npy', '') + ('_rp%g' % RP if RP != .1 else ''), np.array([res[m][0] for m in res] + [res[m][1] for m in res]))
+    np.save('exact_switch_pend_%s%s%s%s.npy' % ('_'.join(res).replace(':', ''), '_g%s' % GAIN if GAIN != 1 else '', '_bot' if os.environ.get('BOTTOM') else '', '_rp%g' % RP if RP != .1 else ''), np.array([res[m][0] for m in res] + [res[m][1] for m in res]))
