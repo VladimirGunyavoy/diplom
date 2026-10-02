@@ -1,0 +1,6 @@
+Running as unit: run-r1792be25337047a9a920723baea5e072.scope; invocation ID: d000bddab95043cdb94ceb82b28a4680
+nodes_only True
+spores 1509 iters 13 sec 333 BIG nodes 0.219
+{"N": 1500, "V_cover": 0.99, "V_over_Tstar": {"mean": 1.0967, "med": 1.0492, "min": 1.005, "max": 3.782}}
+{"N": 1500, "agent": "dt", "reach": 0.993, "T_over_Tstar": {"mean": 1.0668, "med": 1.0372, "max": 1.716}, "sw_med": 1.0}
+{"N": 1500, "agent": "arc", "reach": 0.993, "T_over_Tstar": {"mean": 1.0838, "med": 1.0485, "max": 1.811}, "sw_med": 1.0}

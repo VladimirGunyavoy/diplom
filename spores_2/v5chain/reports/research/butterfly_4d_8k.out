@@ -1,0 +1,5 @@
+Running as unit: run-r09f87032122c46d6847ae17aeeaa1714.scope; invocation ID: 25beed128d5f4bcea07c4d76b138da89
+pairs 483241 per node 8.5 sec 45
+spores 8081 nodes 56567 iters 31 BIG 0.136 sec 46
+{"N": 8000, "V_cover": 1.0, "V_over_Tstar": {"mean": 1.5269, "med": 1.4184, "min": 1.033, "max": 5.179}}
+{"N": 8000, "agent": "dt", "reach": 0.987, "T_over_Tstar": {"mean": 1.4194, "med": 1.2931, "max": 4.183}, "sw_med": 4.0, "sec": 54}

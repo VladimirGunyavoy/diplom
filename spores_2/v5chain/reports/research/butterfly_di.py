@@ -14,14 +14,15 @@ class Butterfly:
         g = np.linspace(-RHO, RHO, 3); gc = np.array([(a, b) for a in g for b in g])          # споры в цели (V = 0)
         s.C = np.r_[gc, rng.uniform(-L, L, (N, 2))]; s.K = len(s.C); s.ngoal = len(gc)
         s.r, s.m, s.tau = r, m, tau; s.sn = np.linspace(-r, r, m); s.sq = s.sn.copy() if nodes_only else np.linspace(-r, r, ns)   # nodes_only: дуги только в узлы (без интерполяции ⇒ V ≥ T*)
-        s.V = np.full((s.K, m), BIG); s.V[:s.ngoal] = 0.
+        s.V = np.full((s.K, m), BIG)
+        s.ingoal = (np.abs(s.C[:, None, 0]) <= RHO) & (np.abs(s.C[:, None, 1] + s.sn[None, :]) <= RHO); s.V[s.ingoal] = 0.   # V = 0 только у узлов внутри цели
         s.tree = cKDTree(s.C)
     def arcs(s, y, c, sq):
         """время/управление дуги из y (2,) в точки c + sq·e_v (векторно по c (k,2), sq (q,))."""
         xp, vp = c[:, None, 0] + 0 * sq, c[:, None, 1] + sq[None, :]
         with np.errstate(divide='ignore', invalid='ignore'):
-            t = 2 * (xp - y[0]) / (y[1] + vp); u = (vp - y[1]) / t
-        ok = (t > 1e-9) & (t <= s.tau) & (np.abs(u) <= 1 + 1e-12)
+            den = y[1] + vp; t = np.where(np.abs(den) > 1e-9, 2 * (xp - y[0]) / np.where(np.abs(den) > 1e-9, den, 1), np.inf); u = (vp - y[1]) / t
+        ok = (t > 1e-6) & (t <= s.tau) & (np.abs(u) <= 1 + 1e-12) & np.isfinite(u)
         return np.where(ok, t, np.inf), u
     def Vc(s, k, sq): return np.stack([np.interp(sq, s.sn, s.V[i]) for i in k])                # V на отрезке споры
     def best(s, y, exclude=-1):
@@ -33,17 +34,18 @@ class Butterfly:
     def solve(s, it=200, tol=1e-6):
         for n in range(it):
             Vold = s.V.copy()
-            for i in range(s.ngoal, s.K):
+            for i in range(s.K):
                 for j, sv in enumerate(s.sn):
+                    if s.ingoal[i, j]: continue
                     J, _ = s.best(s.C[i] + np.r_[0, sv], exclude=i); s.V[i, j] = min(s.V[i, j], J)
             d = np.max(np.abs(np.minimum(s.V, BIG) - np.minimum(Vold, BIG)))
             if d < tol: break
         s.n_it = n; return s
-    def Vq(s, Y): return np.array([0. if (abs(y[0]) <= RHO and abs(y[1]) <= RHO) else s.best(y)[0] for y in Y])
+    def Vq(s, Y): return np.array([0. if (abs(y[0]) <= RHO + 1e-9 and abs(y[1]) <= RHO + 1e-9) else s.best(y)[0] for y in Y])
     def rollout(s, y0, mode='dt', dt=.06, tmax=20.):
         y = np.array(y0, float); t = 0.; pu = None; sw = 0
         while t < tmax:
-            if abs(y[0]) <= RHO and abs(y[1]) <= RHO: return t, sw
+            if abs(y[0]) <= RHO + 1e-9 and abs(y[1]) <= RHO + 1e-9: return t, sw
             J, b = s.best(y)
             if b is None or J >= BIG / 2: return np.inf, sw
             _, _, ta, u = b; h = min(dt, ta) if mode == 'dt' else ta
@@ -51,7 +53,7 @@ class Butterfly:
             pu = u
             for _ in range(8):                                                                   # точное движение, проверка входа в цель
                 hh = h / 8; y = np.r_[y[0] + y[1] * hh + u * hh * hh / 2, y[1] + u * hh]; t += hh
-                if abs(y[0]) <= RHO and abs(y[1]) <= RHO: return t, sw
+                if abs(y[0]) <= RHO + 1e-9 and abs(y[1]) <= RHO + 1e-9: return t, sw
         return np.inf, sw
 
 if __name__ == '__main__':
