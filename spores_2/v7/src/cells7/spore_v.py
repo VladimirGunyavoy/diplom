@@ -89,8 +89,9 @@ class SporeV:
     def value(self, Q):
         Q = np.atleast_2d(Q); return np.where(self.goal(Q), 0.0, self._vmin(self.Vn, len(Q), self._pairs(Q)))
 
-    def rollout(self, Q0, dt=0.02, tmax=40.0, eps=0.0, sub=4):
-        """Q0 (n,2): агент — каждые dt слой argmin [dt + V*(φ_k(q,dt))]; T (inf — не дошёл), число переключений."""
+    def rollout(self, Q0, dt=0.02, tmax=40.0, eps=0.0, sub=4, hold=None, hc=0.5):
+        """hold (HoldCell, tau=dt) и hc: внутри xᵀPx ≤ hc (физ. коорд., P Риккати) вместо слоя — непрерывное u = hold.choose(dx) (LQR-клетка цели, research-7).
+        Q0 (n,2): агент — каждые dt слой argmin [dt + V*(φ_k(q,dt))]; T (inf — не дошёл), число переключений."""
         Y = np.array(Q0, float); n = len(Y); T = np.full(n, np.inf); act = np.ones(n, bool); last = np.full(n, -1); sw = np.zeros(n, int); t = 0.0
         done = self.goal(Y); T[done] = 0; act &= ~done
         while act.any() and t < tmax:
@@ -100,10 +101,21 @@ class SporeV:
                 li = last[ia]; hold = (li >= 0) & (vk[np.arange(len(ia)), np.maximum(li, 0)] <= vk[np.arange(len(ia)), kb] + eps); kb = np.where(hold, li, kb)
             ch = (last[ia] >= 0) & (kb != last[ia]) & ok; sw[ia[ch]] += 1; last[ia] = np.where(ok, kb, last[ia])
             kk = kb.copy(); yy = Y[ia].copy(); fin = np.zeros(len(ia), bool); tf = np.full(len(ia), np.inf)
+            reg = np.zeros(len(ia), bool); uh = np.zeros(len(ia))
+            if hold is not None:
+                dx = self.S.wrap(Y[ia]) * self.S.scale; reg = np.einsum('ni,ij,nj->n', dx, hold.P, dx) <= hc; ok = ok | reg
+                for j in np.nonzero(reg)[0]: uh[j] = hold.choose(dx[j])
             for sidx in range(sub):                                     # подшаги: цель проверяется на каждом (не проскочить квадрат цели внутри dt, hub-research-7)
                 for k in (0, 1):
                     m_ = kk == k
+                    m_ = m_ & ~reg
                     if m_.any(): yy[m_] = rk4v(self.S, k, yy[m_], np.full(m_.sum(), dt / sub), n=2)
+                if reg.any():
+                    h_ = dt / sub / 2; z = yy[reg]
+                    for _ in range(2):
+                        f_ = lambda y: self.S._f(y * self.S.scale, uh[reg]) / self.S.scale          # u — вектор по агентам (маятник: sin φ + u)
+                        k1 = f_(z); k2 = f_(z + h_ / 2 * k1); k3 = f_(z + h_ / 2 * k2); k4 = f_(z + h_ * k3); z = z + h_ / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+                    yy[reg] = z
                 g_ = self.goal(yy) & ~fin; tf[g_] = t + (sidx + 1) * dt / sub; fin |= g_
             Y[ia] = yy; t += dt; T[ia[fin]] = tf[fin]; act[ia[fin]] = False; act[ia[~ok]] = False
         return T, sw
