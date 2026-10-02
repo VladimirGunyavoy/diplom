@@ -22,10 +22,10 @@ def verify(q, s, t1, t2, tmax3, h=.005):
             x, w = step(x, w, u, hh); t += hh
             if ingoal(x, w)[0]: return t
     return np.inf
-def shoot(q, B, dtau=.02, S1=9., S2=9., eps=.004, ntry=300):
+def shoot(q, B, dtau=.02, S1=9., S2=9., eps=.004, ntry=300, signs=(1., -1.)):
     if ingoal(q[0], q[1]): return 0., None
     cand = []
-    for s in (1., -1.):
+    for s in signs:
         n1 = int(S1 / dtau) + 1; x, w = np.array([q[0]]), np.array([q[1]]); X1, W1 = [x[0]], [w[0]]
         for _ in range(n1 - 1): x, w = step(x, w, s * UM, dtau); X1.append(x[0]); W1.append(w[0])
         x, w = np.array(X1), np.array(W1); ok = np.abs(w) <= 4; X, Wv = [x.copy()], [w.copy()]
