@@ -57,6 +57,18 @@ def finish_plan(x, w, k, H=4.0):
                 best = (f2[j], k1, t2[j]) if f2[j] < f[i] else (f[i], k1, taus[i])
     return best
 
+EPS = float(os.environ.get('EPS', 0))                                       # >0: план принимается, только если доходит и при u·(1±EPS)
+def robust_ok(x, w, k1, ts, J, h=.01):
+    if EPS <= 0: return True
+    for g in (1 - EPS, 1 + EPS):
+        xx, ww, t = np.array([x]), np.array([w]), 0.
+        while t < J * 1.2 + .3:
+            if goal(xx, ww)[0]: break
+            kk = k1 if t < ts else -k1; xx, ww = step(xx, ww, kk * UM * g, h); t += h
+        else: return False
+        if not goal(xx, ww)[0]: return False
+    return True
+
 def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
     n = len(Q); T = np.full(n, np.inf); SW = np.zeros(n, int); out = []
     for i in range(n):
@@ -78,7 +90,7 @@ def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
                 if t >= ts and kk == k: k = -k; sw += 1
                 if t - tm >= R:                                                   # P3: пересчёт точного финиша каждые R с
                     J, k1, ts2 = finish_plan(x, w, k)
-                    if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1:          # та же проверка, что при первом плане
+                    if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1 and robust_ok(x, w, k1, ts2, J):   # та же проверка + устойчивость к ошибке модели
                         if k1 != k: k = k1; sw += 1
                         plan = (t + ts2, k, t, t + J)
                     else: plan, pz, p0next = None, None, True; continue         # ушли из трубки финиша — шаг по V (как P0), потом снова финиш
@@ -107,7 +119,7 @@ def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
                 pz = [p, tpred]
             if mode in ('P2', 'P3', 'P4') and t - last_fp >= .15:
                 last_fp = t; J, k1, ts = finish_plan(x, w, k)
-                if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1:              # финиш не хуже обещанного V, иначе V знает путь короче
+                if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1 and robust_ok(x, w, k1, ts, J):   # финиш не хуже V и доходит при u·(1±EPS)
                     if k1 != k: k = k1; sw += 1
                     plan = (t + ts, k, t, t + J); continue
             z = np.array([x, w, pz[0][0], pz[0][1]]); moved = 0.

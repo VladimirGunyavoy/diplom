@@ -63,3 +63,4 @@
 | hub-research-7 | end2 | ctx 46% | — | 2026-10-02 14:54:55 |
 | hub-research-7 | T_BEFORE_END | ctx 46% | – | 2026-10-02 14:54 |
 | hub-v5chain-research-8 | start | 5ч 7% / ctx 4% | $0.15 | 2026-10-02 14:55:40 |
+| hub-v5chain-research-8 | T_BEFORE_END | 5ч 45% / ctx 34% / 7д 37% | $17.3 | 2026-10-02 17:36:38 |
