@@ -64,3 +64,4 @@ motion primitives и их интерполяция, сингулярные ду�
 
 ## Бэклог
 - Встраивание атласа в Ursina-визуализацию (`main.py`) — пользователю «глазами смотреть»; по его слову.
+- hub-worker-12 handoff (принят hub-worker-13): s8.py (blend) жив pid 972758 → /tmp/claude-1000/s8.log; затем LQR-клетка у цели маятника, спектр u, ответ research-7 (детали .llm/roles/worker/recent.md)
