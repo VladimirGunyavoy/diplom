@@ -1,0 +1,5 @@
+Running as unit: run-rbac4634059f643b493cbda24558f3ce2.scope; invocation ID: 27975227b0924c7b8fa91954bb41143d
+characteristics 5012 samples 2573588 switch pts 512 sec 8
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/pend_characteristics.py:47: RuntimeWarning: divide by zero encountered in divide
+  r = vc[ok] / vg[ok]
+{"covered": 0.775, "Vchar_over_Vgrid": {"mean": Infinity, "med": 0.9163, "p05": 0.677, "p95": 2.405}, "Vchar_over_J_P2": {"n": 31, "mean": 1.32, "max": 2.6685, "min": 0.8375}, "Vgrid_over_J_P2": 1.1046}
