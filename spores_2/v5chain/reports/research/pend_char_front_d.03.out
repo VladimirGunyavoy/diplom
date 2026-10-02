@@ -1,0 +1,14 @@
+t 1.0 front 107 links 105 inserted 67 cells 0.006
+t 2.0 front 244 links 241 inserted 261 cells 0.028
+t 3.0 front 292 links 285 inserted 453 cells 0.084
+t 4.0 front 355 links 350 inserted 552 cells 0.191
+t 5.0 front 619 links 614 inserted 825 cells 0.348
+t 6.0 front 270 links 263 inserted 1079 cells 0.504
+t 7.0 front 299 links 291 inserted 1188 cells 0.616
+t 8.0 front 263 links 256 inserted 1283 cells 0.729
+t 9.0 front 228 links 222 inserted 1385 cells 0.829
+t 10.0 front 94 links 91 inserted 1395 cells 0.879
+t 11.0 front 83 links 80 inserted 1395 cells 0.892
+t 12.0 front 4 links 1 inserted 1395 cells 0.896
+samples 151979 sec 2
+{"dmax": 0.03, "covered_r02": 1.0, "nearest_dist_max": 0.0167, "vmin_over_vnear": {"n": 100, "mean": 0.9979, "med": 0.9977, "min": 0.9128, "max": 1.2367}, "best_known40_over_Vchar": {"n": 40, "mean": 0.9978, "med": 0.9964, "min": 0.9853, "max": 1.0405}, "P3_over_Vchar": {"n": 40, "mean": 0.9989, "med": 0.9964, "min": 0.9853, "max": 1.0538}, "P0_over_Vchar": {"n": 40, "mean": 1.0659, "med": 1.0628, "min": 1.0093, "max": 1.228}, "butterfly5000_over_Vchar_100": {"n": 100, "mean": 1.0401, "med": 1.0383, "min": 1.011, "max": 1.1497}, "grid_agent_over_Vchar_100": {"n": 100, "mean": 1.0741, "med": 1.0679, "min": 1.0106, "max": 1.3542}, "Vgrid_over_Vchar_100": {"n": 100, "mean": 1.1078, "med": 1.1003, "min": 0.9212, "max": 1.7502}, "sec": 2}
