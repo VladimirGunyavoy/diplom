@@ -40,3 +40,4 @@
 - [research/lit_bangbang_cost.md](research/lit_bangbang_cost.md) — литобзор: bang-bang дифдрайва (Balkcom–Mason 2002: все дуги на вершинах), L1/L2-цена (bang-off-bang / насыщ.-непрерывное) (searcher-1)
 - [research/pend_faces_front.md](research/pend_faces_front.md) — маятник на гранях: 60% «недостижимых» — застой фронта строгой интерполяции, не физика; BIG-конечное → 99–100%
 - [research/v7_spore_cells.md](research/v7_spore_cells.md) — v7 клетки из точных траекторий + гало 10% + свободное переключение: DI 100%, T/T* 1.02–1.04; оценка только после шага Δt (без 0-переходов)
+- [research/v7_spectrum_cost.md](research/v7_spectrum_cost.md) — спектр на клетках v7: при T убирает дребезг (3→1 переключ.), при T+ρ∫u² bang-bang хуже на 12–46%, спектр 1.025 от ПМП-оптимума
