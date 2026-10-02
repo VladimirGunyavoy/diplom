@@ -121,3 +121,4 @@ hub-v5chain-research-8 | done | ctx 34%, 5ч 45% | точный момент п�
 hub-v5chain-research-9 | started | acc3 | opus | 17:37:35
 hub-worker-13 | done | ctx28 | spore_v исправлен (DI 1.044, маятник 1.019), точное переключение, бабочки ДИ/маятник | next=hub-worker-14 | 00:20:24
 hub-worker-14 | started | acc3 | sonnet | 00:21:06
+hub-v5chain-research-9 | idle | задач нет: пункты research-8 закрыты (бабочки на маятнике, эталон стрельбой, разрыв T*, оценка ĝ), остался рассказ по слову пользователя | 01:00:37
