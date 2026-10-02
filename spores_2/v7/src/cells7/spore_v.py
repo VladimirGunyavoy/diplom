@@ -38,7 +38,7 @@ class SporeV:
 
     def _pairs(self, Q):
         """Для точек Q (n,2): (qi, k, idx4, w4) по всем клеткам, содержащим точку (ядро+гало)."""
-        n0 = len(Q); per = np.asarray(self.S.per, float)
+        Q = self.S.wrap(Q); n0 = len(Q); per = np.asarray(self.S.per, float)                      # точки приводим в [−период/2, период/2) (агент может накручивать обороты)
         Qi = np.concatenate([Q + sh * per for sh in (-1, 0, 1)]) if per.any() else Q               # периодичность: образы точек со сдвигами ±период (locate сам оборачивает)
         qt = cKDTree(Qi); lst = qt.query_ball_point(self.cen, self.rad)                                  # по клеткам — точки в её радиусе (память ∝ числу реальных пар)
         CI = np.repeat(np.arange(self.K), [len(l) for l in lst]); QI = np.concatenate([np.array(l, int) for l in lst]).astype(int) if len(CI) else np.zeros(0, int)
@@ -84,7 +84,7 @@ class SporeV:
     def value(self, Q):
         Q = np.atleast_2d(Q); return np.where(self.goal(Q), 0.0, self._vmin(self.Vn, len(Q), self._pairs(Q)))
 
-    def rollout(self, Q0, dt=0.02, tmax=40.0, eps=0.0):
+    def rollout(self, Q0, dt=0.02, tmax=40.0, eps=0.0, sub=4):
         """Q0 (n,2): агент — каждые dt слой argmin [dt + V*(φ_k(q,dt))]; T (inf — не дошёл), число переключений."""
         Y = np.array(Q0, float); n = len(Y); T = np.full(n, np.inf); act = np.ones(n, bool); last = np.full(n, -1); sw = np.zeros(n, int); t = 0.0
         done = self.goal(Y); T[done] = 0; act &= ~done
@@ -94,7 +94,13 @@ class SporeV:
             if eps > 0:                                                    # гистерезис (hub-research-7): держать прежний слой, если он хуже лучшего не более чем на eps
                 li = last[ia]; hold = (li >= 0) & (vk[np.arange(len(ia)), np.maximum(li, 0)] <= vk[np.arange(len(ia)), kb] + eps); kb = np.where(hold, li, kb)
             ch = (last[ia] >= 0) & (kb != last[ia]) & ok; sw[ia[ch]] += 1; last[ia] = np.where(ok, kb, last[ia])
-            Y[ia] = np.where(kb[:, None] == 0, Yn[0], Yn[1]); t += dt; fin = self.goal(Y[ia]); T[ia[fin]] = t; act[ia[fin]] = False; act[ia[~ok]] = False
+            kk = kb.copy(); yy = Y[ia].copy(); fin = np.zeros(len(ia), bool); tf = np.full(len(ia), np.inf)
+            for sidx in range(sub):                                     # подшаги: цель проверяется на каждом (не проскочить квадрат цели внутри dt, hub-research-7)
+                for k in (0, 1):
+                    m_ = kk == k
+                    if m_.any(): yy[m_] = rk4v(self.S, k, yy[m_], np.full(m_.sum(), dt / sub), n=2)
+                g_ = self.goal(yy) & ~fin; tf[g_] = t + (sidx + 1) * dt / sub; fin |= g_
+            Y[ia] = yy; t += dt; T[ia[fin]] = tf[fin]; act[ia[fin]] = False; act[ia[~ok]] = False
         return T, sw
 
 
