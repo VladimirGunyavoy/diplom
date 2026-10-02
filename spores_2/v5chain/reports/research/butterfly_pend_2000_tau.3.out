@@ -1,0 +1,20 @@
+{"N": 2000, "tau": 0.3, "r": 0.1, "nodes": 14063, "pairs": 533946, "pairs_per_node": 38.0, "sec_pairs": 21, "sec_bellman": 0.1, "iters": 2, "BIG_nodes": 0.997, "BIG_nodes_w2": 0.995}
+grid sec 20 Ta/Vg {'mean': 0.9762, 'med': 0.9745, 'min': 0.577, 'max': 1.47}
+/home/rl/.local/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:3862: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/home/rl/.local/lib/python3.12/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+Traceback (most recent call last):
+  File "/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_pend.py", line 101, in <module>
+    print(json.dumps(dict(V_cover=round(float(m.sum() / ok.sum()), 3), V_over_Vgrid=stats(Vb[m] / Vg[m])), ensure_ascii=False), flush=True)
+                                                                                    ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_pend.py", line 91, in stats
+    def stats(r): return dict(mean=round(float(np.mean(r)), 4), med=round(float(np.median(r)), 4), min=round(float(np.min(r)), 3), max=round(float(np.max(r)), 3))
+                                                                                                                   ^^^^^^^^^
+  File "/home/rl/.local/lib/python3.12/site-packages/numpy/_core/fromnumeric.py", line 3299, in min
+    return _wrapreduction(a, np.minimum, 'min', axis, None, out,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/.local/lib/python3.12/site-packages/numpy/_core/fromnumeric.py", line 83, in _wrapreduction
+    return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: zero-size array to reduction operation minimum which has no identity

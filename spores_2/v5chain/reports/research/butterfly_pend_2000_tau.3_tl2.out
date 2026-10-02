@@ -1,0 +1,5 @@
+{"N": 2000, "tau": 0.3, "r": 0.1, "TL": 2.0, "nodes": 14063, "pairs": 1309542, "pairs_per_node": 93.1, "sec_pairs": 46, "sec_bellman": 4.3, "iters": 73, "BIG_nodes": 0.03, "BIG_nodes_w2": 0.004}
+grid sec 20 Ta/Vg {'mean': 0.9762, 'med': 0.9745, 'min': 0.577, 'max': 1.47}
+{"V_cover": 1.0, "V_over_Vgrid": {"mean": 0.9683, "med": 0.9708, "min": 0.611, "max": 1.103}}
+{"agent": "dt", "reach": 1.0, "T_over_Vgrid": {"mean": 0.9592, "med": 0.9634, "min": 0.611, "max": 1.117}, "T_over_Ta": {"mean": 0.9862, "med": 0.9885, "min": 0.76, "max": 1.173}, "sw_med": 1.0, "sw_mean": 1.1, "sec": 48}
+{"agent": "arc", "reach": 1.0, "T_over_Vgrid": {"mean": 0.9735, "med": 0.9692, "min": 0.611, "max": 1.449}, "T_over_Ta": {"mean": 1.004, "med": 0.9925, "min": 0.764, "max": 2.029}, "sw_med": 1.0, "sw_mean": 1.1, "sec": 12}
