@@ -58,7 +58,7 @@ class Cell:
         """Для точек Y (N,2): (s, t, внутри) по модели; внутри — |s|≤halo·r и −(halo−1)τ ≤ t ≤ halo·τ. Ньютон по (s,t)."""
         S = self.S; Y = np.atleast_2d(Y); N = len(Y)
         d = S.wrap(Y[:, None, :] - self.X[None, :, :]); d2 = np.sum(d * d, -1); j0 = np.argmin(d2, 1)
-        thr = 1.5 * (max(halo, 1.0) * self.r * np.max(np.linalg.norm(self.V, axis=1)) + (self.ts[1] - self.ts[0]) * np.max(np.linalg.norm(self.Xd, axis=1))) + 1e-9
+        thr = 1.5 * (max(halo, 1.0) * self.r * np.max(np.linalg.norm(self.V, axis=1)) + max(self.ts[1] - self.ts[0], (max(halo, 1.0) - 1) * self.tau) * np.max(np.linalg.norm(self.Xd, axis=1))) + 1e-9      # гало по t выходит за [0,τ] — отступ от крайних выборок траектории
         near = d2[np.arange(N), j0] < thr * thr
         if not near.any(): return np.zeros(N), np.zeros(N), np.zeros(N, bool)
         if not near.all():                                   # предфильтр: Ньютон только для точек рядом с центральной траекторией
