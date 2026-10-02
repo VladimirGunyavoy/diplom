@@ -1,0 +1,7 @@
+Running as unit: run-r0a4b59b23b6947759e6afc93d704a5cc.scope; invocation ID: bc03883c2a374ec3b5744558299249ce
+grid 24 iter 1057
+{"mode": "P0", "reach": 1.0, "T_mean": 5.253, "sw_med": 33.0, "sw_max": 46, "sec": 10}
+{"mode": "P3:0.2", "reach": 1.0, "T_mean": 5.833, "sw_med": 1.0, "sw_max": 6, "sec": 331}
+{"mode": "P3:0.5", "reach": 1.0, "T_mean": 5.771, "sw_med": 2.0, "sw_max": 6, "sec": 182}
+{"mode": "P3:0.2", "vs_P0": {"mean": 1.1231, "med": 0.9802, "min": 0.936, "max": 2.32}}
+{"mode": "P3:0.5", "vs_P0": {"mean": 1.1089, "med": 0.98, "min": 0.935, "max": 2.495}}
