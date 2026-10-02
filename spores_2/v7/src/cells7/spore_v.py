@@ -38,8 +38,11 @@ class SporeV:
 
     def _pairs(self, Q):
         """Для точек Q (n,2): (qi, k, idx4, w4) по всем клеткам, содержащим точку (ядро+гало)."""
-        qt = cKDTree(Q); lst = qt.query_ball_point(self.cen, self.rad)                                  # по клеткам — точки в её радиусе (память ∝ числу реальных пар)
+        n0 = len(Q); per = np.asarray(self.S.per, float)
+        Qi = np.concatenate([Q + sh * per for sh in (-1, 0, 1)]) if per.any() else Q               # периодичность: образы точек со сдвигами ±период (locate сам оборачивает)
+        qt = cKDTree(Qi); lst = qt.query_ball_point(self.cen, self.rad)                                  # по клеткам — точки в её радиусе (память ∝ числу реальных пар)
         CI = np.repeat(np.arange(self.K), [len(l) for l in lst]); QI = np.concatenate([np.array(l, int) for l in lst]).astype(int) if len(CI) else np.zeros(0, int)
+        QI = QI % n0; pk = np.unique(QI.astype(np.int64) * self.K + CI); QI, CI = pk // self.K, pk % self.K                      # образы → исходные точки, без дублей
         o = np.argsort(CI, kind='stable'); QI, CI = QI[o], CI[o]; bnd = np.nonzero(np.diff(CI))[0] + 1; out = ([], [], [], [])
         for a, b in zip(np.r_[0, bnd], np.r_[bnd, len(CI)]):
             if a == b: continue
