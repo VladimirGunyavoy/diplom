@@ -1,0 +1,2 @@
+{"tau": 0.4, "r": 0.1, "cells": 439, "nodes": 27657, "iters": 363, "V_start_over_Tstar": {"med": 1.027, "mean": 1.036}, "share_finite_nodes_with_BIG_corner": 0.07, "reach": 1.0, "T_over_Tstar_mean": 1.068, "sw_med": 3.0, "sec": 3}
+{"tau": 0.05, "r": 0.03, "cells": 8531, "nodes": 537453, "iters": 7683, "V_start_over_Tstar": {"med": 1.017, "mean": 1.013}, "share_finite_nodes_with_BIG_corner": 0.009, "reach": 1.0, "T_over_Tstar_mean": 1.015, "sw_med": 3.0, "sec": 1268}
