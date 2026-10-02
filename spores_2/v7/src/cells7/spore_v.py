@@ -17,9 +17,9 @@ def rk4v(S, k, Y, T, n=12):
 
 
 class SporeV:
-    def __init__(self, S, cells, goal, m=7, nt=9, halo=1.1):
+    def __init__(self, S, cells, goal, m=7, nt=9, halo=1.1, dt_edge=None):
         """cells — список Cell (оба слоя, поле .k); goal(Y)->bool-маска цели в нормированных координатах."""
-        self.S, self.cells, self.goal, self.m, self.nt, self.halo = S, cells, goal, m, nt, halo
+        self.S, self.cells, self.goal, self.m, self.nt, self.halo = S, cells, goal, m, nt, halo; self.dt_edge = dt_edge
         K = len(cells); self.K = K
         self.sg = np.linspace(-1, 1, m); self.tg = np.linspace(-(halo - 1), halo, nt)          # доли r и τ
         self.r = np.array([c.r for c in cells]); self.tau = np.array([c.tau for c in cells]); self.kk = np.array([c.k for c in cells])
@@ -58,25 +58,29 @@ class SporeV:
     def _vmin(self, V, npts, pr):
         qi, _, idx, w = pr; val = np.sum(V[idx] * w, 1); out = np.full(npts, BIG); np.minimum.at(out, qi, val); return out
 
+    def _Tn(self):
+        """Шаг по времени ребра узла: свой dtc клетки или заданный dt_edge (полулагранжева диффузия ∝ h²/dt — при мелких клетках шаг надо брать крупнее)."""
+        return np.full(self.N, self.dt_edge) if self.dt_edge else np.repeat(self.dtc, self.m * self.nt)
+
     def build(self, log=None):
         """Рёбра: для каждого узла и слоя k — точка φ_k(узел, Δt клетки) и её пары (клетка, веса)."""
-        self.E = []; Tn = np.repeat(self.dtc, self.m * self.nt)
+        self.E = []; Tn = self._Tn()
         for k in (0, 1):
-            Y = rk4v(self.S, k, self.P, Tn, n=12); self.E.append((self._pairs(Y), len(Y)))
+            Y = rk4v(self.S, k, self.P, Tn, n=12); self.E.append((self._pairs(Y), len(Y), self.goal(Y)))        # конец ребра в цели — V=0 (узлы цели редки: траектория проскакивает цель между узлами)
             if log: log('edges', k, len(self.E[-1][0][0]))
 
     def solve(self, it=20000, tol=1e-9, log=None):
-        V = np.full(self.N, BIG); V[self.G] = 0.0; Tn = np.repeat(self.dtc, self.m * self.nt)
+        V = np.full(self.N, BIG); V[self.G] = 0.0; Tn = self._Tn()
         for n in range(it):
             Vn = np.full(self.N, BIG)
-            for (pr, npts) in self.E: Vn = np.minimum(Vn, Tn + self._vmin(V, npts, pr))
+            for (pr, npts, eg) in self.E: Vn = np.minimum(Vn, Tn + np.where(eg, 0.0, self._vmin(V, npts, pr)))
             Vn[self.G] = 0.0; Vn = np.minimum(Vn, BIG); d = np.max(np.abs(Vn - V)); V = Vn
             if log and n % 200 == 0: log(n, d)
             if d < tol: break
         self.Vn = V; self.iters = n; return V
 
     def value(self, Q):
-        Q = np.atleast_2d(Q); return self._vmin(self.Vn, len(Q), self._pairs(Q))
+        Q = np.atleast_2d(Q); return np.where(self.goal(Q), 0.0, self._vmin(self.Vn, len(Q), self._pairs(Q)))
 
     def rollout(self, Q0, dt=0.02, tmax=40.0, eps=0.0):
         """Q0 (n,2): агент — каждые dt слой argmin [dt + V*(φ_k(q,dt))]; T (inf — не дошёл), число переключений."""
