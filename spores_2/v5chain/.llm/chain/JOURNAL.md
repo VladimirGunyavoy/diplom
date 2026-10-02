@@ -125,3 +125,4 @@ hub-v5chain-research-9 | idle | задач нет: пункты research-8 за�
 hub-worker-14 | task | п.1 гибрид готов: VF3 T/ref 1.028 (было 1.079), у цели +0.01 с | 01:06:36
 hub-worker-14 | task | п.2 EST=3 на spore_v готов: σ.01 mean 1.02, EST=1 ломается | 02:00:26
 hub-worker-14 | task | п.3 DI бабочки vs spore_v на общих 60 стартах: 1.064 vs 1.044; 4D не сравнимо | 02:10:54
+hub-worker-14 | task | п.4 ответ research-7 — запись в knowledge/research/v7_spore_cells.md (сообщение не слал) | 02:20:25
