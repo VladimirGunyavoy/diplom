@@ -21,6 +21,7 @@ def rk4z(z, u, h):
     k1 = fz(z, u); k2 = fz(z + h / 2 * k1, u); k3 = fz(z + h / 2 * k2, u); k4 = fz(z + h * k3, u)
     return z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 def goal(x, w, r=.1): return (np.abs(wrap(x)) <= r) & (np.abs(w) <= r)
+TF = float(os.environ.get('TF', 1.))                                        # P4: за сколько секунд до прибытия перейти на спектр
 RP = float(os.environ.get('RP', .1))                                        # план финиша — в цель ±RP (запас против ошибки модели), успех — ±.1
 
 def T1(x, w, u, H=4.0, h=.01):
@@ -59,19 +60,27 @@ def finish_plan(x, w, k, H=4.0):
 def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
     n = len(Q); T = np.full(n, np.inf); SW = np.zeros(n, int); out = []
     for i in range(n):
-        x, w = Q[i]; t = 0.; k = None; sw = 0; last_sw = 1e9; plan = None; pz = None; last_fp = -1e9; p0next = False
+        x, w = Q[i]; t = 0.; k = None; sw = 0; last_sw = 1e9; plan = None; pz = None; last_fp = -1e9; p0next = False; pu4 = None
         while t < tmax:
             if goal(x, w): T[i] = t; break
             if mode == 'P0' or (mode != 'P0' and pz is None and False):
                 pass
             if plan is not None:                                          # открытый финиш: τ_switch, потом до цели
-                ts, kk, tm = plan
+                ts, kk, tm, tarr = plan
+                if mode == 'P4' and tarr - t < TF:                               # P4: последняя секунда — обратная связь спектром каждые dt
+                    US = np.linspace(-1, 1, 11); c = [dt + S.Vq(*step(np.array([x]), np.array([w]), uu * UM, dt))[0] for uu in US]; uu = US[int(np.argmin(c))]
+                    if pu4 is not None and abs(uu - pu4) > .5: sw += 1
+                    pu4 = uu
+                    for _ in range(int(round(dt / h))):
+                        xn, wn = step(np.array([x]), np.array([w]), uu * UM * GAIN, h); x, w = float(xn[0]), float(wn[0]); t += h
+                        if goal(x, w): break
+                    continue
                 if t >= ts and kk == k: k = -k; sw += 1
                 if t - tm >= R:                                                   # P3: пересчёт точного финиша каждые R с
                     J, k1, ts2 = finish_plan(x, w, k)
                     if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1:          # та же проверка, что при первом плане
                         if k1 != k: k = k1; sw += 1
-                        plan = (t + ts2, k, t)
+                        plan = (t + ts2, k, t, t + J)
                     else: plan, pz, p0next = None, None, True; continue         # ушли из трубки финиша — шаг по V (как P0), потом снова финиш
                 xn, wn = step(np.array([x]), np.array([w]), k * UM * GAIN, h); x, w = float(xn[0]), float(wn[0]); t += h; continue
             if mode == 'P0' or p0next:
@@ -96,11 +105,11 @@ def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
                     if np.sign(zn[3]) == np.sign(k): tpred = (j + 1) * .01; break         # u = −sign(p_ω): переключение, когда sign(p_ω) = sign(k)
                     zz = zn
                 pz = [p, tpred]
-            if mode in ('P2', 'P3') and t - last_fp >= .15:
+            if mode in ('P2', 'P3', 'P4') and t - last_fp >= .15:
                 last_fp = t; J, k1, ts = finish_plan(x, w, k)
                 if J <= S.Vq(np.array([x]), np.array([w]))[0] + .1:              # финиш не хуже обещанного V, иначе V знает путь короче
                     if k1 != k: k = k1; sw += 1
-                    plan = (t + ts, k, t); continue
+                    plan = (t + ts, k, t, t + J); continue
             z = np.array([x, w, pz[0][0], pz[0][1]]); moved = 0.
             while moved < dt - 1e-12:
                 zn = rk4z(z, k * UM * GAIN, h)
