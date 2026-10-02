@@ -11,6 +11,7 @@ from v7_faces_di import tstar_box
 BIG = 1e3
 
 class Cover:
+    LAYERS = (1.0, -1.0)
     def __init__(s, L=2.5, tau=.4, r=.08, m=7, nt=9, halo=.1, seeds=6000, rho=.1, seed=0, ovl=None, fill=True):
         s.L, s.tau, s.r, s.rh, s.m, s.nt, s.rho = L, tau, r, r * (1 + halo), m, nt, rho
         s.h = halo; s.sgn = np.linspace(-1, 1, m); s.tgn = np.linspace(-halo, 1 + halo, nt)        # сетки в долях r_h и τ (у каждой клетки свои r, τ)
@@ -102,7 +103,7 @@ class Cover:
         P = np.stack([s.X.ravel(), s.Vv.ravel()], 1); dt = np.repeat(s.C[:, 4], s.m * s.nt) * (s.tgn[1] - s.tgn[0]); s.dt = s.dt0
         lay = np.repeat(s.C[:, 2], s.m * s.nt); last = (np.arange(s.N) % s.nt) == s.nt - 1
         F = []
-        for u in (1.0, -1.0):
+        for u in s.LAYERS:
             Fp = s.phi(P, u, dt); qi, k, idx, w = s.pairs(Fp); o = np.argsort(qi, kind='stable'); qi, idx, w = qi[o], idx[o], w[o]
             uq, st = np.unique(qi, return_index=True); same = (lay == u) & ~last                  # свой слой не последний узел — берём следующий узел
             F.append((u, uq, st, idx, w, same)); s.npairs = getattr(s, 'npairs', 0) + len(qi)
