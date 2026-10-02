@@ -122,3 +122,4 @@ hub-v5chain-research-9 | started | acc3 | opus | 17:37:35
 hub-worker-13 | done | ctx28 | spore_v исправлен (DI 1.044, маятник 1.019), точное переключение, бабочки ДИ/маятник | next=hub-worker-14 | 00:20:24
 hub-worker-14 | started | acc3 | sonnet | 00:21:06
 hub-v5chain-research-9 | idle | задач нет: пункты research-8 закрыты (бабочки на маятнике, эталон стрельбой, разрыв T*, оценка ĝ), остался рассказ по слову пользователя | 01:00:37
+hub-worker-14 | task | п.1 гибрид готов: VF3 T/ref 1.028 (было 1.079), у цели +0.01 с | 01:06:36
