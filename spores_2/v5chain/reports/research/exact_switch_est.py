@@ -24,11 +24,19 @@ def goal(x, w, r=.1): return (np.abs(wrap(x)) <= r) & (np.abs(w) <= r)
 TF = float(os.environ.get('TF', 1.))                                        # P4: за сколько секунд до прибытия перейти на спектр
 RP = float(os.environ.get('RP', .1))                                        # план финиша — в цель ±RP (запас против ошибки модели), успех — ±.1
 
-EST = int(os.environ.get('EST', 0)); G = [1., 0]                                # research-9: оценка коэффициента при u на ходу; G = [ĝ, число наблюдений]
+EST = int(os.environ.get('EST', 0)); G = [1., 0, 0., 0.]                                # research-9: оценка коэффициента при u на ходу; G = [ĝ, число наблюдений]
 def observe(x0, w0, x1, w1, ucmd, h):
     """ĝ из одного шага: Δω = ∫sin φ dt + ĝ·u·h (трапеция по наблюдаемым φ); скользящее среднее. Состояние без шума."""
     if not EST or abs(ucmd) < 1e-9 or h < 1e-6: return
-    g = (w1 - w0 - h * (np.sin(x0) + np.sin(x1)) / 2) / (ucmd * h); G[1] += 1; G[0] += (g - G[0]) / min(G[1], 50)
+    if NOISE: x0, w0, x1, w1 = (v + NOISE * RNG.standard_normal() for v in (x0, w0, x1, w1))          # шум датчика — только в оценке ĝ (планировщик видит точное состояние)
+    d = w1 - w0 - h * (np.sin(x0) + np.sin(x1)) / 2; G[1] += 1
+    if EST == 1: G[0] += (d / (ucmd * h) - G[0]) / min(G[1], 50)                                      # скользящее среднее 50 шагов
+    elif EST == 3:                                                                                   # длинная база: по дуге с постоянным u — (ω_сейчас − ω_начала − ∫sin φ dt)/(u·T); дуги — МНК с весом (u·T)²
+        if ARC[0] != ucmd: G[2] += ARC[4]; G[3] += ARC[5]; ARC[:] = [ucmd, w0, 0., 0., 0., 0.]       # новая дуга: закрыть старую
+        ARC[2] += h * (np.sin(x0) + np.sin(x1)) / 2; ARC[3] += h; dd = w1 - ARC[1] - ARC[2]; ARC[4], ARC[5] = ucmd * ARC[3] * dd, (ucmd * ARC[3]) ** 2
+        if G[3] + ARC[5] > (.3 * .3) ** 2: G[0] = float(np.clip((G[2] + ARC[4]) / (G[3] + ARC[5]), .5, 1.5))
+    else: G[2] += ucmd * h * d; G[3] += (ucmd * h) ** 2; G[0] = float(np.clip(G[2] / G[3], .5, 1.5)) if G[1] >= 30 else 1.   # EST=2: накопительная МНК
+ARC = [0., 0., 0., 0., 0., 0.]; NOISE = float(os.environ.get('NOISE', 0)); RNG = np.random.default_rng(7)
 def T1(x, w, u, H=4.0, h=.01):
     """Время, за которое слой u в одиночку входит в цель (inf — не входит за H). Векторно; вход уточняется до h/8."""
     u = u * G[0]; x, w = np.array(x, float), np.array(w, float); T = np.full(x.shape, np.inf); t = 0.; act = ~goal(x, w, RP); T[~act] = 0.
@@ -77,7 +85,7 @@ def robust_ok(x, w, k1, ts, J, h=.01):
 def run(S, Q, mode, dt=.03, delta=.05, tau_f=.15, h=.003, tmax=40., R=np.inf):
     n = len(Q); T = np.full(n, np.inf); SW = np.zeros(n, int); out = []
     for i in range(n):
-        G[0], G[1] = 1., 0; x, w = Q[i]; t = 0.; k = None; sw = 0; last_sw = 1e9; plan = None; pz = None; last_fp = -1e9; p0next = False; pu4 = None
+        G[:] = [1., 0, 0., 0.]; ARC[:] = [0.] * 6; x, w = Q[i]; t = 0.; k = None; sw = 0; last_sw = 1e9; plan = None; pz = None; last_fp = -1e9; p0next = False; pu4 = None
         while t < tmax:
             if goal(x, w): T[i] = t; break
             if mode == 'P0' or (mode != 'P0' and pz is None and False):
@@ -153,4 +161,4 @@ if __name__ == '__main__':
     for m in [m for m in res if m != 'P0']:
         ok = np.isfinite(T0) & np.isfinite(res[m][0]); r = res[m][0][ok] / T0[ok]
         print(json.dumps(dict(mode=m, vs_P0=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), min=round(float(r.min()), 3), max=round(float(r.max()), 3)))), flush=True)
-    print('g_hat последнего старта', round(G[0], 5), 'наблюдений', G[1]); np.save('exact_switch_est%d_eps%g_%s%s%s%s.npy' % (EST, EPS, '_'.join(res).replace(':', ''), '_g%s' % GAIN if GAIN != 1 else '', '_bot' if os.environ.get('BOTTOM') else '', '_rp%g' % RP if RP != .1 else ''), np.array([res[m][0] for m in res] + [res[m][1] for m in res]))
+    print('g_hat последнего старта', round(G[0], 5), 'наблюдений', G[1]); np.save('exact_switch_est%d_eps%g_n%g_%s%s%s%s.npy' % (EST, EPS, NOISE, '_'.join(res).replace(':', ''), '_g%s' % GAIN if GAIN != 1 else '', '_bot' if os.environ.get('BOTTOM') else '', '_rp%g' % RP if RP != .1 else ''), np.array([res[m][0] for m in res] + [res[m][1] for m in res]))
