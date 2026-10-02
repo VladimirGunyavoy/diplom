@@ -1,0 +1,18 @@
+Running as unit: run-rf0904384934e4bfe9a4ef2ade95de65c.scope; invocation ID: 511409673851466784a8b84b2803bb2b
+round 0 gaps 208 total 2208 sec 6
+round 1 gaps 322 total 2530 sec 7
+round 2 gaps 508 total 3038 sec 9
+round 3 gaps 782 total 3820 sec 12
+round 4 gaps 1274 total 5094 sec 17
+round 5 gaps 1786 total 6880 sec 21
+round 6 gaps 1516 total 8396 sec 25
+round 7 gaps 1416 total 9812 sec 29
+round 8 gaps 1368 total 11180 sec 34
+round 9 gaps 1370 total 12550 sec 38
+round 10 gaps 1372 total 13922 sec 43
+round 11 gaps 1366 total 15288 sec 47
+round 12 gaps 1366 total 16654 sec 50
+round 13 gaps 1366 total 18020 sec 56
+round 14 gaps 1362 total 19382 sec 60
+round 15 gaps 1362 total 20744 sec 64
+{"dmax": 0.05, "chars": 20346, "samples": 13777360, "covered": 1.0, "Vchar_over_Vgrid": {"mean": 0.9955, "med": 0.9107, "p05": 0.791, "p95": 1.709}, "Vchar_over_J_P2": {"n": 40, "mean": 1.2389, "min": 0.9458, "max": 3.4084}, "Vgrid_over_J_P2": 1.1046, "sec": 105}
