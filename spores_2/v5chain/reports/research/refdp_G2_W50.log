@@ -1,0 +1,41 @@
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 178, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: Inf detected for output g, at (row 220, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: Inf detected for output g, at (row 218, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:08 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: Inf detected for output g, at (row 172, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: Inf detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 180, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 176, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 176, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 178, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: Inf detected for output g, at (row 176, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 176, col 0).") [.../casadi/core/oracle_function.cpp:408]
+CasADi - 2026-10-02 14:29:09 WARNING("S:nlp_g failed: NaN detected for output g, at (row 176, col 0).") [.../casadi/core/oracle_function.cpp:408]
+ДВОЙНОЙ МАЯТНИК висит→вверх G=2.00 WMP=50 N=80 M=4: T_ref 6.126  успешных 61/72  лучшие [6.126, 6.126, 6.127, 6.127, 6.127, 6.131]  статусы {'Solve_Succeeded': 67, 'Infeasible_Problem_Detected': 5}  (87 с)
