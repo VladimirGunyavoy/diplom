@@ -1,7 +1,7 @@
 """Бабочки 4D плоский ДИ, ускоренный поиск пар (PLAN п.3, hub-worker-14). Модель — reports/research/butterfly_4d.py (B4): дуги формулой.
 Ускорение: кандидатов даёт cKDTree.sparse_distance_matrix(узлы чанка, ndarray) — вся работа в C++, без списков Python; чанки узлов; в памяти только (qi, k, t, s*) int32/float64;
 Беллман — reduceat по отсортированным парам вместо np.minimum.at. Запуск из spores_2/v7: python3 src/cells7/butterfly_4d.py N [m]"""
-import sys, time, json
+import sys, os, time, json
 sys.path.insert(0, '.'); sys.path.insert(0, '../v5chain/reports/research')
 import numpy as np
 from scipy.spatial import cKDTree
@@ -21,7 +21,8 @@ class B4Fast(B4):
         t, ss, aa = s.arcs(Yc[qi], k); f = np.isfinite(t)
         return (qi[f] + i0).astype(np.int32), k[f].astype(np.int32), t[f], ss[f], (aa[f] if want_a else None)
 
-    def pairs(s, Y, own=None, chunk=2000, want_a=True, procs=int(__import__('os').environ.get('PROCS', 1))):
+    def pairs(s, Y, own=None, chunk=None, want_a=True, procs=int(__import__('os').environ.get('PROCS', 1))):
+        chunk = chunk or max(100, int(2000 * 8000 / s.K))                      # кандидатов на узел ∝ N ⇒ чанк ∝ 1/N (пик памяти ~ const)
         jobs = [(Y[i:i + chunk], None if own is None else own[i:i + chunk], i, want_a) for i in range(0, len(Y), chunk)]
         if procs > 1 and len(jobs) > 1:
             global _S; _S = s
@@ -30,14 +31,20 @@ class B4Fast(B4):
         return tuple(np.concatenate([r[i] for r in R]) if (i < 4 or want_a) else None for i in range(5))
 
     def solve(s, it=200):
-        own = np.repeat(np.arange(s.K), s.m); t0 = time.time()
-        qi, k, t, ss, _ = s.pairs(s.nodes, own, want_a=False); o = np.argsort(qi, kind='stable'); qi, k, t, ss = qi[o], k[o], t[o], ss[o]
-        s.npairs = len(qi); print('pairs', s.npairs, 'на узел', round(s.npairs / len(s.nodes), 1), 'сек', round(time.time() - t0), flush=True)
-        starts = np.r_[0, np.nonzero(np.diff(qi))[0] + 1]; nodeid = qi[starts]
-        fpos = (ss + s.r) / (2 * s.r) * (s.m - 1); j = np.clip(np.floor(fpos).astype(np.int64), 0, s.m - 2); b = fpos - j; idx = k.astype(np.int64) * s.m + j; del fpos, j
+        t0 = time.time(); cache = '/tmp/claude-1000/b4pairs_%d_%d.npz' % (s.K, s.m)
+        if os.path.exists(cache):
+            Z = np.load(cache); starts, nodeid, idx, b, t = Z['starts'], Z['nodeid'], Z['idx'], Z['b'], Z['t']; del Z
+        else:
+            own = np.repeat(np.arange(s.K), s.m); qi, k, t, ss, _ = s.pairs(s.nodes, own, want_a=False); o = np.argsort(qi, kind='stable')
+            qi = qi[o]; k = k[o]; t = t[o]; ss = ss[o]; del o
+            starts = np.r_[0, np.nonzero(np.diff(qi))[0] + 1]; nodeid = qi[starts].copy(); del qi
+            fpos = (ss + s.r) / (2 * s.r) * (s.m - 1); del ss; j = np.clip(np.floor(fpos).astype(np.int32), 0, s.m - 2); b = fpos - j; del fpos
+            idx = k * np.int32(s.m) + j; del k, j
+            np.savez(cache, starts=starts, nodeid=nodeid, idx=idx, b=b, t=t)
+        s.npairs = len(t); print('pairs', s.npairs, 'на узел', round(s.npairs / len(s.nodes), 1), 'сек', round(time.time() - t0), flush=True)
         V = s.V.copy()
         for n in range(it):
-            J = t + (1 - b) * V[idx] + b * V[idx + 1]; mn = np.minimum.reduceat(J, starts)
+            J = (1 - b) * V[idx]; J += b * V[idx + 1]; J += t; mn = np.minimum.reduceat(J, starts); del J
             Vn = V.copy(); Vn[nodeid] = np.minimum(np.minimum(V[nodeid], BIG), mn); Vn = np.where(s.ingoal, 0., np.minimum(Vn, BIG))
             d = np.max(np.abs(Vn - V)); V = Vn
             if d < 1e-7: break
