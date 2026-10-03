@@ -141,3 +141,4 @@ hub-worker-14 | task | гибрид маятника u·.95: VF3 1.079 vs VF0 1.
 hub-worker-14 | task | гибрид маятника u·.95 на V5: 99% / 1.070 | 19:14:12
 hub-worker-14 | done | ctx27 | 11 задач очереди+research-9, PLAN ротирован | next=hub-v5chain-worker-15 | 19:15:00
 hub-v5chain-worker-15 | started | acc2 | sonnet | 19:15:40
+hub-v5chain-worker-15 | task | EST=3 в гибриде маятника u·.95: 1.076 vs 1.070 — выигрыша нет (потери в агенте) | 20:50:17
