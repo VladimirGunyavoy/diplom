@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5))
+TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -99,7 +99,16 @@ def rollout_edges(A, k, s, tmax=40.):
     E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
     while T < tmax:
         if ingoal(y[:, None])[0]: return T, arcs, wmax
+        if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
+            J, (tt, u1, u2) = plan(A, y)
+            if J >= BIG / 2 or tt <= 0: return np.inf, arcs, wmax
+            nst = max(6, int(tt / .01))
+            for _ in range(nst):
+                y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
+                if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
+            T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1; continue
         f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
+        if ALLN: js = list(np.argsort(A.V[k]))                                               # ALLN: рёбра всех узлов споры по возрастанию V узла
         for j in js:
             for k2, t0, s20 in E.get(k * MN + j, []):
                 P = A.C[k] + A.sn[j] * A.n[k]
@@ -110,7 +119,16 @@ def rollout_edges(A, k, s, tmax=40.):
                 v = r[0] + edge_value(A, k2, r[3])
                 if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
                 break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
-        if best is None: return np.inf, arcs, wmax
+        if best is None and ALLN:                                                            # запас: прямые пары из точки (Ньютон из формулы)
+            iy, kk, sv, t_ = A.pairs(y[None])
+            for kk_, sv_ in zip(kk.astype(int), sv):
+                tt, u1, u2, s2, ok = solve_arcs(y[:, None], A.C[kk_][:, None], A.n[kk_][:, None])
+                if ok[0] and abs(s2[0]) <= R:
+                    v = tt[0] + edge_value(A, kk_, s2[0])
+                    if v < BIG / 2 and (best is None or v < best[0]): best = (v, kk_, (tt[0], u1[0], u2[0], s2[0]))
+        if best is None:
+            if not PLANFB: return np.inf, arcs, wmax
+            k = None; continue
         _, k2, (tt, u1, u2, s2) = best; nst = max(6, int(tt / .01)); yy = y.copy()
         for _ in range(nst):
             yy = flow(yy[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(yy[2:]).max())
