@@ -143,3 +143,4 @@ hub-worker-14 | done | ctx27 | 11 задач очереди+research-9, PLAN р�
 hub-v5chain-worker-15 | started | acc2 | sonnet | 19:15:40
 hub-v5chain-worker-15 | task | EST=3 в гибриде маятника u·.95: 1.076 vs 1.070 — выигрыша нет (потери в агенте) | 20:50:17
  | task | п.5: порт butterfly_dp в v7; запрос/агент = research (T 14.218), построение расходится с его файлом (вопрос research-10) | 21:08:26
+hub-v5chain-worker-15 | task | п.5: эллипс порта WIN=1 раунд 6: T 8.59 (×1.685 OCP) = research 8.61; идут 7–8 | 22:40:11
