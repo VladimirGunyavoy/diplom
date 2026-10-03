@@ -1,0 +1,5 @@
+NQ=60,M=24,RW=.6 butterfly_dd_finish.py 1500
+NQ=60,M=24,RW=1.2 butterfly_dd.py 1000
+NQ=60,M=24,RW=1.5 butterfly_dd.py 800
+NQ=60,M=24,RW=2.0 butterfly_dd.py 800
+NQ=60,M=24,RW=.9 butterfly_dd_finish.py 1500

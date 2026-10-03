@@ -1,0 +1,21 @@
+== 15:58:44 NQ=60,M=24,RW=.6 butterfly_dd_finish.py 1500
+готово 4
+{"N": 1500, "VF": 0.0, "reach": 1.0, "T_over_ref": {"mean": 1.1111, "med": 1.1012, "max": 1.391}, "segs_med": 9.0, "sec": 0}
+{"N": 1500, "VF": 1.0, "reach": 1.0, "T_over_ref": {"mean": 1.1093, "med": 1.0967, "max": 1.391}, "segs_med": 10.0, "sec": 22}
+{"N": 1500, "VF": 2.0, "reach": 1.0, "T_over_ref": {"mean": 1.0976, "med": 1.0826, "max": 1.342}, "segs_med": 8.0, "sec": 32}
+{"N": 1500, "VF": 3.0, "reach": 1.0, "T_over_ref": {"mean": 1.0639, "med": 1.0483, "max": 1.331}, "segs_med": 5.5, "sec": 31}
+== 16:00:15 NQ=60,M=24,RW=1.2 butterfly_dd.py 1000
+{"N": 1000, "m": 24, "RW": 1.2, "nodes": 24024, "pairs": 5015136, "iters": 7, "sec": 5, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.0714, "med": 1.0586, "min": 1.002, "max": 1.219}, "reach": 1.0, "T_over_ref": {"mean": 1.0642, "med": 1.0496, "min": 1.002, "max": 1.219}, "segs_med": 7.0, "sec": 5}
+== 16:00:21 NQ=60,M=24,RW=1.5 butterfly_dd.py 800
+{"N": 800, "m": 24, "RW": 1.5, "nodes": 19224, "pairs": 4841664, "iters": 7, "sec": 4, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.0714, "med": 1.0654, "min": 1.002, "max": 1.199}, "reach": 1.0, "T_over_ref": {"mean": 1.0671, "med": 1.0624, "min": 1.002, "max": 1.199}, "segs_med": 6.0, "sec": 5}
+== 16:00:27 NQ=60,M=24,RW=2.0 butterfly_dd.py 800
+{"N": 800, "m": 24, "RW": 2.0, "nodes": 19224, "pairs": 7900800, "iters": 5, "sec": 6, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.064, "med": 1.0513, "min": 1.0, "max": 1.184}, "reach": 1.0, "T_over_ref": {"mean": 1.0603, "med": 1.0487, "min": 1.0, "max": 1.184}, "segs_med": 5.0, "sec": 6}
+== 16:00:35 NQ=60,M=24,RW=.9 butterfly_dd_finish.py 1500
+готово 7
+{"N": 1500, "VF": 0.0, "reach": 1.0, "T_over_ref": {"mean": 1.0589, "med": 1.048, "max": 1.161}, "segs_med": 7.0, "sec": 0}
+{"N": 1500, "VF": 1.0, "reach": 1.0, "T_over_ref": {"mean": 1.056, "med": 1.0447, "max": 1.161}, "segs_med": 8.0, "sec": 19}
+{"N": 1500, "VF": 2.0, "reach": 1.0, "T_over_ref": {"mean": 1.0525, "med": 1.044, "max": 1.159}, "segs_med": 7.0, "sec": 33}
+{"N": 1500, "VF": 3.0, "reach": 1.0, "T_over_ref": {"mean": 1.0324, "med": 1.0227, "max": 1.145}, "segs_med": 5.0, "sec": 31}

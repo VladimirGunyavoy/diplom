@@ -1,0 +1,9 @@
+== 15:57:45 NQ=60,M=36,RW=.6 butterfly_dd.py 1500
+{"N": 1500, "m": 36, "RW": 0.6, "nodes": 54036, "pairs": 4646016, "iters": 13, "sec": 6, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.1107, "med": 1.1047, "min": 1.021, "max": 1.402}, "reach": 1.0, "T_over_ref": {"mean": 1.1008, "med": 1.088, "min": 1.014, "max": 1.393}, "segs_med": 11.0, "sec": 6}
+== 15:57:52 NQ=60,M=24,RW=.9 butterfly_dd.py 1500
+{"N": 1500, "m": 24, "RW": 0.9, "nodes": 36024, "pairs": 6694272, "iters": 10, "sec": 7, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.0663, "med": 1.058, "min": 1.004, "max": 1.168}, "reach": 1.0, "T_over_ref": {"mean": 1.0589, "med": 1.048, "min": 1.004, "max": 1.161}, "segs_med": 7.0, "sec": 7}
+== 15:58:01 NQ=60,M=24,RW=.6 butterfly_dd.py 2500
+{"N": 2500, "m": 24, "RW": 0.6, "nodes": 60024, "pairs": 8671392, "iters": 13, "sec": 12, "BIG": 0.0}
+{"V_over_ref": {"mean": 1.0863, "med": 1.0787, "min": 1.015, "max": 1.24}, "reach": 1.0, "T_over_ref": {"mean": 1.0772, "med": 1.0661, "min": 1.014, "max": 1.206}, "segs_med": 9.0, "sec": 12}
