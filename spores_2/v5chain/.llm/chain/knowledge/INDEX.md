@@ -10,6 +10,7 @@
 | память ролей (хендоффы, последние смены) | `../../roles/README.md` |
 | код: архитектура, менеджеры, ввод | `../../context/architecture.md`, `../../context/input_manager_guide.md` |
 | атлас спор (двойной интегратор → дифдрайв) | `../../../docs/spore_atlas_double_integrator.md` |
+- [concepts.md](concepts.md) — **цель проекта и концепции/ограничения пользователя одним списком (правило · источник); читают на старте все роли, сверяют результаты**
 - [atlas_di_tails.md](atlas_di_tails.md) — хвосты атласа DI: запросы у линии vmax
 - [research/README.md](research/README.md) — заметки роли research (рисерч, математика)
 - [research/di_gradV_switch.md](research/di_gradV_switch.md) — агент по ∇V из 5 точек клетки (DI): мелкие клетки 20/20, крупным нужна клетка цели
