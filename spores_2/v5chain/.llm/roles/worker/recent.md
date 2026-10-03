@@ -1,3 +1,7 @@
+## hub-worker-14 (acc3, Sonnet, 00:20–19:30, ctx27%)
+Звено: hub-worker-14 (acc3, Sonnet, 00:20–19:30), причина смены: ctx ~27% (софт 30%, рабочая смена ~19 ч)
+Сделано: очередь PLAN п.1–5 + задачи research-9 (всё в `knowledge/research/butterfly_spores.md`, `butterfly_dd.md`, `v7/reports/spore_v_di.md`): гибрид бабочки маятника + финиш стрельбой (VF3 1.028; u·.95 на V с заполненными дырами 1.070, 99%); EST=3 на spore_v с шумом (σ.01 1.02); бабочки ДИ на общих стартах (1.064 vs 1.044); 4D бабочки 50k спор (V med 1.092, агент med 1.101, финиш по кривой переключения VF2 → max 1.49); дифдрайв бабочки в v7 (1.033) + 2 диска (100%, 0 столкновений, 1.077–1.085 vs свободный эталон); g=2 тёплый старт OCP — отрицательно. PLAN.md ротирован 53→8 КБ.
+
 ## hub-worker-13 (2026-10-02, acc2 Sonnet, ctx 28%)
 Звено: hub-worker-13 (acc2, Sonnet, 10:11–02:45), причина смены: ctx 28% (софт 30%, идл)
 Сделано: spore_v исправлен и измерен (отчёт `v7/reports/spore_v_di.md`, всё в PLAN): `Cell.locate` (допуск гало, экстраполяция Эрмита, предфильтр по t → 99.9% узлов находят свою клетку), `dt_edge`=шаг агента, густота узлов: DI T/T* 1.044 (5→3 перекл.), маятник hs=.008 T/Ta 1.019; LQR-зона hc=.1; спектр u в агенте ≤1%; точное переключение (research-8/9) на spore_v: P3:.5+EST=1+EPS=.02 sw 18→3, u·.95: 1.027; бабочки (research-8): ДИ ×100 (`cells7/butterfly_di.py`), маятник 100%/1.036/4 перекл. при 35k узлов (`cells7/butterfly_pend.py`, окно .3); против строгого эталона pend_ref_T: spore_v 1.075, бабочки 1.077.
@@ -20,7 +24,4 @@ v7: градиент V (value_jet.py) на DI — не сошёлся (v7_cells.
 
 ## hub-worker-10 (acc3, sonnet, 16:44–21:40), смена: human (NEEDS-HUMAN п.3)
 v7: locate предфильтр ×2, симметричная проверка ядер, nD-клетка celln.py, покрытие 9 систем (v7_summary.md), п.5 эллипс+пул (ellipse.py), картинки dd/m2g. V по клеткам (граф/решётка/гало) не работает — v7_cells.md. Грабли: v6 импортируется по именам файлов; nD-метрики O(N²), 8D≈20 мин; sleep>120 блокируется; git -c user.email обязателен; не пушить. Код v7 на aida ~/spore_v5/w10/v7.
-
-## hub-worker-9 (acc3, sonnet, 09:20–16:50), смена по ctx 21%
-`corridor_query(fs,neigh,wlim)`, refine |w|≤WM; v6_summary (WM3/6, neigh8, dd+диски 40/40, маятник, двойной маятник g=1/1.5/2); v7 каркас `spores_2/v7/src/cells7` (systems, cell, cover) + tests/run_cover.py. Грабли: ssh -f + setsid nohup; sleep>120 блокируется; casadi нет; pkill -f убивает шелл; git add только своих путей. Код v7 на aida `~/spore_v5/w9/v7`.
 

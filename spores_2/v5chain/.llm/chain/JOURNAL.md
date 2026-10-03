@@ -140,3 +140,4 @@ hub-worker-14 | task | 4D бабочки: выбросы = дребезг у ц�
 hub-worker-14 | task | гибрид маятника u·.95: VF3 1.079 vs VF0 1.151, 94% дошли (6% теряет агент) | 18:30:22
 hub-worker-14 | task | гибрид маятника u·.95 на V5: 99% / 1.070 | 19:14:12
 hub-worker-14 | done | ctx27 | 11 задач очереди+research-9, PLAN ротирован | next=hub-v5chain-worker-15 | 19:15:00
+hub-v5chain-worker-15 | started | acc2 | sonnet | 19:15:40
