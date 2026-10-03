@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2))
+TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -87,9 +87,9 @@ def newton_warm(y, c, nn, t, u1, u2, s, it=12):
 def node_edges(A):
     """Для каждого узла (k, j): лучшее ребро (k2, t, u1, u2, s2) по V атласа."""
     iy, k, j0, a, t = A.e; V = A.V.reshape(-1); val = t + (1 - a) * V[k * MN + j0] + a * V[k * MN + j0 + 1]
-    o = np.lexsort((val, iy)); first = o[np.r_[True, iy[o][1:] != iy[o][:-1]]]; E = {}
-    for i in first:
-        if val[i] < BIG / 2: E[int(iy[i])] = (int(k[i]), float(t[i]), float(((j0[i] + a[i]) / (MN - 1)) * 2 * R - R))
+    o = np.lexsort((val, iy)); E = {}
+    for i in o:                                                                          # research-10: до TOPE рёбер на узел — запасные, если тёплый Ньютон не сошёлся
+        if val[i] < BIG / 2 and len(E.setdefault(int(iy[i]), [])) < TOPE: E[int(iy[i])].append((int(k[i]), float(t[i]), float(((j0[i] + a[i]) / (MN - 1)) * 2 * R - R)))
     return E
 def edge_value(A, k2, s2):
     f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = f_ - j0; return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
@@ -101,14 +101,15 @@ def rollout_edges(A, k, s, tmax=40.):
         if ingoal(y[:, None])[0]: return T, arcs, wmax
         f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
         for j in js:
-            if k * MN + j not in E: continue
-            k2, t0, s20 = E[k * MN + j]; P = A.C[k] + A.sn[j] * A.n[k]
-            tt, u1, u2, s2, ok = solve_arcs(P[:, None], A.C[k2][:, None], A.n[k2][:, None])
-            if not ok[0]: continue
-            r = newton_warm(y, A.C[k2], A.n[k2], tt[0], u1[0], u2[0], s2[0])
-            if r is None: continue
-            v = r[0] + edge_value(A, k2, r[3])
-            if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
+            for k2, t0, s20 in E.get(k * MN + j, []):
+                P = A.C[k] + A.sn[j] * A.n[k]
+                tt, u1, u2, s2, ok = solve_arcs(P[:, None], A.C[k2][:, None], A.n[k2][:, None])
+                if not ok[0]: continue
+                r = newton_warm(y, A.C[k2], A.n[k2], tt[0], u1[0], u2[0], s2[0])
+                if r is None: continue
+                v = r[0] + edge_value(A, k2, r[3])
+                if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
+                break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
         if best is None: return np.inf, arcs, wmax
         _, k2, (tt, u1, u2, s2) = best; nst = max(6, int(tt / .01)); yy = y.copy()
         for _ in range(nst):

@@ -57,3 +57,4 @@ if __name__ == '__main__':
         ne, na, dmin = grow_round(A, rng, dmin, Tb); dmin *= DSH; A.solve(); Tb = min(Tb, A.V[KS, MN // 2]); A.E = Q.node_edges(A); T, arcs, wm = Q.rollout_edges(A, KS, 0.)
         print(json.dumps(dict(round=r, ellipse=ne, added=na, spores=A.K, pairs_per_node=round(len(A.e[0]) / (A.K * MN), 2), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3),
                               T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0))), flush=True)
+        np.savez(sys.argv[1].replace('.npz', '_ell%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)

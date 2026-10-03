@@ -7,5 +7,5 @@ while read -r envs args; do
   until [ $(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo) -ge 2048 ]; do sleep 60; done
   echo "== $(date +%T) $envs $args"
   E=""; for kv in ${envs//,/ }; do E="$E -E $kv"; done
-  systemd-run --user --scope -q -p MemoryMax=1500M -p MemorySwapMax=0 $E python3 $args < /dev/null 2>&1 | grep -v Running | cut -c1-330
+  systemd-run --user --scope -q -p MemoryMax=1500M -p MemorySwapMax=0 $E python3 $args < /dev/null 2>&1 | grep --line-buffered -v Running | cut -c1-330
 done < "$1"
