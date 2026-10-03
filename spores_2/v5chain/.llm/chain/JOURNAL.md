@@ -127,3 +127,4 @@ hub-worker-14 | task | п.2 EST=3 на spore_v готов: σ.01 mean 1.02, EST=
 hub-worker-14 | task | п.3 DI бабочки vs spore_v на общих 60 стартах: 1.064 vs 1.044; 4D не сравнимо | 02:10:54
 hub-worker-14 | task | п.4 ответ research-7 — запись в knowledge/research/v7_spore_cells.md (сообщение не слал) | 02:20:25
 hub-worker-14 | task | п.5 g=2: тёплый старт из OCP с |ω|≤3 не сходится (без предела 6.885) — отрицательный результат | 02:53:58
+hub-worker-14 | idle | очередь PLAN пуста, п.1–5 закрыты | 03:00:15
