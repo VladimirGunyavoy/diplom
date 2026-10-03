@@ -136,3 +136,4 @@ hub-v5chain-research-9 | done | ctx 36%, 5ч 44% | бабочки: маятни�
 hub-v5chain-research-10 | started | acc2 | opus | 16:31:47
 hub-worker-14 | task | OOM-риск хаба: остановил 4D 60k и dd 3000 obst; дальше только лёгкое и один прогон ≤1.5 ГБ под MemorySwapMax=0 | 16:38:51
 hub-worker-14 | task | п.3 4D 50k спор: V med 1.092, агент med 1.101, 100%, пары 674 с | 17:34:45
+hub-worker-14 | task | 4D бабочки: выбросы = дребезг у цели, финиш по кривой переключения VF2 лечит (max 5.67→1.49) | 17:42:16
