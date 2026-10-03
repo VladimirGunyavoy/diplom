@@ -10,6 +10,7 @@ sys.path.insert(0, '.')
 from butterfly_dp import wrap, flow, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp_atlas as BA
 from butterfly_dp_atlas import Atlas, R, MN
+Atlas.pairs.__defaults__ = (None, int(os.environ.get('CHUNK', 800)))                       # куски пар меньше: 4000+4000 при 3000 падали по OOM (1.5 ГБ)
 DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
 def normals(C, rng):
     w = C[:, 2:]; nn = np.hypot(w[:, 0], w[:, 1]); rnd = rng.normal(size=(len(C), 2)); rnd /= np.linalg.norm(rnd, axis=1, keepdims=True)
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, G=G, WIN=WIN, TL=TL, R=R, DMIN=DMIN0, nodes=A.K * MN, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it,
                           BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    np.savez('butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d.npz' % (N, TR, FR, FWD), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    np.savez('butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g.npz' % (N, TR, FR, FWD, R), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     if FWD:                                                                                  # research-10: агент по рёбрам графа от споры-старта (butterfly_dp_query.rollout_edges)
         import butterfly_dp_query as Q
         T, arcs, wm = Q.rollout_edges(A, 81, 0.)

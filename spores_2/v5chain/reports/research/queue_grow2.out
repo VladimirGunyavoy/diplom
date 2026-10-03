@@ -1,0 +1,69 @@
+== 17:30:29 TR=1,FR=1,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000
+{"N": 4000, "grow_sec": 5.7, "dmin_end": 0.186, "w_med": 1.12, "w_q90": 1.99, "q1_cover": 0.62, "TR": 1, "FR": 1, "FWD": 4000, "tv_q": [8.11, 19.58, 34.87], "lam_med": 1.49}
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:15: RuntimeWarning: overflow encountered in square
+  Q1 = u1 - u2 - G * MS[0] * np.cos(th1) - S12 * s * d2 ** 2; Q2 = u2 - G * MS[1] * np.cos(th2) + S12 * s * d1 ** 2
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: invalid value encountered in subtract
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in add
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:15: RuntimeWarning: invalid value encountered in cos
+  Q1 = u1 - u2 - G * MS[0] * np.cos(th1) - S12 * s * d2 ** 2; Q2 = u2 - G * MS[1] * np.cos(th2) + S12 * s * d1 ** 2
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: overflow encountered in multiply
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:39: RuntimeWarning: invalid value encountered in subtract
+  e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:39: RuntimeWarning: overflow encountered in divide
+  e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
+/home/rl/.local/lib/python3.12/site-packages/numpy/linalg/_linalg.py:2406: RuntimeWarning: overflow encountered in det
+  r = _umath_linalg.det(a, signature=signature)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:17: RuntimeWarning: invalid value encountered in subtract
+  return a1, a2 - a1
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in cos
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in sin
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: overflow encountered in subtract
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/.local/lib/python3.12/site-packages/numpy/linalg/_linalg.py:2406: RuntimeWarning: invalid value encountered in det
+  r = _umath_linalg.det(a, signature=signature)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:27: RuntimeWarning: invalid value encountered in add
+  k1 = f(z, u1, u2); k2 = f(z + h / 2 * k1, u1, u2); k3 = f(z + h / 2 * k2, u1, u2); k4 = f(z + h * k3, u1, u2); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:27: RuntimeWarning: overflow encountered in multiply
+  k1 = f(z, u1, u2); k2 = f(z + h / 2 * k1, u1, u2); k3 = f(z + h / 2 * k2, u1, u2); k4 = f(z + h * k3, u1, u2); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+{"N": 4000, "G": 1.0, "WIN": 1.0, "TL": 1.5, "R": 0.15, "DMIN": 0.35, "nodes": 40410, "pairs": 73728, "pairs_per_node": 1.8, "sec_pairs": 1563, "iters": 41, "BIG": 0.639, "sec": 1563}
+{"query": "висит→вверх (рёбра)", "V": 10.989, "T": 10.94, "T_over_OCP": 2.1459, "v6": 5.28, "arcs": 19, "wmax": 2.97, "fwd_finite": 0.104, "sec": 1568}
+== 17:56:38 TR=1,FR=0,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000
+{"N": 4000, "grow_sec": 5.6, "dmin_end": 0.167, "w_med": 1.16, "w_q90": 2.08, "q1_cover": 0.68, "TR": 1, "FR": 0, "FWD": 4000, "tv_q": [6.1, 10.14, 15.84], "lam_med": 1.56}
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:15: RuntimeWarning: overflow encountered in square
+  Q1 = u1 - u2 - G * MS[0] * np.cos(th1) - S12 * s * d2 ** 2; Q2 = u2 - G * MS[1] * np.cos(th2) + S12 * s * d1 ** 2
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: invalid value encountered in subtract
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in add
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:15: RuntimeWarning: invalid value encountered in cos
+  Q1 = u1 - u2 - G * MS[0] * np.cos(th1) - S12 * s * d2 ** 2; Q2 = u2 - G * MS[1] * np.cos(th2) + S12 * s * d1 ** 2
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: overflow encountered in subtract
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:17: RuntimeWarning: invalid value encountered in subtract
+  return a1, a2 - a1
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:39: RuntimeWarning: invalid value encountered in subtract
+  e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:39: RuntimeWarning: overflow encountered in divide
+  e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
+/home/rl/.local/lib/python3.12/site-packages/numpy/linalg/_linalg.py:2406: RuntimeWarning: overflow encountered in det
+  r = _umath_linalg.det(a, signature=signature)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:16: RuntimeWarning: overflow encountered in multiply
+  det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:27: RuntimeWarning: overflow encountered in multiply
+  k1 = f(z, u1, u2); k2 = f(z + h / 2 * k1, u1, u2); k3 = f(z + h / 2 * k2, u1, u2); k4 = f(z + h * k3, u1, u2); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in cos
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:14: RuntimeWarning: invalid value encountered in sin
+  th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+/home/rl/.local/lib/python3.12/site-packages/numpy/linalg/_linalg.py:2406: RuntimeWarning: invalid value encountered in det
+  r = _umath_linalg.det(a, signature=signature)
+/home/rl/claude-work/projects/spore/spores_2/v5chain/reports/research/butterfly_dp.py:27: RuntimeWarning: invalid value encountered in add
+  k1 = f(z, u1, u2); k2 = f(z + h / 2 * k1, u1, u2); k3 = f(z + h / 2 * k2, u1, u2); k4 = f(z + h * k3, u1, u2); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+{"N": 4000, "G": 1.0, "WIN": 1.0, "TL": 1.5, "R": 0.15, "DMIN": 0.35, "nodes": 40410, "pairs": 73104, "pairs_per_node": 1.8, "sec_pairs": 1480, "iters": 54, "BIG": 0.585, "sec": 1481}
+{"query": "висит→вверх (рёбра)", "V": 11.498, "T": 11.383, "T_over_OCP": 2.2328, "v6": 5.28, "arcs": 15, "wmax": 1.88, "fwd_finite": 0.106, "sec": 1485}
+== 18:21:24 TR=1,FR=1,FWD=1500,WIN=1.0,R=.3,MN=9 butterfly_dp_grow.py 1500

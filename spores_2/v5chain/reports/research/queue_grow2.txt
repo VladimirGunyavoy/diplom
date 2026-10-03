@@ -1,2 +1,5 @@
 TR=1,FR=1,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000
 TR=1,FR=0,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000
+TR=1,FR=1,FWD=1500,WIN=1.0,R=.3,MN=9 butterfly_dp_grow.py 1500
+TR=1,FR=1,FWD=1500,WIN=1.0,R=.6,MN=17 butterfly_dp_grow.py 1500
+WIN=1.0,NEW=500,ROUNDS=6 butterfly_dp_ellipse.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500.npz
