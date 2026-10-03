@@ -63,6 +63,6 @@ if __name__ == '__main__':
     rng = np.random.default_rng(0); Q = np.stack([rng.uniform(-np.pi, np.pi, 100), rng.uniform(-2, 2, 100)], 1)
     ref = np.load('../v5chain/reports/research/pend_ref_T.npy'); ok0 = ref > .05
     for VF in [float(a) for a in sys.argv[1:]] or [0., 1.5, 3.]:
-        t1 = time.time(); T, SW = run(B, Bd, Q, VF); f = ok0 & np.isfinite(T) & np.isfinite(ref); r = T[f] / ref[f]; near = f & (ref < 2)
+        t1 = time.time(); T, SW = run(B, Bd, Q, VF); np.save('/tmp/claude-1000/hyb_T_g%g_est%d_vf%g.npy' % (GAIN, EST, VF), np.c_[T, SW]); f = ok0 & np.isfinite(T) & np.isfinite(ref); r = T[f] / ref[f]; near = f & (ref < 2)
         print(json.dumps(dict(VF=VF, reach=round(float(f.sum() / ok0.sum()), 3), mean=round(float(r.mean()), 3), med=round(float(np.median(r)), 3), p90=round(float(np.percentile(r, 90)), 3), max=round(float(r.max()), 3),
               sw=round(float(SW[f].mean()), 2), EST=EST, GAIN=GAIN, near_n=int(near.sum()), near_dT=round(float(np.mean((T - ref)[near])), 3) if near.any() else None, sec=round(time.time() - t1)), ensure_ascii=False), flush=True)
