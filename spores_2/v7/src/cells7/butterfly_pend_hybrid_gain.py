@@ -39,7 +39,8 @@ def run(B, Bd, Q, VF, dt=.06, tmax=40., sub=4):
     return T, SW
 
 if __name__ == '__main__':
-    t0 = time.time(); B = ButterflyPend(N=5000, m=7, tau=2.0, win=.3); B.V = np.load('/tmp/claude-1000/bp_V4.npy')
+    t0 = time.time(); FILL = bool(os.environ.get('FILL'))                                     # FILL=1: V с заполненными дырами (bp_fill.py)
+    B = ButterflyPend(N=5000, m=7, tau=2.0, win=.3, extra=np.load('/tmp/claude-1000/bp_extra.npy') if FILL else None); B.V = np.load('/tmp/claude-1000/bp_V5.npy' if FILL else '/tmp/claude-1000/bp_V4.npy')
     Bd = {s: band(s * UM) for s in (1., -1.)}; print('готово', round(time.time() - t0), flush=True)
     rng = np.random.default_rng(0); Q = np.stack([rng.uniform(-np.pi, np.pi, 100), rng.uniform(-2, 2, 100)], 1)
     ref = np.load('../v5chain/reports/research/pend_ref_T.npy'); ok0 = ref > .05

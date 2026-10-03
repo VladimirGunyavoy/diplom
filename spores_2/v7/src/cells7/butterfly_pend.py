@@ -37,10 +37,12 @@ def arc_times(Y, P, tau, ng=24, newton=3):
 
 
 class ButterflyPend:
-    def __init__(s, N=3000, r=.1, m=7, tau=.5, ns=21, seed=0, goal_spores=3, win=None):
+    def __init__(s, N=3000, r=.1, m=7, tau=.5, ns=21, seed=0, goal_spores=3, win=None, extra=None):
         rng = np.random.default_rng(seed)
         g = np.linspace(-1, 1, goal_spores); gc = np.array([(a * RX, b * RW) for a in g for b in g])
-        s.C = np.r_[gc, np.stack([rng.uniform(-np.pi, np.pi, N), rng.uniform(-4, 4, N)], 1)]; s.K = len(s.C); s.ngoal = len(gc)
+        s.C = np.r_[gc, np.stack([rng.uniform(-np.pi, np.pi, N), rng.uniform(-4, 4, N)], 1)]
+        if extra is not None: s.C = np.r_[s.C, extra]                     # extra — дополнительные споры (заполнение дыр покрытия)
+        s.K = len(s.C); s.ngoal = len(gc)
         s.win = win; s.r, s.m, s.tau = r, m, tau; s.sn = np.linspace(-r, r, m); s.sq = np.linspace(-r, r, ns)
         fl = np.stack([s.C[:, 1], np.sin(s.C[:, 0])], 1); nr = np.maximum(np.hypot(fl[:, 0], fl[:, 1]), 1e-9); s.E = np.stack([-fl[:, 1], fl[:, 0]], 1) / nr[:, None]    # e⊥ ⟂ дрейфу
         s.V = np.full((s.K, m), BIG); s.nodeP = s.C[:, None, :] + s.sn[None, :, None] * s.E[:, None, :]          # узлы отрезков (K,m,2)
