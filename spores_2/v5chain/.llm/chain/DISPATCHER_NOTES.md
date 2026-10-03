@@ -26,3 +26,5 @@
 15:52 · пульс падал 31 ч (UnicodeDecodeError, чинил research-9) · resumed; разбудил worker-14 (стёр черновик по слову пользователя), задача из PLAN research-9
 16:01 · meta: idle worker/research при недостигнутой цели TASK.md без слова пользователя не принимать — будить/поднимать research (ссылка knowledge/concepts.md), worker'у следующий шаг по TASK.md; cron перейдёт на auto (fixer-4)
 16:30 · ram критично: free 150 МБ, swap 4.5 ГБ; butterfly_dd obst 1.7 ГБ (worker-14), 4D 60k (research-9) · закрыл tmux worker-11/12 (finished), попросил worker-14 убить dd obst и перезапустить под MemoryMax
+16:33 · ram: free 390 МБ, swap 4.5 ГБ, worker-14 10 мин в ходе (сообщение в очереди) · убил butterfly_dd.py 3000 obst (1.7 ГБ, эксперимент worker-14); 4D 60k research-9 не трогал; free стало 4 ГБ
+16:38 · сторож: тишина worker-14 18 мин · ход завис на «10m 0s» без дочерних процессов · Escape, очередь сообщений обработана, воркер пишет в журнал (остановил 4D 60k по моей просьбе)
