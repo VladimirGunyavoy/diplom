@@ -3,6 +3,7 @@
 с переносом нормали (TR=1), агент по рёбрам с запасными дугами, эллиптическое доращивание. Параметры — переменные окружения, как в прототипах.
 Запуск из spores_2/v7: `FWD=1500 TR=1 FR=1 python3 -m src.cells7.butterfly_dp grow 1500`, `... ellipse <npz>`. Тяжёлое — systemd-run MemoryMax=1500M."""
 import numpy as np, sys, os, time, json
+import multiprocessing as mp
 from scipy.spatial import cKDTree
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
@@ -46,6 +47,8 @@ def solve_arcs(Y, C, Nn, newton=8):
     return t, u1, u2, s, ok
 
 R, MN = float(os.environ.get('R', .15)), int(os.environ.get('MN', 5))
+def _pairs_job(a0):
+    s, Y, own, chunk = _PJ; return s._pairs_chunk(a0, Y, own, chunk)
 class Atlas:
     def __init__(s, N, seed=0):
         rng = np.random.default_rng(seed); g = np.linspace(-1, 1, 3)
@@ -57,16 +60,24 @@ class Atlas:
         s.ingoal = ingoal(np.moveaxis(s.P, 2, 0)); s.V = np.full((s.K, MN), BIG); s.V[s.ingoal] = 0.
         X = np.c_[np.cos(s.C[:, 0]), np.sin(s.C[:, 0]), np.cos(s.C[:, 1]), np.sin(s.C[:, 1]), s.C[:, 2:] / 2]; s.tree = cKDTree(X); s.X = X
     def emb(s, Y): return np.c_[np.cos(Y[:, 0]), np.sin(Y[:, 0]), np.cos(Y[:, 1]), np.sin(Y[:, 1]), Y[:, 2:] / 2]
+    def _pairs_chunk(s, a0, Y, own, chunk):
+        y = Y[a0:a0 + chunk]; nb = s.tree.query_ball_point(s.emb(y), 2 * WIN)                     # грубый шар, дальше точная коробка
+        iy = np.repeat(np.arange(len(y)), [len(b) for b in nb]); k = np.concatenate([np.asarray(b, int) for b in nb]) if len(iy) else np.zeros(0, int)
+        if own is not None: g = k != own[a0 + iy]; iy, k = iy[g], k[g]
+        d = np.c_[wrap(s.C[k, :2] - y[iy, :2]), s.C[k, 2:] - y[iy, 2:]]; g = (np.abs(d) <= WIN).all(1); iy, k = iy[g], k[g]
+        if not len(iy): return None
+        t, u1, u2, sv, ok = solve_arcs(y[iy].T, s.C[k].T, s.n[k].T); ok &= np.abs(sv) <= R
+        return [v[ok] for v in (iy + a0, k, sv, t)]
     def pairs(s, Y, own=None, chunk=3000):
+        starts = list(range(0, len(Y), chunk)); nproc = int(os.environ.get('NPROC', 1))
+        if nproc > 1 and len(starts) > 1:                                                          # NPROC: куски пар по процессам (fork, атлас наследуется)
+            global _PJ; _PJ = (s, Y, own, chunk)
+            with mp.get_context('fork').Pool(nproc) as pool: res = pool.map(_pairs_job, starts)
+        else: res = [s._pairs_chunk(a0, Y, own, chunk) for a0 in starts]
         out = [[], [], [], []]
-        for a0 in range(0, len(Y), chunk):
-            y = Y[a0:a0 + chunk]; nb = s.tree.query_ball_point(s.emb(y), 2 * WIN)                     # грубый шар, дальше точная коробка
-            iy = np.repeat(np.arange(len(y)), [len(b) for b in nb]); k = np.concatenate([np.asarray(b, int) for b in nb]) if len(iy) else np.zeros(0, int)
-            if own is not None: g = k != own[a0 + iy]; iy, k = iy[g], k[g]
-            d = np.c_[wrap(s.C[k, :2] - y[iy, :2]), s.C[k, 2:] - y[iy, 2:]]; g = (np.abs(d) <= WIN).all(1); iy, k = iy[g], k[g]
-            if not len(iy): continue
-            t, u1, u2, sv, ok = solve_arcs(y[iy].T, s.C[k].T, s.n[k].T); ok &= np.abs(sv) <= R
-            for o, v in zip(out, (iy[ok] + a0, k[ok], sv[ok], t[ok])): o.append(v)
+        for r in res:
+            if r is None: continue
+            for o, v in zip(out, r): o.append(v)
         return [np.concatenate(o) for o in out] if out[0] else [np.zeros(0)] * 4
     def build(s):
         Y = s.P.reshape(-1, 4); own = np.repeat(np.arange(s.K), MN); iy, k, sv, t = s.pairs(Y, own)
