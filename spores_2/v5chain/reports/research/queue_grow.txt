@@ -1,0 +1,2 @@
+TR=1,WIN=1.0,BUILD_ONLY=1 butterfly_dp_grow.py 1500
+TR=1,WIN=1.0,BUILD_ONLY=1 butterfly_dp_grow.py 4000

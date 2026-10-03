@@ -1,0 +1,2 @@
+TR=1,FR=1,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000
+TR=1,FR=0,FWD=4000,WIN=1.0 butterfly_dp_grow.py 4000

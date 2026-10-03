@@ -37,7 +37,9 @@ def solve_arcs(Y, C, Nn, newton=8):
     for _ in range(newton):
         Z = flow(Y, u1, u2, t); R = Z - (Ct + s * Nn)
         e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
-        J = np.moveaxis(J, 1, 0); d = np.linalg.solve(J + 1e-12 * np.eye(4), np.moveaxis(R, 0, 1)[..., None])[..., 0]
+        J = np.moveaxis(J, 1, 0); rhs = np.moveaxis(R, 0, 1)[..., None]
+        bad = ~np.isfinite(J).all((1, 2)) | (np.abs(np.linalg.det(np.nan_to_num(J))) < 1e-12)   # research-10: вырожденные пары (нормаль в касательной трубки) — шаг 0
+        J[bad] = np.eye(4); rhs[bad] = 0.; d = np.linalg.solve(J, rhs)[..., 0]
         t = np.clip(t - d[:, 0], 1e-4, 2 * TL); u1 = np.clip(u1 - d[:, 1], -3, 3); u2 = np.clip(u2 - d[:, 2], -3, 3); s = s - d[:, 3]
     Z = flow(Y, u1, u2, t); res = np.abs(Z - (Ct + s * Nn)).max(0)
     ok = (res < 1e-7) & (t > 1e-3) & (t <= TL) & (np.abs(u1) <= 1 + 1e-9) & (np.abs(u2) <= 1 + 1e-9)

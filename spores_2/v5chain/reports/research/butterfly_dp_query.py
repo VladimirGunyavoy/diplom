@@ -1,0 +1,118 @@
+"""research hub-v5chain-research-10: запрос к выращенному атласу бабочек двойного маятника (butterfly_dp_grow.py, TR=1) через ПРЯМОЕ мини-дерево.
+Из произвольной точки дуга с постоянным τ попадает в отрезок споры редко (трубка приходов 3D, отрезок 1D), поэтому запрос строит прямое
+дерево глубины DEP: дуги τ ∈ {−1, 0, 1}², t ∈ TS (27 детей на уровень), каждая вершина пробует пары в атлас; V(y) = min [Σt + V_атлас].
+Агент проходит первую дугу лучшей ветви целиком (модель точная) и перепланирует. Концепция «прямое + обратное дерево» (concepts.md)."""
+import numpy as np, sys, os, time, json
+sys.path.insert(0, '.')
+from butterfly_dp import wrap, flow, ingoal, BIG, G
+from butterfly_dp_atlas import Atlas, R, MN
+from butterfly_dp_grow import emb
+from scipy.spatial import cKDTree
+TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2))
+UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
+def load(path):
+    d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
+    A.sn = np.linspace(-R, R, MN); A.X = emb(A.C); A.tree = cKDTree(A.X)
+    A.e = [np.asarray(x, dt) for x, dt in zip(d['e'], (int, int, int, float, float))]; return A
+def direct(A, Y):
+    """Лучшее значение одной дугой в атлас для каждой строки Y (n, 4); и (t, u1, u2) этой дуги."""
+    out = np.full(len(Y), BIG); arc = np.zeros((len(Y), 3))
+    if not len(Y): return out, arc
+    gi = ingoal(Y.T); out[gi] = 0.
+    iy, k, sv, t = A.pairs(Y); iy, k = iy.astype(int), k.astype(int)
+    if not len(iy): return out, arc
+    f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
+    V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG
+    o = np.lexsort((val, iy)); iy, k, val, t = iy[o], k[o], val[o], t[o]; first = np.r_[True, iy[1:] != iy[:-1]]
+    for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
+        if v < out[i]:
+            from butterfly_dp import solve_arcs
+            _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); out[i] = v; arc[i] = (tt, u1[0], u2[0])
+    return out, arc
+def children(Y):
+    n = len(Y); U = np.repeat(UU, len(TS), 0); T = np.tile(TS, len(UU)); m = len(T)
+    Yr = np.repeat(Y, m, 0); Z = flow(Yr.T, np.tile(U[:, 0], n), np.tile(U[:, 1], n), np.tile(T, n)).T; Z[:, :2] = wrap(Z[:, :2])
+    return Z, np.tile(T, n), np.tile(U, (n, 1))
+def plan(A, y):
+    """V(y) и первая дуга (t, u1, u2): прямо в атлас или через дерево глубины DEP."""
+    v, arc = direct(A, y[None]); best, barc = v[0], arc[0]
+    lv = [(y[None], None, None, None)]; Y = y[None]; par = None
+    for d in range(DEP):
+        Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
+        root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
+        cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
+        first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
+        Z, cost, first = Z[ok], cost[ok], first[ok]; vz, _ = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
+        if tot[i] < best: best, barc = tot[i], first[i]
+        Y, Ccost, Farc, par = Z, cost, first, None
+    return best, barc
+def rollout(A, y0, tmax=25.):
+    y = np.array(y0, float); t = 0.; wmax = 0.; nplan = 0; V0 = None
+    while t < tmax:
+        if ingoal(y[:, None])[0]: return t, wmax, nplan, V0
+        J, (ta, u1, u2) = plan(A, y); nplan += 1; V0 = J if V0 is None else V0
+        if J >= BIG / 2: return np.inf, wmax, nplan, V0
+        for _ in range(max(1, int(round(ta / .01)))):
+            y = flow(y[:, None], np.array([u1]), np.array([u2]), ta / max(1, int(round(ta / .01))), n=1)[:, 0]; t += ta / max(1, int(round(ta / .01))); wmax = max(wmax, np.abs(y[2:]).max())
+            if ingoal(y[:, None])[0]: return t, wmax, nplan, V0
+    return np.inf, wmax, nplan, V0
+if __name__ == '__main__':
+    A = load(sys.argv[1]); t0 = time.time(); fin = A.V[:, MN // 2] < BIG / 2
+    q = np.array([-np.pi / 2, 0, 0, 0]); dd = np.linalg.norm(A.X[fin] - emb(q[None]), axis=1)
+    print(json.dumps(dict(atlas=sys.argv[1], spores=A.K, finite_centers=round(float(fin.mean()), 3), near_start=round(float(dd.min()), 3), DEP=DEP, TS=TS.tolist())), flush=True)
+    T, wm, npl, V0 = rollout(A, q)
+    print(json.dumps(dict(query='висит→вверх', V=round(float(V0), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), v6=5.28, wmax=round(float(wm), 2), plans=npl, sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
+    rng = np.random.default_rng(3); Q = np.c_[rng.uniform(-np.pi, np.pi, (int(os.environ.get('NQ', 20)), 2)), rng.uniform(-1, 1, (int(os.environ.get('NQ', 20)), 2))]; res = []
+    for qq in Q: T, wm, npl, V0 = rollout(A, qq); res.append((V0, T, wm, npl))
+    R_ = np.array(res, float); f_ = np.isfinite(R_[:, 1]) & (R_[:, 0] < BIG / 2)
+    print(json.dumps(dict(random_reach=round(float(f_.mean()), 2), V_finite=round(float((R_[:, 0] < BIG / 2).mean()), 2),
+                          T_over_V=dict(mean=round(float((R_[f_, 1] / R_[f_, 0]).mean()), 3), max=round(float((R_[f_, 1] / R_[f_, 0]).max()), 3)) if f_.any() else None,
+                          T_med=round(float(np.median(R_[f_, 1])), 2) if f_.any() else None, wmax_over3=int((R_[:, 2] > 3).sum()), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
+    np.save(sys.argv[1].replace('.npz', '_q_dep%d.npy' % DEP), R_)
+
+# --- research-10: агент «по рёбрам» — тёплый Ньютон из точки на отрезке к цели ребра ближайшего узла ---
+from butterfly_dp import f as fdyn
+def newton_warm(y, c, nn, t, u1, u2, s, it=12):
+    for _ in range(it):
+        Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
+        e = 1e-6; Z1 = flow(y[:, None], np.array([u1 + e]), np.array([u2]), t)[:, 0]; Z2 = flow(y[:, None], np.array([u1]), np.array([u2 + e]), t)[:, 0]
+        J = np.c_[fdyn(Z[:, None], np.array([u1]), np.array([u2]))[:, 0], (Z1 - Z) / e, (Z2 - Z) / e, -nn]
+        try: d = np.linalg.solve(J, Rz)
+        except np.linalg.LinAlgError: return None
+        t, u1, u2, s = t - d[0], u1 - d[1], u2 - d[2], s - d[3]
+        if not np.isfinite([t, u1, u2, s]).all() or t <= 1e-3 or t > 3: return None
+    Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
+    if np.abs(Rz).max() > 1e-7 or abs(u1) > 1 + 1e-9 or abs(u2) > 1 + 1e-9 or abs(s) > R: return None
+    return t, u1, u2, s
+def node_edges(A):
+    """Для каждого узла (k, j): лучшее ребро (k2, t, u1, u2, s2) по V атласа."""
+    iy, k, j0, a, t = A.e; V = A.V.reshape(-1); val = t + (1 - a) * V[k * MN + j0] + a * V[k * MN + j0 + 1]
+    o = np.lexsort((val, iy)); first = o[np.r_[True, iy[o][1:] != iy[o][:-1]]]; E = {}
+    for i in first:
+        if val[i] < BIG / 2: E[int(iy[i])] = (int(k[i]), float(t[i]), float(((j0[i] + a[i]) / (MN - 1)) * 2 * R - R))
+    return E
+def edge_value(A, k2, s2):
+    f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = f_ - j0; return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
+def rollout_edges(A, k, s, tmax=40.):
+    """Старт на отрезке споры k в точке s. Возвращает T, число дуг, wmax."""
+    from butterfly_dp import solve_arcs
+    E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
+    while T < tmax:
+        if ingoal(y[:, None])[0]: return T, arcs, wmax
+        f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
+        for j in js:
+            if k * MN + j not in E: continue
+            k2, t0, s20 = E[k * MN + j]; P = A.C[k] + A.sn[j] * A.n[k]
+            tt, u1, u2, s2, ok = solve_arcs(P[:, None], A.C[k2][:, None], A.n[k2][:, None])
+            if not ok[0]: continue
+            r = newton_warm(y, A.C[k2], A.n[k2], tt[0], u1[0], u2[0], s2[0])
+            if r is None: continue
+            v = r[0] + edge_value(A, k2, r[3])
+            if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
+        if best is None: return np.inf, arcs, wmax
+        _, k2, (tt, u1, u2, s2) = best; nst = max(6, int(tt / .01)); yy = y.copy()
+        for _ in range(nst):
+            yy = flow(yy[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(yy[2:]).max())
+            if ingoal(yy[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
+        T += tt; arcs += 1; k, s = k2, s2; y = A.C[k] + s * A.n[k]
+    return np.inf, arcs, wmax
