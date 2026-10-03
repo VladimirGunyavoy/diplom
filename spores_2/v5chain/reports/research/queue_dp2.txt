@@ -1,0 +1,1 @@
+G=1,WIN=1.0,TL=1.5,R=.6,MN=9 butterfly_dp_atlas.py 4000
