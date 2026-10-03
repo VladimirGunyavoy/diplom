@@ -1,0 +1,11 @@
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell1.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell2.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell3.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell4.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell5.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell6.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell7.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell8.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell9.npz
+WIN=1.0 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell10.npz
+WIN=1.0,NEW=500,ROUNDS=10,GEO=1,MARG=.1,RING=.25 butterfly_dp_ellipse.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500.npz

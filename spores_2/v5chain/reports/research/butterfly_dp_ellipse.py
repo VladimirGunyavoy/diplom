@@ -14,6 +14,7 @@ import butterfly_dp_query as Q
 from butterfly_dp_grow import emb, normals
 MARG, NEW, ROUNDS, DSH = float(os.environ.get('MARG', .1)), int(os.environ.get('NEW', 1000)), int(os.environ.get('ROUNDS', 3)), float(os.environ.get('DSH', .85))
 UMAX, KS = .9, 81
+GEO, RING = int(os.environ.get('GEO', 0)), float(os.environ.get('RING', .25))
 def edges_add(A, Y_iy, out):
     iy, k, sv, t = out
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
@@ -24,8 +25,13 @@ def g_from_start(A):
 def refresh(A):
     A.P = A.C[:, None, :] + A.sn[None, :, None] * A.n[:, None, :]; A.ingoal = ingoal(np.moveaxis(A.P, 2, 0))
     A.X = emb(A.C); A.tree = cKDTree(A.X)
-def grow_round(A, rng, dmin, Tb):
-    g = g_from_start(A).min(1); V = A.V.min(1); ell = np.flatnonzero(g + V <= (1 + MARG) * Tb); K0 = A.K; C, n = A.C, A.n; added = 0; tries = 0
+def grow_round(A, rng, dmin, Tb, r=1):
+    if GEO:                                                                                  # GEO (концепция пользователя): геометрический эллипс a + b ≤ c_r в вложении, кольца растут
+        a = np.linalg.norm(A.X - emb(A.C[KS][None]), axis=1); b = np.linalg.norm(A.X - emb(np.array([[np.pi / 2, 0, 0, 0]])), axis=1)
+        c0 = np.linalg.norm(emb(A.C[KS][None]) - emb(np.array([[np.pi / 2, 0, 0, 0]]))); ell = np.flatnonzero(a + b <= c0 * (1 + MARG) + RING * r)
+    else:
+        g = g_from_start(A).min(1); V = A.V.min(1); ell = np.flatnonzero(g + V <= (1 + MARG) * Tb)
+    K0 = A.K; C, n = A.C, A.n; added = 0; tries = 0
     while added < NEW and tries < 400:
         tries += 1; b = 400; B = ell[rng.integers(len(ell), size=b)]; sg = np.where(rng.random(b) < .5, 1., -1.)
         u = rng.uniform(-1, 1, (2, b)); c = rng.random(b) < .5; u[:, c] = np.sign(u[:, c]); u *= UMAX; t = rng.uniform(.2, TL, b)
@@ -54,7 +60,7 @@ if __name__ == '__main__':
     A.solve(); Tb = A.V[KS, MN // 2]; T, arcs, wm = Q.rollout_edges(A, KS, 0.)
     print(json.dumps(dict(round=0, spores=A.K, V=round(float(Tb), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, wmax=round(float(wm), 2))), flush=True)
     for r in range(1, ROUNDS + 1):
-        ne, na, dmin = grow_round(A, rng, dmin, Tb); dmin *= DSH; A.solve(); Tb = min(Tb, A.V[KS, MN // 2]); A.E = Q.node_edges(A); T, arcs, wm = Q.rollout_edges(A, KS, 0.)
+        ne, na, dmin = grow_round(A, rng, dmin, Tb, r); dmin *= DSH; A.solve(); Tb = min(Tb, A.V[KS, MN // 2]); A.E = Q.node_edges(A); A.nplan = 0; T, arcs, wm = Q.rollout_edges(A, KS, 0.)
         print(json.dumps(dict(round=r, ellipse=ne, added=na, spores=A.K, pairs_per_node=round(len(A.e[0]) / (A.K * MN), 2), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3),
                               T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0))), flush=True)
-        np.savez(sys.argv[1].replace('.npz', '_ell%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+        np.savez(sys.argv[1].replace('.npz', ('_geo%d.npz' if GEO else '_ell%d.npz') % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
