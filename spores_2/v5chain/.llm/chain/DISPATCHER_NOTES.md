@@ -25,3 +25,4 @@
 15:51 · worker-14 idle 12 ч при слове пользователя «непрерывно сутки» (15:46 research-9); в поле ввода worker-14 неотправленное «оформи финиш и хендофф» — решения жду от пользователя, поле не трогал
 15:52 · пульс падал 31 ч (UnicodeDecodeError, чинил research-9) · resumed; разбудил worker-14 (стёр черновик по слову пользователя), задача из PLAN research-9
 16:01 · meta: idle worker/research при недостигнутой цели TASK.md без слова пользователя не принимать — будить/поднимать research (ссылка knowledge/concepts.md), worker'у следующий шаг по TASK.md; cron перейдёт на auto (fixer-4)
+16:30 · ram критично: free 150 МБ, swap 4.5 ГБ; butterfly_dd obst 1.7 ГБ (worker-14), 4D 60k (research-9) · закрыл tmux worker-11/12 (finished), попросил worker-14 убить dd obst и перезапустить под MemoryMax
