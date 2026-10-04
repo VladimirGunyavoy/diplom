@@ -35,6 +35,28 @@ class ButterflyDDObs(M.ButterflyDD):
             ok = arc_free(Y[iy], PH, L, s.obs); iy, k, T, thl, PH, L = iy[ok], k[ok], T[ok], thl[ok], PH[ok], L[ok]
         return iy, k, T, thl, PH, L
 
+    def solve(s, it=2000, tol=1e-7, rows=1500, pchunk=1500000):
+        """Беллман с КОМПАКТНЫМИ парами (int32/float32/int8, hub-v5chain-worker-15): пары ~ N², в float64 N=2500 не лез в 1.5 ГБ. Кандидаты — кусками строк Y, итерации — кусками пар по границам узлов."""
+        m = s.m; Y = np.c_[np.repeat(s.C, m, 0), np.tile(s.th, s.K)]; own = np.repeat(np.arange(s.K), m); I, Kk, Tt, Jj, Aa = [], [], [], [], []
+        for a0 in range(0, len(Y), rows):
+            iy, k, T, thl, _, _ = s.cand(Y[a0:a0 + rows], own[a0:a0 + rows]); f = (thl % (2 * np.pi)) / (2 * np.pi / m); j = np.floor(f).astype(int) % m; a = f - np.floor(f); o = np.argsort(iy, kind='stable')
+            I.append((iy[o] + a0).astype(np.int32)); Kk.append(k[o].astype(np.int32)); Tt.append(T[o].astype(np.float32)); Jj.append(j[o].astype(np.int8)); Aa.append(a[o].astype(np.float32))
+        iy, k, T, j, a = (np.concatenate(v) for v in (I, Kk, Tt, Jj, Aa)); del I, Kk, Tt, Jj, Aa; s.npairs = len(T)
+        st = np.flatnonzero(np.r_[True, iy[1:] != iy[:-1]]); nodes = iy[st]; bnd = [0]
+        while bnd[-1] < len(st): bnd.append(min(len(st), int(np.searchsorted(st, st[bnd[-1]] + pchunk, 'right'))) if bnd[-1] < len(st) - 1 else len(st))
+        dj = np.abs(wrap(s.th[None, :] - s.th[:, None])); V = s.V.reshape(-1).copy()
+        for n in range(it):
+            new = V.copy()
+            for sa, sb in zip(bnd[:-1], bnd[1:]):
+                if sa >= sb: continue
+                p0, p1 = st[sa], (st[sb] if sb < len(st) else len(T)); kk = k[p0:p1].astype(np.int64); jj = j[p0:p1].astype(np.int64); aa = a[p0:p1].astype(np.float64); j1 = (jj + 1) % m
+                V0, V1 = V[kk * m + jj], V[kk * m + j1]; val = T[p0:p1] + (1 - aa) * V0 + aa * V1; val[((V0 >= BIG / 2) & (aa < 1 - 1e-9)) | ((V1 >= BIG / 2) & (aa > 1e-9))] = BIG
+                nd = nodes[sa:sb]; new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st[sa:sb] - p0))
+            W = new.reshape(s.K, m); W = np.minimum(W, (W[:, None, :] + dj[None]).min(2)); new = W.reshape(-1); new[0] = 0.
+            d = np.max(np.abs(np.minimum(new, BIG) - np.minimum(V, BIG))); V = new
+            if d < tol: break
+        s.V = V.reshape(s.K, m); s.n_it = n; return s
+
 
 def run(B, q, VF, smax=300):
     """агент + финиш min(TGT,TGTGT) при V ≤ VF (только без препятствий — пути финиша их не знают)."""
