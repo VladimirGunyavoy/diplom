@@ -9,6 +9,7 @@ M, wrap, BIG, move, tgt, tgtgt = BD.M, BD.wrap, BD.BIG, BD.move, BD.tgt, BD.tgtg
 GV, GW = float(os.environ.get('GV', 1)), float(os.environ.get('GW', 1)); TOL, THT = float(os.environ.get('TOL', .03)), float(os.environ.get('THT', .05)); SNAP = int(os.environ.get('SNAP', 0))
 def ingoal(y): return np.hypot(y[0], y[1]) <= TOL and abs(wrap(y[2])) <= THT
 ARCV = int(os.environ.get('ARCV', 0)); SIG = float(os.environ.get('SIG', 0)); NRNG = np.random.default_rng(7)     # SIG>0: агент видит состояние с шумом σ (xy и θ), цель/истина — по реальному
+EMIN, PMIN = float(os.environ.get('EMIN', 1e-2)), float(os.environ.get('PMIN', 1e-3))   # пороги длины хорды/угла для оценки ĝ (при шуме — больше)
 FILT = float(os.environ.get('FILT', 0))   # FILT=K∈(0,1]: комплементарный фильтр — предсказание по команде и ĝ, коррекция K·(замер−предсказание)
 EST = int(os.environ.get('EST', 0))     # EST=1: оценка ĝV, ĝW по уже выполненным сегментам (наблюдаем реальное состояние), команда делится на ĝ
 def run(B, q, smax=400):
@@ -25,14 +26,14 @@ def run(B, q, smax=400):
         if kind == 'turn':
             y = np.array([y[0], y[1], y[2] + GW * phi / cw]); t += abs(phi / cw)
             yo1 = y + SIG * NRNG.normal(size=3) if SIG else y
-            if EST and abs(phi) > 1e-3: gw = float(np.clip(wrap(yo1[2] - y0o[2]) * cw / phi, .3, 3.)); hw = True
+            if EST and abs(phi) > PMIN: gw = float(np.clip(wrap(yo1[2] - y0o[2]) * cw / phi, .3, 3.)); hw = True
         else:
             y = move(y, GW * phi / cw, GV * L / cv); t += abs(L / cv) + abs(phi / cw)       # время = длительность КОМАНДЫ (с ĝ растягивается)
             yo1 = y + SIG * NRNG.normal(size=3) if SIG else y
             if EST:
                 yn = move(y0o, phi, L); cn = np.hypot(*(yn[:2] - y0o[:2])); ca = np.hypot(*(yo1[:2] - y0o[:2]))
-                if abs(phi) > 1e-3: gw = float(np.clip(wrap(yo1[2] - y0o[2]) * cw / phi, .3, 3.)); hw = True                                 # дуга — набег курса ⇒ ĝW
-                if cn > 1e-2 and (abs(phi) < 1e-3 or ARCV): gv = float(np.clip(cv * ca / cn, .3, 3.)); hv = True   # прямой участок — длина хорды ⇒ ĝV
+                if abs(phi) > PMIN: gw = float(np.clip(wrap(yo1[2] - y0o[2]) * cw / phi, .3, 3.)); hw = True                                 # дуга — набег курса ⇒ ĝW
+                if cn > EMIN and (abs(phi) < PMIN or ARCV): gv = float(np.clip(cv * ca / cn, .3, 3.)); hv = True   # прямой участок — длина хорды ⇒ ĝV
             if SNAP: y[:2] = B.C[k]
         if FILT:
             yp = np.array([ye[0], ye[1], ye[2] + gw * phi / cw]) if kind == 'turn' else move(ye, gw * phi / cw, gv * L / cv); yo2 = y + SIG * NRNG.normal(size=3); d = yo2 - yp; d[2] = wrap(d[2]); ye = yp + FILT * d; ye[2] = wrap(ye[2])
