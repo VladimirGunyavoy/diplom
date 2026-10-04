@@ -369,7 +369,21 @@ def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
     return A
 def _lazy_main(path):
     A = load(path); lazy_nodes(A, int(os.environ.get('ROUNDS', 8)), int(os.environ.get('CAP', 4000)), float(os.environ.get('OCP', 7.636)), path)
+def wfilter(A, NF=8, path=None):
+    """research-11 (PLAN п.9): |w| <= WMAX ВДОЛЬ дуги (при построении пар предел проверялся только в концах). Для каждого ребра дуга восстанавливается (solve_arcs),
+    скорость меряется в NF точках; плохие рёбра удаляются, V пересчитывается."""
+    refresh(A); iy, k, j0, a, t = A.e; Y = A.P.reshape(-1, 4); t0 = time.time(); keep = np.zeros(len(iy), bool); wm = np.zeros(len(iy))
+    for c0 in range(0, len(iy), 20000):
+        sl = slice(c0, c0 + 20000); y = Y[iy[sl]].T; tt, u1, u2, sv, ok = solve_arcs(y, A.C[k[sl]].T, A.n[k[sl]].T); w = np.zeros(len(tt))
+        for fr in np.arange(1, NF + 1) / NF: z = flow(y, u1, u2, tt * fr); w = np.maximum(w, np.nan_to_num(np.abs(z[2:]).max(0), nan=99.))
+        keep[sl] = ok & (w <= WMAX); wm[sl] = w
+    V0 = float(A.V[KS, MN // 2]); A.e = [x[keep] for x in A.e]; A.V[:] = BIG; A.V[A.ingoal] = 0.; A.solve()
+    print(json.dumps(dict(edges=len(iy), dropped=int((~keep).sum()), over_w=int((wm > WMAX).sum()), V_before=round(V0, 3), V_after=round(float(A.V[KS, MN // 2]), 3), sec=round(time.time() - t0))), flush=True)
+    if path: np.savez(path.replace('.npz', '_wf.npz'), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    return A
+def _wf_main(path): A = load(path); wfilter(A, int(os.environ.get('NF', 8)), path)
 if __name__ == '__main__':
     if sys.argv[1] == 'grow': _grow_main(int(sys.argv[2]))
     elif sys.argv[1] == 'lazy': _lazy_main(sys.argv[2])
+    elif sys.argv[1] == 'wfilter': _wf_main(sys.argv[2])
     else: _ellipse_main(sys.argv[2])
