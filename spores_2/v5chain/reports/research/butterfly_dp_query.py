@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TRAJ = []; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+TRAJ = []; CHAIN = []; PEND = []; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -44,6 +44,7 @@ def children(Y):
 def plan(A, y):
     """V(y) и первая дуга (t, u1, u2): прямо в атлас или через дерево глубины DEP."""
     v, arc = direct(A, y[None]); best, barc = v[0], arc[0]
+    CHAIN[:] = [tuple(arc[0])]                                                               # research-11: вся лучшая цепочка дуг — запас агенту, если следующий план не найдётся
     lv = [(y[None], None, None, None)]; Y = y[None]; par = None
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
@@ -53,9 +54,10 @@ def plan(A, y):
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
-        Z, cost, first = Z[ok], cost[ok], first[ok]; vz, _ = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
-        if tot[i] < best: best, barc = tot[i], first[i]
-        Y, Ccost, Farc, par = Z, cost, first, None
+        H = np.c_[T, U][:, None, :] if d == 0 else np.concatenate([np.repeat(Hp, len(TS) * len(UU), 0), np.c_[T, U][:, None, :]], 1); H = H[ok]
+        Z, cost, first = Z[ok], cost[ok], first[ok]; vz, az = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
+        if tot[i] < best: best, barc = tot[i], first[i]; CHAIN[:] = [tuple(h) for h in H[i]] + [tuple(az[i])]
+        Y, Ccost, Farc, par, Hp = Z, cost, first, None, H
     return best, barc
 def rollout(A, y0, tmax=25.):
     y = np.array(y0, float); t = 0.; wmax = 0.; nplan = 0; V0 = None
@@ -115,6 +117,8 @@ def rollout_edges(A, k, s, tmax=40.):
         if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
             J, (tt, u1, u2) = plan(A, y)
             fail = J >= BIG / 2 or tt <= 0
+            if fail and PEND: tt, u1, u2 = PEND.pop(0); fail = tt <= 0; A.npend = getattr(A, 'npend', 0) + 1     # план не найден — следующая дуга прошлого плана (открыто)
+            elif not fail: PEND[:] = CHAIN[1:]
             if fail and kp is None: return np.inf, arcs, wmax
             if not fail:
                 nst = max(6, int(tt / .01))
