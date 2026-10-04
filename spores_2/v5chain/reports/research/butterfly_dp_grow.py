@@ -11,7 +11,7 @@ from butterfly_dp import wrap, flow, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp_atlas as BA
 from butterfly_dp_atlas import Atlas, R, MN
 Atlas.pairs.__defaults__ = (None, int(os.environ.get('CHUNK', 800)))                       # куски пар меньше: 4000+4000 при 3000 падали по OOM (1.5 ГБ)
-RRT = int(os.environ.get('RRT', 0)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
+RRT = int(os.environ.get('RRT', 0)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
 def normals(C, rng):
     w = C[:, 2:]; nn = np.hypot(w[:, 0], w[:, 1]); rnd = rng.normal(size=(len(C), 2)); rnd /= np.linalg.norm(rnd, axis=1, keepdims=True)
     n = np.zeros((len(C), 4)); n[:, 0] = np.where(nn > .05, -w[:, 1] / np.maximum(nn, 1e-9), rnd[:, 0]); n[:, 1] = np.where(nn > .05, w[:, 0] / np.maximum(nn, 1e-9), rnd[:, 1]); return n
@@ -34,7 +34,8 @@ class GrowAtlas(Atlas):
             if TR: u *= UMAX; sv[:] = 0.                                                     # TR: из центра B, запас по τ для соседних узлов
             if RRT:                                                                          # research-11: смещение Вороного — случайная точка области → ближайшая спора дерева → лучшая дуга веера к ней (dp_g2_voronoi.py)
                 UG = np.array([(a, c) for a in (-1, 0, 1) for c in (-1, 0, 1)]) * UMAX; TG = np.array([.25, .5, .9, 1.5]); TG = TG[TG <= TL + 1e-9]; UF = np.repeat(UG, len(TG), 0); TF = np.tile(TG, len(UG))
-                X = np.c_[rng.uniform(-np.pi, np.pi, (batch, 2)), rng.uniform(-WMAX, WMAX, (batch, 2))]; B = pool[cKDTree(emb(C[pool])).query(emb(X))[1]]
+                X = np.c_[rng.uniform(-np.pi, np.pi, (batch, 2)), rng.uniform(-WMAX, WMAX, (batch, 2))]; dk, Bk_ = cKDTree(emb(C[pool])).query(emb(X), k=min(KN, len(pool))); dk, Bk_ = dk.reshape(batch, -1), Bk_.reshape(batch, -1)
+                B = pool[Bk_[np.arange(batch), np.where(dk <= dk[:, :1] * KF + .05, tv[pool][Bk_], np.inf).argmin(1)]]   # KN > 1: самый дешёвый по времени из k ближайших (dp_g2_voronoi.py)
                 Y = np.repeat(C[B], len(TF), 0); Z = flow(Y.T, np.tile(UF[:, 0], batch), np.tile(UF[:, 1], batch), sg * np.tile(TF, batch)).T
                 okz = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= WMAX).all(1) & (np.abs(np.c_[wrap(Y[:, :2] - Z[:, :2]), Y[:, 2:] - Z[:, 2:]]) <= WIN).all(1)
                 dz = np.linalg.norm(emb(np.nan_to_num(Z)) - np.repeat(emb(X), len(TF), 0), axis=1); dz[~okz] = np.inf; m = dz.reshape(batch, -1).argmin(1); u = UF[m].T.copy(); t = TF[m].copy(); sv[:] = 0.
