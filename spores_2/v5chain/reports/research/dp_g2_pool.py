@@ -21,11 +21,12 @@ for it in range(int(os.environ.get('ITERS', 6)) + 1):
     pts.append(z.copy()); P = np.array(pts); nn = np.zeros_like(P); nn[-1] = normals(P[-1:], rng)[0]
     for i in range(len(P) - 2, -1, -1):                                                      # перенос нормали назад: узлы споры i ложатся на отрезок споры i + 1
         u1, u2, dt = seg[i]; d = (flow((P[i + 1] + 1e-5 * nn[i + 1])[:, None], np.array([u1]), np.array([u2]), -dt, n=12)[:, 0] - P[i]) / 1e-5; nn[i] = d / np.linalg.norm(d)
-    P[:, :2] = wrap(P[:, :2]); keep = cKDTree(A.X).query(emb(P))[0] > .01; P, nn = P[keep], nn[keep]; K0 = A.K
+    P[:, :2] = wrap(P[:, :2]); dd, jj = cKDTree(A.X).query(emb(P)); keep = dd > .01; K0 = A.K; idx = np.where(keep, K0 + np.cumsum(keep) - 1, jj); dts = np.array([x[2] for x in seg]); P, nn = P[keep], nn[keep]
     A.C = np.r_[A.C, P]; A.n = np.r_[A.n, nn]; A.K = len(A.C); A.V = np.r_[A.V, np.full((A.K - K0, MN), BIG)]; E.refresh(A); A.V[A.ingoal] = 0.
     Yn = A.P[K0:].reshape(-1, 4); idn = np.arange(K0 * MN, A.K * MN); own = np.repeat(np.arange(K0, A.K), MN); e_new = E.edges_add(A, idn, A.pairs(Yn, own))
     near = np.unique(np.concatenate([np.asarray(b, int) for b in cKDTree(A.X[:K0]).query_ball_point(A.X[K0:], 2 * WIN)] or [np.zeros(0, int)]))
     Yo = A.P[near].reshape(-1, 4); ido = (near[:, None] * MN + np.arange(MN)).reshape(-1); out = A.pairs(Yo); kp = out[1].astype(int) >= K0; e_old = E.edges_add(A, ido, [x[kp] for x in out])
-    e = [np.r_[a, b, c] for a, b, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
+    m = len(dts); e_ch = [idx[:-1] * MN + MN // 2, idx[1:], np.full(m, MN // 2), np.zeros(m), dts]                 # точные рёбра самого пути: центр i → центр i + 1 (известные u, dt)
+    e = [np.r_[a, b, c, d] for a, b, c, d in zip(A.e, e_new, e_old, e_ch)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
     print(json.dumps(dict(pooled=int(A.K - K0), new_centers_fin=int((A.V[K0:, MN // 2] < BIG / 2).sum()), V=round(float(A.V[KS, MN // 2]), 3))), flush=True)
 np.savez(sys.argv[1].replace('.npz', '_pool.npz'), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
