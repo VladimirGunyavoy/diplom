@@ -162,3 +162,4 @@ hub-v5chain-worker-17 | дд шум: EMIN/PMIN в reports/bdd/err.py, σ.01 1.50
 hub-v5chain-worker-17 | 4D ДИ 200k: mean 1.070, max 2.01 (100k 1.089\/2.59); build 68 мин
 hub-v5chain-worker-17 | дд шум: порог 20σ оптимален (1.35\/1.36\/1.56 при σ.005\/.01\/.02)
 hub-v5chain-worker-17 | 4D 200k dt.0025 mean 1.062; выбросы = дребезг агента (V\/T* ок)
+hub-v5chain-worker-17 | v7 butterfly_dp: RRT=1, snap, lazy_nodes (п.7); тест на aida идёт

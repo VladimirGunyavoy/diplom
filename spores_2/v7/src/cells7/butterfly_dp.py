@@ -9,6 +9,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
+RRT = int(os.environ.get('RRT', 0))   # RRT=1: родитель со смещением Вороного (research-11, g=2)
 PRUNE = int(os.environ.get('PRUNE', 1)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
 TL = float(os.environ.get('TL', 1.5)); WIN = float(os.environ.get('WIN', .5))
 def wrap(a): return (a + np.pi) % (2 * np.pi) - np.pi
@@ -54,6 +55,8 @@ def solve_arcs(Y, C, Nn, newton=8):
     return t, u1, u2, s, ok
 
 R, MN = float(os.environ.get('R', .15)), int(os.environ.get('MN', 5))
+SNAPA = float(os.environ.get('SNAPA', 1e-4))   # research-10: приход в узел с ошибкой Ньютона — привязать (вес 1e-7 у соседа с BIG убивал ребро); SNAPA=0 — как раньше
+def snap(a): return np.where(a < SNAPA, 0., np.where(a > 1 - SNAPA, 1., a))
 def _pairs_job(a0):
     s, Y, own, chunk = _PJ; return s._pairs_chunk(a0, Y, own, chunk)
 class Atlas:
@@ -93,7 +96,7 @@ class Atlas:
     def solve(s, it=3000, tol=1e-7):
         iy, k, j0, a, t = s.e; V = s.V.reshape(-1).copy(); fixed = s.ingoal.reshape(-1); st = np.flatnonzero(np.r_[True, iy[1:] != iy[:-1]]); nodes = iy[st]
         for n in range(it):
-            V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG
+            V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - max(SNAPA, 1e-9))) | ((V1 >= BIG / 2) & (a > max(SNAPA, 1e-9)))] = BIG
             new = V.copy(); new[nodes] = np.minimum(V[nodes], np.minimum.reduceat(val, st)); new[fixed] = 0.; d = np.max(np.abs(new - V)); V = new
             if d < tol: break
         s.V = V.reshape(s.K, MN); s.n_it = n; return s
@@ -138,6 +141,12 @@ class GrowAtlas(Atlas):
             u = rng.uniform(-1, 1, (2, batch)); corner = rng.random(batch) < .5
             u[:, corner] = np.sign(u[:, corner]); t = rng.uniform(.2, TL, batch); sv = np.linspace(-R, R, MN)[rng.integers(MN, size=batch)]   # точно в узел споры B: интерполяция V по отрезку не нужна
             if TR: u *= UMAX; sv[:] = 0.                                                     # TR: из центра B, запас по τ для соседних узлов
+            if RRT:                                                                          # research-11: смещение Вороного — случайная точка области → ближайшая спора дерева → лучшая дуга веера к ней (dp_g2_voronoi.py)
+                UG = np.array([(a, c) for a in (-1, 0, 1) for c in (-1, 0, 1)]) * UMAX; TG = np.array([.25, .5, .9, 1.5]); TG = TG[TG <= TL + 1e-9]; UF = np.repeat(UG, len(TG), 0); TF = np.tile(TG, len(UG))
+                X = np.c_[rng.uniform(-np.pi, np.pi, (batch, 2)), rng.uniform(-WMAX, WMAX, (batch, 2))]; B = pool[cKDTree(emb(C[pool])).query(emb(X))[1]]
+                Y = np.repeat(C[B], len(TF), 0); Z = flow(Y.T, np.tile(UF[:, 0], batch), np.tile(UF[:, 1], batch), sg * np.tile(TF, batch)).T
+                okz = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= WMAX).all(1) & (np.abs(np.c_[wrap(Y[:, :2] - Z[:, :2]), Y[:, 2:] - Z[:, 2:]]) <= WIN).all(1)
+                dz = np.linalg.norm(emb(np.nan_to_num(Z)) - np.repeat(emb(X), len(TF), 0), axis=1); dz[~okz] = np.inf; m = dz.reshape(batch, -1).argmin(1); u = UF[m].T.copy(); t = TF[m].copy(); sv[:] = 0.
             A = flow((C[B] + sv[:, None] * n[B]).T, u[0], u[1], sg * t).T
             if TR:                                                                           # нормаль A = перенос нормали B назад по дуге ⇒ узлы A ложатся на отрезок B
                 d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; nA = d / np.linalg.norm(d, axis=1, keepdims=True); s.lam.append(np.linalg.norm(d, axis=1))
@@ -307,7 +316,7 @@ def grow_round(A, rng, dmin, Tb):
 def _grow_main(N):
     t0 = time.time(); A = GrowAtlas(N); A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, K=A.K, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it, BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g.npz' % (N, TR, FR, FWD, R); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, '_rrt' if RRT else ''); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     T, arcs, wm = rollout_edges(A, 81, 0.)
     print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
 def _ellipse_main(path):
@@ -318,6 +327,35 @@ def _ellipse_main(path):
         ne, na, dmin = grow_round(A, rng, dmin, Tb); dmin *= DSH; A.solve(); Tb = min(Tb, A.V[KS, MN // 2]); A.E = node_edges(A); T, arcs, wm = rollout_edges(A, KS, 0.)
         print(json.dumps(dict(round=r, ellipse=ne, added=na, spores=A.K, pairs_per_node=round(len(A.e[0]) / (A.K * MN), 2), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, sec=round(time.time() - t0))), flush=True)
         np.savez(path.replace('.npz', '_ell%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
+    """research-11 (PLAN п.7б): g=2 — «ленивые узлы». Приход ребра между узлами, один из которых BIG, становится новой спорой (центр в точке прихода);
+    ребро «источник → центр новой споры» точное (a=0). Раунды, пока старт не связан; дальше только раздувают атлас."""
+    refresh(A); A.V[A.ingoal] = 0.; A.solve(); t0 = time.time()
+    print(json.dumps(dict(round=0, spores=int(A.K), V=round(float(A.V[KS, MN // 2]), 3), centers_fin=int((A.V[:, MN // 2] < BIG / 2).sum()))), flush=True)
+    for r in range(1, rounds + 1):
+        iy, k, j0, a, t = A.e; V = A.V.reshape(-1); V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; a_ = snap(a)
+        bad = ((V0 >= BIG / 2) & (a_ < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a_ > SNAPA)); fin = (A.V < BIG / 2).any(1)
+        cand = np.flatnonzero((V[iy] >= BIG / 2) & bad & fin[k]); sv = A.sn[j0[cand]] + a[cand] * (2 * R / (MN - 1))
+        _, u = np.unique(np.c_[k[cand], np.round(sv / .01)], axis=0, return_index=True)         # одна новая спора на (спора, s с шагом .01)
+        if len(u) > cap: u = np.random.default_rng(r).choice(u, cap, replace=False)
+        if not len(u): print(json.dumps(dict(round=r, new=0))); break
+        kk, ss = k[cand][u], sv[u]; K0 = A.K; newC = A.C[kk] + ss[:, None] * A.n[kk]; lab = {(int(x), int(round(y / .01))): K0 + i for i, (x, y) in enumerate(zip(kk, ss))}
+        tgt = np.array([lab.get((int(x), int(round(y / .01))), -1) for x, y in zip(k[cand], sv)]); m = tgt >= 0
+        A.C = np.r_[A.C, newC]; A.n = np.r_[A.n, A.n[kk]]; A.K = len(A.C); A.V = np.r_[A.V, np.full((A.K - K0, MN), BIG)]; refresh(A); A.V[A.ingoal] = 0.
+        out = A.pairs(A.C[K0:], np.arange(K0, A.K)); e_new = edges_add(A, K0 * MN + MN // 2 + MN * np.arange(A.K - K0), out)
+        e_src = [iy[cand][m], tgt[m], np.full(m.sum(), MN // 2), np.zeros(m.sum()), t[cand][m]]
+        e = [np.r_[x, y, z] for x, y, z in zip(A.e, e_new, e_src)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
+        print(json.dumps(dict(round=r, cand=int(len(cand)), new=int(A.K - K0), new_fin=int((A.V[K0:, MN // 2] < BIG / 2).sum()), spores=int(A.K), V=round(float(A.V[KS, MN // 2]), 3),
+                              centers_fin=int((A.V[:, MN // 2] < BIG / 2).sum()), sec=round(time.time() - t0))), flush=True)
+        if path: np.savez(path.replace('.npz', '_lazy%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+        if A.V[KS, MN // 2] < BIG / 2 and r >= int(os.environ.get('LAZYMIN', 1)): break
+    if A.V[KS, MN // 2] < BIG / 2:
+        A.E = node_edges(A); T, arcs, wm = rollout_edges(A, KS, 0.)
+        print(json.dumps(dict(V=round(float(A.V[KS, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / ocp), 4), arcs=arcs, wmax=round(float(wm), 2))), flush=True)
+    return A
+def _lazy_main(path):
+    A = load(path); lazy_nodes(A, int(os.environ.get('ROUNDS', 8)), int(os.environ.get('CAP', 4000)), float(os.environ.get('OCP', 7.636)), path)
 if __name__ == '__main__':
     if sys.argv[1] == 'grow': _grow_main(int(sys.argv[2]))
+    elif sys.argv[1] == 'lazy': _lazy_main(sys.argv[2])
     else: _ellipse_main(sys.argv[2])
