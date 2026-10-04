@@ -169,3 +169,4 @@ hub-v5chain-worker-17 | g=1 RRT=1 лучше RRT=0 (T 11.77 vs 13.50 при 3082
 hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN: RRT=1 ×1.20, RRT=0 ×1.44; fp.py на aida
 hub-v5chain-worker-17 | g=2 FORCEPLAN 25k спор T×1.99
 hub-v5chain-worker-17 | g=2 FORCEPLAN TS 5 значений: ×1.18 OCP
+hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN DEP3 ×1.0455
