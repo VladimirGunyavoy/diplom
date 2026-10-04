@@ -275,7 +275,9 @@ def rollout_edges(A, k, s, tmax=40.):
             onk = (-1, 0.)
             if fail and PEND: tt, u1, u2 = PEND.pop(0); fail = tt <= 0; A.npend = getattr(A, 'npend', 0) + 1     # план не найден — следующая дуга прошлого плана (открыто)
             elif not fail: PEND[:] = CHAIN[1:]; onk = tuple(ONK)
-            if fail and kp is None: return np.inf, arcs, wmax
+            if fail and kp is None:
+                if os.environ.get('DIAG'): print('DIAG fail y', np.round(y, 3).tolist(), 'J', round(float(J), 2), 'T', round(T, 2), flush=True)
+                return np.inf, arcs, wmax
             if not fail:
                 nst = max(6, int(tt / .01))
                 TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                             # research-11: дуги пути — для пула траекторий (dp_g2_pool.py)
