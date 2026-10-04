@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+TRAJ = []; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -30,7 +30,7 @@ def direct(A, Y):
         for i, kk, v, tt in zip(iy[tries], k[tries], val[tries], t[tries]):
             if out[i] < BIG / 2: continue
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); z = Y[i][:, None].copy(); wm = 0.
-            for _ in range(10): z = flow(z, u1, u2, tt / 10, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+            for _ in range(30): z = flow(z, u1, u2, tt / 30, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
             if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0])
         return out, arc
     for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
@@ -48,7 +48,8 @@ def plan(A, y):
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
         if WCHK:                                                                             # и у дуг мини-дерева — в середине
-            Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T / 2).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
+            for fr in (.2, .4, .6, .8):
+                Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T * fr).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
@@ -114,6 +115,7 @@ def rollout_edges(A, k, s, tmax=40.):
             J, (tt, u1, u2) = plan(A, y)
             if J >= BIG / 2 or tt <= 0: return np.inf, arcs, wmax
             nst = max(6, int(tt / .01))
+            TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                             # research-11: дуги пути — для пула траекторий (dp_g2_pool.py)
             for _ in range(nst):
                 y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
                 if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
