@@ -170,3 +170,4 @@ hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN: RRT=1 ×1.20, RRT=0 ×1.44;
 hub-v5chain-worker-17 | g=2 FORCEPLAN 25k спор T×1.99
 hub-v5chain-worker-17 | g=2 FORCEPLAN TS 5 значений: ×1.18 OCP
 hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN DEP3 ×1.0455
+hub-v5chain-worker-17 | g=2 FORCEPLAN DEP3 ×1.087 — цель ≤1.1 достигнута
