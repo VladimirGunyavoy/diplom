@@ -57,7 +57,7 @@ class GrowAtlas(Atlas):
         s.ingoal = ingoal(np.moveaxis(s.P, 2, 0)); s.V = np.full((s.K, MN), BIG); s.V[s.ingoal] = 0.
         s.X = emb(s.C); s.tree = cKDTree(s.X)
 if __name__ == '__main__':
-    N = int(sys.argv[1]); t0 = time.time(); A = GrowAtlas(N); tg = time.time() - t0
+    N = int(sys.argv[1]); t0 = time.time(); A = GrowAtlas(N, seed=int(os.environ.get('SEED', 0))); tg = time.time() - t0
     w = np.abs(A.C[:, 2:]).max(1)
     print(json.dumps(dict(N=N, grow_sec=round(tg, 1), dmin_end=round(A.dmin, 3), w_med=round(float(np.median(w)), 2), w_q90=round(float(np.quantile(w, .9)), 2),
                           q1_cover=round(float(np.histogram(A.C[:, 0], 8, (-np.pi, np.pi))[0].min() / len(A.C) * 8), 2),
