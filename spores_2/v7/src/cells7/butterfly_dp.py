@@ -168,7 +168,8 @@ class GrowAtlas(Atlas):
         s.sn = np.linspace(-R, R, MN); s.P = s.C[:, None, :] + s.sn[None, :, None] * s.n[:, None, :]
         s.ingoal = ingoal(np.moveaxis(s.P, 2, 0)); s.V = np.full((s.K, MN), BIG); s.V[s.ingoal] = 0.
         s.X = emb(s.C); s.tree = cKDTree(s.X)
-TS = np.array([float(x) for x in os.environ.get('TS', '.15,.3,.5,.9,1.4' if G == 2 else '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+# --- агент (hub-v5chain-worker-17: порт butterfly_dp_query.py research-11: WCHK/ONK/PEND/CHAIN) ---
+TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.15,.3,.5,.9,1.4' if G == 2 else '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -177,15 +178,25 @@ def load(path):
 def direct(A, Y):
     """Лучшее значение одной дугой в атлас для каждой строки Y (n, 4); и (t, u1, u2) этой дуги."""
     out = np.full(len(Y), BIG); arc = np.zeros((len(Y), 3))
+    DK[:] = [-1] * len(Y); DS[:] = [0.] * len(Y)                                             # research-11: целевая спора и s лучшей дуги — агент после прямой дуги «стоит на споре»
     if not len(Y): return out, arc
     gi = ingoal(Y.T); out[gi] = 0.
     iy, k, sv, t = A.pairs(Y); iy, k = iy.astype(int), k.astype(int)
     if not len(iy): return out, arc
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
-    V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG
-    o = np.lexsort((val, iy)); iy, k, val, t = iy[o], k[o], val[o], t[o]; first = np.r_[True, iy[1:] != iy[:-1]]
-    for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
+    V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG
+    o = np.lexsort((val, iy)); iy, k, val, t, sv = iy[o], k[o], val[o], t[o], sv[o]; first = np.r_[True, iy[1:] != iy[:-1]]
+    if WCHK:                                                                                 # research-11: |w| ≤ 3 ВДОЛЬ дуги (g = 2: FORCEPLAN давал wmax 4.16) — до 4 лучших кандидатов на точку
+        rank = np.arange(len(iy)) - np.maximum.accumulate(np.where(first, np.arange(len(iy)), 0)); tries = (rank < 4) & (val < BIG / 2)
+        for i, kk, v, tt, ss in zip(iy[tries], k[tries], val[tries], t[tries], sv[tries]):
+            if out[i] < BIG / 2: continue
+            _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); z = Y[i][:, None].copy(); wm = 0.
+            for _ in range(30): z = flow(z, u1, u2, tt / 30, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+            if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0]); DK[i] = int(kk); DS[i] = float(ss)
+        return out, arc
+    for i, kk, v, tt, ss in zip(iy[first], k[first], val[first], t[first], sv[first]):
         if v < out[i]:
+            DK[i] = int(kk); DS[i] = float(ss)
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); out[i] = v; arc[i] = (tt, u1[0], u2[0])
     return out, arc
 def children(Y):
@@ -195,17 +206,20 @@ def children(Y):
 def plan(A, y):
     """V(y) и первая дуга (t, u1, u2): прямо в атлас или через дерево глубины DEP."""
     v, arc = direct(A, y[None]); best, barc = v[0], arc[0]
+    ONK[:] = [DK[0], DS[0]]; CHAIN[:] = [tuple(arc[0])]                                                               # research-11: вся лучшая цепочка дуг — запас агенту, если следующий план не найдётся
     lv = [(y[None], None, None, None)]; Y = y[None]; par = None
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
+        if WCHK:                                                                             # и у дуг мини-дерева — в середине
+            for fr in (.2, .4, .6, .8):
+                Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T * fr).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
-        Z, cost, first = Z[ok], cost[ok], first[ok]; vz, _ = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
-        if tot[i] < best: best, barc = tot[i], first[i]
-        if BEAMREL and len(Z) > 1: ix = np.flatnonzero(tot <= tot.min() * (1 + BEAMREL) + 1e-9); ix = ix[np.argsort(tot[ix])[:BEAMCAP]]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAMREL: на след. уровень — узлы с cost+V(лист) ≤ (1+x)·лучшее (≤ BEAMCAP)
-        elif BEAM and len(Z) > BEAM: ix = np.argsort(tot)[:BEAM]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAM: на следующий уровень — лишь лучшие по cost + V(лист)
-        Y, Ccost, Farc, par = Z, cost, first, None
+        H = np.c_[T, U][:, None, :] if d == 0 else np.concatenate([np.repeat(Hp, len(TS) * len(UU), 0), np.c_[T, U][:, None, :]], 1); H = H[ok]
+        Z, cost, first = Z[ok], cost[ok], first[ok]; vz, az = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
+        if tot[i] < best: best, barc = tot[i], first[i]; CHAIN[:] = [tuple(h) for h in H[i]] + [tuple(az[i])]; ONK[:] = [-1, 0.]
+        Y, Ccost, Farc, par, Hp = Z, cost, first, None, H
     return best, barc
 def rollout(A, y0, tmax=25.):
     y = np.array(y0, float); t = 0.; wmax = 0.; nplan = 0; V0 = None
@@ -217,8 +231,6 @@ def rollout(A, y0, tmax=25.):
             y = flow(y[:, None], np.array([u1]), np.array([u2]), ta / max(1, int(round(ta / .01))), n=1)[:, 0]; t += ta / max(1, int(round(ta / .01))); wmax = max(wmax, np.abs(y[2:]).max())
             if ingoal(y[:, None])[0]: return t, wmax, nplan, V0
     return np.inf, wmax, nplan, V0
-# --- research-10: агент «по рёбрам» — тёплый Ньютон из точки на отрезке к цели ребра ближайшего узла ---
-fdyn = f
 def newton_warm(y, c, nn, t, u1, u2, s, it=12):
     for _ in range(it):
         Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
@@ -231,6 +243,10 @@ def newton_warm(y, c, nn, t, u1, u2, s, it=12):
     Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
     if np.abs(Rz).max() > 1e-7 or abs(u1) > 1 + 1e-9 or abs(u2) > 1 + 1e-9 or abs(s) > R: return None
     return t, u1, u2, s
+def arc_wmax(y, u1, u2, t, n=30):
+    z = np.array(y, float)[:, None]; wm = 0.
+    for _ in range(n): z = flow(z, np.array([u1]), np.array([u2]), t / n, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+    return wm
 def node_edges(A):
     """Для каждого узла (k, j): лучшее ребро (k2, t, u1, u2, s2) по V атласа."""
     iy, k, j0, a, t = A.e; V = A.V.reshape(-1); val = t + (1 - a) * V[k * MN + j0] + a * V[k * MN + j0 + 1]
@@ -239,21 +255,31 @@ def node_edges(A):
         if val[i] < BIG / 2 and len(E.setdefault(int(iy[i]), [])) < TOPE: E[int(iy[i])].append((int(k[i]), float(t[i]), float(((j0[i] + a[i]) / (MN - 1)) * 2 * R - R)))
     return E
 def edge_value(A, k2, s2):
-    f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = f_ - j0; return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
+    f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = float(snap(f_ - j0)); return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
 def rollout_edges(A, k, s, tmax=40.):
     """Старт на отрезке споры k в точке s. Возвращает T, число дуг, wmax."""
     E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
     while T < tmax:
         if ingoal(y[:, None])[0]: return T, arcs, wmax
-        if FORCEPLAN: k = None                                                               # FORCEPLAN: мини-дерево из точки на КАЖДОМ шаге (research-10: р.10 T 5.376 = ×1.054 OCP)
+        kp = k
+        if FORCEPLAN: k = None                                                               # FORCEPLAN: всегда мини-дерево из точки (проверка: даёт ли оно короче графа)
         if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
             J, (tt, u1, u2) = plan(A, y)
-            if J >= BIG / 2 or tt <= 0: return np.inf, arcs, wmax
-            nst = max(6, int(tt / .01))
-            for _ in range(nst):
-                y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
-                if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
-            T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1; continue
+            fail = J >= BIG / 2 or tt <= 0
+            onk = (-1, 0.)
+            if fail and PEND: tt, u1, u2 = PEND.pop(0); fail = tt <= 0; A.npend = getattr(A, 'npend', 0) + 1     # план не найден — следующая дуга прошлого плана (открыто)
+            elif not fail: PEND[:] = CHAIN[1:]; onk = tuple(ONK)
+            if fail and kp is None: return np.inf, arcs, wmax
+            if not fail:
+                nst = max(6, int(tt / .01))
+                TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                             # research-11: дуги пути — для пула траекторий (dp_g2_pool.py)
+                for _ in range(nst):
+                    y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
+                    if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
+                T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1
+                if onk[0] >= 0: k, s = int(onk[0]), float(onk[1])                                    # прямая дуга в атлас: стоим на споре onk — при неудаче плана пойдём по её рёбрам
+                continue
+            k = kp                                                                          # research-11: мини-дерево не нашло пути — шаг по рёбрам споры, на которой стоим
         f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
         if ALLN: js = list(np.argsort(A.V[k]))                                               # ALLN: рёбра всех узлов споры по возрастанию V узла
         for j in js:
@@ -263,6 +289,7 @@ def rollout_edges(A, k, s, tmax=40.):
                 if not ok[0]: continue
                 r = newton_warm(y, A.C[k2], A.n[k2], tt[0], u1[0], u2[0], s2[0])
                 if r is None: continue
+                if WCHK and arc_wmax(y, r[1], r[2], r[0]) > 3.: continue                      # research-11: |w| ≤ 3 вдоль дуги и при ходьбе по рёбрам
                 v = r[0] + edge_value(A, k2, r[3])
                 if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
                 break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
@@ -270,7 +297,7 @@ def rollout_edges(A, k, s, tmax=40.):
             iy, kk, sv, t_ = A.pairs(y[None])
             for kk_, sv_ in zip(kk.astype(int), sv):
                 tt, u1, u2, s2, ok = solve_arcs(y[:, None], A.C[kk_][:, None], A.n[kk_][:, None])
-                if ok[0] and abs(s2[0]) <= R:
+                if ok[0] and abs(s2[0]) <= R and not (WCHK and arc_wmax(y, u1[0], u2[0], tt[0]) > 3.):
                     v = tt[0] + edge_value(A, kk_, s2[0])
                     if v < BIG / 2 and (best is None or v < best[0]): best = (v, kk_, (tt[0], u1[0], u2[0], s2[0]))
         if best is None:
@@ -282,7 +309,6 @@ def rollout_edges(A, k, s, tmax=40.):
             if ingoal(yy[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
         T += tt; arcs += 1; k, s = k2, s2; y = A.C[k] + s * A.n[k]
     return np.inf, arcs, wmax
-
 MARG, NEW, ROUNDS, DSH = float(os.environ.get('MARG', .1)), int(os.environ.get('NEW', 1000)), int(os.environ.get('ROUNDS', 3)), float(os.environ.get('DSH', .85))
 UMAX, KS = .9, 81
 def edges_add(A, Y_iy, out):
