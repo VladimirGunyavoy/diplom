@@ -15,16 +15,18 @@ def getband(g):
         _BC.clear(); import gc; gc.collect()                                                                     # одна полоса в памяти (OOM 1.5 ГБ при кэше по ĝ)
         PSR.UM = UM0 * k; _BC[k] = {s: band(s * PSR.UM) for s in (1., -1.)}; PSR.UM = UM0
     return _BC[k]
+COOL = int(os.environ.get('COOL', 0))                                    # COOL шагов агента без повторной стрельбы после промаха плана
 GAIN = float(os.environ.get('GAIN', 1.))
 def run(B, Bd, Q, VF, dt=.06, tmax=40., sub=4):
     T = np.full(len(Q), np.inf); SW = np.zeros(len(Q), int); tf = np.zeros(len(Q))
     for i, q in enumerate(Q):
-        y = np.array(q, float); y[0] = wrap(y[0]); t = 0.; pu = None; sw = 0; gh = 1.; Sxy = Sxx = 0.; arc = [None, 0., 0., 0.]   # ĝ, МНК по дугам: arc = [u, ω0, ∫sinφ, T]
+        y = np.array(q, float); y[0] = wrap(y[0]); t = 0.; pu = None; sw = 0; cool = 0; gh = 1.; Sxy = Sxx = 0.; arc = [None, 0., 0., 0.]   # ĝ, МНК по дугам: arc = [u, ω0, ∫sinφ, T]
         while t < tmax:
             if ingoal(y): T[i] = t; break
             J, b = B.best(y)
             if b is None or J >= BIG / 2: break
-            if J <= VF:
+            if cool > 0: cool -= 1
+            if J <= VF and cool == 0:
                 Bg = Bd if not EST else getband(gh); PSR.UM = UM0 * (gh if EST else 1.)
                 Ts, pl = shoot(y.copy(), Bg, S1=VF + 1.5, S2=VF + 1.5, ntry=100); PSR.UM = UM0
                 if np.isfinite(Ts) and Ts <= J + .3:
@@ -39,7 +41,7 @@ def run(B, Bd, Q, VF, dt=.06, tmax=40., sub=4):
                         if hit: break
                     if hit or GAIN == 1.:
                         sw += sum(1 for a, c in zip(([np.sign(pu)] if pu is not None else []) + us[:-1], us) if a != c); T[i] = t + (te if GAIN != 1. else Ts); tf[i] = Ts; break
-                    # план промахнулся: продолжаем агентом (замкнутая обратная связь)
+                    cool = COOL                                                          # план промахнулся: продолжаем агентом (замкнутая обратная связь)
             _, _, ta, u = b; h = min(dt, ta)
             if pu is not None and abs(u - pu) > .5 * UM: sw += 1
             pu = u; z = y[None, :]
