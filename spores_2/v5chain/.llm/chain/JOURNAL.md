@@ -166,3 +166,4 @@ hub-v5chain-worker-17 | v7 butterfly_dp: RRT=1, snap, lazy_nodes (п.7); тес�
 hub-v5chain-worker-17 | п.7 g=2 воспроизведено в v7 (V 23.359, T×2.65); 4D адаптивный dt без выигрыша
 hub-v5chain-worker-17 | п.8 LAZYFIN: 6711 спор vs 18082, но T ×3.2 vs ×2.65
 hub-v5chain-worker-17 | g=1 RRT=1 лучше RRT=0 (T 11.77 vs 13.50 при 3082 спорах); эллипс g=2 плато ×2.96
+hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN: RRT=1 ×1.20, RRT=0 ×1.44; fp.py на aida
