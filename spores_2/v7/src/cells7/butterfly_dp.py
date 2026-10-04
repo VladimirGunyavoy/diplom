@@ -9,6 +9,8 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
+OCP = float(os.environ.get('OCP', 7.636 if float(os.environ.get('G', 1.)) == 2 else 5.098))   # OCP эталон: g=1 висит→вверх 5.098, g=2 7.636
+BEAM = int(os.environ.get('BEAM', 0))   # 0 — полный перебор дерева агента (как research)
 LAZYFIN = int(os.environ.get('LAZYFIN', 0))   # п.8: ленивые споры — только с конечной V
 RRT = int(os.environ.get('RRT', 0))   # RRT=1: родитель со смещением Вороного (research-11, g=2)
 PRUNE = int(os.environ.get('PRUNE', 1)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
@@ -200,6 +202,7 @@ def plan(A, y):
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
         Z, cost, first = Z[ok], cost[ok], first[ok]; vz, _ = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
         if tot[i] < best: best, barc = tot[i], first[i]
+        if BEAM and len(Z) > BEAM: ix = np.argsort(tot)[:BEAM]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAM: на следующий уровень — лишь лучшие по cost + V(лист)
         Y, Ccost, Farc, par = Z, cost, first, None
     return best, barc
 def rollout(A, y0, tmax=25.):
@@ -319,14 +322,14 @@ def _grow_main(N):
     print(json.dumps(dict(N=N, K=A.K, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it, BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
     out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, '_rrt' if RRT else ''); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     T, arcs, wm = rollout_edges(A, 81, 0.)
-    print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
+    print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
 def _ellipse_main(path):
     A = load(path); rng = np.random.default_rng(1); t0 = time.time(); dmin = float(os.environ.get('DMIN0', .2)); refresh(A); A.V[A.ingoal] = 0.
     A.solve(); Tb = A.V[KS, MN // 2]; T, arcs, wm = rollout_edges(A, KS, 0.)
-    print(json.dumps(dict(round=0, spores=A.K, V=round(float(Tb), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs)), flush=True)
+    print(json.dumps(dict(round=0, spores=A.K, V=round(float(Tb), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs)), flush=True)
     for r in range(1, ROUNDS + 1):
         ne, na, dmin = grow_round(A, rng, dmin, Tb); dmin *= DSH; A.solve(); Tb = min(Tb, A.V[KS, MN // 2]); A.E = node_edges(A); T, arcs, wm = rollout_edges(A, KS, 0.)
-        print(json.dumps(dict(round=r, ellipse=ne, added=na, spores=A.K, pairs_per_node=round(len(A.e[0]) / (A.K * MN), 2), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / 5.098), 4), arcs=arcs, sec=round(time.time() - t0))), flush=True)
+        print(json.dumps(dict(round=r, ellipse=ne, added=na, spores=A.K, pairs_per_node=round(len(A.e[0]) / (A.K * MN), 2), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs, sec=round(time.time() - t0))), flush=True)
         np.savez(path.replace('.npz', '_ell%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
 def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
     """research-11 (PLAN п.7б): g=2 — «ленивые узлы». Приход ребра между узлами, один из которых BIG, становится новой спорой (центр в точке прихода);
