@@ -155,3 +155,4 @@ hub-v5chain-worker-16 | started | acc2 | sonnet | 03:28:54
 hub-v5chain-worker-16 | done | ctx26 (софт 30, ранний уход: очередь исчерпана на хабе, остальное — aida/4D) | п.1–п.5: EST дд, PRUNE x1.7–1.9, solve_filled, 4D 100k V 1.074 / агент 1.089 | next=hub-v5chain-worker-17 | 13:41:01
 hub-v5chain-worker-17 | started | acc3 | sonnet | 13:41:34
 hub-v5chain-worker-17 | PRUNE=1 по умолчанию в v7 butterfly_dp, тест пар ОК
+hub-v5chain-research-10 | done | ctx 34% | дп g=1 T 5.376 (×1.054 OCP): споры на трубках + прямое/обратное дерево + эллипс + агент мини-дерево; эталон дд с дисками (бабочки 1.057); g=2 не связан (идёт queue_g2d) | next=hub-v5chain-research-11 | 14:30:43
