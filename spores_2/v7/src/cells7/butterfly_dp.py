@@ -10,6 +10,7 @@ from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
 OCP = float(os.environ.get('OCP', 7.636 if float(os.environ.get('G', 1.)) == 2 else 5.098))   # OCP эталон: g=1 висит→вверх 5.098, g=2 7.636
+BEAMREL, BEAMCAP = float(os.environ.get('BEAMREL', 0)), int(os.environ.get('BEAMCAP', 400))   # относительное отсечение дерева агента (0 — выкл.)
 BEAM = int(os.environ.get('BEAM', 0))   # 0 — полный перебор дерева агента (как research)
 LAZYFIN = int(os.environ.get('LAZYFIN', 0))   # п.8: ленивые споры — только с конечной V
 RRT = int(os.environ.get('RRT', 0))   # RRT=1: родитель со смещением Вороного (research-11, g=2)
@@ -202,7 +203,8 @@ def plan(A, y):
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
         Z, cost, first = Z[ok], cost[ok], first[ok]; vz, _ = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
         if tot[i] < best: best, barc = tot[i], first[i]
-        if BEAM and len(Z) > BEAM: ix = np.argsort(tot)[:BEAM]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAM: на следующий уровень — лишь лучшие по cost + V(лист)
+        if BEAMREL and len(Z) > 1: ix = np.flatnonzero(tot <= tot.min() * (1 + BEAMREL) + 1e-9); ix = ix[np.argsort(tot[ix])[:BEAMCAP]]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAMREL: на след. уровень — узлы с cost+V(лист) ≤ (1+x)·лучшее (≤ BEAMCAP)
+        elif BEAM and len(Z) > BEAM: ix = np.argsort(tot)[:BEAM]; Z, cost, first = Z[ix], cost[ix], first[ix]   # BEAM: на следующий уровень — лишь лучшие по cost + V(лист)
         Y, Ccost, Farc, par = Z, cost, first, None
     return best, barc
 def rollout(A, y0, tmax=25.):
