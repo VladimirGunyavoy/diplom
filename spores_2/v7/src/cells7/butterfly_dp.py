@@ -147,13 +147,14 @@ class GrowAtlas(Atlas):
             if TR: u *= UMAX; sv[:] = 0.                                                     # TR: из центра B, запас по τ для соседних узлов
             if RRT:                                                                          # research-11: смещение Вороного — случайная точка области → ближайшая спора дерева → лучшая дуга веера к ней (dp_g2_voronoi.py)
                 UG = np.array([(a, c) for a in (-1, 0, 1) for c in (-1, 0, 1)]) * UMAX; TG = np.array([.25, .5, .9, 1.5]); TG = TG[TG <= TL + 1e-9]; UF = np.repeat(UG, len(TG), 0); TF = np.tile(TG, len(UG))
-                X = np.c_[rng.uniform(-np.pi, np.pi, (batch, 2)), rng.uniform(-WMAX, WMAX, (batch, 2))]; B = pool[cKDTree(emb(C[pool])).query(emb(X))[1]]
+                X = np.c_[rng.uniform(-np.pi, np.pi, (batch, 2)), rng.uniform(-WMAX, WMAX, (batch, 2))]; dk, Bk_ = cKDTree(emb(C[pool])).query(emb(X), k=min(KN, len(pool))); dk, Bk_ = dk.reshape(batch, -1), Bk_.reshape(batch, -1)
+                B = pool[Bk_[np.arange(batch), np.where(dk <= dk[:, :1] * KF + .05, tv[pool][Bk_], np.inf).argmin(1)]]   # w18 (KN>1, research-11): самый дешёвый по времени из KN ближайших в пределах KF
                 Y = np.repeat(C[B], len(TF), 0); Z = flow(Y.T, np.tile(UF[:, 0], batch), np.tile(UF[:, 1], batch), sg * np.tile(TF, batch)).T
                 okz = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= WMAX).all(1) & (np.abs(np.c_[wrap(Y[:, :2] - Z[:, :2]), Y[:, 2:] - Z[:, 2:]]) <= WIN).all(1)
                 dz = np.linalg.norm(emb(np.nan_to_num(Z)) - np.repeat(emb(X), len(TF), 0), axis=1); dz[~okz] = np.inf; m = dz.reshape(batch, -1).argmin(1); u = UF[m].T.copy(); t = TF[m].copy(); sv[:] = 0.
             A = flow((C[B] + sv[:, None] * n[B]).T, u[0], u[1], sg * t).T
             if TR:                                                                           # нормаль A = перенос нормали B назад по дуге ⇒ узлы A ложатся на отрезок B
-                d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; nA = d / np.linalg.norm(d, axis=1, keepdims=True); s.lam.append(np.linalg.norm(d, axis=1))
+                d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; ld = np.linalg.norm(d, axis=1, keepdims=True); nA = d / ld * (np.clip(ld, NMIN, NMAX) if NT else 1.); s.lam.append(ld[:, 0])   # NT (research-11): норма нормали = растяжение потока в [NMIN, NMAX]
             A[:, :2] = wrap(A[:, :2])
             ok = np.isfinite(A).all(1) & (np.abs(A[:, 2:]) <= WMAX).all(1) & ~ingoal(A.T)
             ok &= (np.abs(np.c_[wrap(C[B, :2] - A[:, :2]), C[B, 2:] - A[:, 2:]]) <= WIN).all(1)      # дуга должна попасть в окно пар
@@ -169,6 +170,8 @@ class GrowAtlas(Atlas):
         s.ingoal = ingoal(np.moveaxis(s.P, 2, 0)); s.V = np.full((s.K, MN), BIG); s.V[s.ingoal] = 0.
         s.X = emb(s.C); s.tree = cKDTree(s.X)
 # --- агент (hub-v5chain-worker-17: порт butterfly_dp_query.py research-11: WCHK/ONK/PEND/CHAIN) ---
+NT = int(os.environ.get('NT', 0)); NMIN = float(os.environ.get('NMIN', .3)); NMAX = float(os.environ.get('NMAX', 3.)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3))
+WFR = [float(x) for x in os.environ.get('WFR', '.1,.2,.3,.4,.5,.6,.7,.8,.9').split(',')]                    # w18: доли дуги мини-дерева для проверки |w|≤3 (4 точки пропускали пик на длинных дугах)
 TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.15,.3,.5,.9,1.4' if G == 2 else '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
@@ -191,7 +194,8 @@ def direct(A, Y):
         for i, kk, v, tt, ss in zip(iy[tries], k[tries], val[tries], t[tries], sv[tries]):
             if out[i] < BIG / 2: continue
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); z = Y[i][:, None].copy(); wm = 0.
-            for _ in range(30): z = flow(z, u1, u2, tt / 30, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+            nn = max(30, int(tt / .01) + 1)
+            for _ in range(nn): z = flow(z, u1, u2, tt / nn, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
             if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0]); DK[i] = int(kk); DS[i] = float(ss)
         return out, arc
     for i, kk, v, tt, ss in zip(iy[first], k[first], val[first], t[first], sv[first]):
@@ -211,7 +215,7 @@ def plan(A, y):
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
         if WCHK:                                                                             # и у дуг мини-дерева — в середине
-            for fr in (.2, .4, .6, .8):
+            for fr in WFR:
                 Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T * fr).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
@@ -235,7 +239,7 @@ def newton_warm(y, c, nn, t, u1, u2, s, it=12):
     for _ in range(it):
         Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
         e = 1e-6; Z1 = flow(y[:, None], np.array([u1 + e]), np.array([u2]), t)[:, 0]; Z2 = flow(y[:, None], np.array([u1]), np.array([u2 + e]), t)[:, 0]
-        J = np.c_[fdyn(Z[:, None], np.array([u1]), np.array([u2]))[:, 0], (Z1 - Z) / e, (Z2 - Z) / e, -nn]
+        J = np.c_[f(Z[:, None], np.array([u1]), np.array([u2]))[:, 0], (Z1 - Z) / e, (Z2 - Z) / e, -nn]
         try: d = np.linalg.solve(J, Rz)
         except np.linalg.LinAlgError: return None
         t, u1, u2, s = t - d[0], u1 - d[1], u2 - d[2], s - d[3]
@@ -243,7 +247,8 @@ def newton_warm(y, c, nn, t, u1, u2, s, it=12):
     Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
     if np.abs(Rz).max() > 1e-7 or abs(u1) > 1 + 1e-9 or abs(u2) > 1 + 1e-9 or abs(s) > R: return None
     return t, u1, u2, s
-def arc_wmax(y, u1, u2, t, n=30):
+def arc_wmax(y, u1, u2, t, n=None):
+    n = n or max(30, int(t / .01) + 1)                                                  # w18: шаг как у исполнения агента (.01), иначе пик между точками пропускается
     z = np.array(y, float)[:, None]; wm = 0.
     for _ in range(n): z = flow(z, np.array([u1]), np.array([u2]), t / n, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
     return wm
@@ -266,6 +271,7 @@ def rollout_edges(A, k, s, tmax=40.):
         if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
             J, (tt, u1, u2) = plan(A, y)
             fail = J >= BIG / 2 or tt <= 0
+            if os.environ.get('DIAG') and not fail and arc_wmax(y, u1, u2, tt) > 3.01: print('DIAG wmax', round(arc_wmax(y, u1, u2, tt), 2), 'tt', round(tt, 2), 'chain0', tuple(CHAIN[0]) == (tt, u1, u2), 'lenCHAIN', len(CHAIN), flush=True)
             onk = (-1, 0.)
             if fail and PEND: tt, u1, u2 = PEND.pop(0); fail = tt <= 0; A.npend = getattr(A, 'npend', 0) + 1     # план не найден — следующая дуга прошлого плана (открыто)
             elif not fail: PEND[:] = CHAIN[1:]; onk = tuple(ONK)
@@ -346,9 +352,9 @@ def grow_round(A, rng, dmin, Tb):
     e = [np.r_[a, b, c] for a, b, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]
     return len(ell), A.K - K0, dmin
 def _grow_main(N):
-    t0 = time.time(); A = GrowAtlas(N); A.build(); tp = time.time() - t0; A.solve()
+    t0 = time.time(); A = GrowAtlas(N, seed=int(os.environ.get('SEED', 0))); A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, K=A.K, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it, BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, '_rrt' if RRT else ''); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, ('_rrt' if RRT else '') + ('_kn%d' % KN if KN > 1 else '') + ('_nt' if NT else '') + ('_s%d' % int(os.environ.get('SEED', 0)) if os.environ.get('SEED') else '')); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     T, arcs, wm = rollout_edges(A, 81, 0.)
     print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
 def _ellipse_main(path):
