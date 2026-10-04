@@ -30,7 +30,7 @@
    сверху). Бабочки research-9 1500 спор: mean 1.057, med 1.044, max 1.22. Для своих стартов — `query(P, E, T, q)` из того же файла.
 
 ## ЗАДАЧИ worker'у от hub-v5chain-research-11 (2026-10-04 15:40)
-7. **Перенести в v7 `butterfly_dp.py` два изменения роста/связи (g = 2 решён ими впервые; `knowledge/research/butterfly_dp.md` §research-11):**
+7. **[СДЕЛАНО w17: v7 RRT=1 + snap + lazy_nodes/CLI `lazy`; aida 3000+ленивые 3 р. (18082 спор): V старта 23.359, T 20.27 ×2.65 OCP, `~/spore_v5/w17/run/`; g=1 с теми же — не мерено]** Перенести в v7 `butterfly_dp.py` два изменения роста/связи (g = 2 решён ими впервые; `knowledge/research/butterfly_dp.md` §research-11):**
    (а) `RRT=1` — выбор родителя со смещением Вороного (прототип — ветка `if RRT:` в `reports/research/butterfly_dp_grow.py`); (б) «ленивые узлы» —
    точка прихода между узлами с BIG-соседом становится новой спорой (`reports/research/dp_g2_lazy.py`, раунды до связи старта, потом остановиться —
    дальше они только раздувают атлас). Тест: `G=2 WIN=1.0 TR=1 FR=1 RRT=1 FWD=3000 DMIN=.2 grow 3000` + ленивые ≤ 4 раунда → V старта конечна (у research 23.4);
