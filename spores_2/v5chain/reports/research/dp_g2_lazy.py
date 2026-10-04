@@ -7,16 +7,18 @@ sys.path.insert(0, '.')
 from butterfly_dp import BIG
 from butterfly_dp_atlas import R, MN, SNAPA, snap
 import butterfly_dp_query as Q, butterfly_dp_ellipse as E
-A = Q.load(sys.argv[1]); E.refresh(A); A.V[A.ingoal] = 0.; A.solve(); KS = 81; t0 = time.time(); CAP = int(os.environ.get('CAP', 4000)); OCP = float(os.environ.get('OCP', 7.636))
+A = Q.load(sys.argv[1]); E.refresh(A); A.V[A.ingoal] = 0.; A.solve(); KS = 81; t0 = time.time(); CAP = int(os.environ.get('CAP', 4000)); OCP = float(os.environ.get('OCP', 7.636)); FROMSTART = int(os.environ.get('FROMSTART', 0))
 print(json.dumps(dict(round=0, spores=int(A.K), V=round(float(A.V[KS, MN // 2]), 3), centers_fin=int((A.V[:, MN // 2] < BIG / 2).sum()))), flush=True)
 for r in range(1, int(os.environ.get('ROUNDS', 8)) + 1):
     iy, k, j0, a, t = A.e; V = A.V.reshape(-1); V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; a_ = snap(a)
     bad = ((V0 >= BIG / 2) & (a_ < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a_ > SNAPA)); fin = (A.V < BIG / 2).any(1)
-    cand = np.flatnonzero((V[iy] >= BIG / 2) & bad & fin[k]); s = A.sn[j0[cand]] + a[cand] * (2 * R / (MN - 1))
+    src_ok = np.isfinite(E.g_from_start(A).reshape(-1))[iy] if FROMSTART else True                        # FROMSTART: только мостики — источник достижим от старта
+    cand = np.flatnonzero((V[iy] >= BIG / 2) & bad & fin[k] & src_ok); s = A.sn[j0[cand]] + a[cand] * (2 * R / (MN - 1))
     _, u = np.unique(np.c_[k[cand], np.round(s / .01)], axis=0, return_index=True)                      # одна новая спора на (спора, s с шагом .01)
     key = {}; 
     if len(u) > CAP: u = np.random.default_rng(r).choice(u, CAP, replace=False)
     if not len(u): print(json.dumps(dict(round=r, new=0))); break
+    if FROMSTART and A.V[KS, MN // 2] < BIG / 2: break
     kk, ss = k[cand][u], s[u]; K0 = A.K; newC = A.C[kk] + ss[:, None] * A.n[kk]; lab = {(int(x), int(round(y / .01))): K0 + i for i, (x, y) in enumerate(zip(kk, ss))}
     tgt = np.array([lab.get((int(x), int(round(y / .01))), -1) for x, y in zip(k[cand], s)]); m = tgt >= 0
     A.C = np.r_[A.C, newC]; A.n = np.r_[A.n, A.n[kk]]; A.K = len(A.C); A.V = np.r_[A.V, np.full((A.K - K0, MN), BIG)]; E.refresh(A); A.V[A.ingoal] = 0.
