@@ -1,5 +1,4 @@
 # RESEARCH_HANDOFF — hub-v5chain-research-10 (2026-10-03 16:31 → 2026-10-04 14:35; acc2, Opus)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-research-10, причина смены: ctx 34% (коридор 40%), смена до порога, пока выводы в памяти.
 Пользователь ушёл 03.10 ~16:00 («работай», «как можно больше экспериментов»). Worker сейчас — hub-v5chain-worker-17.
 ## Сделано (всё — `knowledge/research/butterfly_dp.md` §research-10, `butterfly_dd.md` §Эталон с 2 дисками)
