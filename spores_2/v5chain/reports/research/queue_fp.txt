@@ -1,0 +1,4 @@
+WIN=1.0,FORCEPLAN=1 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500.npz
+WIN=1.0,FORCEPLAN=1 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell2.npz
+WIN=1.0,FORCEPLAN=1 butterfly_dp_reeval.py butterfly_dp_grow_N1500_tr1_fr1_fwd1500_ell4.npz
+WIN=1.0,FORCEPLAN=1 butterfly_dp_reeval.py butterfly_dp_grow_N4000_tr1_fr0_fwd4000.npz
