@@ -14,7 +14,7 @@ import butterfly_dp_query as Q
 from butterfly_dp_grow import emb, normals
 MARG, NEW, ROUNDS, DSH = float(os.environ.get('MARG', .1)), int(os.environ.get('NEW', 1000)), int(os.environ.get('ROUNDS', 3)), float(os.environ.get('DSH', .85))
 UMAX, KS = .9, 81
-GEO, RING = int(os.environ.get('GEO', 0)), float(os.environ.get('RING', .25))
+GEO, RING = int(os.environ.get('GEO', 0)), float(os.environ.get('RING', .25)); LEVEL = int(os.environ.get('LEVEL', 1))
 def edges_add(A, Y_iy, out):
     iy, k, sv, t = out
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
@@ -31,9 +31,20 @@ def grow_round(A, rng, dmin, Tb, r=1):
         c0 = np.linalg.norm(emb(A.C[KS][None]) - emb(np.array([[np.pi / 2, 0, 0, 0]]))); ell = np.flatnonzero(a + b <= c0 * (1 + MARG) + RING * r)
     else:
         g = g_from_start(A).min(1); V = A.V.min(1); ell = np.flatnonzero(g + V <= (1 + MARG) * Tb)
+        if Tb >= BIG / 2: ell = np.arange(A.K)                                               # пути ещё нет: растут ОБА дерева (иначе g = ∞ выкидывает обратное)
+        if Tb >= BIG / 2 and LEVEL:                                                          # LEVEL: родитель равномерно по уровню (g — прямое, V — обратное) ⇒ фронты глубже
+            ell = None; lev = (g, V); sets = (np.flatnonzero(np.isfinite(g)), np.flatnonzero(V < BIG / 2))
     K0 = A.K; C, n = A.C, A.n; added = 0; tries = 0
     while added < NEW and tries < 400:
-        tries += 1; b = 400; B = ell[rng.integers(len(ell), size=b)]; sg = np.where(rng.random(b) < .5, 1., -1.)
+        tries += 1; b = 400
+        if ell is None:
+            B = []
+            for lv, st in zip(lev, sets):
+                o = st[np.argsort(lv[st])]; L = rng.uniform(0, lv[o].max() + .3, b // 2); B.append(o[np.clip(np.searchsorted(lv[o], L) - rng.integers(0, 8, b // 2), 0, len(o) - 1)])
+            B = np.concatenate(B)
+        else: B = ell[rng.integers(len(ell), size=b)]
+        sg = np.where(rng.random(b) < .5, 1., -1.)
+        if ell is None: sg = np.r_[np.ones(b // 2), -np.ones(b - b // 2)]                       # прямое растёт вперёд, обратное — назад
         u = rng.uniform(-1, 1, (2, b)); c = rng.random(b) < .5; u[:, c] = np.sign(u[:, c]); u *= UMAX; t = rng.uniform(.2, TL, b)
         Aa = flow(C[B].T, u[0], u[1], sg * t).T; d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - Aa) / 1e-5
         nA = d / np.linalg.norm(d, axis=1, keepdims=True); Aa[:, :2] = wrap(Aa[:, :2])
@@ -53,7 +64,7 @@ def grow_round(A, rng, dmin, Tb, r=1):
     Yo = A.P[near].reshape(-1, 4); ido = (near[:, None] * MN + np.arange(MN)).reshape(-1); out = A.pairs(Yo)
     keep = out[1].astype(int) >= K0; e_old = edges_add(A, ido, [x[keep] for x in out])
     e = [np.r_[a, b, c] for a, b, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]
-    return len(ell), A.K - K0, dmin
+    return (len(ell) if ell is not None else -1), A.K - K0, dmin
 if __name__ == '__main__':
     A = Q.load(sys.argv[1]); rng = np.random.default_rng(1); t0 = time.time(); dmin = float(os.environ.get('DMIN0', .2))
     refresh(A); A.V[A.ingoal] = 0.

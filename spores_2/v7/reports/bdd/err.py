@@ -8,16 +8,23 @@ import numpy as np
 M, wrap, BIG, move, tgt, tgtgt = BD.M, BD.wrap, BD.BIG, BD.move, BD.tgt, BD.tgtgt
 GV, GW = float(os.environ.get('GV', 1)), float(os.environ.get('GW', 1)); TOL, THT = float(os.environ.get('TOL', .03)), float(os.environ.get('THT', .05)); SNAP = int(os.environ.get('SNAP', 0))
 def ingoal(y): return np.hypot(y[0], y[1]) <= TOL and abs(wrap(y[2])) <= THT
+EST = int(os.environ.get('EST', 0))     # EST=1: оценка ĝV, ĝW по уже выполненным сегментам (наблюдаем реальное состояние), команда делится на ĝ
 def run(B, q, smax=400):
-    y = np.array(q, float); t = 0.; at = -1; segs = 0
+    y = np.array(q, float); t = 0.; at = -1; segs = 0; gv = gw = 1.
     for _ in range(smax):
         if ingoal(y): return t, segs
         J, act = B.best(y, at)
         if act is None or J >= BIG / 2: return np.inf, segs
-        kind, phi, L, k = act
-        if kind == 'turn': y = np.array([y[0], y[1], y[2] + GW * phi]); t += abs(phi)
+        kind, phi, L, k = act; y0 = y.copy()
+        if kind == 'turn':
+            y = np.array([y[0], y[1], y[2] + GW * phi / gw]); t += abs(phi / gw)
+            if EST and abs(phi) > 1e-3: gw = float(np.clip(GW * 1., .3, 3.)) if False else float(np.clip(wrap(y[2] - y0[2]) * gw / phi, .3, 3.))
         else:
-            y = move(y, GW * phi, GV * L); t += abs(L) + abs(phi)
+            y = move(y, GW * phi / gw, GV * L / gv); t += abs(L / gv) + abs(phi / gw)       # время = длительность КОМАНДЫ (с ĝ растягивается)
+            if EST:
+                yn = move(y0, phi, L); cn = np.hypot(*(yn[:2] - y0[:2])); ca = np.hypot(*(y[:2] - y0[:2]))
+                if abs(phi) > 1e-3: gw = float(np.clip(wrap(y[2] - y0[2]) * gw / phi, .3, 3.))                                 # дуга — набег курса ⇒ ĝW
+                if cn > 1e-2 and abs(phi) < 1e-3: gv = float(np.clip(gv * ca / cn, .3, 3.))   # прямой участок — длина хорды ⇒ ĝV
             if SNAP: y[:2] = B.C[k]
         y[2] = wrap(y[2]); at = k if np.hypot(*(y[:2] - B.C[k])) < 1e-3 else -1; segs += 1
     return np.inf, segs
