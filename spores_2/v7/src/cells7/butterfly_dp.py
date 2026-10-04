@@ -9,6 +9,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
+PRUNE = int(os.environ.get('PRUNE', 0)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
 TL = float(os.environ.get('TL', 1.5)); WIN = float(os.environ.get('WIN', .5))
 def wrap(a): return (a + np.pi) % (2 * np.pi) - np.pi
 def acc(q1, q2, w1, w2, u1, u2):
@@ -35,13 +36,19 @@ def solve_arcs(Y, C, Nn, newton=8):
     r = dq - wb * t / 2; s = (r * Nn[:2]).sum(0)                                                          # остаток вдоль нормали ⇒ s
     t = np.clip(t, 1e-3, TL); a1, a2 = (C[2] - Y[2]) / t, (C[3] - Y[3]) / t; zm = (Y + np.r_[dq + Y[:2], C[2:]][[0, 1, 2, 3]]) / 2
     u1, u2 = invdyn(zm[0], zm[1], zm[2], zm[3], a1, a2); Ct = C.copy(); Ct[:2] = Y[:2] + dq                    # цель без скачка 2π
-    for _ in range(newton):
-        Z = flow(Y, u1, u2, t); R = Z - (Ct + s * Nn)
-        e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
-        J = np.moveaxis(J, 1, 0); rhs = np.moveaxis(R, 0, 1)[..., None]
-        bad = ~np.isfinite(J).all((1, 2)) | (np.abs(np.linalg.det(np.nan_to_num(J))) < 1e-12)   # research-10: вырожденные пары (нормаль в касательной трубки) — шаг 0
-        J[bad] = np.eye(4); rhs[bad] = 0.; d = np.linalg.solve(J, rhs)[..., 0]
-        t = np.clip(t - d[:, 0], 1e-4, 2 * TL); u1 = np.clip(u1 - d[:, 1], -3, 3); u2 = np.clip(u2 - d[:, 2], -3, 3); s = s - d[:, 3]
+    def _newton(Y, Nn, Ct, t, u1, u2, s, k):
+        for _ in range(k):
+            Z = flow(Y, u1, u2, t); R = Z - (Ct + s * Nn)
+            e = 1e-5; Z1 = flow(Y, u1 + e, u2, t); Z2 = flow(Y, u1, u2 + e, t); J = np.stack([f(Z, u1, u2), (Z1 - Z) / e, (Z2 - Z) / e, -Nn], -1)   # (4, n, 4)
+            J = np.moveaxis(J, 1, 0); rhs = np.moveaxis(R, 0, 1)[..., None]
+            bad = ~np.isfinite(J).all((1, 2)) | (np.abs(np.linalg.det(np.nan_to_num(J))) < 1e-12)   # research-10: вырожденные пары (нормаль в касательной трубки) — шаг 0
+            J[bad] = np.eye(4); rhs[bad] = 0.; d = np.linalg.solve(J, rhs)[..., 0]
+            t = np.clip(t - d[:, 0], 1e-4, 2 * TL); u1 = np.clip(u1 - d[:, 1], -3, 3); u2 = np.clip(u2 - d[:, 2], -3, 3); s = s - d[:, 3]
+        return t, u1, u2, s
+    if PRUNE and newton > PRUNE_AT:                                    # hub-v5chain-worker-16: после PRUNE_AT шагов отсечь пары с невязкой > PRUNE_TH (86% пар, 0.8% сошедшихся)
+        t, u1, u2, s = _newton(Y, Nn, Ct, t, u1, u2, s, PRUNE_AT); R0 = np.abs(flow(Y, u1, u2, t) - (Ct + s * Nn)).max(0); a = np.nonzero(R0 <= PRUNE_TH)[0]
+        t2, v1, v2, s2 = _newton(Y[:, a], Nn[:, a], Ct[:, a], t[a], u1[a], u2[a], s[a], newton - PRUNE_AT); t[a], u1[a], u2[a], s[a] = t2, v1, v2, s2
+    else: t, u1, u2, s = _newton(Y, Nn, Ct, t, u1, u2, s, newton)
     Z = flow(Y, u1, u2, t); res = np.abs(Z - (Ct + s * Nn)).max(0)
     ok = (res < 1e-7) & (t > 1e-3) & (t <= TL) & (np.abs(u1) <= 1 + 1e-9) & (np.abs(u2) <= 1 + 1e-9)
     return t, u1, u2, s, ok
