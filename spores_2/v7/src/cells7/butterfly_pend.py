@@ -101,3 +101,19 @@ class ButterflyPend:
                 if ingoal(z[0]): return t, sw
             y = z[0].copy(); y[0] = wrap(y[0])                                   # агент накручивает обороты — φ в [−π,π)
         return np.inf, sw
+
+
+def solve_filled(rounds=2, nadd=30, max_add=3000, grid=(91, 71), sig=(.1, .25), seed=5, log=None, **kw):
+    """Решение с автозаполнением дыр покрытия (PLAN п.5, hub-v5chain-worker-16; из reports/bp_fill.py + bp_holes.py).
+    Раунд: solve → дыры = узлы сетки (φ, ω∈[−3.5, 3.5]) с V=BIG при best(g) → +nadd спор вокруг каждой дыры (σ φ, ω) → пересчёт. kw — аргументы ButterflyPend.
+    Возвращает (B, число дыр по раундам)."""
+    rng = np.random.default_rng(seed); extra = kw.pop('extra', None); holes = []
+    G = np.stack(np.meshgrid(np.linspace(-np.pi, np.pi, grid[0]), np.linspace(-3.5, 3.5, grid[1]), indexing='ij'), -1).reshape(-1, 2)
+    for r in range(rounds + 1):
+        B = ButterflyPend(extra=extra, **kw).solve(log=log); bad = G[np.array([B.best(g)[0] >= BIG / 2 for g in G])]; holes.append(len(bad))
+        if log: log('раунд', r, 'спор', B.K, 'дыр', len(bad))
+        if r == rounds or not len(bad): break
+        if len(bad) * nadd > max_add: bad = bad[rng.choice(len(bad), max(1, max_add // nadd), replace=False)]       # потолок числа новых спор на раунд
+        ex = np.concatenate([h + rng.normal(0, 1, (nadd, 2)) * np.array(sig) for h in bad]); ex[:, 0] = wrap(ex[:, 0]); ex[:, 1] = np.clip(ex[:, 1], -4, 4)
+        extra = ex if extra is None else np.r_[extra, ex]
+    return B, holes
