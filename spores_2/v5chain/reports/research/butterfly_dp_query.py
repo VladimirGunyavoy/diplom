@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TRAJ = []; CHAIN = []; PEND = []; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -17,24 +17,26 @@ def load(path):
 def direct(A, Y):
     """Лучшее значение одной дугой в атлас для каждой строки Y (n, 4); и (t, u1, u2) этой дуги."""
     out = np.full(len(Y), BIG); arc = np.zeros((len(Y), 3))
+    DK[:] = [-1] * len(Y); DS[:] = [0.] * len(Y)                                             # research-11: целевая спора и s лучшей дуги — агент после прямой дуги «стоит на споре»
     if not len(Y): return out, arc
     gi = ingoal(Y.T); out[gi] = 0.
     iy, k, sv, t = A.pairs(Y); iy, k = iy.astype(int), k.astype(int)
     if not len(iy): return out, arc
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
     V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG
-    o = np.lexsort((val, iy)); iy, k, val, t = iy[o], k[o], val[o], t[o]; first = np.r_[True, iy[1:] != iy[:-1]]
+    o = np.lexsort((val, iy)); iy, k, val, t, sv = iy[o], k[o], val[o], t[o], sv[o]; first = np.r_[True, iy[1:] != iy[:-1]]
     from butterfly_dp import solve_arcs
     if WCHK:                                                                                 # research-11: |w| ≤ 3 ВДОЛЬ дуги (g = 2: FORCEPLAN давал wmax 4.16) — до 4 лучших кандидатов на точку
         rank = np.arange(len(iy)) - np.maximum.accumulate(np.where(first, np.arange(len(iy)), 0)); tries = (rank < 4) & (val < BIG / 2)
-        for i, kk, v, tt in zip(iy[tries], k[tries], val[tries], t[tries]):
+        for i, kk, v, tt, ss in zip(iy[tries], k[tries], val[tries], t[tries], sv[tries]):
             if out[i] < BIG / 2: continue
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); z = Y[i][:, None].copy(); wm = 0.
             for _ in range(30): z = flow(z, u1, u2, tt / 30, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
-            if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0])
+            if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0]); DK[i] = int(kk); DS[i] = float(ss)
         return out, arc
-    for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
+    for i, kk, v, tt, ss in zip(iy[first], k[first], val[first], t[first], sv[first]):
         if v < out[i]:
+            DK[i] = int(kk); DS[i] = float(ss)
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); out[i] = v; arc[i] = (tt, u1[0], u2[0])
     return out, arc
 def children(Y):
@@ -44,7 +46,7 @@ def children(Y):
 def plan(A, y):
     """V(y) и первая дуга (t, u1, u2): прямо в атлас или через дерево глубины DEP."""
     v, arc = direct(A, y[None]); best, barc = v[0], arc[0]
-    CHAIN[:] = [tuple(arc[0])]                                                               # research-11: вся лучшая цепочка дуг — запас агенту, если следующий план не найдётся
+    ONK[:] = [DK[0], DS[0]]; CHAIN[:] = [tuple(arc[0])]                                                               # research-11: вся лучшая цепочка дуг — запас агенту, если следующий план не найдётся
     lv = [(y[None], None, None, None)]; Y = y[None]; par = None
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
@@ -56,7 +58,7 @@ def plan(A, y):
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
         H = np.c_[T, U][:, None, :] if d == 0 else np.concatenate([np.repeat(Hp, len(TS) * len(UU), 0), np.c_[T, U][:, None, :]], 1); H = H[ok]
         Z, cost, first = Z[ok], cost[ok], first[ok]; vz, az = direct(A, Z); tot = cost + vz; i = int(np.argmin(tot))
-        if tot[i] < best: best, barc = tot[i], first[i]; CHAIN[:] = [tuple(h) for h in H[i]] + [tuple(az[i])]
+        if tot[i] < best: best, barc = tot[i], first[i]; CHAIN[:] = [tuple(h) for h in H[i]] + [tuple(az[i])]; ONK[:] = [-1, 0.]
         Y, Ccost, Farc, par, Hp = Z, cost, first, None, H
     return best, barc
 def rollout(A, y0, tmax=25.):
@@ -117,8 +119,9 @@ def rollout_edges(A, k, s, tmax=40.):
         if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
             J, (tt, u1, u2) = plan(A, y)
             fail = J >= BIG / 2 or tt <= 0
+            onk = (-1, 0.)
             if fail and PEND: tt, u1, u2 = PEND.pop(0); fail = tt <= 0; A.npend = getattr(A, 'npend', 0) + 1     # план не найден — следующая дуга прошлого плана (открыто)
-            elif not fail: PEND[:] = CHAIN[1:]
+            elif not fail: PEND[:] = CHAIN[1:]; onk = tuple(ONK)
             if fail and kp is None: return np.inf, arcs, wmax
             if not fail:
                 nst = max(6, int(tt / .01))
@@ -126,7 +129,9 @@ def rollout_edges(A, k, s, tmax=40.):
                 for _ in range(nst):
                     y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
                     if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
-                T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1; continue
+                T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1
+                if onk[0] >= 0: k, s = int(onk[0]), float(onk[1])                                    # прямая дуга в атлас: стоим на споре onk — при неудаче плана пойдём по её рёбрам
+                continue
             k = kp                                                                          # research-11: мини-дерево не нашло пути — шаг по рёбрам споры, на которой стоим
         f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
         if ALLN: js = list(np.argsort(A.V[k]))                                               # ALLN: рёбра всех узлов споры по возрастанию V узла
