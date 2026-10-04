@@ -7,7 +7,7 @@ sys.path.insert(0, '.')
 from butterfly_dp import wrap, flow, f, solve_arcs, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp as D
 R, MN = float(os.environ.get('R', .15)), int(os.environ.get('MN', 5))
-SNAPA = float(os.environ.get('SNAPA', 1e-4))                                                # research-10: приход в узел с ошибкой Ньютона ~1e-8 — считать узлом
+WPAIR = int(os.environ.get('WPAIR', 0)); SNAPA = float(os.environ.get('SNAPA', 1e-4))                                                # research-10: приход в узел с ошибкой Ньютона ~1e-8 — считать узлом
 def snap(a): return np.where(a < SNAPA, 0., np.where(a > 1 - SNAPA, 1., a))   # (иначе вес 1e-7 у соседа с BIG убивал ребро)
 class Atlas:
     def __init__(s, N, seed=0):
@@ -29,6 +29,9 @@ class Atlas:
             d = np.c_[wrap(s.C[k, :2] - y[iy, :2]), s.C[k, 2:] - y[iy, 2:]]; g = (np.abs(d) <= WIN).all(1); iy, k = iy[g], k[g]
             if not len(iy): continue
             t, u1, u2, sv, ok = solve_arcs(y[iy].T, s.C[k].T, s.n[k].T); ok &= np.abs(sv) <= R
+            if WPAIR and ok.any():                                                            # research-11: |w| ≤ WMAX ВДОЛЬ дуги (раньше — только в концах; лучший путь g = 2 шёл через такие дуги)
+                ii = np.flatnonzero(ok)
+                for fr in (.2, .4, .6, .8): z = flow(y[iy[ii]].T, u1[ii], u2[ii], t[ii] * fr); ok[ii[~(np.abs(np.nan_to_num(z[2:], nan=99.)) <= WMAX).all(0)]] = False
             for o, v in zip(out, (iy[ok] + a0, k[ok], sv[ok], t[ok])): o.append(v)
         return [np.concatenate(o) for o in out] if out[0] else [np.zeros(0)] * 4
     def build(s):

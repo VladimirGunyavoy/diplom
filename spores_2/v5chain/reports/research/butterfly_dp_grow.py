@@ -44,6 +44,8 @@ class GrowAtlas(Atlas):
                 d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; ld = np.linalg.norm(d, axis=1, keepdims=True); nA = d / ld * (np.clip(ld, NMIN, NMAX) if NT else 1.); s.lam.append(ld[:, 0])   # NT (research-11): нормаль НЕ нормируется ⇒ узел j ребёнка ложится в узел j родителя (длина отрезка R·|n|)
             A[:, :2] = wrap(A[:, :2])
             ok = np.isfinite(A).all(1) & (np.abs(A[:, 2:]) <= WMAX).all(1) & ~ingoal(A.T)
+            if BA.WPAIR:                                                                     # research-11: и дуга роста — |w| ≤ WMAX вдоль
+                for fr in (.2, .4, .6, .8): Am = flow((C[B] + sv[:, None] * n[B]).T, u[0], u[1], sg * t * fr).T; ok &= (np.abs(np.nan_to_num(Am[:, 2:], nan=99.)) <= WMAX).all(1)
             ok &= (np.abs(np.c_[wrap(C[B, :2] - A[:, :2]), C[B, 2:] - A[:, 2:]]) <= WIN).all(1)      # дуга должна попасть в окно пар
             ok &= cKDTree(emb(C)).query(emb(np.where(ok[:, None], A, 0.)))[0] >= dmin
             acc = []
