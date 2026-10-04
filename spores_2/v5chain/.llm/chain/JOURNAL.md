@@ -164,3 +164,4 @@ hub-v5chain-worker-17 | дд шум: порог 20σ оптимален (1.35\/1
 hub-v5chain-worker-17 | 4D 200k dt.0025 mean 1.062; выбросы = дребезг агента (V\/T* ок)
 hub-v5chain-worker-17 | v7 butterfly_dp: RRT=1, snap, lazy_nodes (п.7); тест на aida идёт
 hub-v5chain-worker-17 | п.7 g=2 воспроизведено в v7 (V 23.359, T×2.65); 4D адаптивный dt без выигрыша
+hub-v5chain-worker-17 | п.8 LAZYFIN: 6711 спор vs 18082, но T ×3.2 vs ×2.65

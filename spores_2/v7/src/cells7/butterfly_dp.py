@@ -9,6 +9,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
+LAZYFIN = int(os.environ.get('LAZYFIN', 0))   # п.8: ленивые споры — только с конечной V
 RRT = int(os.environ.get('RRT', 0))   # RRT=1: родитель со смещением Вороного (research-11, g=2)
 PRUNE = int(os.environ.get('PRUNE', 1)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
 TL = float(os.environ.get('TL', 1.5)); WIN = float(os.environ.get('WIN', .5))
@@ -339,15 +340,23 @@ def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
         _, u = np.unique(np.c_[k[cand], np.round(sv / .01)], axis=0, return_index=True)         # одна новая спора на (спора, s с шагом .01)
         if len(u) > cap: u = np.random.default_rng(r).choice(u, cap, replace=False)
         if not len(u): print(json.dumps(dict(round=r, new=0))); break
-        kk, ss = k[cand][u], sv[u]; K0 = A.K; newC = A.C[kk] + ss[:, None] * A.n[kk]; lab = {(int(x), int(round(y / .01))): K0 + i for i, (x, y) in enumerate(zip(kk, ss))}
+        kk, ss = k[cand][u], sv[u]; K0 = A.K; newC = A.C[kk] + ss[:, None] * A.n[kk]; pre = None
+        if LAZYFIN:                                                                              # PLAN п.8: пары только из центра; в атлас — лишь споры с конечной V (после одного шага по текущей V)
+            o4 = A.pairs(newC, np.full(len(u), -1)); iy_, k_, s_, t_ = o4; iy_ = iy_.astype(int); k_ = k_.astype(int); f_ = (s_ + R) / (2 * R) * (MN - 1); j_ = np.clip(np.floor(f_).astype(int), 0, MN - 2); a2 = snap(f_ - j_)
+            Vf = A.V.reshape(-1); W0, W1 = Vf[k_ * MN + j_], Vf[k_ * MN + j_ + 1]; val = t_ + (1 - a2) * W0 + a2 * W1; val[((W0 >= BIG / 2) & (a2 < 1 - SNAPA)) | ((W1 >= BIG / 2) & (a2 > SNAPA))] = BIG
+            best = np.full(len(u), BIG); np.minimum.at(best, iy_, val); keepm = best < BIG / 2; nid = np.cumsum(keepm) - 1; sl = keepm[iy_]
+            print(json.dumps(dict(round=r, tested=int(len(u)), finite=int(keepm.sum()))), flush=True)
+            if not keepm.any(): break
+            pre = [nid[iy_[sl]], k_[sl], s_[sl], t_[sl]]; u, kk, ss, newC = u[keepm], kk[keepm], ss[keepm], newC[keepm]
+        lab = {(int(x), int(round(y / .01))): K0 + i for i, (x, y) in enumerate(zip(kk, ss))}
         tgt = np.array([lab.get((int(x), int(round(y / .01))), -1) for x, y in zip(k[cand], sv)]); m = tgt >= 0
         A.C = np.r_[A.C, newC]; A.n = np.r_[A.n, A.n[kk]]; A.K = len(A.C); A.V = np.r_[A.V, np.full((A.K - K0, MN), BIG)]; refresh(A); A.V[A.ingoal] = 0.
-        out = A.pairs(A.C[K0:], np.arange(K0, A.K)); e_new = edges_add(A, K0 * MN + MN // 2 + MN * np.arange(A.K - K0), out)
+        out = pre if pre is not None else A.pairs(A.C[K0:], np.arange(K0, A.K)); e_new = edges_add(A, K0 * MN + MN // 2 + MN * np.arange(A.K - K0), out)
         e_src = [iy[cand][m], tgt[m], np.full(m.sum(), MN // 2), np.zeros(m.sum()), t[cand][m]]
         e = [np.r_[x, y, z] for x, y, z in zip(A.e, e_new, e_src)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
         print(json.dumps(dict(round=r, cand=int(len(cand)), new=int(A.K - K0), new_fin=int((A.V[K0:, MN // 2] < BIG / 2).sum()), spores=int(A.K), V=round(float(A.V[KS, MN // 2]), 3),
                               centers_fin=int((A.V[:, MN // 2] < BIG / 2).sum()), sec=round(time.time() - t0))), flush=True)
-        if path: np.savez(path.replace('.npz', '_lazy%d.npz' % r), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+        if path: np.savez(path.replace('.npz', '_lazy%s%d.npz' % ('f' if LAZYFIN else '', r)), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
         if A.V[KS, MN // 2] < BIG / 2 and r >= int(os.environ.get('LAZYMIN', 1)): break
     if A.V[KS, MN // 2] < BIG / 2:
         A.E = node_edges(A); T, arcs, wm = rollout_edges(A, KS, 0.)
