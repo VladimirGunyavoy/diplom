@@ -110,16 +110,20 @@ def rollout_edges(A, k, s, tmax=40.):
     E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
     while T < tmax:
         if ingoal(y[:, None])[0]: return T, arcs, wmax
+        kp = k
         if FORCEPLAN: k = None                                                               # FORCEPLAN: всегда мини-дерево из точки (проверка: даёт ли оно короче графа)
         if k is None:                                                                        # вне отрезка: прямое мини-дерево из точки (plan), первая дуга целиком
             J, (tt, u1, u2) = plan(A, y)
-            if J >= BIG / 2 or tt <= 0: return np.inf, arcs, wmax
-            nst = max(6, int(tt / .01))
-            TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                             # research-11: дуги пути — для пула траекторий (dp_g2_pool.py)
-            for _ in range(nst):
-                y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
-                if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
-            T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1; continue
+            fail = J >= BIG / 2 or tt <= 0
+            if fail and kp is None: return np.inf, arcs, wmax
+            if not fail:
+                nst = max(6, int(tt / .01))
+                TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                             # research-11: дуги пути — для пула траекторий (dp_g2_pool.py)
+                for _ in range(nst):
+                    y = flow(y[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(y[2:]).max())
+                    if ingoal(y[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
+                T += tt; arcs += 1; y[:2] = wrap(y[:2]); A.nplan = getattr(A, 'nplan', 0) + 1; continue
+            k = kp                                                                          # research-11: мини-дерево не нашло пути — шаг по рёбрам споры, на которой стоим
         f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
         if ALLN: js = list(np.argsort(A.V[k]))                                               # ALLN: рёбра всех узлов споры по возрастанию V узла
         for j in js:
