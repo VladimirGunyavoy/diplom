@@ -58,7 +58,7 @@ if __name__ == '__main__':
     A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, G=G, WIN=WIN, TL=TL, R=R, DMIN=DMIN0, nodes=A.K * MN, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it,
                           BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    np.savez('butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g.npz' % (N, TR, FR, FWD, R), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    np.savez('butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     if FWD:                                                                                  # research-10: агент по рёбрам графа от споры-старта (butterfly_dp_query.rollout_edges)
         import butterfly_dp_query as Q
         T, arcs, wm = Q.rollout_edges(A, 81, 0.)
