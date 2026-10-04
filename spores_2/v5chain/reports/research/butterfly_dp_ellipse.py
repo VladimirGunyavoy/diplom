@@ -14,7 +14,7 @@ import butterfly_dp_query as Q
 from butterfly_dp_grow import emb, normals
 MARG, NEW, ROUNDS, DSH = float(os.environ.get('MARG', .1)), int(os.environ.get('NEW', 1000)), int(os.environ.get('ROUNDS', 3)), float(os.environ.get('DSH', .85))
 UMAX, KS = .9, 81
-GEO, RING = int(os.environ.get('GEO', 0)), float(os.environ.get('RING', .25)); LEVEL = int(os.environ.get('LEVEL', 1))
+GEO, RING = int(os.environ.get('GEO', 0)), float(os.environ.get('RING', .25)); LEVEL = int(os.environ.get('LEVEL', 1)); CONNECT = int(os.environ.get('CONNECT', 0))
 def edges_add(A, Y_iy, out):
     iy, k, sv, t = out
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
@@ -35,6 +35,20 @@ def grow_round(A, rng, dmin, Tb, r=1):
         if Tb >= BIG / 2 and LEVEL:                                                          # LEVEL: родитель равномерно по уровню (g — прямое, V — обратное) ⇒ фронты глубже
             ell = None; lev = (g, V); sets = (np.flatnonzero(np.isfinite(g)), np.flatnonzero(V < BIG / 2))
     K0 = A.K; C, n = A.C, A.n; added = 0; tries = 0
+    if CONNECT and Tb >= BIG / 2:                                                            # CONNECT (как RRT-Connect): веер дуг из ближайших пар «прямая f — обратная b» навстречу
+        fs, bs = np.flatnonzero(np.isfinite(g)), np.flatnonzero(V < BIG / 2); d, i = cKDTree(A.X[bs]).query(A.X[fs]); o = np.argsort(d)[:CONNECT]
+        UG = np.array([(a, c) for a in np.linspace(-1, 1, 5) for c in np.linspace(-1, 1, 5)]) * UMAX; TG = np.linspace(.3, TL, 5)
+        U = np.repeat(UG, len(TG), 0); T = np.tile(TG, len(UG)); newC, newN = [], []
+        for j in o:
+            for src, dst, sgn in ((fs[j], bs[i[j]], 1.), (bs[i[j]], fs[j], -1.)):
+                Y = np.repeat(C[src][None], len(T), 0); Z = flow(Y.T, U[:, 0], U[:, 1], sgn * T).T
+                D = (flow((Y + 1e-5 * n[src]).T, U[:, 0], U[:, 1], sgn * T).T - Z) / 1e-5; Z[:, :2] = wrap(Z[:, :2])
+                ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= WMAX).all(1); dd = np.linalg.norm(emb(Z) - emb(C[dst][None]), axis=1); dd[~ok] = np.inf
+                for m in np.argsort(dd)[:2]:
+                    if np.isfinite(dd[m]): newC.append(Z[m]); newN.append(D[m] / np.linalg.norm(D[m]))
+        if newC:
+            newC, newN = np.array(newC), np.array(newN); keep = cKDTree(emb(C)).query(emb(newC))[0] >= dmin * .3
+            C = np.r_[C, newC[keep]]; n = np.r_[n, newN[keep]]; added += int(keep.sum())
     while added < NEW and tries < 400:
         tries += 1; b = 400
         if ell is None:
