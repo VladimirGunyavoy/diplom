@@ -174,3 +174,4 @@ hub-v5chain-worker-17 | g=2 FORCEPLAN DEP3 ×1.087 — цель ≤1.1 дост�
 hub-v5chain-worker-17 | PLAN п.6: дд+диски vs эталон с дисками 1.084/1.060/1.040 (N800/1500/3000)
 hub-v5chain-worker-17 | g=2 мои замеры недопустимы (wmax 5.82); п.9 wfilter; V не меняется; нужен WCHK в агенте (п.10)
 hub-v5chain-worker-17 | done | ctx26 (к софту 30) | п.6–п.10: RRT/snap/lazy/wfilter/агент WCHK в v7, КОРРЕКЦИЯ: g=2 недопустимые числа; допустимо g=2 ×1.326 (wmax 3.22), g=1 ×1.64 | next=hub-v5chain-worker-18 | 23:40:42
+hub-v5chain-worker-18 | started | acc2 | sonnet | 23:41:24
