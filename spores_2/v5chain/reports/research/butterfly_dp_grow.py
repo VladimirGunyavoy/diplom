@@ -11,7 +11,7 @@ from butterfly_dp import wrap, flow, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp_atlas as BA
 from butterfly_dp_atlas import Atlas, R, MN
 Atlas.pairs.__defaults__ = (None, int(os.environ.get('CHUNK', 800)))                       # куски пар меньше: 4000+4000 при 3000 падали по OOM (1.5 ГБ)
-RRT = int(os.environ.get('RRT', 0)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
+RRT = int(os.environ.get('RRT', 0)); NT = int(os.environ.get('NT', 0)); NMIN = float(os.environ.get('NMIN', .3)); NMAX = float(os.environ.get('NMAX', 3.)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
 def normals(C, rng):
     w = C[:, 2:]; nn = np.hypot(w[:, 0], w[:, 1]); rnd = rng.normal(size=(len(C), 2)); rnd /= np.linalg.norm(rnd, axis=1, keepdims=True)
     n = np.zeros((len(C), 4)); n[:, 0] = np.where(nn > .05, -w[:, 1] / np.maximum(nn, 1e-9), rnd[:, 0]); n[:, 1] = np.where(nn > .05, w[:, 0] / np.maximum(nn, 1e-9), rnd[:, 1]); return n
@@ -41,7 +41,7 @@ class GrowAtlas(Atlas):
                 dz = np.linalg.norm(emb(np.nan_to_num(Z)) - np.repeat(emb(X), len(TF), 0), axis=1); dz[~okz] = np.inf; m = dz.reshape(batch, -1).argmin(1); u = UF[m].T.copy(); t = TF[m].copy(); sv[:] = 0.
             A = flow((C[B] + sv[:, None] * n[B]).T, u[0], u[1], sg * t).T
             if TR:                                                                           # нормаль A = перенос нормали B назад по дуге ⇒ узлы A ложатся на отрезок B
-                d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; nA = d / np.linalg.norm(d, axis=1, keepdims=True); s.lam.append(np.linalg.norm(d, axis=1))
+                d = (flow((C[B] + 1e-5 * n[B]).T, u[0], u[1], sg * t).T - A) / 1e-5; ld = np.linalg.norm(d, axis=1, keepdims=True); nA = d / ld * (np.clip(ld, NMIN, NMAX) if NT else 1.); s.lam.append(ld[:, 0])   # NT (research-11): нормаль НЕ нормируется ⇒ узел j ребёнка ложится в узел j родителя (длина отрезка R·|n|)
             A[:, :2] = wrap(A[:, :2])
             ok = np.isfinite(A).all(1) & (np.abs(A[:, 2:]) <= WMAX).all(1) & ~ingoal(A.T)
             ok &= (np.abs(np.c_[wrap(C[B, :2] - A[:, :2]), C[B, 2:] - A[:, 2:]]) <= WIN).all(1)      # дуга должна попасть в окно пар
