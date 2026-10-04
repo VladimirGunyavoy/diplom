@@ -99,6 +99,10 @@ def newton_warm(y, c, nn, t, u1, u2, s, it=12):
     Z = flow(y[:, None], np.array([u1]), np.array([u2]), t)[:, 0]; Rz = Z - (c + s * nn); Rz[:2] = wrap(Rz[:2])
     if np.abs(Rz).max() > 1e-7 or abs(u1) > 1 + 1e-9 or abs(u2) > 1 + 1e-9 or abs(s) > R: return None
     return t, u1, u2, s
+def arc_wmax(y, u1, u2, t, n=30):
+    z = np.array(y, float)[:, None]; wm = 0.
+    for _ in range(n): z = flow(z, np.array([u1]), np.array([u2]), t / n, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+    return wm
 def node_edges(A):
     """Для каждого узла (k, j): лучшее ребро (k2, t, u1, u2, s2) по V атласа."""
     iy, k, j0, a, t = A.e; V = A.V.reshape(-1); val = t + (1 - a) * V[k * MN + j0] + a * V[k * MN + j0 + 1]
@@ -142,6 +146,7 @@ def rollout_edges(A, k, s, tmax=40.):
                 if not ok[0]: continue
                 r = newton_warm(y, A.C[k2], A.n[k2], tt[0], u1[0], u2[0], s2[0])
                 if r is None: continue
+                if WCHK and arc_wmax(y, r[1], r[2], r[0]) > 3.: continue                      # research-11: |w| ≤ 3 вдоль дуги и при ходьбе по рёбрам
                 v = r[0] + edge_value(A, k2, r[3])
                 if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
                 break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
@@ -149,7 +154,7 @@ def rollout_edges(A, k, s, tmax=40.):
             iy, kk, sv, t_ = A.pairs(y[None])
             for kk_, sv_ in zip(kk.astype(int), sv):
                 tt, u1, u2, s2, ok = solve_arcs(y[:, None], A.C[kk_][:, None], A.n[kk_][:, None])
-                if ok[0] and abs(s2[0]) <= R:
+                if ok[0] and abs(s2[0]) <= R and not (WCHK and arc_wmax(y, u1[0], u2[0], tt[0]) > 3.):
                     v = tt[0] + edge_value(A, kk_, s2[0])
                     if v < BIG / 2 and (best is None or v < best[0]): best = (v, kk_, (tt[0], u1[0], u2[0], s2[0]))
         if best is None:
