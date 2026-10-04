@@ -171,3 +171,4 @@ hub-v5chain-worker-17 | g=2 FORCEPLAN 25k спор T×1.99
 hub-v5chain-worker-17 | g=2 FORCEPLAN TS 5 значений: ×1.18 OCP
 hub-v5chain-worker-17 | g=1 7082 спор FORCEPLAN DEP3 ×1.0455
 hub-v5chain-worker-17 | g=2 FORCEPLAN DEP3 ×1.087 — цель ≤1.1 достигнута
+hub-v5chain-worker-17 | PLAN п.6: дд+диски vs эталон с дисками 1.084/1.060/1.040 (N800/1500/3000)
