@@ -7,6 +7,8 @@ sys.path.insert(0, '.')
 from butterfly_dp import wrap, flow, f, solve_arcs, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp as D
 R, MN = float(os.environ.get('R', .15)), int(os.environ.get('MN', 5))
+SNAPA = float(os.environ.get('SNAPA', 1e-4))                                                # research-10: приход в узел с ошибкой Ньютона ~1e-8 — считать узлом
+def snap(a): return np.where(a < SNAPA, 0., np.where(a > 1 - SNAPA, 1., a))   # (иначе вес 1e-7 у соседа с BIG убивал ребро)
 class Atlas:
     def __init__(s, N, seed=0):
         rng = np.random.default_rng(seed); g = np.linspace(-1, 1, 3)
@@ -36,7 +38,7 @@ class Atlas:
     def solve(s, it=3000, tol=1e-7):
         iy, k, j0, a, t = s.e; V = s.V.reshape(-1).copy(); fixed = s.ingoal.reshape(-1); st = np.flatnonzero(np.r_[True, iy[1:] != iy[:-1]]); nodes = iy[st]
         for n in range(it):
-            V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG
+            V0, V1 = V[k * MN + j0], V[k * MN + j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG
             new = V.copy(); new[nodes] = np.minimum(V[nodes], np.minimum.reduceat(val, st)); new[fixed] = 0.; d = np.max(np.abs(new - V)); V = new
             if d < tol: break
         s.V = V.reshape(s.K, MN); s.n_it = n; return s
@@ -45,7 +47,7 @@ class Atlas:
         out = s.pairs(y[None]); iy, k, sv, t = out
         if not len(t): return BIG, 0, 0, 0
         f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0; k = k.astype(int)
-        V0, V1 = s.V[k, j0], s.V[k, j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG; i = int(np.argmin(val))
+        V0, V1 = s.V[k, j0], s.V[k, j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG; i = int(np.argmin(val))
         _, u1, u2, _, ok = solve_arcs(y[:, None], s.C[k[i]][:, None], s.n[k[i]][:, None]); return val[i], u1[0], u2[0], t[i]
     def rollout(s, y0, dt=.05, h=.01, tmax=30.):
         y = np.array(y0, float); t = 0.; wmax = 0.; sw = 0; pu = None

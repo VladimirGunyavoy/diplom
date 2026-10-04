@@ -5,7 +5,7 @@
 import numpy as np, sys, os, time, json
 sys.path.insert(0, '.')
 from butterfly_dp import wrap, flow, ingoal, BIG, G
-from butterfly_dp_atlas import Atlas, R, MN
+from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
 TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
@@ -22,7 +22,7 @@ def direct(A, Y):
     iy, k, sv, t = A.pairs(Y); iy, k = iy.astype(int), k.astype(int)
     if not len(iy): return out, arc
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
-    V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - 1e-9)) | ((V1 >= BIG / 2) & (a > 1e-9))] = BIG
+    V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG
     o = np.lexsort((val, iy)); iy, k, val, t = iy[o], k[o], val[o], t[o]; first = np.r_[True, iy[1:] != iy[:-1]]
     for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
         if v < out[i]:
@@ -92,7 +92,7 @@ def node_edges(A):
         if val[i] < BIG / 2 and len(E.setdefault(int(iy[i]), [])) < TOPE: E[int(iy[i])].append((int(k[i]), float(t[i]), float(((j0[i] + a[i]) / (MN - 1)) * 2 * R - R)))
     return E
 def edge_value(A, k2, s2):
-    f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = f_ - j0; return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
+    f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = float(snap(f_ - j0)); return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
 def rollout_edges(A, k, s, tmax=40.):
     """Старт на отрезке споры k в точке s. Возвращает T, число дуг, wmax."""
     from butterfly_dp import solve_arcs
