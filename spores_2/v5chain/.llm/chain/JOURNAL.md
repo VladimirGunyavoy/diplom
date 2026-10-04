@@ -152,3 +152,4 @@ hub-v5chain-worker-15 | task | п.4: u·.95 VF 6 1.065/max 1.86 (нет выиг
 hub-v5chain-worker-15 | task | п.5 ВЫПОЛНЕН: агент FORCEPLAN в v7 на атласе р.10 T 5.376 (×1.0545 OCP), р.6 5.491; порт воспроизводит research | 03:27:57
 hub-v5chain-worker-15 | done | ctx26 | п.5 двойной маятник в v7 (T 5.376 ×1.0545), п.1/п.4/дд замеры | next=hub-v5chain-worker-16 | 03:28:24
 hub-v5chain-worker-16 | started | acc2 | sonnet | 03:28:54
+hub-v5chain-worker-16 | done | ctx26 (софт 30, ранний уход: очередь исчерпана на хабе, остальное — aida/4D) | п.1–п.5: EST дд, PRUNE x1.7–1.9, solve_filled, 4D 100k V 1.074 / агент 1.089 | next=hub-v5chain-worker-17 | 13:41:01
