@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -24,9 +24,17 @@ def direct(A, Y):
     f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
     V0, V1 = A.V[k, j0], A.V[k, j0 + 1]; a = snap(a); val = t + (1 - a) * V0 + a * V1; val[((V0 >= BIG / 2) & (a < 1 - SNAPA)) | ((V1 >= BIG / 2) & (a > SNAPA))] = BIG
     o = np.lexsort((val, iy)); iy, k, val, t = iy[o], k[o], val[o], t[o]; first = np.r_[True, iy[1:] != iy[:-1]]
+    from butterfly_dp import solve_arcs
+    if WCHK:                                                                                 # research-11: |w| ≤ 3 ВДОЛЬ дуги (g = 2: FORCEPLAN давал wmax 4.16) — до 4 лучших кандидатов на точку
+        rank = np.arange(len(iy)) - np.maximum.accumulate(np.where(first, np.arange(len(iy)), 0)); tries = (rank < 4) & (val < BIG / 2)
+        for i, kk, v, tt in zip(iy[tries], k[tries], val[tries], t[tries]):
+            if out[i] < BIG / 2: continue
+            _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); z = Y[i][:, None].copy(); wm = 0.
+            for _ in range(10): z = flow(z, u1, u2, tt / 10, n=1); wm = max(wm, float(np.abs(z[2:]).max()))
+            if wm <= 3.: out[i] = v; arc[i] = (tt, u1[0], u2[0])
+        return out, arc
     for i, kk, v, tt in zip(iy[first], k[first], val[first], t[first]):
         if v < out[i]:
-            from butterfly_dp import solve_arcs
             _, u1, u2, _, ok = solve_arcs(Y[i][:, None], A.C[kk][:, None], A.n[kk][:, None]); out[i] = v; arc[i] = (tt, u1[0], u2[0])
     return out, arc
 def children(Y):
@@ -39,6 +47,8 @@ def plan(A, y):
     lv = [(y[None], None, None, None)]; Y = y[None]; par = None
     for d in range(DEP):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
+        if WCHK:                                                                             # и у дуг мини-дерева — в середине
+            Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T / 2).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
