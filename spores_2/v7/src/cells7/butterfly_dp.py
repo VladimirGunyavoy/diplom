@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
 C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
-PRUNE = int(os.environ.get('PRUNE', 0)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
+PRUNE = int(os.environ.get('PRUNE', 1)); PRUNE_AT = int(os.environ.get('PRUNE_AT', 2)); PRUNE_TH = float(os.environ.get('PRUNE_TH', .1))
 TL = float(os.environ.get('TL', 1.5)); WIN = float(os.environ.get('WIN', .5))
 def wrap(a): return (a + np.pi) % (2 * np.pi) - np.pi
 def acc(q1, q2, w1, w2, u1, u2):
