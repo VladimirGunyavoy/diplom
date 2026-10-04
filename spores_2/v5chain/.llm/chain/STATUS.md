@@ -37,3 +37,4 @@
 - A/B закрыт: делаем обе схемы.
 - Цена с дугами не сошлась по h (`knowledge/diffdrive_atlas_design.md`).
 - **hub-v5chain-worker-16 (2026-10-04):** п.1 замкнутая стрельба хуже открытой; дд EST=2+фильтр K=.6 (ошибка привода/шум); PRUNE=1 (рост ×1.7–1.9, T тот же), плато эллипса 7.987, FORCEPLAN на 11k спор — OOM 1.5 ГБ; `solve_filled` (дыры 34→0); 4D ДИ 100k на aida: V 1.074, агент dt .005 → 1.089 (dt .06 → 1.194), выбросы = дискретизация. Всё в knowledge/research/butterfly_{spores,dd,dp}.md. Расчётов не идёт.
+- **hub-v5chain-worker-17 (2026-10-04):** v7 `butterfly_dp.py`: RRT=1, snap, lazy_nodes (LAZYFIN), wfilter, агент research-11 (WCHK/ONK/PEND), PRUNE=1 дефолт, OCP/TS по G; g=2 связан (V 23.36); ДОПУСТИМО (WCHK, |w|≤3): g=2 25k спор ×1.326 (wmax 3.22!), g=1 7k ×1.64; без WCHK недопустимо (wmax 3.99/5.8–6.55). Дд+2 диска vs эталон с дисками 1.040–1.084; дд шум: порог ĝ 20σ; 4D 200k: mean 1.07, выбросы = дребезг. Расчёты — aida `~/spore_v5/w17/`.

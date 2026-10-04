@@ -1,9 +1,11 @@
 # Session Handoff
-Звено: hub-v5chain-worker-16 (acc2, Sonnet, 03:28–13:45, причина смены: ctx 26% близко к софту 30%)
-Сделано: п.1 замкнутая стрельба маятника u·.95 ХУЖЕ открытой (85%/1.083 vs 100%/1.050); п.2 дд: EST=2 ARCV=1 (ω·.9 100%/1.141, было 73%/1.334), шум+фильтр K=.6; п.3 PRUNE=1 в butterfly_dp (рост x1.9, раунд эллипса x1.74, T тот же), плато эллипса T 7.987, FORCEPLAN на 11k спор — OOM; п.5 solve_filled в butterfly_pend.py (дыры 34→0); п.4 4D ДИ 100k на aida: V 1.074, агент dt .005 → 1.089.
-Стоп на / следующий шаг: открыто: (а) 4D: финиш по осям + старт 88 (2.59× при V/T* 1.04), 200k+ спор на aida; (б) дд при шуме: настроить K/мёртвую зону, хрупкость `at` при σ→0; (в) мини-дерево FORCEPLAN на большом атласе — нужна aida или меньше памяти на узел; (г) включить PRUNE=1 по умолчанию (сейчас флаг).
-Грабли: фоновый `ssh aida ... &` подвисает на 120 с и съедает остальную команду — запускать `(ssh -o BatchMode=yes aida 'cd …&& nohup python3 x > x.out 2>&1 < /dev/null &' < /dev/null >/dev/null 2>&1 &)` и журнал писать ОТДЕЛЬНЫМ вызовом. `pkill -f <шаблон>` убивает свою же оболочку — kill по PID через ps|grep|awk|xargs. `git add -A` по v7/reports тянет чужие npz — добавлять файлы поимённо. Кэши /tmp/claude-1000/{bp_V5,bp_extra}.npy и w16/grow/* могут пропасть. Результаты на aida: ~/spore_v5/w16/ (b4d_*.out). aida: 32 ядра, 60 ГБ, свободна.
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-worker-17 (acc3, Sonnet, 13:41–23:45, причина смены: ctx 26–27% к софту 30%)
+Сделано: v7 butterfly_dp.py: RRT=1, snap, lazy_nodes (+LAZYFIN), wfilter, агент research-11 (WCHK/ONK/PEND, портирован блоком), PRUNE=1, OCP/TS по G (п.7–п.9 частично, п.10 агент); g=2 связан (V 23.36); дд+2 диска против эталона с дисками (п.6): N3000 1.040; дд шум: порог ĝ 20σ (1.50→1.35); 4D 200k mean 1.07, выбросы = дребезг агента.
+ГЛАВНОЕ/КОРРЕКЦИЯ: мои g=2 числа ×1.087/×1.18 были БЕЗ проверки |w|≤3 (wmax 5.8–6.55) — недопустимы. Допустимо (WCHK=1): g=2 25k спор ×1.326 (но wmax 3.22!), g=1 7k ×1.64 (wmax 2.44). Записано в PLAN/knowledge/research/butterfly_dp.md.
+Стоп на / следующий шаг: PLAN §«ОТКРЫТО после w17» п.(1): выяснить wmax 3.22 при WCHK, портировать KN=4 KF=1.3 NT=1 в GrowAtlas, цель-замер G=2 FWD=6000 grow→wfilter→FORCEPLAN WCHK на 3 зёрнах; затем повторить сравнения глубина/TS с WCHK=1.
+Грабли: на aida код v7 копируется rsync'ом в ~/spore_v5/w17/v7/src (после правок v7 — rsync -a src/cells7 aida:~/spore_v5/w17/v7/src/); запуск PYTHONPATH=. из ~/spore_v5/w17/v7 (fp.py — замер атласа FORCEPLAN, ms.py — агент по N стартам с wmax, оба там же); butterfly_dd при импорте chdir в research — пути абсолютные. Фоновый ssh — (ssh … 'nohup … &' </dev/null >/dev/null 2>&1 &). BEAM/BEAMREL (отсечение дерева агента) не работает. Пуш невозможен (нет кредов), коммиты локальные с -c user.name=w17 -c user.email=a@b. Агент без WCHK даёт недопустимо хорошие числа. Эталон стартов вокруг «висит» у ms.py — нет, сравнивать только варианты между собой.
 Решения цепочки: нет новых.
-Коммиты: см. git log (последний «4D агент dt»).
-Токены: T_START 5ч 9% / ctx 4% / $0.09 (03:28) / T_BEFORE_END 5ч 11% / ctx 26% / $9.1 (13:40)
-NEXT_LINK: hub-v5chain-worker-17   NEXT_MODEL: sonnet
+Коммиты: a34b43a [hub-v5chain-worker-17]: WCHK замеры g=1/g=2;7816cf9 [hub-v5chain-worker-17]: п.10 агент research-11 в v7 (WCHK/ONK/PEND);2b00753 [hub-v5chain-worker-17]: коррекция g=2 (wmax), п.9 wfilter;
+Токены: T_START 5ч 1% / ctx 4% / $0.04 (13:41) / T_BEFORE_END "cost_usd":9.386529799999998,"ctx_pct":26,"five_hour_pct":10, (23:40)
+NEXT_LINK: hub-v5chain-worker-18   NEXT_MODEL: sonnet
