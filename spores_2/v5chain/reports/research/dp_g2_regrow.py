@@ -20,6 +20,12 @@ def sampleX(b, band):
     if band is not None: e = energy(X.T); X = X[(e >= band[0]) & (e <= band[1])]
     return X[:b] if len(X) >= b else np.c_[rng.uniform(-np.pi, np.pi, (b, 2)), rng.uniform(-WMAX, WMAX, (b, 2))]
 A = Q.load(sys.argv[1]); E.refresh(A); A.V[A.ingoal] = 0.; A.solve(); KS = 81; t0 = time.time(); rng = np.random.default_rng(int(os.environ.get('SEED', 0)))
+if os.environ.get('START'):                                                                 # research-13: новый старт — спорой в ГОТОВЫЙ атлас (общий пул, концепция пользователя), прямое дерево растёт от неё
+    from butterfly_dp_grow import normals
+    s0 = np.array([float(v) for v in os.environ['START'].split(',')]); K0 = A.K; A.C = np.r_[A.C, s0[None]]; A.n = np.r_[A.n, normals(s0[None], rng)]; A.K += 1; A.V = np.r_[A.V, np.full((1, MN), BIG)]
+    E.refresh(A); A.V[A.ingoal] = 0.; KS = E.KS = K0; e_new = E.edges_add(A, np.arange(K0 * MN, A.K * MN), A.pairs(A.P[K0:].reshape(-1, 4), np.repeat([K0], MN)))
+    e = [np.r_[a, b_] for a, b_ in zip(A.e, e_new)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
+    print(json.dumps(dict(start=s0.tolist(), KS=int(KS), pairs_from_start=int(len(e_new[0])), V=round(float(A.V[KS, MN // 2]), 3), E_start=round(float(energy(s0)), 2))), flush=True)
 NEW, ROUNDS, KN, KF, UMAX, OCP = int(os.environ.get('NEW', 1000)), int(os.environ.get('ROUNDS', 8)), int(os.environ.get('KN', 4)), float(os.environ.get('KF', 1.3)), .9, float(os.environ.get('OCP', 7.636))
 UG = np.array([(a, c) for a in (-1, 0, 1) for c in (-1, 0, 1)]) * UMAX; TG = np.array([.25, .5, .9, 1.5]); TG = TG[TG <= TL + 1e-9]; UF = np.repeat(UG, len(TG), 0); TF = np.tile(TG, len(UG)); dmin = float(os.environ.get('DMIN0', .13))
 for r in range(1, ROUNDS + 1):
@@ -56,6 +62,7 @@ for r in range(1, ROUNDS + 1):
     Yo = A.P[near].reshape(-1, 4); ido = (near[:, None] * MN + np.arange(MN)).reshape(-1); out = A.pairs(Yo); kp = out[1].astype(int) >= K0; e_old = E.edges_add(A, ido, [x[kp] for x in out])
     e = [np.r_[a, b_, c] for a, b_, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
     print(json.dumps(dict(round=r, added=int(A.K - K0), spores=int(A.K), dmin=round(dmin, 3), V=round(float(A.V[KS, MN // 2]), 3), fwd=int(np.isfinite(E.g_from_start(A).min(1)).sum()), bwd=int((A.V.min(1) < BIG / 2).sum()), sec=round(time.time() - t0))), flush=True)
+    if int(os.environ.get('CKPT', 0)): np.savez(sys.argv[1].replace('.npz', '_rg.npz'), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)   # research-13: снимок каждый раунд (прогон могут убить)
 np.savez(sys.argv[1].replace('.npz', '_rg.npz'), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
 if A.V[KS, MN // 2] < BIG / 2:
     A.E = Q.node_edges(A); A.nplan = 0; T, arcs, wm = Q.rollout_edges(A, KS, 0.)

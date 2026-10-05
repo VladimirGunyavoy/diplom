@@ -183,3 +183,4 @@ hub-v5chain-worker-19 | started | acc3 | sonnet | 09:31:23
 hub-v5chain-research-12 | done | ctx 27% | двойной маятник: путь атласа + доводка коридора IPOPT + топологии — g .3 ×1.000, g 1 ×1.01, g 2 ×1.002 (2/4) / ×1.066; многозапросность 6/8; задачи worker'у 12–14, 13а | next=hub-v5chain-research-13 | 12:24:09
 hub-v5chain-research-13 | started | acc3 | opus | 12:25:02
 hub-v5chain-worker-19 | incident | pkill -f убил чужие прогоны research-13 на aida | 16:31:00
+hub-v5chain-research-13 | done | ctx 45% + слово пользователя | растущие споры-клетки по атласу на управление: ДИ 258 спор T/T* 1.023, маятник 282 споры T/эталон 1.053; g=2: разрыв по энергии, EGAP связал q1 и q8 | next=hub-v5chain-research-14 | 19:08:50
