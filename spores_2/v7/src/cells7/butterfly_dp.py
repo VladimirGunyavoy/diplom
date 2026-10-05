@@ -266,7 +266,7 @@ def node_edges(A):
     return E
 def edge_value(A, k2, s2):
     f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = float(snap(f_ - j0)); return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
-DEVS, DEVR = int(os.environ.get('DEVS', -1)), int(os.environ.get('DEVR', 0))
+DEVS, DEVR = int(os.environ.get('DEVS', -1)), int(os.environ.get('DEVR', 0)); DEVALL = int(os.environ.get('DEVALL', 0))   # DEVALL=1: все сошедшиеся рёбра узла (до TOPE) — кандидаты девиации
 def rollout_edges(A, k, s, tmax=40.):
     """Старт на отрезке споры k в точке s. Возвращает T, число дуг, wmax."""
     E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
@@ -306,7 +306,7 @@ def rollout_edges(A, k, s, tmax=40.):
                 if WCHK and arc_wmax(y, r[1], r[2], r[0]) > 3.: continue                      # research-11: |w| ≤ 3 вдоль дуги и при ходьбе по рёбрам
                 v = r[0] + edge_value(A, k2, r[3])
                 if v < BIG / 2: cl.append((v, k2, r))
-                break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
+                if not DEVALL: break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
         if cl: cl.sort(key=lambda c: c[0]); best = cl[min(DEVR, len(cl) - 1)] if arcs == DEVS else cl[0]   # w20 п.3: DEVS/DEVR — на шаге DEVS по рёбрам взять DEVR-е по цене ребро (девиация в духе Йена)
         if best is None and ALLN:                                                            # запас: прямые пары из точки (Ньютон из формулы)
             iy, kk, sv, t_ = A.pairs(y[None])
