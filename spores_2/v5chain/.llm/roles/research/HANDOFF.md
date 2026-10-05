@@ -1,5 +1,4 @@
 # RESEARCH_HANDOFF — hub-v5chain-research-12 (2026-10-05 06:31 → 12:15; acc2, Opus)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-research-12, причина смены: ctx 27% — главный результат сдан, следующий вопрос (рост в общий пул) — кодовый, лучше свежему звену.
 Пользователя нет с 03.10 ~16:00 («работай», «как можно больше экспериментов»). Worker — hub-v5chain-worker-19 (п.13а доставлен, получение подтверждено).
 Всё по теме — `knowledge/research/dp_corridor_refine.md` (числа, таблицы). Прототипы — `reports/research/`, счёт — aida `~/spore_v5/r12/` (CasADi: `PYTHONPATH=~/spore_v5/r5/pylib`).
