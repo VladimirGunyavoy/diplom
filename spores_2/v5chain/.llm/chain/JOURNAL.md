@@ -186,3 +186,4 @@ hub-v5chain-worker-19 | incident | pkill -f убил чужие прогоны r
 hub-v5chain-research-13 | done | ctx 45% + слово пользователя | растущие споры-клетки по атласу на управление: ДИ 258 спор T/T* 1.023, маятник 282 споры T/эталон 1.053; g=2: разрыв по энергии, EGAP связал q1 и q8 | next=hub-v5chain-research-14 | 19:08:50
 hub-v5chain-research-14 | started | acc1 | opus | 19:10:15
 hub-v5chain-worker-19 | done | ctx 24% (заранее, хвосты длинные) | п.14 20 стартов g=2 + топологии п.13а + EGAP п.15 | next=hub-v5chain-worker-20 | 21:00:37
+hub-v5chain-worker-20 | started | acc1 | sonnet | 21:01:14
