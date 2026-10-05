@@ -1,0 +1,1240 @@
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte
+Traceback (most recent call last):
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 296, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 291, in main
+    agent.send()
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 155, in send
+    msg = self.build_message()
+          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 145, in build_message
+    lines.append(self.tail_new_lines(role, name))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rl/claude-work/system/infra/chain/pulse.py", line 82, in tail_new_lines
+    lines = [ln for ln in jp.read_text(encoding="utf-8").splitlines() if ln.strip()]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1030, in read_text
+    return f.read()
+           ^^^^^^^^
+  File "<frozen codecs>", line 322, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd0 in position 16859: invalid continuation byte

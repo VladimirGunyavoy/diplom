@@ -1,0 +1,6 @@
+1 | 16:25 | 0%/4%/10% | $0.04 | заступил, жду задачу
+2 | 19:22 | 6%/10%/11% | $1.76 | взял задачу hub-worker-3: поставить pip ursina на хаб для spores_2/v6, проверить import/Ursina()
+3 | 19:24 | 6%/10%/11% | $1.8 | закончил: ursina 8.3.0 поставлен (pip --user), import ок; Ursina() не идёт — нет libGL/Xvfb/DISPLAY, нужен apt (не ставил, вне задачи); в infra.md
+4 | 19:59 | 6%/10%/11% | - | взял задачу hub-worker-3: scipy (pip --user) + проверить прочие пакеты для v6/main.py с Ursina(window_type='none')
+5 | 20:00 | 6%/11%/11% | $1.9 | scipy 1.18.1 поставлен (pip --user); дальше — проверить прочие пакеты для v6/main.py (IPython? utils?) и Ursina(window_type='none'); Bash временно не проходит классификатор, повторяю
+6 | 20:11 | 7%/11%/11% | $2 | закончил: scipy 1.18.1 поставлен; др. недостающих пакетов нет (IPython только в try); main.py с window_type='none' падает на FirstPersonController (mouse.locked, нет окна) — код v6, не пакет; в infra.md

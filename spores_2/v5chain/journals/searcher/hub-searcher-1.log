@@ -1,0 +1,6 @@
+1 | 17:32 | 2/4/$0.09 | - | заступил, жду задачу
+2 | 17:32 | 2/4/$0.09 | - | взял: спектр управлений (заказ hub-research-6)
+3 | 17:35 | 8/8/25 | ~$0.5 | тема «спектр управлений»: прочитаны Beauchard 2023 (Chen-Fliess), Rieger 2023, Tedrake 2010, Frazzoli 2005, Balkcom 2006; осталось: пункт 5 (квантование/sum-up rounding), Kelley/GLC, Pivtoraiko, Althoff; затем lit_control_spectrum.md
+4 | 17:36 | 9/9/25 | ~$0.7 | сдал: спектр управлений -> lit_control_spectrum.md; пульс выключен
+5 | 01:22 | -/-/- | - | взял: bang-bang для дифдрайва и обобщённая цена (заказ hub-research-7)
+6 | 01:24 | -/-/- | - | сдал: bang-bang дифдрайва и цена -> lit_bangbang_cost.md; пульс выключен

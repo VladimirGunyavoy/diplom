@@ -1,0 +1,60 @@
+2026-09-29 04:10:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 04:12:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 04:14:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 04:16:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 04:18:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 04:20:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 14:58:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 15:00:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 15:02:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 15:04:01 | pulse script for worker-hub-worker-1 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 15:04:02 | nudged hop-hub-worker-1 directly (worker-hub-worker-1 silent 18m)
+2026-09-29 15:04:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-1 (ping 1/5)
+2026-09-29 16:28:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 16:30:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 17:58:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 18:00:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 18:02:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 18:04:01 | pulse script for worker-hub-worker-2 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 18:04:03 | nudged hop-hub-worker-2 directly (worker-hub-worker-2 silent 19m)
+2026-09-29 18:04:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-2 (ping 1/5)
+2026-09-29 19:58:03 | nudged hop-hub-worker-3 directly (worker-hub-worker-3 silent 18m)
+2026-09-29 19:58:05 | pinged hop-hub-watcher-1 about silent worker-hub-worker-3 (ping 1/5)
+2026-09-29 22:48:01 | pulse script for worker-hub-worker-3 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 22:50:01 | pulse script for worker-hub-worker-3 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-29 22:50:03 | nudged hop-hub-worker-3 directly (worker-hub-worker-3 silent 19m)
+2026-09-29 22:50:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-3 (ping 1/5)
+2026-09-30 08:58:01 | pulse script for worker-hub-worker-5 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-30 08:58:03 | nudged hop-hub-worker-5 directly (worker-hub-worker-5 silent 18m)
+2026-09-30 08:58:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-5 (ping 1/5)
+2026-09-30 16:48:01 | pulse script for worker-hub-worker-6 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-09-30 16:48:02 | nudged hop-hub-worker-6 directly (worker-hub-worker-6 silent 18m)
+2026-09-30 16:48:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-6 (ping 1/5)
+2026-10-01 02:58:01 | pulse script for worker-hub-worker-7 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-01 02:58:02 | nudged hop-hub-worker-7 directly (worker-hub-worker-7 silent 18m)
+2026-10-01 02:58:04 | pinged hop-hub-watcher-1 about silent worker-hub-worker-7 (ping 1/5)
+2026-10-01 16:58:01 | pulse script for worker-hub-worker-9 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-01 17:00:02 | pulse script for worker-hub-worker-9 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-01 17:10:03 | nudged hop-hub-worker-10 directly (worker-hub-worker-10 silent 19m)
+2026-10-01 17:10:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-10 (ping 1/5)
+2026-10-01 17:28:03 | nudged hop-hub-worker-10 directly (worker-hub-worker-10 silent 18m)
+2026-10-01 17:28:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-10 (ping 1/5)
+2026-10-01 20:28:01 | pulse script for worker-hub-worker-10 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-01 20:28:02 | nudged hop-hub-worker-10 directly (worker-hub-worker-10 silent 18m)
+2026-10-01 20:28:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-10 (ping 1/5)
+2026-10-02 00:10:01 | worker-hub-worker-11 has finished_ marker — not watching
+2026-10-02 01:50:02 | nudged hop-hub-worker-12 directly (worker-hub-worker-12 silent 18m)
+2026-10-02 01:50:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-12 (ping 1/5)
+2026-10-02 02:58:03 | nudged hop-hub-worker-12 directly (worker-hub-worker-12 silent 18m)
+2026-10-02 02:58:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-12 (ping 1/5)
+2026-10-02 03:00:03 | nudged hop-hub-worker-12 directly (worker-hub-worker-12 silent 20m)
+2026-10-02 10:12:02 | worker-hub-worker-12 has finished_ marker — not watching
+2026-10-03 15:52:01 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-03 15:52:02 | nudged hop-hub-worker-14 directly (worker-hub-worker-14 silent 772m)
+2026-10-03 15:52:04 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-14 (ping 1/5)
+2026-10-03 15:54:01 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-03 15:56:01 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-03 15:58:01 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-03 16:00:02 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
+2026-10-03 16:38:03 | nudged hop-hub-worker-14 directly (worker-hub-worker-14 silent 18m)
+2026-10-03 16:38:05 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-14 (ping 1/5)

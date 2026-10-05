@@ -1,0 +1,4 @@
+2026-10-01 17:35:01 | reaped hop-hub-worker-1 (idle 3045m, finished-marker present, 22 hop-* sessions > limit 20)
+2026-10-01 17:35:01 | reaped hop-hub-worker-2 (idle 2955m, finished-marker present, 22 hop-* sessions > limit 20)
+2026-10-01 19:15:02 | reaped hop-hub-worker-4 (idle 2390m, finished-marker present, 21 hop-* sessions > limit 20)
+2026-10-01 20:15:01 | reaped hop-hub-worker-5 (idle 2130m, finished-marker present, 21 hop-* sessions > limit 20)
