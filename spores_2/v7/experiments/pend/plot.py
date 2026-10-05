@@ -16,7 +16,7 @@ def draw():
     for k, (a, u) in enumerate(zip(ax, US)):
         cl = [c for c in cells if abs(c['u'] - u) < 1e-9]
         for c in cl:
-            g = c['G']; pg = np.r_[g[:, 0], g[::-1, -1]]; seg = g[[i for i in range(len(g)) if np.allclose(g[i, 2], c['c'], atol=1e-4)] or [0]][0]
+            g = c['G'].astype(float); g = g[:, g.shape[1] // 2:g.shape[1] // 2 + 1] + (g - g[:, g.shape[1] // 2:g.shape[1] // 2 + 1]) / 1.1; pg = np.r_[g[:, 0], g[::-1, -1]];   # только ядро (без гало 10%) seg = g[[i for i in range(len(g)) if np.allclose(g[i, 2], c['c'], atol=1e-4)] or [0]][0]
             for s in sh:
                 if pg[:, 0].max() + s < XV[0] or pg[:, 0].min() + s > XV[1]: continue
                 a.fill(pg[:, 0] + s, pg[:, 1], fc=PAL[k], alpha=.15, ec=PAL[k], lw=.8); a.plot(seg[:, 0] + s, seg[:, 1], '-', color=INK, lw=1.1); a.plot(seg[[0, 1, 3, 4], 0] + s, seg[[0, 1, 3, 4], 1], 'o', color=INK, ms=2.2); a.plot(c['c'][0] + s, c['c'][1], 'o', color=SP, ms=6.5, mec='white', mew=.8, zorder=5)
