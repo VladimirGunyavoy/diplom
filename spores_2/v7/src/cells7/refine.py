@@ -6,7 +6,7 @@ import numpy as np
 import casadi as ca
 G = float(os.environ.get('G', 2.)); UB = float(os.environ.get('UB', 1.)); WM = float(os.environ.get('WM', 3.)); HMIN = float(os.environ.get('HMIN', .02))
 HMAX = float(os.environ.get('HMAX', .5)); M = int(os.environ.get('M', 40)); DTS = float(os.environ.get('DTS', .0125)); MS = [2.5, 1.0]; S11, S12, S22 = 2.5, 1., 1.
-C3 = np.array([np.pi / 2, 0.]); RQ, RW = .3, .5; X0 = np.array([-np.pi / 2, 0, 0, 0]); OCP = 7.636
+C3 = np.array([np.pi / 2, 0.]); RQ, RW = .3, .5; X0 = np.array([float(v) for v in os.environ['START'].split(',')]) if os.environ.get('START') else np.array([-np.pi / 2, 0, 0, 0]); OCP = 7.636
 def acc(q1, q2, w1, w2, u1, u2, cos=np.cos, sin=np.sin):
     th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = cos(th1 - th2); s = sin(th1 - th2)
     Q1 = u1 - u2 - G * MS[0] * cos(th1) - S12 * s * d2 ** 2; Q2 = u2 - G * MS[1] * cos(th2) + S12 * s * d1 ** 2
