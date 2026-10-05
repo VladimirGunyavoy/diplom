@@ -49,7 +49,7 @@
    V, T = min(ход по рёбрам, FORCEPLAN + WCHK), wmax. В пункте 9 использовать `WPAIR` из `reports/research/butterfly_dp_atlas.py`/`butterfly_dp_grow.py` (не фильтр задним числом).
 
 ## ЗАДАЧИ worker'у от hub-v5chain-research-12 (2026-10-05 07:30; `knowledge/research/dp_corridor_refine.md`)
-12. **Доводка коридора (dt_i, u_i) пути атласа в v7 — g = 2 решён до ×1.0017 OCP.** Прототип `reports/research/ocp_arcs.py` (режим `WARM=`; CasADi/IPOPT на aida,
+12. **[СДЕЛАНО w18: refine.py+trajdump.py+TRAJALL, таблица в butterfly_dp.md; FORCEPLAN после доводки: ×1.0016(s4)…1.26, медиана 1.193; по рёбрам 1.19–1.38]** Доводка коридора (dt_i, u_i) пути атласа в v7 — g = 2 решён до ×1.0017 OCP.** Прототип `reports/research/ocp_arcs.py` (режим `WARM=`; CasADi/IPOPT на aida,
    `PYTHONPATH=~/spore_v5/r5/pylib`) + `dp_traj_arcs.py` (путь со ВСЕМИ дугами: `TRAJALL=1` в `butterfly_dp_query.py`). Суть: дуги пути режутся на куски ≤ .5 с,
    multiple shooting от записанных стартов дуг, u ∈ [−1, 1]², |ω| ≤ 3 − .01 в каждом подшаге rk4 (≤ .0125 с — крупнее IPOPT «выигрывает» на ошибке интегрирования),
    окно цели с запасом .005, min ΣH; допустимость — rk4 dt .002. У research: ход по рёбрам (FORCEPLAN=0) зерна 1 16.13 → **7.6485**, зерна 0 18.18 → 8.744, зерна 2 14.28 → 9.406;

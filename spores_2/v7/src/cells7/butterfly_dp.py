@@ -175,6 +175,7 @@ WTOL = float(os.environ.get('WTOL', .05))                                       
 WK = int(os.environ.get('WK', 30))                                                           # w18: подотрезков дуги мини-дерева в проверке |w|
 WN = int(os.environ.get('WN', 20))                                                          # w18: RK4 в проверке долей — n=6 на дугу 1.4 с слишком грубо (пик 3.02 при проверке ≤2.95)
 WFR = [float(x) for x in os.environ.get('WFR', '.1,.2,.3,.4,.5,.6,.7,.8,.9,.95').split(',')]                    # w18: доли дуги мини-дерева для проверки |w|≤3 (4 точки пропускали пик на длинных дугах)
+TRAJALL = int(os.environ.get('TRAJALL', 0))
 TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.15,.3,.5,.9,1.4' if G == 2 else '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
@@ -316,6 +317,7 @@ def rollout_edges(A, k, s, tmax=40.):
             if not PLANFB: return np.inf, arcs, wmax
             k = None; continue
         _, k2, (tt, u1, u2, s2) = best; nst = max(6, int(tt / .01)); yy = y.copy()
+        if TRAJALL: TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                  # w18 (research-12): ход по рёбрам — дуги пути тоже в TRAJ (для доводки коридора)
         for _ in range(nst):
             yy = flow(yy[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(yy[2:]).max())
             if ingoal(yy[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax

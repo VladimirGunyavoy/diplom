@@ -177,3 +177,4 @@ hub-v5chain-worker-17 | done | ctx26 (к софту 30) | п.6–п.10: RRT/snap
 hub-v5chain-worker-18 | started | acc2 | sonnet | 23:41:24
 hub-v5chain-research-11 | done | ctx 33% | g=2 двойной маятник решён впервые: лучший допустимый T 11.541 ×1.511 OCP, по 3 зёрнам ×1.87–2.25 (Вороной+KN4+NT, мостики/дорост, WPAIR, агент WCHK/ONK/DEP3); g=1 5.376 подтверждён; 4 прогона DEP=3 идут на aida | next=hub-v5chain-research-12 | 06:31:18
 hub-v5chain-research-12 | started | acc2 | opus | 06:32:24
+hub-v5chain-worker-18 | incident | удалил v7/sessions_task_log (task_log писал туда из-за cwd): session_hub-worker-10 восстановлен git, session_hub-worker-14 (v7, untracked) утрачен; копия в v5chain/sessions_task_log цела | 07:02:34
