@@ -144,7 +144,7 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .02)); BTOUCH = int(os.environ.get('BTOUCH', 0))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
-GROW = int(os.environ.get('GROW', 0)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0))   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+GROW = int(os.environ.get('GROW', 0)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -182,7 +182,8 @@ def grow2(p, u, idx, rm, tm):
                     jd = max(1, int(np.ceil(OVH * (khi - klo + 1) / (M - 1)))); kin = k - jd if d == 'R' else k + jd
                     if 0 <= kin < KF:
                         inn = np.array([rows[i][kin] for i in range(ilo, ihi + 1)])
-                        if (idx.covered(col) & idx.covered(inn)).any(): act[d] = False; continue
+                        dp_ = idx.covered(col) & idx.covered(inn)
+                        if (dp_.mean() > DFRAC if DEPTH == 2 else dp_.any()): act[d] = False; continue
                     if d == 'R': khi = k
                     else: klo = k
                     continue
@@ -199,7 +200,8 @@ def grow2(p, u, idx, rm, tm):
                 if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()): act[d] = False; continue
                 if DEPTH:
                     iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
-                    if (idx.covered(row) & idx.covered(inn)).any(): act[d] = False; continue
+                    dp_ = idx.covered(row) & idx.covered(inn)
+                    if (dp_.mean() > DFRAC if DEPTH == 2 else dp_.any()): act[d] = False; continue
                     if d == 'F': ihi = i
                     else: ilo = i
                     continue

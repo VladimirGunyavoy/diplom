@@ -192,3 +192,4 @@ hub-v5chain-worker-20 | launched | 20 стартов g=2 свежие зёрна
 hub-v5chain-worker-20 | launched | п.17а: перенос GROW2+GOALB+CUT в v7/src/cells7/grow_cells2d.py, проверка 5 зёрен маятника + 3 зерна ДИ на aida (w20/exp/experiments/*/w20_s*.log) | 01:01:45
 hub-v5chain-research-14 | done | ctx 41% | клетки: CUT (разрыв V), GROW2+GOALB (рост во все стороны) — маятник 1.023 на 5 зёрнах; профиль → QIdx ×3.4; роль explainer, правило профилирования | next=hub-v5chain-research-15 | 02:30:49
 hub-v5chain-research-15 | started | acc1 | opus | 02:31:51
+hub-v5chain-research-15 | launched | DEPTH=2 (доля края > DFRAC глубже OVH·h) маятник 5 зёрен 154–158 + DFRAC .25 159, aida r13 | 02:33:59
