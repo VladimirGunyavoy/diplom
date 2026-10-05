@@ -266,6 +266,7 @@ def node_edges(A):
     return E
 def edge_value(A, k2, s2):
     f_ = (s2 + R) / (2 * R) * (MN - 1); j0 = min(max(int(np.floor(f_)), 0), MN - 2); a = float(snap(f_ - j0)); return (1 - a) * A.V[k2, j0] + a * A.V[k2, j0 + 1]
+DEVS, DEVR = int(os.environ.get('DEVS', -1)), int(os.environ.get('DEVR', 0))
 def rollout_edges(A, k, s, tmax=40.):
     """Старт на отрезке споры k в точке s. Возвращает T, число дуг, wmax."""
     E = node_edges(A) if not hasattr(A, 'E') else A.E; A.E = E; y = A.C[k] + s * A.n[k]; T = 0.; arcs = 0; wmax = 0.
@@ -293,7 +294,7 @@ def rollout_edges(A, k, s, tmax=40.):
                 if onk[0] >= 0: k, s = int(onk[0]), float(onk[1])                                    # прямая дуга в атлас: стоим на споре onk — при неудаче плана пойдём по её рёбрам
                 continue
             k = kp                                                                          # research-11: мини-дерево не нашло пути — шаг по рёбрам споры, на которой стоим
-        f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
+        cl = []; f_ = (s + R) / (2 * R) * (MN - 1); js = sorted({min(max(int(np.floor(f_)), 0), MN - 1), min(max(int(np.ceil(f_)), 0), MN - 1)}); best = None
         if ALLN: js = list(np.argsort(A.V[k]))                                               # ALLN: рёбра всех узлов споры по возрастанию V узла
         for j in js:
             for k2, t0, s20 in E.get(k * MN + j, []):
@@ -304,8 +305,9 @@ def rollout_edges(A, k, s, tmax=40.):
                 if r is None: continue
                 if WCHK and arc_wmax(y, r[1], r[2], r[0]) > 3.: continue                      # research-11: |w| ≤ 3 вдоль дуги и при ходьбе по рёбрам
                 v = r[0] + edge_value(A, k2, r[3])
-                if v < BIG / 2 and (best is None or v < best[0]): best = (v, k2, r)
+                if v < BIG / 2: cl.append((v, k2, r))
                 break                                                                    # первое сошедшееся ребро узла (они по возрастанию цены)
+        if cl: cl.sort(key=lambda c: c[0]); best = cl[min(DEVR, len(cl) - 1)] if arcs == DEVS else cl[0]   # w20 п.3: DEVS/DEVR — на шаге DEVS по рёбрам взять DEVR-е по цене ребро (девиация в духе Йена)
         if best is None and ALLN:                                                            # запас: прямые пары из точки (Ньютон из формулы)
             iy, kk, sv, t_ = A.pairs(y[None])
             for kk_, sv_ in zip(kk.astype(int), sv):
