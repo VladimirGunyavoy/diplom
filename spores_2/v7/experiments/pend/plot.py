@@ -12,7 +12,7 @@ def load(name):
     except Exception: return None
 def draw():
     st, cells, val, ag, paths = load('status.json') or {}, load('cells.pkl') or [], load('value.npz'), load('agent.npz'), load('paths.pkl'); pr = st.get('params') or {}; US = pr.get('US', [-1, 0, 1]); XL, WL, PER, RHO = pr.get('XL', 3.14), pr.get('WL', 3.5), pr.get('PER'), pr.get('RHO', .1)
-    sh = [0.] if not PER else [k * PER for k in (-1, 0, 1, 2)]; XV = (-XL, XL) if not PER else (-1., 7.); fig, ax = plt.subplots(3, 2, figsize=(14, 19.6), dpi=110); fig.patch.set_facecolor('white'); ax = ax.ravel(); xn = 'угол φ (0 и 2π — верх, π — низ; полоса шире периода, часть точек видна дважды)' if pr.get('SYS') == 'pend' else 'положение x'; yn = 'угловая скорость ω' if pr.get('SYS') == 'pend' else 'скорость v'
+    sh = [0.] if not PER else [k * PER for k in (-1, 0, 1, 2)]; XV = (-XL, XL) if not PER else (-1., 7.); fig, ax = plt.subplots(2, 3, figsize=(22, 13.8), dpi=100); fig.patch.set_facecolor('white'); ax = ax.ravel(); xn = 'угол φ (0 и 2π — верх, π — низ; полоса шире периода, часть точек видна дважды)' if pr.get('SYS') == 'pend' else 'положение x'; yn = 'угловая скорость ω' if pr.get('SYS') == 'pend' else 'скорость v'
     for k, (a, u) in enumerate(zip(ax, US)):
         cl = [c for c in cells if abs(c['u'] - u) < 1e-9]
         for c in cl:
@@ -65,7 +65,7 @@ def draw():
     line2 = 'рост ≤ %s с в каждую сторону, полуширина ≤ %s, боковой заход %s, цель ±%s, узлов поперёк %s, шаг %s с   |   спор %s, узлов %s' % (pr.get('TMAX'), pr.get('RMAX'), pr.get('OVL'), RHO, pr.get('M'), pr.get('DTN'), st.get('cells', '—'), st.get('nodes', '—')); line3 = ''
     if ag is not None:
         fz = np.isfinite(ag['T']); r = ag['T'][fz] / ag['ref'][fz]; line3 = 'агент, %d стартов: дошли %.1f%%, T/эталон среднее %.3f, медиана %.3f, макс %.2f, переключений (медиана) %.0f' % (len(fz), 100 * fz.mean(), r.mean(), np.median(r), r.max(), np.median(ag['sw'][fz]))
-    fig.suptitle(head + '\n' + line2 + ('\n' + line3 if line3 else ''), color=INK, fontsize=11, x=.02, ha='left', y=.995); fig.tight_layout(rect=(0, 0, 1, .965)); tmp = OUT + '.tmp.png'; fig.savefig(tmp); plt.close(fig); os.replace(tmp, OUT)
+    fig.suptitle(head + '\n' + line2 + ('\n' + line3 if line3 else ''), color=INK, fontsize=11, x=.02, ha='left', y=.995); fig.tight_layout(rect=(0, 0, 1, .945)); tmp = OUT + '.tmp.png'; fig.savefig(tmp); plt.close(fig); os.replace(tmp, OUT)
 def stamp(): return tuple(os.path.getmtime(os.path.join(D, f)) if os.path.exists(os.path.join(D, f)) else 0 for f in ('status.json', 'cells.pkl', 'value.npz', 'agent.npz', 'paths.pkl'))
 last = None
 while True:
