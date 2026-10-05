@@ -174,3 +174,4 @@
 ## w20 (2026-10-05)
 - Порт EGAP/TRUNC в v7: `butterfly_dp.regrow_gap` (`python3 -m src.cells7.butterfly_dp regrow <npz>`, EGAP=1|2 EQ EM EW TRUNC NEW ROUNDS); на старте 2 совпадает с прототипом research-13 (полоса, 9382 споры, fwd 4431). Встроен в `v7/reports/bdp/mq/mq3.sh` (RG=<раундов> перед lazy; SD=<зерно>).
 - Старт 16: зёрна 1601–1603 (N9000/FWD4500) — после 6 раундов lazy (37.6k спор) НЕ связаны.
+- Профиль (правило meta-1, 2026-10-06; cProfile, aida, `butterfly_dp grow 6000`, FWD3000, g=2, WFILT=1, старт 1, 117 с): `acc` (динамика маятника в RK4, 198k вызовов) 75 с = 64% tottime; `flow` 7.6 с; `query_ball_point` 7.3 с; `numpy solve` 4.8 с; `pairs` 103 с = 88% cumulative. Вывод: время — векторная динамика (4 тригонометрии на вызов), тождества cos/sin(th1−th2)=cos/sin(q2) вызовов не сокращают; ускорение — только numba/C или меньше шагов RK4 (n=6 → 4 проверить на точность Ньютона). Не оптимизировал (до/после не снято).
