@@ -1,7 +1,7 @@
 """«Трейн» для 2D систем на общем ядре v5chain/reports/research/grow_cells2d.py: считает и пишет данные в <эксперимент>/data/ (картинку рисует plot.py).
 Запуск из этой папки: SYS=di [GROW=2 DELTA=.03 CUT=1 GOALB=1 ...] python3 compute.py NN_имя (копия pend/compute.py — общее ядро grow_cells2d.py)"""
 import numpy as np, sys, os, json, time, pickle
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, '../../../v5chain/reports/research'))
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, '../../src/cells7'))
 import grow_cells2d as G
 tag = sys.argv[1]; D = os.path.join(HERE, tag, 'data'); os.makedirs(D, exist_ok=True); t0 = time.time()
 def dump(name, obj, js=True):
@@ -14,12 +14,12 @@ def log(u, cells):
     if len(cells) % 5 == 0: cells_dump(done + cells); status('строю атлас u = %+g' % u, cells=len(done) + len(cells))
 for fn in ('cells.pkl', 'value.npz', 'agent.npz', 'paths.pkl'):
     if os.path.exists(os.path.join(D, fn)): os.remove(os.path.join(D, fn))
-CUT = float(os.environ.get('CUT', 0)); REFINE = int(os.environ.get('REFINE', 0)) or (1 if CUT > 0 else 0); RTOL = float(os.environ.get('RTOL', .05)); RFT = int(os.environ.get('RFT', 1)); HB = .1     # REFINE (research-14): проходы измельчения по невязке Беллмана
+CUT = float(os.environ.get('CUT', 1. if G.SYS == 'pend' else .5)); REFINE = int(os.environ.get('REFINE', 0)) or (1 if CUT > 0 else 0); RTOL = float(os.environ.get('RTOL', .05)); RFT = int(os.environ.get('RFT', 1)); HB = .1     # REFINE (research-14): проходы измельчения по невязке Беллмана
 NX, NW = int(np.ceil(2 * G.XL / HB)), int(np.ceil(2 * G.WL / HB)); LEV = np.zeros((NX, NW), int)
 def binof(Y): Y = np.atleast_2d(Y); return np.clip(((G.wrap(Y[:, 0]) + G.XL) / HB).astype(int), 0, NX - 1), np.clip(((Y[:, 1] + G.WL) / HB).astype(int), 0, NW - 1)
 def limits(p, u): l = LEV[binof(p)][0]; return max(G.RMAX / 2 ** l, .02), (G.TMAX / 2 ** l if RFT else G.TMAX)
 G.LIMITS = limits; hist = []
-GOALB = int(os.environ.get('GOALB', 0)); GB = None                                           # GOALB=1 (research-14): край цели ±RHO — стена с самого начала (клетка не лежит поперёк края цели)
+GOALB = int(os.environ.get('GOALB', 1)); GB = None                                           # GOALB=1 (research-14): край цели ±RHO — стена с самого начала (клетка не лежит поперёк края цели)
 if GOALB:
     from scipy.spatial import cKDTree; e_ = np.linspace(-G.RHO, G.RHO, 41); GB = np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]]; G.BARRIER = cKDTree(GB)
 for ps in range(REFINE + 1):
