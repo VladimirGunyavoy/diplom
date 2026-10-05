@@ -1,3 +1,9 @@
+## hub-v5chain-worker-19 (acc3, Sonnet, 09:30–21:00, ctx 24%)
+Сделано: п.14 — 20 случайных стартов g=2 (рост от старта → агент → refine → топологии; 20/20 связны, min по зёрнам в mq/results.md); п.13а топологии (w18 → ×1.0655); п.15 EGAP связал старт 2 (6.850), старт 16 не связан ни EGAP, ни TRUNC.
+Стоп на / следующий шаг: PLAN «ОТКРЫТО после w19» п.(1) старт 16 (рост из вырожденного старта), п.(2) порт EGAP в butterfly_dp.py v7 + в mq.sh, п.(3) k путей Йена (старты 3, 15); п.17 research-13 (растущие споры-клетки) — по PLAN.
+Грабли: aida общая — гасить только по PID (pkill -f убил чужие прогоны, память kill-only-own-pids); refine.py теперь берёт START из env (раньше зашитый X0 → Infeasible); drop.sh = dp_arc_drop INS=1 над rf_*.npz (код в ~/spore_v5/r12); раунд EGAP на lazy-атласе 33k не завершается — применять до lazy; файлы aida: ~/spore_v5/w19/ (rf_*.out, rf_*_drop.out, results собраны в v7/reports/bdp/mq/results.md); task_log писать из корня проекта; идущих расчётов нет.
+Решения цепочки: нет новых (эталон случайных стартов = лучшее известное по зёрнам: ocp_arcs 0/33 допустимых).
+
 ## hub-v5chain-worker-17 (acc3, Sonnet, 13:41–23:45, ctx 26%)
 Сделано: v7 butterfly_dp.py: RRT=1, snap, lazy_nodes (+LAZYFIN), wfilter, агент research-11 (WCHK/ONK/PEND, портирован блоком), PRUNE=1, OCP/TS по G (п.7–п.9 частично, п.10 агент); g=2 связан (V 23.36); дд+2 диска против эталона с дисками (п.6): N3000 1.040; дд шум: порог ĝ 20σ (1.50→1.35); 4D 200k mean 1.07, выбросы = дребезг агента.
 ГЛАВНОЕ/КОРРЕКЦИЯ: мои g=2 числа ×1.087/×1.18 были БЕЗ проверки |w|≤3 (wmax 5.8–6.55) — недопустимы. Допустимо (WCHK=1): g=2 25k спор ×1.326 (но wmax 3.22!), g=1 7k ×1.64 (wmax 2.44). Записано в PLAN/knowledge/research/butterfly_dp.md.
@@ -27,14 +33,3 @@ NEXT_LINK: hub-v5chain-worker-19   NEXT_MODEL: sonnet
 Решения цепочки: нет новых.
 Коммиты: см. git log (последний «п.5 — агент мини-дерево (FORCEPLAN) в v7»).
 
-## hub-worker-14 (acc3, Sonnet, 00:20–19:30, ctx27%)
-Звено: hub-worker-14 (acc3, Sonnet, 00:20–19:30), причина смены: ctx ~27% (софт 30%, рабочая смена ~19 ч)
-Сделано: очередь PLAN п.1–5 + задачи research-9 (всё в `knowledge/research/butterfly_spores.md`, `butterfly_dd.md`, `v7/reports/spore_v_di.md`): гибрид бабочки маятника + финиш стрельбой (VF3 1.028; u·.95 на V с заполненными дырами 1.070, 99%); EST=3 на spore_v с шумом (σ.01 1.02); бабочки ДИ на общих стартах (1.064 vs 1.044); 4D бабочки 50k спор (V med 1.092, агент med 1.101, финиш по кривой переключения VF2 → max 1.49); дифдрайв бабочки в v7 (1.033) + 2 диска (100%, 0 столкновений, 1.077–1.085 vs свободный эталон); g=2 тёплый старт OCP — отрицательно. PLAN.md ротирован 53→8 КБ.
-
-## hub-worker-13 (2026-10-02, acc2 Sonnet, ctx 28%)
-Звено: hub-worker-13 (acc2, Sonnet, 10:11–02:45), причина смены: ctx 28% (софт 30%, идл)
-Сделано: spore_v исправлен и измерен (отчёт `v7/reports/spore_v_di.md`, всё в PLAN): `Cell.locate` (допуск гало, экстраполяция Эрмита, предфильтр по t → 99.9% узлов находят свою клетку), `dt_edge`=шаг агента, густота узлов: DI T/T* 1.044 (5→3 перекл.), маятник hs=.008 T/Ta 1.019; LQR-зона hc=.1; спектр u в агенте ≤1%; точное переключение (research-8/9) на spore_v: P3:.5+EST=1+EPS=.02 sw 18→3, u·.95: 1.027; бабочки (research-8): ДИ ×100 (`cells7/butterfly_di.py`), маятник 100%/1.036/4 перекл. при 35k узлов (`cells7/butterfly_pend.py`, окно .3); против строгого эталона pend_ref_T: spore_v 1.075, бабочки 1.077.
-Грабли: `pkill -f` убивает шелл (дважды наступил) — kill по pid; на хабе всего 7 ГБ RAM — тяжёлое с `systemd-run --user --scope -p MemoryMax=4G`, в фоне `setsid nohup … & disown`; V.build у маятника hs=.008 ~11 мин, SporeV(...) init ~5–10 мин; кэши /tmp/claude-1000/{pend_V6.npy (hs.008,dt_edge.06), bp_V4.npy (бабочки окно .3), pend_cells_filled.pkl, di_cells_filled.pkl}; скрипты /tmp/claude-1000/{q*,s9,bp*,es_run*,es_head*}.py (в /tmp — могут пропасть); git: нет user.name → `git -c user.name=hub-worker-N -c user.email=a@b commit`; STATUS велит не пушить — не пушил; бабочки: агент без wrap φ накручивает обороты.
-Решения цепочки: рекомендуемые настройки агента spore_v — history/decisions.md.
-
-# links_recent — последние 5 звеньев (новые сверху)
