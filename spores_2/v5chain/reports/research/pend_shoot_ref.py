@@ -2,11 +2,11 @@
 последняя дуга — «полоса»: множество точек, из которых постоянное u ведёт в цель (назад от границы цели, KD-дерево, допуск eps), затем
 кандидаты по возрастанию времени проверяются ЧЕСТНОЙ симуляцией (rk4, вход в коробку ±.1). Результат — реальная траектория ⇒ строгая верхняя
 оценка T*; близка к T*, если оптимум имеет ≤ 2 переключений (точность ~dtau)."""
-import numpy as np, sys, time, json
+import numpy as np, sys, time, json, os
 from scipy.spatial import cKDTree
 sys.path.insert(0, '.')
 from pend_cost_grid import step, wrap, UM
-R0 = .1
+R0 = float(os.environ.get('R0', .1)); SUF = '' if R0 == .1 else '_R%g' % R0   # R0 (research-15): размер цели ±R0
 def band(u, S=9., h=.005, nb=300):
     e = np.linspace(-R0, R0, nb); b = np.r_[np.c_[e, 0 * e + R0], np.c_[e, 0 * e - R0], np.c_[0 * e + R0, e], np.c_[0 * e - R0, e]]; x, w = b[:, 0].copy(), b[:, 1].copy(); P, T = [], []
     for i in range(int(S / h)):
@@ -45,7 +45,8 @@ if __name__ == '__main__':
     for i, q in enumerate(Q):
         T, pl = shoot(q, B); R.append((T,) + (pl if pl else (0, 0, 0, 0)))
         if i % 10 == 9: print(i + 1, 'sec', round(time.time() - t0), flush=True)
-    R = np.array(R); np.save('pend_shoot_ref.npy', R)
+    R = np.array(R); np.save('pend_shoot_ref%s.npy' % SUF, R)
+    if SUF: print(json.dumps(dict(R0=R0, n=int(len(R)), finite=int(np.isfinite(R[:, 0]).sum()), sec=round(time.time() - t0))), flush=True); sys.exit()
     Bf = np.load('butterfly_pend_5000_tau0.3_r0.1_tl2.npy'); A = np.load('exact_switch_pend_P0_P2_P30.5.npy'); C = np.load('pend_char_agent_d0.015_m0.5.npy')
     best = np.minimum(Bf[1], Bf[3])[:N]; n4 = min(N, 40); best[:n4] = np.minimum.reduce([best[:n4], A[0][:n4], A[1][:n4], A[2][:n4]]); best = np.minimum(best, C[1][:N]); T = R[:, 0]; f = np.isfinite(T) & (Bf[0][:N] > .05)
     def st(r): return dict(n=int(len(r)), mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), min=round(float(r.min()), 4), max=round(float(r.max()), 4))

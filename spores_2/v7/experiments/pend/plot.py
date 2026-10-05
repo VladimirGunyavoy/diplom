@@ -19,12 +19,14 @@ def draw():
         if int(os.environ.get('ADMS', 0)) and len(cl) > 1:                                    # ADMS=1 (слово пользователя 2026-10-06): размер точки по расстоянию до ближайшей споры на экране — густо → мелко
             from scipy.spatial import cKDTree; bb = a.get_position(); kx = bb.width * fig.get_figwidth() * 72 / (XV[1] - XV[0]); kw = bb.height * fig.get_figheight() * 72 / (2 * WL)
             C = np.array([c['c'] for c in cl], float); CC = np.concatenate([C + np.array([s_, 0.]) for s_ in ([0.] if not PER else [-PER, 0., PER])]) * np.array([kx, kw]); dd, _ = cKDTree(CC).query(C * np.array([kx, kw]), 2)
-            for i, c in enumerate(cl): sp = float(np.clip(.6 * dd[i, 1], .8, SPMS)); msz[id(c)] = (sp, float(np.clip(.4 * sp, .5, CLMS)))
+            for i, c in enumerate(cl): sp = float(np.clip(.6 * dd[i, 1], .8, SPMS)); msz[id(c)] = (sp, float(np.clip(.25 * sp, .3, CLMS)))
         for c in cl:
             g = c['G'].astype(float); g = g[:, g.shape[1] // 2:g.shape[1] // 2 + 1] + (g - g[:, g.shape[1] // 2:g.shape[1] // 2 + 1]) / 1.1; pg = np.r_[g[:, 0], g[::-1, -1]]; seg = g[[i for i in range(len(g)) if np.allclose(g[i, 2], c['c'], atol=1e-4)] or [0]][0]   # только ядро (без гало 10%)
             for s in sh:
                 if pg[:, 0].max() + s < XV[0] or pg[:, 0].min() + s > XV[1]: continue
-                a.fill(pg[:, 0] + s, pg[:, 1], fc=PAL[k], alpha=.15, ec=PAL[k], lw=.8); a.plot(seg[:, 0] + s, seg[:, 1], '-', color=INK, lw=1.1); a.plot(seg[[0, 1, 3, 4], 0] + s, seg[[0, 1, 3, 4], 1], 'o', color=INK, ms=msz.get(id(c), (SPMS, CLMS))[1]); a.plot(c['c'][0] + s, c['c'][1], 'o', color=SP, ms=msz.get(id(c), (SPMS, CLMS))[0], mec='white', mew=min(.8, .15 * msz.get(id(c), (SPMS, CLMS))[0]), zorder=5)
+                a.fill(pg[:, 0] + s, pg[:, 1], fc=PAL[k], alpha=.15, ec=PAL[k], lw=.8); a.plot(seg[:, 0] + s, seg[:, 1], '-', color=INK, lw=msz[id(c)][1] if id(c) in msz else 1.1, alpha=float(os.environ.get('SGA', 1.)), solid_capstyle='butt')
+                if id(c) not in msz: a.plot(seg[[0, 1, 3, 4], 0] + s, seg[[0, 1, 3, 4], 1], 'o', color=INK, ms=CLMS)   # ADMS: клоны не точками — отрезок споры линией адаптивной толщины (слово пользователя)
+                a.plot(c['c'][0] + s, c['c'][1], 'o', color=SP, ms=msz.get(id(c), (SPMS, CLMS))[0], mec='white', mew=min(.8, .15 * msz.get(id(c), (SPMS, CLMS))[0]), zorder=5)
         cov = (st.get('cover') or [None] * 3)[k]; con = (st.get('contact') or [None] * 3)[k]
         a.set_title('атлас u = %+g: спор %d%s%s' % (u, len(cl), '' if cov is None else ', покрыто %.1f%%' % (100 * cov), '' if not con or con.get('all4') is None else '\nсоседи со всех 4 сторон у %.0f%% спор (бока %.0f%%, торцы %.0f%%)' % (100 * con['all4'], 100 * con['side'], 100 * con['end'])), color=INK, fontsize=11, loc='left')
         a.text(.02, .02, 'фиолетовая точка — спора, чёрные — её клоны на нормальном отрезке;\nзакрашено — клетка (отрезок, пронесённый потоком этого u вперёд и назад)', transform=a.transAxes, color=INK, fontsize=8.5, bbox=BX, va='bottom')

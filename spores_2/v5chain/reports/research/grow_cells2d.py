@@ -384,7 +384,7 @@ def contact_stats(cells, idx):
     S = np.array(S) if S else np.zeros((0, 4)); return dict(all4=round(float(np.mean(ok)), 3) if ok else None, side=round(float((S[:, :2] >= .8).all(1).mean()), 3) if ok else None, end=round(float((S[:, 2:] >= .8).all(1).mean()), 3) if ok else None)
 def starts_ref():
     """старты и эталон: маятник — 100 стартов и pend_ref_T.npy (research-9); ДИ — точное T*."""
-    if SYS == 'pend': rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); return Q, np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pend_ref_T.npy'))
+    if SYS == 'pend': rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); rf = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get('REFF', 'pend_ref_T.npy'))); rf = rf[:, 0] if rf.ndim == 2 else rf; fin = np.isfinite(rf); return Q[fin], rf[fin]   # стрельба ≤ 3 дуг решает не все старты — нерешённые не сравниваем   # REFF (research-15): эталон для другой цели, напр. pend_shoot_ref_R0.05.npy[:, 0]
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from v7_faces_di import tstar_box; Q = np.random.default_rng(1).uniform(-1.5, 1.5, (200, 2)); return Q, tstar_box(Q[:, 0], Q[:, 1], RHO)
 if __name__ == '__main__':
     t0 = time.time(); A = Atlas(); tb = time.time() - t0; A.solve(); Q, ref = starts_ref(); ok = ref > .05; T, sw, _ = A.rollout(Q[ok]); fz = np.isfinite(T); r = T[fz] / ref[ok][fz]
