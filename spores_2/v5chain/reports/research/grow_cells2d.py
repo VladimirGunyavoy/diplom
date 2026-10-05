@@ -90,6 +90,8 @@ class Index:
                 yy = Y[q] - np.array([sh, 0.]); g = inbb(c, yy)
                 if g.any(): m[q[g]] |= c.incore(yy[g])
         return m
+BARRIER = None; BEPS = float(os.environ.get('BEPS', .02)); BTOUCH = int(os.environ.get('BTOUCH', 0))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
+def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M)
@@ -100,7 +102,8 @@ def build_layer(u, rng, log=None):
         if np.linalg.norm(f(p, u)) < FMIN or idx.covered(p[None])[0]: fails += 0 if queue else 1; continue          # у равновесия потока (|f| мало) клетку не строим
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); n = normal(p, u); ext = []
         for sg in (1., -1.):                                                                  # отрезок: до соседа / края / 2·RMAX, с заходом в соседа на OVL
-            ss = sg * np.arange(1, int(2 * rm / .01) + 1) * .01; P = p + ss[:, None] * n; bad = ~inbox(P) | idx.covered(P); k = int(np.argmax(bad)) if bad.any() else -1
+            ss = sg * np.arange(1, int(2 * rm / .01) + 1) * .01; P = p + ss[:, None] * n; bad = ~inbox(P) | idx.covered(P); k = int(np.argmax(bad)) if bad.any() else -1; nb_ = nearb(P); kb = int(np.argmax(nb_)) if nb_.any() else -1
+            if kb >= 0 and (k < 0 or kb <= k): ext.append((abs(ss[kb - 1]) if kb > 0 else 0.) + (BEPS if BTOUCH else 0.)); continue      # барьер раньше соседа: до барьера, без захода
             ext.append(((abs(ss[k - 1]) if k > 0 else 0.) + OVL) if k >= 0 else abs(ss[-1]))
         lo, hi = -ext[1], ext[0]
         if hi - lo > 2 * rm: mid = np.clip(0., lo + rm, hi - rm); lo, hi = mid - rm, mid + rm
@@ -113,6 +116,7 @@ def build_layer(u, rng, log=None):
                     prev = sl[M // 2]; sl = step(sl, u, float(sg)); inb = inbox(sl); L += float(np.linalg.norm(sl[M // 2] - prev))
                     if not inb.any() or np.linalg.norm(f(sl[M // 2], u)) < FMIN / 2: break
                     if ADAPT == 1 and not shape_ok(c, sl, u, L): byshape = True; break
+                    if BARRIER is not None and nearb(sl[1:-1] if BTOUCH else sl).any(): break
                     if ADAPT == 2:
                         ce = step(ce, u, float(sg)); A = jac(sl[M // 2], u)
                         for _ in range(2): W = W + DTN / 2 * (sg * (A @ W + W @ A.T) + UB ** 2 * BBT)

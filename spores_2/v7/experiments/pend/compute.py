@@ -14,7 +14,7 @@ def log(u, cells):
     if len(cells) % 5 == 0: cells_dump(done + cells); status('строю атлас u = %+g' % u, cells=len(done) + len(cells))
 for fn in ('cells.pkl', 'value.npz', 'agent.npz', 'paths.pkl'):
     if os.path.exists(os.path.join(D, fn)): os.remove(os.path.join(D, fn))
-REFINE = int(os.environ.get('REFINE', 0)); RTOL = float(os.environ.get('RTOL', .05)); RFT = int(os.environ.get('RFT', 1)); HB = .1     # REFINE (research-14): проходы измельчения по невязке Беллмана
+CUT = float(os.environ.get('CUT', 0)); REFINE = int(os.environ.get('REFINE', 0)) or (1 if CUT > 0 else 0); RTOL = float(os.environ.get('RTOL', .05)); RFT = int(os.environ.get('RFT', 1)); HB = .1     # REFINE (research-14): проходы измельчения по невязке Беллмана
 NX, NW = int(np.ceil(2 * G.XL / HB)), int(np.ceil(2 * G.WL / HB)); LEV = np.zeros((NX, NW), int)
 def binof(Y): Y = np.atleast_2d(Y); return np.clip(((G.wrap(Y[:, 0]) + G.XL) / HB).astype(int), 0, NX - 1), np.clip(((Y[:, 1] + G.WL) / HB).astype(int), 0, NW - 1)
 def limits(p, u): l = LEV[binof(p)][0]; return max(G.RMAX / 2 ** l, .02), (G.TMAX / 2 ** l if RFT else G.TMAX)
@@ -23,7 +23,14 @@ for ps in range(REFINE + 1):
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
     for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
     if ps == REFINE: break
-    A.finish(); A.solve(); Y, Vo = [], []                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
+    A.finish(); A.solve(); Y, Vo = [], []
+    if CUT > 0:                                                                                # CUT: середины пар соседних узлов (поперёк и вдоль) с перепадом V > CUT — барьер для прохода 1
+        from scipy.spatial import cKDTree; DB = []
+        for c in A.cells:
+            g = c.G; v = A.V[c.o:c.o + len(g) * c.m].reshape(len(g), c.m)
+            for a_, b_, va, vb in ((g[:, :-1], g[:, 1:], v[:, :-1], v[:, 1:]), (g[:-1], g[1:], v[:-1], v[1:])):
+                k = (np.abs(va - vb) > CUT) & (va < G.BIG / 2) & (vb < G.BIG / 2); DB.append(((a_ + b_) / 2)[k])
+        DB = np.concatenate(DB); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
     for c in A.cells:
         g = c.G; nt = len(g); v = A.V[c.o:c.o + nt * c.m].reshape(nt, c.m); Y.append(((g[:-1, :-1] + g[1:, :-1] + g[:-1, 1:] + g[1:, 1:]) / 4).reshape(-1, 2)); Vo.append(((v[:-1, :-1] + v[1:, :-1] + v[:-1, 1:] + v[1:, 1:]) / 4).ravel())
     Y, Vo = np.concatenate(Y), np.concatenate(Vo); rhs = np.full(len(Y), np.inf)
