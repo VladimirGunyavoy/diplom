@@ -10,7 +10,7 @@ import casadi as ca
 
 G = float(os.environ.get('G', 2.)); UB = float(os.environ.get('UB', 1.)); WM = float(os.environ.get('WM', 3.)); HMIN = float(os.environ.get('HMIN', .02))
 HMAX = float(os.environ.get('HMAX', 3.)); REF = os.environ.get('REF', 'refdp_G2_W3_N80.npy'); MS = [2.5, 1.0]; S11, S12, S22 = 2.5, 1., 1.
-C3 = np.array([np.pi / 2, 0.]); RQ, RW = .3, .5; X0 = np.array([-np.pi / 2, 0, 0, 0])
+C3 = np.array([np.pi / 2, 0.]); RQ, RW = .3, .5; X0 = np.array([float(x) for x in os.environ.get('X0', '%r,0,0,0' % (-np.pi / 2)).split(',')])   # X0 — старт (research-12: многозапросность)
 
 
 def acc(q1, q2, w1, w2, u1, u2, cos=np.cos, sin=np.sin):
