@@ -6,7 +6,7 @@ import grow_cells2d as G
 tag = sys.argv[1]; D = os.path.join(HERE, tag, 'data'); os.makedirs(D, exist_ok=True); t0 = time.time()
 def dump(name, obj, js=True):
     tmp = os.path.join(D, name + '.tmp'); (json.dump(obj, open(tmp, 'w')) if js else pickle.dump(obj, open(tmp, 'wb'))); os.replace(tmp, os.path.join(D, name))
-PAR = dict(SYS=G.SYS, US=list(G.US), TMAX=G.TMAX, RMAX=G.RMAX, OVL=G.OVL, RHO=G.RHO, ADAPT=G.ADAPT, NORM=G.NORM, DELTA=G.DELTA, SEL=G.SEL, CORE=G.CORE, JUMP=G.JUMP, JMODE=G.JMODE, JAG=G.JAG, JDIR=G.JDIR, GROW=G.GROW, OVH=G.OVH, FRAC=G.FRAC, M=G.M, DTN=G.DTN, XL=G.XL, WL=G.WL, PER=G.PER)
+PAR = dict(SYS=G.SYS, US=list(G.US), TMAX=G.TMAX, RMAX=G.RMAX, OVL=G.OVL, RHO=G.RHO, ADAPT=G.ADAPT, NORM=G.NORM, DELTA=G.DELTA, SEL=G.SEL, CORE=G.CORE, JUMP=G.JUMP, JMODE=G.JMODE, JAG=G.JAG, JDIR=G.JDIR, GROW=G.GROW, OVH=G.OVH, FRAC=G.FRAC, GOALB=int(os.environ.get('GOALB', 0)), M=G.M, DTN=G.DTN, XL=G.XL, WL=G.WL, PER=G.PER)
 def status(stage, **kw): dump('status.json', dict(stage=stage, sec=round(time.time() - t0, 1), params=PAR, **kw))
 def cells_dump(cells): dump('cells.pkl', [dict(u=float(c.u), c=c.c, r=float(c.r), n=c.n, G=c.G.astype(np.float32)) for c in cells], js=False)
 done = []
@@ -19,6 +19,9 @@ NX, NW = int(np.ceil(2 * G.XL / HB)), int(np.ceil(2 * G.WL / HB)); LEV = np.zero
 def binof(Y): Y = np.atleast_2d(Y); return np.clip(((G.wrap(Y[:, 0]) + G.XL) / HB).astype(int), 0, NX - 1), np.clip(((Y[:, 1] + G.WL) / HB).astype(int), 0, NW - 1)
 def limits(p, u): l = LEV[binof(p)][0]; return max(G.RMAX / 2 ** l, .02), (G.TMAX / 2 ** l if RFT else G.TMAX)
 G.LIMITS = limits; hist = []
+GOALB = int(os.environ.get('GOALB', 0)); GB = None                                           # GOALB=1 (research-14): край цели ±RHO — стена с самого начала (клетка не лежит поперёк края цели)
+if GOALB:
+    from scipy.spatial import cKDTree; e_ = np.linspace(-G.RHO, G.RHO, 41); GB = np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]]; G.BARRIER = cKDTree(GB)
 for ps in range(REFINE + 1):
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
     for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
@@ -30,7 +33,7 @@ for ps in range(REFINE + 1):
             g = c.G; v = A.V[c.o:c.o + len(g) * c.m].reshape(len(g), c.m)
             for a_, b_, va, vb in ((g[:, :-1], g[:, 1:], v[:, :-1], v[:, 1:]), (g[:-1], g[1:], v[:-1], v[1:])):
                 k = (np.abs(va - vb) > CUT) & (va < G.BIG / 2) & (vb < G.BIG / 2); DB.append(((a_ + b_) / 2)[k])
-        DB = np.concatenate(DB); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
+        DB = np.concatenate(DB + ([GB] if GB is not None else [])); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
     for c in A.cells:
         g = c.G; nt = len(g); v = A.V[c.o:c.o + nt * c.m].reshape(nt, c.m); Y.append(((g[:-1, :-1] + g[1:, :-1] + g[:-1, 1:] + g[1:, 1:]) / 4).reshape(-1, 2)); Vo.append(((v[:-1, :-1] + v[1:, :-1] + v[:-1, 1:] + v[1:, 1:]) / 4).ravel())
     Y, Vo = np.concatenate(Y), np.concatenate(Vo); rhs = np.full(len(Y), np.inf)
