@@ -2,7 +2,7 @@
 import numpy as np, sys, os, json
 os.environ['TRAJALL'] = '1'; sys.path.insert(0, '.')
 import butterfly_dp_query as Q, butterfly_dp_ellipse as E
-A = Q.load(sys.argv[1]); E.refresh(A); Q.TRAJ.clear(); A.E = Q.node_edges(A); T, arcs, wm = Q.rollout_edges(A, 81, 0.)
+A = Q.load(sys.argv[1]); E.refresh(A); Q.TRAJ.clear(); A.E = Q.node_edges(A); K0 = int(sys.argv[3]) if len(sys.argv) > 3 else 81; S0 = float(sys.argv[4]) if len(sys.argv) > 4 else 0.; T, arcs, wm = Q.rollout_edges(A, K0, S0)
 Y = np.array([t[0] for t in Q.TRAJ]); U = np.array([[t[1], t[2]] for t in Q.TRAJ]); H = np.array([t[3] for t in Q.TRAJ])
 if np.isfinite(T): H[-1] -= H.sum() - T                                                      # последняя дуга — до входа в цель
 np.savez(sys.argv[2], Y=Y, U=U, H=H, T=T)
