@@ -90,7 +90,7 @@ def main():
             seeds.append(('ocp%d' % kk, np.clip(Uk, -UB, UB), Hk, None))
     rng = np.random.default_rng(int(os.environ.get('SEED', 0)))
     for s in range(NR):
-        T0 = rng.uniform(6, 14); Hk = np.minimum(rng.dirichlet(np.ones(K) * 3) * T0, HMAX); ph = rng.uniform(0, 2 * np.pi, 2); tc = np.cumsum(Hk) - Hk / 2
+        T0 = rng.uniform(float(os.environ.get('TLO', 6)), float(os.environ.get('THI', 14))); Hk = np.minimum(rng.dirichlet(np.ones(K) * 3) * T0, HMAX); ph = rng.uniform(0, 2 * np.pi, 2); tc = np.cumsum(Hk) - Hk / 2
         Uk = np.stack([np.sign(np.sin(2 * np.pi * tc / rng.uniform(1.5, 3.5) + ph[i])) for i in range(2)], 1) * UB
         seeds.append(('rnd%d' % s, Uk, Hk, None))
     best = None; out = []
