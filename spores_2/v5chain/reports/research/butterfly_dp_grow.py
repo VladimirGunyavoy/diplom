@@ -11,7 +11,7 @@ from butterfly_dp import wrap, flow, ingoal, C3, RQ, RW_, WMAX, BIG, TL, WIN, G
 import butterfly_dp_atlas as BA
 from butterfly_dp_atlas import Atlas, R, MN
 Atlas.pairs.__defaults__ = (None, int(os.environ.get('CHUNK', 800)))                       # куски пар меньше: 4000+4000 при 3000 падали по OOM (1.5 ГБ)
-RRT = int(os.environ.get('RRT', 0)); NT = int(os.environ.get('NT', 0)); NMIN = float(os.environ.get('NMIN', .3)); NMAX = float(os.environ.get('NMAX', 3.)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
+RRT = int(os.environ.get('RRT', 0)); NT = int(os.environ.get('NT', 0)); NMIN = float(os.environ.get('NMIN', .3)); NMAX = float(os.environ.get('NMAX', 3.)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3)); DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([float(x) for x in os.environ.get('START', '%r,0,0,0' % (-np.pi / 2)).split(',')])   # research-12: START — старт прямого дерева (многозапросность)
 def normals(C, rng):
     w = C[:, 2:]; nn = np.hypot(w[:, 0], w[:, 1]); rnd = rng.normal(size=(len(C), 2)); rnd /= np.linalg.norm(rnd, axis=1, keepdims=True)
     n = np.zeros((len(C), 4)); n[:, 0] = np.where(nn > .05, -w[:, 1] / np.maximum(nn, 1e-9), rnd[:, 0]); n[:, 1] = np.where(nn > .05, w[:, 0] / np.maximum(nn, 1e-9), rnd[:, 1]); return n
