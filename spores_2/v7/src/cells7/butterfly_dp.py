@@ -171,7 +171,9 @@ class GrowAtlas(Atlas):
         s.X = emb(s.C); s.tree = cKDTree(s.X)
 # --- агент (hub-v5chain-worker-17: порт butterfly_dp_query.py research-11: WCHK/ONK/PEND/CHAIN) ---
 NT = int(os.environ.get('NT', 0)); NMIN = float(os.environ.get('NMIN', .3)); NMAX = float(os.environ.get('NMAX', 3.)); KN = int(os.environ.get('KN', 1)); KF = float(os.environ.get('KF', 1.3))
-WFR = [float(x) for x in os.environ.get('WFR', '.1,.2,.3,.4,.5,.6,.7,.8,.9').split(',')]                    # w18: доли дуги мини-дерева для проверки |w|≤3 (4 точки пропускали пик на длинных дугах)
+WTOL = float(os.environ.get('WTOL', .05))                                                    # w18: запас на пик между долями дуги (3.02 при 9 долях)
+WN = int(os.environ.get('WN', 20))                                                          # w18: RK4 в проверке долей — n=6 на дугу 1.4 с слишком грубо (пик 3.02 при проверке ≤2.95)
+WFR = [float(x) for x in os.environ.get('WFR', '.1,.2,.3,.4,.5,.6,.7,.8,.9,.95').split(',')]                    # w18: доли дуги мини-дерева для проверки |w|≤3 (4 точки пропускали пик на длинных дугах)
 TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.15,.3,.5,.9,1.4' if G == 2 else '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
@@ -216,7 +218,7 @@ def plan(A, y):
         Z, T, U = children(Y); ok = np.isfinite(Z).all(1) & (np.abs(Z[:, 2:]) <= 3).all(1)
         if WCHK:                                                                             # и у дуг мини-дерева — в середине
             for fr in WFR:
-                Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T * fr).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3).all(1)
+                Zm = flow(np.repeat(Y, len(TS) * len(UU), 0).T, U[:, 0], U[:, 1], T * fr, n=WN).T; ok &= np.isfinite(Zm).all(1) & (np.abs(Zm[:, 2:]) <= 3 - WTOL).all(1)
         root = np.repeat(np.arange(len(Y)), len(TS) * len(UU)) if par is None else np.repeat(par, len(TS) * len(UU))
         cost = np.repeat(np.zeros(len(Y)) if d == 0 else Ccost, len(TS) * len(UU)) + T
         first = np.c_[T, U] if d == 0 else np.repeat(Farc, len(TS) * len(UU), 0)
