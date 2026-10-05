@@ -8,7 +8,7 @@ from butterfly_dp import wrap, flow, ingoal, BIG, G
 from butterfly_dp_atlas import Atlas, R, MN, SNAPA, snap
 from butterfly_dp_grow import emb
 from scipy.spatial import cKDTree
-TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0))
+TRAJ = []; CHAIN = []; PEND = []; DK = []; DS = []; ONK = [-1, 0.]; WCHK = int(os.environ.get('WCHK', 0)); TS = np.array([float(x) for x in os.environ.get('TS', '.25,.5,.9').split(',')]); DEP = int(os.environ.get('DEP', 2)); TOPE = int(os.environ.get('TOPE', 5)); ALLN = int(os.environ.get('ALLN', 1)); PLANFB = int(os.environ.get('PLANFB', 1)); FORCEPLAN = int(os.environ.get('FORCEPLAN', 0)); TRAJALL = int(os.environ.get('TRAJALL', 0))
 UU = np.array([(a, b) for a in (-1, 0, 1) for b in (-1, 0, 1)], float)
 def load(path):
     d = np.load(path, allow_pickle=True); A = Atlas.__new__(Atlas); A.C, A.n, A.V = d['C'], d['n'], d['V']; A.K = len(A.C)
@@ -161,6 +161,7 @@ def rollout_edges(A, k, s, tmax=40.):
             if not PLANFB: return np.inf, arcs, wmax
             k = None; continue
         _, k2, (tt, u1, u2, s2) = best; nst = max(6, int(tt / .01)); yy = y.copy()
+        if TRAJALL: TRAJ.append((y.copy(), float(u1), float(u2), float(tt)))                # research-12: и дуги ходьбы по рёбрам (тёплый старт коридора, ocp_arcs.py)
         for _ in range(nst):
             yy = flow(yy[:, None], np.array([u1]), np.array([u2]), tt / nst, n=1)[:, 0]; wmax = max(wmax, np.abs(yy[2:]).max())
             if ingoal(yy[:, None])[0]: return T + tt * (_ + 1) / nst, arcs + 1, wmax
