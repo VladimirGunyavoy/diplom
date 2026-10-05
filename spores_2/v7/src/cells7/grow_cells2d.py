@@ -1,4 +1,4 @@
-"""w20 (PLAN п.17а): перенос в v7 из v5chain/reports/research/grow_cells2d.py (research-14, коммит 6b41ee9). Умолчания = связка GROW2 (δ .03) + BTOUCH/BEPS .01; GOALB и CUT — в experiments/*/compute.py (умолчания GOALB=1, CUT=1 для pend / .5 для di)."""
+"""w20 (PLAN п.17а): перенос в v7 из v5chain/reports/research/grow_cells2d.py (research-14: GROW2, QIdx/FASTLOC=2 по профилю). Умолчания = связка GROW2 (δ .03) + BTOUCH/BEPS .01; GOALB и CUT — в experiments/*/compute.py (умолчания GOALB=1, CUT=1 для pend / .5 для di)."""
 """research-13 (слово пользователя 2026-10-05): растущие споры-клетки для ЛЮБОЙ 2D системы (обобщение di_grow_cells.py). По одному атласу на управление.
 Спора = точка + нормальный отрезок (M узлов), пронесённый потоком своего управления вперёд и назад ≤ TMAX. Посев встык, обязательные боковые (OVL) и курсовые
 пересечения с соседями. Формул системы нет: поток — rk4, положение точки в клетке — поиск четырёхугольника сетки узлов + обратная билинейная карта.
@@ -8,7 +8,7 @@ import numpy as np, sys, os, json, time
 SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .1)); TMAX = float(os.environ.get('TMAX', 1.5)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
-CORE = int(os.environ.get('CORE', 0)); JUMP = float(os.environ.get('JUMP', 0)); JMODE = os.environ.get('JMODE', 'max'); JAG = int(os.environ.get('JAG', 0)); JDIR = int(os.environ.get('JDIR', 0));   # JDIR=1: разрыв — только скачок поперёк столбцов в ОБЕИХ строках (барьер вдоль потока); JMODE drop — четырёхугольник не используется
+CORE = int(os.environ.get('CORE', 0)); FASTLOC = int(os.environ.get('FASTLOC', 2)); JUMP = float(os.environ.get('JUMP', 0)); JMODE = os.environ.get('JMODE', 'max'); JAG = int(os.environ.get('JAG', 0)); JDIR = int(os.environ.get('JDIR', 0));   # JDIR=1: разрыв — только скачок поперёк столбцов в ОБЕИХ строках (барьер вдоль потока); JMODE drop — четырёхугольник не используется
    # JMODE near — значение узла с наибольшим весом; JAG=1 — только у агента (vstar), не в счёте V
    # JUMP > 0 (research-14): узлы четырёхугольника расходятся по V > JUMP — разрыв цены, берём max узлов (не обещать лишнего)
 NORM = os.environ.get('NORM', 'gram'); DELTA = float(os.environ.get('DELTA', .03)); SEL = os.environ.get('SEL', 'stop'); EPSJ = 1e-5; STEPS = int(os.environ.get('STEPS', 0)); DN = float(os.environ.get('DN', .003)); MMAX = int(os.environ.get('MMAX', 9))   # STEPS=1: узлы поперёк m и шаг строк kt — из той же метрики (ошибка интерполяции ≤ DN); ADAPT=2 (research-14): ошибка линейной модели среза в локальной метрике
@@ -77,17 +77,65 @@ def nerr(err, W, t):
     if NORM == 'axis': return float(np.max(np.linalg.norm(err / np.array([UB * t * t / 2, UB * t]), axis=1)))
     return float(np.max(np.linalg.norm(err, axis=1)))
 def inbb(c, Y): return (Y[:, 0] >= c.bb[0]) & (Y[:, 0] <= c.bb[1]) & (Y[:, 1] >= c.bb[2]) & (Y[:, 1] <= c.bb[3])
+class QIdx:
+    """FASTLOC=2 (research-14, по профилю: locate = 58% времени, 674k мелких вызовов): индекс по ЧЕТЫРЁХУГОЛЬНИКАМ сеток клеток.
+    Четырёхугольник регистрируется во всех ячейках QB, которые задевает его рамка (с копиями по периоду). Запрос — все точки сразу, векторно."""
+    QB = .1
+    def __init__(s): s.bins = {}; s.C = []; s.n = 0; s.parts = []; s.dirty = True
+    def add(s, c, cid):
+        g = c.G; nt, m = g.shape[0], g.shape[1]; A0, A1, B1, B0 = g[:-1, :-1].reshape(-1, 2), g[:-1, 1:].reshape(-1, 2), g[1:, 1:].reshape(-1, 2), g[1:, :-1].reshape(-1, 2)
+        it = np.repeat(np.arange(nt - 1), m - 1); j = np.tile(np.arange(m - 1), nt - 1); q0 = s.n; nq = len(A0); s.n += nq
+        s.parts.append((A0, A1, B1, B0, np.full(nq, cid), it, j, c.sn[j], np.full(nq, c.sn[1] - c.sn[0]), np.full(nq, c.r), np.full(nq, c.o if hasattr(c, 'o') else 0), np.full(nq, m))); s.dirty = True
+        X = np.stack([A0, A1, B1, B0]); lo = X.min(0) - 1e-9; hi = X.max(0) + 1e-9
+        for sh in SH:
+            if PER is not None and (hi[:, 0].max() + sh < -XL - .2 or lo[:, 0].min() + sh > XL + .2): continue
+            ix0 = np.floor((lo[:, 0] + sh) / s.QB).astype(int); ix1 = np.floor((hi[:, 0] + sh) / s.QB).astype(int); iw0 = np.floor(lo[:, 1] / s.QB).astype(int); iw1 = np.floor(hi[:, 1] / s.QB).astype(int)
+            for q in range(nq):
+                for a_ in range(ix0[q], ix1[q] + 1):
+                    for b_ in range(iw0[q], iw1[q] + 1): s.bins.setdefault((a_, b_), []).append((q0 + q, sh))
+    def arrays(s):
+        if s.dirty and s.parts: s.T = [np.concatenate(z) for z in zip(*s.parts)]; s.dirty = False
+        return s.T
+    def query(s, Y):
+        """все пары (точка, четырёхугольник), где точка внутри: pi, qi, a, b (координаты в четырёхугольнике), sh."""
+        if not s.parts: return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
+        A0, A1, B1, B0 = s.arrays()[:4]; key = np.floor(Y / s.QB).astype(int); kk = key[:, 0] * 100003 + key[:, 1]; order = np.argsort(kk, kind='stable'); uk, st = np.unique(kk[order], return_index=True); st = np.r_[st, len(order)]
+        out = []; PI, QI, SH_ = [], [], []; cnt = 0
+        for u_, a_, b_ in zip(uk, st[:-1], st[1:]):
+            lst = s.bins.get((int(np.floor(Y[order[a_], 0] / s.QB)), int(np.floor(Y[order[a_], 1] / s.QB))))
+            if not lst: continue
+            qa = np.array(lst); pts = order[a_:b_]; PI.append(np.repeat(pts, len(qa))); QI.append(np.tile(qa[:, 0].astype(int), len(pts))); SH_.append(np.tile(qa[:, 1].astype(float), len(pts))); cnt += len(pts) * len(qa)
+            if cnt > 2_000_000: out.append(s._test(Y, np.concatenate(PI), np.concatenate(QI), np.concatenate(SH_))); PI, QI, SH_ = [], [], []; cnt = 0
+        if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(QI), np.concatenate(SH_)))
+        if not out: return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
+        return [np.concatenate(z) for z in zip(*out)]
+    def _test(s, Y, pi, qi, sh):
+        A0, A1, B1, B0 = s.arrays()[:4]; y = Y[pi] - np.c_[sh, 0 * sh]; pos = np.ones(len(pi), bool); neg = pos.copy()
+        for p_, q_ in ((A0, A1), (A1, B1), (B1, B0), (B0, A0)):
+            P_, Q_ = p_[qi], q_[qi]; cr = (Q_[:, 0] - P_[:, 0]) * (y[:, 1] - P_[:, 1]) - (Q_[:, 1] - P_[:, 1]) * (y[:, 0] - P_[:, 0]); pos &= cr >= -1e-10; neg &= cr <= 1e-10
+        k = pos | neg; pi, qi, sh, y = pi[k], qi[k], sh[k], y[k]; p0, p1, p2, p3 = A0[qi], A1[qi], B0[qi], B1[qi]; a = np.full(len(pi), .5); b = a.copy()
+        for _ in range(5):
+            F = ((1 - a) * (1 - b))[:, None] * p0 + (a * (1 - b))[:, None] * p1 + ((1 - a) * b)[:, None] * p2 + (a * b)[:, None] * p3 - y
+            Fa = (1 - b)[:, None] * (p1 - p0) + b[:, None] * (p3 - p2); Fb = (1 - a)[:, None] * (p2 - p0) + a[:, None] * (p3 - p1); det = Fa[:, 0] * Fb[:, 1] - Fa[:, 1] * Fb[:, 0]; det = np.where(np.abs(det) < 1e-14, 1e-14, det)
+            a = np.clip(a - (F[:, 0] * Fb[:, 1] - F[:, 1] * Fb[:, 0]) / det, 0, 1); b = np.clip(b - (Fa[:, 0] * F[:, 1] - Fa[:, 1] * F[:, 0]) / det, 0, 1)
+        return pi, qi, a, b, sh
 class Index:
     """сетка ячеек HB: в ячейке — (клетка, сдвиг по периоду); покрытие точки ядрами проверяется только по ним."""
     HB = .25
-    def __init__(s): s.bins = {}
+    def __init__(s): s.bins = {}; s.q = QIdx() if FASTLOC == 2 else None; s.nc = 0
     def add(s, c):
+        if s.q is not None: s.q.add(c, s.nc); s.nc += 1; return
         for sh in SH:
             if PER is not None and (c.bb[1] + sh < -XL - .3 or c.bb[0] + sh > XL + .3): continue
             for i in range(int(np.floor((c.bb[0] + sh) / s.HB)), int(np.floor((c.bb[1] + sh) / s.HB)) + 1):
                 for j in range(int(np.floor(c.bb[2] / s.HB)), int(np.floor(c.bb[3] / s.HB)) + 1): s.bins.setdefault((i, j), []).append((c, sh))
     def covered(s, Y):
-        Y = np.atleast_2d(Y).astype(float).copy(); Y[:, 0] = wrap(Y[:, 0]); m = np.zeros(len(Y), bool); key = np.floor(Y / s.HB).astype(int)
+        Y = np.atleast_2d(Y).astype(float).copy(); Y[:, 0] = wrap(Y[:, 0]); m = np.zeros(len(Y), bool)
+        if s.q is not None:
+            pi, qi, a, b, sh = s.q.query(Y)
+            if len(pi): s0, ds, r = s.q.arrays()[7:10]; core = np.abs(s0[qi] + a * ds[qi]) <= r[qi] + 1e-9; m[pi[core]] = True
+            return m
+        key = np.floor(Y / s.HB).astype(int)
         for k in set(map(tuple, key)):
             q = np.flatnonzero((key[:, 0] == k[0]) & (key[:, 1] == k[1]))
             for c, sh in s.bins.get(k, ()):
@@ -97,7 +145,7 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.environ.get('BTOUCH', 1))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
-GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5))   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0))   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -131,6 +179,14 @@ def grow2(p, u, idx, rm, tm):
                 if ihi - ilo < 3 and (act['F'] or act['B']): continue                         # сначала хоть немного длины (эллипс при T → 0 вырожден)
                 col = np.array([rows[i][k] for i in range(ilo, ihi + 1)])
                 if not inbox(col).all() or not ok_rect(min(klo, k), max(khi, k), ilo, ihi) or (BARRIER is not None and nearb(col).any()): act[d] = False; continue
+                if DEPTH:                                                                     # глубина: новый край И точка на OVH·h внутрь (в столбцах — растяжение учтено) покрыты соседом
+                    jd = max(1, int(np.ceil(OVH * (khi - klo + 1) / (M - 1)))); kin = k - jd if d == 'R' else k + jd
+                    if 0 <= kin < KF:
+                        inn = np.array([rows[i][kin] for i in range(ilo, ihi + 1)])
+                        if (idx.covered(col) & idx.covered(inn)).any(): act[d] = False; continue
+                    if d == 'R': khi = k
+                    else: klo = k
+                    continue
                 if d == 'R': khi = k
                 else: klo = k
                 if d in extra:
@@ -142,6 +198,12 @@ def grow2(p, u, idx, rm, tm):
                 if i not in rows: act[d] = False; continue
                 row = rows[i][klo:khi + 1]
                 if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()): act[d] = False; continue
+                if DEPTH:
+                    iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
+                    if (idx.covered(row) & idx.covered(inn)).any(): act[d] = False; continue
+                    if d == 'F': ihi = i
+                    else: ilo = i
+                    continue
                 if d == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False
@@ -223,12 +285,41 @@ class Atlas:
         s.cells = [c for l in s.layers for c in l]; N = 0
         for c in s.cells: c.o = N; N += c.G.shape[0] * c.m
         s.P = np.concatenate([c.G.reshape(-1, 2) for c in s.cells]); s.N = N; s.goal = ingoal(s.P); s.V = np.full(N, BIG); s.V[s.goal] = 0.
+    def binidx(s):
+        """FASTLOC (research-14): сетка ячеек LB → для каждой клетки и сдвига по периоду — ключи ячеек её рамки; поиск точки — только среди клеток своей ячейки."""
+        s.LB = .2; s.NB = int(np.ceil(2 * (WL + 1) / s.LB)) + 2
+        for c in s.cells:
+            c.bk = {}
+            for sh in SH:
+                if PER is not None and (c.bb[1] + sh < -XL - 1e-9 or c.bb[0] + sh > XL + 1e-9): continue
+                ix = np.arange(int(np.floor((c.bb[0] + sh + XL + 1) / s.LB)), int(np.floor((c.bb[1] + sh + XL + 1) / s.LB)) + 1); iw = np.arange(int(np.floor((c.bb[2] + WL + 1) / s.LB)), int(np.floor((c.bb[3] + WL + 1) / s.LB)) + 1)
+                c.bk[sh] = (ix[:, None] * s.NB + iw[None, :]).ravel()
     def stencils(s, Y):
         Y = Y.astype(float).copy(); Y[:, 0] = wrap(Y[:, 0]); I, IDX, W, CR = [], [], [], []
+        if FASTLOC == 2:
+            if not hasattr(s, 'qx'):
+                s.qx = QIdx()
+                for ci, c in enumerate(s.cells): s.qx.add(c, ci)
+            pi, qi, a, b, sh = s.qx.query(Y)
+            if not len(pi): return np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4))
+            T_ = s.qx.arrays(); it, j, o, m = T_[5][qi], T_[6][qi], T_[10][qi], T_[11][qi]; I = pi
+            IDX = o[:, None] + np.stack([it * m + j, it * m + j + 1, (it + 1) * m + j, (it + 1) * m + j + 1], 1); W = np.stack([(1 - b) * (1 - a), (1 - b) * a, b * (1 - a), b * a], 1)
+            if CORE: cr = np.abs(T_[7][qi] + a * T_[8][qi]) <= T_[9][qi] + 1e-9; hc = np.zeros(len(Y), bool); hc[I[cr]] = True; k = cr | ~hc[I]; I, IDX, W = I[k], IDX[k], W[k]
+            return I, IDX, W
+        if FASTLOC:
+            if not hasattr(s.cells[0], 'bk'): s.binidx()
+            key = np.floor((Y[:, 0] + XL + 1) / s.LB).astype(int) * s.NB + np.floor((Y[:, 1] + WL + 1) / s.LB).astype(int); order = np.argsort(key, kind='stable'); sk = key[order]
         for c in s.cells:
-            for sh in SH:
-                if PER is not None and (c.bb[1] + sh < -XL or c.bb[0] + sh > XL): continue
-                yy = Y - np.array([sh, 0.]); q = np.flatnonzero(inbb(c, yy))
+            for sh in (c.bk if FASTLOC else SH):
+                if not FASTLOC and PER is not None and (c.bb[1] + sh < -XL or c.bb[0] + sh > XL): continue
+                if FASTLOC:
+                    kk = c.bk[sh]; lo = np.searchsorted(sk, kk, 'left'); hi = np.searchsorted(sk, kk, 'right'); m_ = hi > lo
+                    if not m_.any(): continue
+                    q0 = np.concatenate([order[a_:b_] for a_, b_ in zip(lo[m_], hi[m_])]); yy0 = Y[q0] - np.array([sh, 0.]); q = q0[inbb(c, yy0)]
+                    if not len(q): continue
+                    yy = Y - np.array([sh, 0.])
+                else:
+                    yy = Y - np.array([sh, 0.]); q = np.flatnonzero(inbb(c, yy))
                 if not len(q): continue
                 found, it, j, a, b = c.locate(yy[q]); q, it, j, a, b = q[found], it[found], j[found], a[found], b[found]
                 if not len(q): continue
