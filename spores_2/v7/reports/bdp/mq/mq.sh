@@ -8,3 +8,4 @@ ROUNDS=6 CAP=4000 python3 -m src.cells7.butterfly_dp lazy $A.npz > $R/lazy_$I.ou
 L=$(ls -t ${A}_lazy?.npz 2>/dev/null | head -1); [ -z "$L" ] && L=$A.npz
 FORCEPLAN=1 TRAJALL=1 python3 reports/bdp/trajdump.py $L $R/tr_$I.npz > $R/td_$I.out 2>&1
 python3 -m src.cells7.refine $R/tr_$I.npz $R/rf_$I.npz > $R/rf_$I.out 2>&1
+bash $R/drop.sh $R/rf_$I.npz "$START" 6   # п.13а: топологии после доводки (результат — rf_$I_drop.npy/.out)
