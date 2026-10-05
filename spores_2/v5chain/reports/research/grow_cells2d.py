@@ -65,6 +65,10 @@ def shape_ok(c, sl, u, L):
     return turn <= TURN and 1 / STR <= stretch <= STR and bend <= BEND and trv >= TRV and L <= LMAX
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(2)], 1)
 BBT = np.array([[0., 0.], [0., 1.]])                                                           # управление входит во вторую координату (маятник, ДИ)
+def wstep(W, A, h, sg):
+    """шаг грамиана на h (A постоянна на шаге; назад по времени A → −A): W ← Φ W Φᵀ + Q, Q = ∫₀ʰ e^{As} BBᵀ e^{Aᵀs} ds до h³ — положительно определена (Эйлер давал det < 0 у старта)."""
+    A = sg * A; Ph = np.eye(2) + h * A + h * h / 2 * A @ A; Bq = UB ** 2 * BBT
+    return Ph @ W @ Ph.T + h * Bq + h * h / 2 * (A @ Bq + Bq @ A.T) + h ** 3 / 3 * A @ Bq @ A.T
 def nerr(err, W, t):
     """ADAPT=2: отклонение среза от линейной модели в единицах «что управление успевает исправить за время t».
     gram — эллипс достижимости W(t) (линеаризация вдоль траектории спо́ры); axis — масштабы UB·t²/2 и UB·t без дрейфа; none — евклидово."""
@@ -92,6 +96,57 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .02)); BTOUCH = int(os.environ.get('BTOUCH', 0))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
+GROW = int(os.environ.get('GROW', 0)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5))   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+def grow2(p, u, idx, rm, tm):
+    """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
+    Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
+    (край покрыт > FRAC) — добираем наложение OVH·h (h = ширина/(M−1)) или 1 строку и стоп."""
+    n = normal(p, u); S = np.linspace(-rm, rm, KF); ds = S[1] - S[0]; k0 = KF // 2; nmax = int(tm / DTN + 1e-9)
+    rows = {0: p + S[:, None] * n}; Wt = {0: np.zeros((2, 2))}
+    for sg in (1, -1):
+        y = rows[0]; W = np.zeros((2, 2))
+        for i in range(1, nmax + 1):
+            y = step(y, u, float(sg)); A = jac(y[k0], u)
+            W = wstep(W, A, DTN, sg)
+            rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)                                       # эллипс энергии a²·t (куб |δu| ≤ a внутри него)
+            if not inbox(y[k0:k0 + 1]).all() or np.linalg.norm(f(y[k0], u)) < FMIN / 2: break
+    imin, imax = min(rows), max(rows)
+    def bend(klo, khi, i, Wc):
+        if khi - klo < 2: return 0.
+        P = rows[i][klo:khi + 1]; ch = P[-1] - P[0]; L = np.linalg.norm(ch)
+        if L < 1e-12: return np.inf
+        nn = np.array([-ch[1], ch[0]]) / L; d = (P[1:-1] - P[0]) @ nn; v = d[np.argmax(np.abs(d))] * nn
+        lam, Q = np.linalg.eigh(Wc); q = Q.T @ v; return float(np.sqrt(np.sum(q * q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)))))
+    def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
+        Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
+        return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
+    klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}
+    while any(act.values()):
+        for d in 'RLFB':
+            if not act[d]: continue
+            if d in 'RL':
+                k = khi + 1 if d == 'R' else klo - 1
+                if k < 0 or k >= KF: act[d] = False; continue
+                if ihi - ilo < 3 and (act['F'] or act['B']): continue                         # сначала хоть немного длины (эллипс при T → 0 вырожден)
+                col = np.array([rows[i][k] for i in range(ilo, ihi + 1)])
+                if not inbox(col).all() or not ok_rect(min(klo, k), max(khi, k), ilo, ihi) or (BARRIER is not None and nearb(col).any()): act[d] = False; continue
+                if d == 'R': khi = k
+                else: klo = k
+                if d in extra:
+                    extra[d] -= 1
+                    if extra[d] <= 0: act[d] = False
+                elif (idx.covered(col) | ~inbox(col)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
+            else:
+                i = ihi + 1 if d == 'F' else ilo - 1
+                if i not in rows: act[d] = False; continue
+                row = rows[i][klo:khi + 1]
+                if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()): act[d] = False; continue
+                if d == 'F': ihi = i
+                else: ilo = i
+                if d in extra: act[d] = False
+                elif (idx.covered(row) | ~inbox(row)).mean() > FRAC: extra[d] = 1
+    if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M)
@@ -101,6 +156,15 @@ def build_layer(u, rng, log=None):
         p = np.array([wrap(p[0]), p[1]])
         if np.linalg.norm(f(p, u)) < FMIN or idx.covered(p[None])[0]: fails += 0 if queue else 1; continue          # у равновесия потока (|f| мало) клетку не строим
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); n = normal(p, u); ext = []
+        if GROW == 2:
+            c = grow2(p, u, idx, rm, tm)
+            if c is None: fails += 0 if queue else 1; continue
+            fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+            queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
+            for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
+            if log: log(u, cells)
+            continue
         for sg in (1., -1.):                                                                  # отрезок: до соседа / края / 2·RMAX, с заходом в соседа на OVL
             ss = sg * np.arange(1, int(2 * rm / .01) + 1) * .01; P = p + ss[:, None] * n; bad = ~inbox(P) | idx.covered(P); k = int(np.argmax(bad)) if bad.any() else -1; nb_ = nearb(P); kb = int(np.argmax(nb_)) if nb_.any() else -1
             if kb >= 0 and (k < 0 or kb <= k): ext.append((abs(ss[kb - 1]) if kb > 0 else 0.) + (BEPS if BTOUCH else 0.)); continue      # барьер раньше соседа: до барьера, без захода
@@ -119,7 +183,7 @@ def build_layer(u, rng, log=None):
                     if BARRIER is not None and nearb(sl[1:-1] if BTOUCH else sl).any(): break
                     if ADAPT == 2:
                         ce = step(ce, u, float(sg)); A = jac(sl[M // 2], u)
-                        for _ in range(2): W = W + DTN / 2 * (sg * (A @ W + W @ A.T) + UB ** 2 * BBT)
+                        W = wstep(W, A, DTN, sg)
                         tng = (ce - sl[M // 2]) / EPSJ; e = nerr(sl - (sl[M // 2] + (c.r * sc0)[:, None] * tng), W, (i + 1) * DTN); el.append((e, L)); ws.append(W)
                         if SEL == 'stop' and e > DELTA: byshape = True; break
                     i += 1
