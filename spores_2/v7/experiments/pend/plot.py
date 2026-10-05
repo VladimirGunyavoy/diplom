@@ -3,7 +3,7 @@
 import numpy as np, sys, os, json, time, pickle
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
-HERE = os.path.dirname(os.path.abspath(__file__)); tag = [a for a in sys.argv[1:] if not a.startswith('--')][0]; WATCH = '--watch' in sys.argv; D = os.path.join(HERE, tag, 'data'); OUT = os.path.join(HERE, 'pics', tag + '.png'); os.makedirs(os.path.join(HERE, 'pics'), exist_ok=True)   # все картинки в одной папке, имя = номер и название эксперимента
+HERE = os.path.dirname(os.path.abspath(__file__)); tag = [a for a in sys.argv[1:] if not a.startswith('--')][0]; WATCH = '--watch' in sys.argv; D = os.path.join(HERE, tag, 'data'); OUT = os.path.join(HERE, 'pics', tag + os.environ.get('PSUF', '') + '.png'); os.makedirs(os.path.join(HERE, 'pics'), exist_ok=True)   # все картинки в одной папке, имя = номер и название эксперимента
 BIG = 1e3; INK, MUT = '#1f2328', '#6b7280'; PAL = ['#1f5fbf', '#5f6b7a', '#d9480f']; SP = '#8b2fc9'; BX = dict(boxstyle='round,pad=.25', fc='white', ec='#d0d5dd', lw=.6)
 def load(name):
     p = os.path.join(D, name)
@@ -28,13 +28,19 @@ def draw():
         V = np.where(val['V'] >= BIG / 2, np.nan, val['V']); cm = matplotlib.colors.LinearSegmentedColormap.from_list('b', plt.cm.Greens_r(np.linspace(0, .85, 64)))
         for s_ in sh: im = a.pcolormesh(val['gx'] + s_, val['gw'], V, cmap=cm, shading='auto', vmin=0, vmax=np.nanmax(V))
         cb = fig.colorbar(im, ax=a, fraction=.046, pad=.02); cb.set_label('V — время до цели, с (белое — нет пути)', color=INK); cb.outline.set_visible(False)
+    PSHOW, PALPHA = int(os.environ.get('PSHOW', 0)), float(os.environ.get('PALPHA', .6))         # показать PSHOW путей (равномерно: дальние точки по стартам), прозрачность PALPHA
+    if paths and PSHOW and len(paths) > PSHOW:
+        X0 = np.array([p['p'][0] for p in paths], float); sel = [0]; dmin = np.linalg.norm(X0 - X0[0], axis=1)
+        for _ in range(PSHOW - 1): j = int(np.argmax(dmin)); sel.append(j); dmin = np.minimum(dmin, np.linalg.norm(X0 - X0[j], axis=1))
+        paths = [paths[j] for j in sel]
+    many = len(paths or []) > 20
     for p in paths or []:
         P = p['p'].astype(float); first = True; dtn = pr.get('DTN', .06)
         acc = np.diff(P[:, 1]) / dtn - (np.sin((P[1:, 0] + P[:-1, 0]) / 2) if pr.get('SYS') == 'pend' else 0.); cols = [PAL[k] for k in np.argmin(np.abs(acc[:, None] - np.array(US)[None]), 1)]   # управление на шаге — по приращению скорости
         for s_ in sh:                                                                         # путь не рвём: рисуем целиком в каждой копии, где он виден; цвет отрезка = управление
             if P[:, 0].max() + s_ < XV[0] or P[:, 0].min() + s_ > XV[1]: continue
-            a.add_collection(LineCollection(np.stack([P[:-1] + np.array([s_, 0.]), P[1:] + np.array([s_, 0.])], 1), colors=cols, linewidths=2.2, linestyles=(0, (4, 2)), alpha=.6, zorder=4)); a.plot(P[0, 0] + s_, P[0, 1], 'o', color=INK, ms=6, mec='white', mew=1.2, zorder=5)
-            if first and XV[0] <= P[0, 0] + s_ <= XV[1]: a.annotate(('%.1f с' % p['T'] if np.isfinite(p['T']) else 'не дошёл') + ('' if p.get('ref') is None else ' / эталон %.1f' % p['ref']), (P[0, 0] + s_, P[0, 1]), (P[0, 0] + s_ + .06, P[0, 1] + .12), color=INK, fontsize=8, bbox=BX, zorder=6); first = False
+            a.add_collection(LineCollection(np.stack([P[:-1] + np.array([s_, 0.]), P[1:] + np.array([s_, 0.])], 1), colors=cols, linewidths=1.2 if many else 2.2, linestyles=(0, (4, 2)), alpha=PALPHA, zorder=4)); a.plot(P[0, 0] + s_, P[0, 1], 'o', color=INK, ms=3 if many else 6, mec='white', mew=.6 if many else 1.2, alpha=min(1., PALPHA * 1.5), zorder=5)
+            if first and not many and XV[0] <= P[0, 0] + s_ <= XV[1]: a.annotate(('%.1f с' % p['T'] if np.isfinite(p['T']) else 'не дошёл') + ('' if p.get('ref') is None else ' / эталон %.1f' % p['ref']), (P[0, 0] + s_, P[0, 1]), (P[0, 0] + s_ + .06, P[0, 1] + .12), color=INK, fontsize=8, bbox=BX, zorder=6); first = False
     a.set_title('склейка трёх атласов: цена V (зелёная) и пути агента; число у старта — время до цели\nцвет пути = управление на этом участке: синий u = %+g, серый u = %+g, оранжевый u = %+g' % tuple(US), color=INK, fontsize=10.5, loc='left')
     for a in ax[:4]:
         a.set_xlim(*XV); a.set_ylim(-WL, WL); a.set_xlabel(xn, color=INK); a.set_ylabel(yn, color=INK); a.tick_params(colors=MUT, labelsize=8)

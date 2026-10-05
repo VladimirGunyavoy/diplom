@@ -52,6 +52,8 @@ np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace
 fz = np.isfinite(T); r = T[fz] / ref[fz]
 if G.SYS == 'pend':                                                                           # пути для картинки: 7 стартов + их зеркала (−φ, −ω) — видно закрутку в обе стороны
     S0 = np.array([(2.2, 0.), (2.8, .8), (1.5, 1.2), (.8, -1.5), (2.5, -1.), (3.0, .3), (1.9, -.6)]); S = np.r_[S0, -S0]
+    PN = int(os.environ.get('PATHN', 0))                                                     # PATHN > 0 (слово пользователя 2026-10-06): старты путей — равномерная сетка по всему полю
+    if PN: nx = max(2, int(round(np.sqrt(PN * 2 * G.XL / (2 * G.WL))))); nw = max(2, PN // nx); S = np.stack(np.meshgrid(-G.XL + (np.arange(nx) + .5) * 2 * G.XL / nx, -G.WL + (np.arange(nw) + .5) * 2 * G.WL / nw), -1).reshape(-1, 2)
 else: S = np.array([[-1.3, -.6], [1.4, 1.0], [-.4, 1.3], [.9, -1.2], [-1.4, .9], [1.3, .6], [-1.4, -1.0], [.4, -1.3]])
 T2, _, p2 = A.rollout(S); paths = []
 for i in range(len(S)):
