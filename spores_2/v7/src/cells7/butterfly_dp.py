@@ -8,7 +8,7 @@ from scipy.spatial import cKDTree
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 G = float(os.environ.get('G', 1.)); M1, M2 = 1.5, 1.0; S11, S12, S22 = M1 + M2, M2, M2; MS = np.array([M1 + M2, M2])
-C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, 3.; BIG = 1e3
+C3 = np.array([np.pi / 2, 0.]); RQ, RW_, WMAX = .3, .5, float(os.environ.get('WMX', 3.)); BIG = 1e3
 OCP = float(os.environ.get('OCP', 7.636 if float(os.environ.get('G', 1.)) == 2 else 5.098))   # OCP эталон: g=1 висит→вверх 5.098, g=2 7.636
 BEAMREL, BEAMCAP = float(os.environ.get('BEAMREL', 0)), int(os.environ.get('BEAMCAP', 400))   # относительное отсечение дерева агента (0 — выкл.)
 BEAM = int(os.environ.get('BEAM', 0))   # 0 — полный перебор дерева агента (как research)
@@ -96,7 +96,7 @@ class Atlas:
     def build(s):
         Y = s.P.reshape(-1, 4); own = np.repeat(np.arange(s.K), MN); iy, k, sv, t = s.pairs(Y, own)
         f_ = (sv + R) / (2 * R) * (MN - 1); j0 = np.clip(np.floor(f_).astype(int), 0, MN - 2); a = f_ - j0
-        o = np.argsort(iy, kind='stable'); s.e = [v[o] for v in (iy.astype(int), k.astype(int), j0, a, t)]; return s
+        o = np.argsort(iy, kind='stable'); s.e = [v[o] for v in (iy.astype(int), k.astype(int), j0, a, t)]; wf_apply(s); return s
     def solve(s, it=3000, tol=1e-7):
         iy, k, j0, a, t = s.e; V = s.V.reshape(-1).copy(); fixed = s.ingoal.reshape(-1); st = np.flatnonzero(np.r_[True, iy[1:] != iy[:-1]]); nodes = iy[st]
         for n in range(it):
@@ -351,12 +351,12 @@ def grow_round(A, rng, dmin, Tb):
     near = np.unique(np.concatenate([np.asarray(b, int) for b in cKDTree(A.X[:K0]).query_ball_point(A.X[K0:], 2 * WIN)] or [np.zeros(0, int)]))
     Yo = A.P[near].reshape(-1, 4); ido = (near[:, None] * MN + np.arange(MN)).reshape(-1); out = A.pairs(Yo)
     keep = out[1].astype(int) >= K0; e_old = edges_add(A, ido, [x[keep] for x in out])
-    e = [np.r_[a, b, c] for a, b, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]
+    e = [np.r_[a, b, c] for a, b, c in zip(A.e, e_new, e_old)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; wf_apply(A)
     return len(ell), A.K - K0, dmin
 def _grow_main(N):
     t0 = time.time(); A = GrowAtlas(N, seed=int(os.environ.get('SEED', 0))); A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, K=A.K, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it, BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, ('_rrt' if RRT else '') + ('_kn%d' % KN if KN > 1 else '') + ('_nt' if NT else '') + ('_s%d' % int(os.environ.get('SEED', 0)) if os.environ.get('SEED') else '')); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, ('_rrt' if RRT else '') + ('_kn%d' % KN if KN > 1 else '') + ('_nt' if NT else '') + ('_wmx%g' % WMAX if WMAX != 3. else '') + ('_s%d' % int(os.environ.get('SEED', 0)) if os.environ.get('SEED') else '')); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     T, arcs, wm = rollout_edges(A, 81, 0.)
     print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
 def _ellipse_main(path):
@@ -392,7 +392,7 @@ def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
         A.C = np.r_[A.C, newC]; A.n = np.r_[A.n, A.n[kk]]; A.K = len(A.C); A.V = np.r_[A.V, np.full((A.K - K0, MN), BIG)]; refresh(A); A.V[A.ingoal] = 0.
         out = pre if pre is not None else A.pairs(A.C[K0:], np.arange(K0, A.K)); e_new = edges_add(A, K0 * MN + MN // 2 + MN * np.arange(A.K - K0), out)
         e_src = [iy[cand][m], tgt[m], np.full(m.sum(), MN // 2), np.zeros(m.sum()), t[cand][m]]
-        e = [np.r_[x, y, z] for x, y, z in zip(A.e, e_new, e_src)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; A.solve()
+        e = [np.r_[x, y, z] for x, y, z in zip(A.e, e_new, e_src)]; o = np.argsort(e[0], kind='stable'); A.e = [x[o] for x in e]; wf_apply(A); A.solve()
         print(json.dumps(dict(round=r, cand=int(len(cand)), new=int(A.K - K0), new_fin=int((A.V[K0:, MN // 2] < BIG / 2).sum()), spores=int(A.K), V=round(float(A.V[KS, MN // 2]), 3),
                               centers_fin=int((A.V[:, MN // 2] < BIG / 2).sum()), sec=round(time.time() - t0))), flush=True)
         if path: np.savez(path.replace('.npz', '_lazy%s%d.npz' % ('f' if LAZYFIN else '', r)), C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
@@ -403,6 +403,16 @@ def lazy_nodes(A, rounds=4, cap=4000, ocp=7.636, path=None):
     return A
 def _lazy_main(path):
     A = load(path); lazy_nodes(A, int(os.environ.get('ROUNDS', 8)), int(os.environ.get('CAP', 4000)), float(os.environ.get('OCP', 7.636)), path)
+WFILT = int(os.environ.get('WFILT', 0)); WLIM = float(os.environ.get('WLIM', 3.)); WNF = int(os.environ.get('WNF', 40))
+def wf_apply(A):
+    """w18: |w| <= WLIM вдоль дуги — при построении/добавлении рёбер (WFILT=1; NF точек, wfilter из w17 с NF=8 пропускал пики): V честная сразу."""
+    if not WFILT or not len(A.e[0]): return
+    iy, k = A.e[0], A.e[1]; Y = A.P.reshape(-1, 4); keep = np.zeros(len(iy), bool)
+    for c0 in range(0, len(iy), 20000):
+        sl = slice(c0, c0 + 20000); y = Y[iy[sl]].T; tt, u1, u2, sv, ok = solve_arcs(y, A.C[k[sl]].T, A.n[k[sl]].T); w = np.zeros(len(tt))
+        for fr in np.arange(1, WNF + 1) / WNF: z = flow(y, u1, u2, tt * fr); w = np.maximum(w, np.nan_to_num(np.abs(z[2:]).max(0), nan=99.))
+        keep[sl] = ok & (w <= WLIM)
+    A.e = [x[keep] for x in A.e]
 def wfilter(A, NF=8, path=None):
     """research-11 (PLAN п.9): |w| <= WMAX ВДОЛЬ дуги (при построении пар предел проверялся только в концах). Для каждого ребра дуга восстанавливается (solve_arcs),
     скорость меряется в NF точках; плохие рёбра удаляются, V пересчитывается."""
