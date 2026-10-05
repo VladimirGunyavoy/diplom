@@ -7,7 +7,9 @@ import numpy as np, sys, os, json, time
 SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .1)); TMAX = float(os.environ.get('TMAX', 1.5)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
-CORE = int(os.environ.get('CORE', 0)); JUMP = float(os.environ.get('JUMP', 0));   # JUMP > 0 (research-14): узлы четырёхугольника расходятся по V > JUMP — разрыв цены, берём max узлов (не обещать лишнего)
+CORE = int(os.environ.get('CORE', 0)); JUMP = float(os.environ.get('JUMP', 0)); JMODE = os.environ.get('JMODE', 'max'); JAG = int(os.environ.get('JAG', 0)); JDIR = int(os.environ.get('JDIR', 0));   # JDIR=1: разрыв — только скачок поперёк столбцов в ОБЕИХ строках (барьер вдоль потока); JMODE drop — четырёхугольник не используется
+   # JMODE near — значение узла с наибольшим весом; JAG=1 — только у агента (vstar), не в счёте V
+   # JUMP > 0 (research-14): узлы четырёхугольника расходятся по V > JUMP — разрыв цены, берём max узлов (не обещать лишнего)
 NORM = os.environ.get('NORM', 'gram'); DELTA = float(os.environ.get('DELTA', .1)); SEL = os.environ.get('SEL', 'stop'); EPSJ = 1e-5; STEPS = int(os.environ.get('STEPS', 0)); DN = float(os.environ.get('DN', .003)); MMAX = int(os.environ.get('MMAX', 9))   # STEPS=1: узлы поперёк m и шаг строк kt — из той же метрики (ошибка интерполяции ≤ DN); ADAPT=2 (research-14): ошибка линейной модели среза в локальной метрике
 RMIN = float(os.environ.get('RMIN', .01)); FMIN = float(os.environ.get('FMIN', .2)); NFAIL = int(os.environ.get('NFAIL', 400))
 if SYS == 'pend':
@@ -168,9 +170,13 @@ class Atlas:
             cr = np.concatenate(CR); hc = np.zeros(len(Y), bool); hc[I[cr]] = True; k = cr | ~hc[I]; I, IDX, W = I[k], IDX[k], W[k]
         return I, IDX, W
     @staticmethod
-    def interp(W, VI):
+    def interp(W, VI, jump=True):
         v = (W * VI).sum(1); m = W > 1e-6; bad = (m & (VI >= BIG / 2)).any(1)
-        if JUMP > 0: vm = np.where(m, VI, -np.inf).max(1); vn = np.where(m, VI, np.inf).min(1); j = vm - vn > JUMP; v = np.where(j, vm, v)
+        if JUMP > 0 and jump:
+            vm = np.where(m, VI, -np.inf).max(1); vn = np.where(m, VI, np.inf).min(1); j = vm - vn > JUMP
+            if JDIR: j = (np.abs(VI[:, 0] - VI[:, 1]) > JUMP) & (np.abs(VI[:, 2] - VI[:, 3]) > JUMP)
+            if JMODE == 'drop': bad = bad | j
+            else: v = np.where(j, vm if JMODE == 'max' else VI[np.arange(len(VI)), W.argmax(1)], v)
         v[bad] = BIG; return v
     def vstar(s, Y):
         I, IDX, W = s.stencils(Y); out = np.full(len(Y), BIG)
@@ -186,7 +192,7 @@ class Atlas:
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
         for n in range(it):
-            val = DTN + s.interp(W, V[IDX]); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
+            val = DTN + s.interp(W, V[IDX], not JAG); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
