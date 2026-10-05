@@ -124,7 +124,7 @@ class Atlas:
                 if ingoal(y[:, None])[0]: return t, wmax, sw
         return np.inf, wmax, sw
 Atlas.pairs.__defaults__ = (None, int(os.environ.get('CHUNK', 800)))                       # куски пар меньше: 4000+4000 при 3000 падали по OOM (1.5 ГБ)
-DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([-np.pi / 2, 0, 0, 0])
+DMIN0 = float(os.environ.get('DMIN', .35)); TR = int(os.environ.get('TR', 0)); UMAX = float(os.environ.get('UMAX', .9)); FR = int(os.environ.get('FR', 0)); FWD = int(os.environ.get('FWD', 0)); START = np.array([float(v) for v in os.environ['START'].split(',')]) if os.environ.get('START') else np.array([-np.pi / 2, 0, 0, 0])   # w19: START=q1,q2,w1,w2 — произвольный запрос
 def normals(C, rng):
     w = C[:, 2:]; nn = np.hypot(w[:, 0], w[:, 1]); rnd = rng.normal(size=(len(C), 2)); rnd /= np.linalg.norm(rnd, axis=1, keepdims=True)
     n = np.zeros((len(C), 4)); n[:, 0] = np.where(nn > .05, -w[:, 1] / np.maximum(nn, 1e-9), rnd[:, 0]); n[:, 1] = np.where(nn > .05, w[:, 0] / np.maximum(nn, 1e-9), rnd[:, 1]); return n
@@ -362,7 +362,7 @@ def grow_round(A, rng, dmin, Tb):
 def _grow_main(N):
     t0 = time.time(); A = GrowAtlas(N, seed=int(os.environ.get('SEED', 0))); A.build(); tp = time.time() - t0; A.solve()
     print(json.dumps(dict(N=N, K=A.K, pairs=len(A.e[0]), pairs_per_node=round(len(A.e[0]) / (A.K * MN), 1), sec_pairs=round(tp), iters=A.n_it, BIG=round(float((A.V >= BIG / 2).mean()), 3), sec=round(time.time() - t0))), flush=True)
-    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, ('_rrt' if RRT else '') + ('_kn%d' % KN if KN > 1 else '') + ('_nt' if NT else '') + ('_wmx%g' % WMAX if WMAX != 3. else '') + ('_s%d' % int(os.environ.get('SEED', 0)) if os.environ.get('SEED') else '')); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
+    out = 'butterfly_dp_grow_N%d_tr%d_fr%d_fwd%d_R%g%s%s.npz' % (N, TR, FR, FWD, R, '' if G == 1 else '_g%g' % G, ('_rrt' if RRT else '') + ('_kn%d' % KN if KN > 1 else '') + ('_nt' if NT else '') + ('_wmx%g' % WMAX if WMAX != 3. else '') + ('_s%d' % int(os.environ.get('SEED', 0)) if os.environ.get('SEED') else '') + ('_x' + os.environ['XTAG'] if os.environ.get('XTAG') else '')); np.savez(out, C=A.C, n=A.n, V=A.V, e=np.array(A.e, dtype=object), allow_pickle=True)
     T, arcs, wm = rollout_edges(A, 81, 0.)
     print(json.dumps(dict(query='висит→вверх (рёбра)', V=round(float(A.V[81, MN // 2]), 3), T=round(float(T), 3), T_over_OCP=round(float(T / OCP), 4), arcs=arcs, wmax=round(float(wm), 2), sec=round(time.time() - t0)), ensure_ascii=False), flush=True)
 def _ellipse_main(path):
