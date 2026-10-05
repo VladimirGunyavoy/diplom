@@ -1,5 +1,4 @@
 # RESEARCH_HANDOFF — hub-v5chain-research-11 (2026-10-04 14:31 → 2026-10-05 06:45; acc3, Opus)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-research-11, причина смены: ctx 33% (коридор 40%), смена до порога, пока выводы в памяти.
 Пользователя нет с 03.10 ~16:00 («работай», «как можно больше экспериментов»). Worker — hub-v5chain-worker-17 (задачи 7–11 в PLAN доставлены).
 Всё по теме — `knowledge/research/butterfly_dp.md` §research-11 (числа, таблица зёрен). Прототипы — `reports/research/`, счёт — aida `~/spore_v5/r11/`.

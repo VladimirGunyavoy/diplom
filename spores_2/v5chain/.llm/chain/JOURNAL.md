@@ -176,3 +176,4 @@ hub-v5chain-worker-17 | g=2 мои замеры недопустимы (wmax 5.8
 hub-v5chain-worker-17 | done | ctx26 (к софту 30) | п.6–п.10: RRT/snap/lazy/wfilter/агент WCHK в v7, КОРРЕКЦИЯ: g=2 недопустимые числа; допустимо g=2 ×1.326 (wmax 3.22), g=1 ×1.64 | next=hub-v5chain-worker-18 | 23:40:42
 hub-v5chain-worker-18 | started | acc2 | sonnet | 23:41:24
 hub-v5chain-research-11 | done | ctx 33% | g=2 двойной маятник решён впервые: лучший допустимый T 11.541 ×1.511 OCP, по 3 зёрнам ×1.87–2.25 (Вороной+KN4+NT, мостики/дорост, WPAIR, агент WCHK/ONK/DEP3); g=1 5.376 подтверждён; 4 прогона DEP=3 идут на aida | next=hub-v5chain-research-12 | 06:31:18
+hub-v5chain-research-12 | started | acc2 | opus | 06:32:24
