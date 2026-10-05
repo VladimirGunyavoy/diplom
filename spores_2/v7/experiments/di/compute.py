@@ -1,5 +1,5 @@
 """«Трейн» для 2D систем на общем ядре v5chain/reports/research/grow_cells2d.py: считает и пишет данные в <эксперимент>/data/ (картинку рисует plot.py).
-Запуск из этой папки: [SYS=pend] [TMAX=1.5] [OVL=.05] ... python3 compute.py 01_имя-эксперимента"""
+Запуск из этой папки: SYS=di [ADAPT=2 ... REFINE=2 RTOL=.05] python3 compute.py NN_имя (копия pend/compute.py — общее ядро grow_cells2d.py)"""
 import numpy as np, sys, os, json, time, pickle
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, '../../../v5chain/reports/research'))
 import grow_cells2d as G
