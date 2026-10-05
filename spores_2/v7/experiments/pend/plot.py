@@ -15,11 +15,16 @@ def draw():
     sh = [0.] if not PER else [k * PER for k in (-1, 0, 1, 2)]; XV = (-XL, XL) if not PER else (-1., 7.); fig, ax = plt.subplots(2, 3, figsize=(22, 13.8), dpi=100); fig.patch.set_facecolor('white'); ax = ax.ravel(); xn = 'угол φ (0 и 2π — верх, π — низ; полоса шире периода, часть точек видна дважды)' if pr.get('SYS') == 'pend' else 'положение x'; yn = 'угловая скорость ω' if pr.get('SYS') == 'pend' else 'скорость v'
     for k, (a, u) in enumerate(zip(ax, US)):
         cl = [c for c in cells if abs(c['u'] - u) < 1e-9]
+        SPMS, CLMS = float(os.environ.get('SPMS', 6.5)), float(os.environ.get('CLMS', 2.2)); msz = {}
+        if int(os.environ.get('ADMS', 0)) and len(cl) > 1:                                    # ADMS=1 (слово пользователя 2026-10-06): размер точки по расстоянию до ближайшей споры на экране — густо → мелко
+            from scipy.spatial import cKDTree; bb = a.get_position(); kx = bb.width * fig.get_figwidth() * 72 / (XV[1] - XV[0]); kw = bb.height * fig.get_figheight() * 72 / (2 * WL)
+            C = np.array([c['c'] for c in cl], float); CC = np.concatenate([C + np.array([s_, 0.]) for s_ in ([0.] if not PER else [-PER, 0., PER])]) * np.array([kx, kw]); dd, _ = cKDTree(CC).query(C * np.array([kx, kw]), 2)
+            for i, c in enumerate(cl): sp = float(np.clip(.6 * dd[i, 1], .8, SPMS)); msz[id(c)] = (sp, float(np.clip(.4 * sp, .5, CLMS)))
         for c in cl:
             g = c['G'].astype(float); g = g[:, g.shape[1] // 2:g.shape[1] // 2 + 1] + (g - g[:, g.shape[1] // 2:g.shape[1] // 2 + 1]) / 1.1; pg = np.r_[g[:, 0], g[::-1, -1]]; seg = g[[i for i in range(len(g)) if np.allclose(g[i, 2], c['c'], atol=1e-4)] or [0]][0]   # только ядро (без гало 10%)
             for s in sh:
                 if pg[:, 0].max() + s < XV[0] or pg[:, 0].min() + s > XV[1]: continue
-                a.fill(pg[:, 0] + s, pg[:, 1], fc=PAL[k], alpha=.15, ec=PAL[k], lw=.8); a.plot(seg[:, 0] + s, seg[:, 1], '-', color=INK, lw=1.1); a.plot(seg[[0, 1, 3, 4], 0] + s, seg[[0, 1, 3, 4], 1], 'o', color=INK, ms=2.2); a.plot(c['c'][0] + s, c['c'][1], 'o', color=SP, ms=float(os.environ.get('SPMS', 6.5)), mec='white', mew=.8, zorder=5)
+                a.fill(pg[:, 0] + s, pg[:, 1], fc=PAL[k], alpha=.15, ec=PAL[k], lw=.8); a.plot(seg[:, 0] + s, seg[:, 1], '-', color=INK, lw=1.1); a.plot(seg[[0, 1, 3, 4], 0] + s, seg[[0, 1, 3, 4], 1], 'o', color=INK, ms=msz.get(id(c), (SPMS, CLMS))[1]); a.plot(c['c'][0] + s, c['c'][1], 'o', color=SP, ms=msz.get(id(c), (SPMS, CLMS))[0], mec='white', mew=min(.8, .15 * msz.get(id(c), (SPMS, CLMS))[0]), zorder=5)
         cov = (st.get('cover') or [None] * 3)[k]; con = (st.get('contact') or [None] * 3)[k]
         a.set_title('атлас u = %+g: спор %d%s%s' % (u, len(cl), '' if cov is None else ', покрыто %.1f%%' % (100 * cov), '' if not con or con.get('all4') is None else '\nсоседи со всех 4 сторон у %.0f%% спор (бока %.0f%%, торцы %.0f%%)' % (100 * con['all4'], 100 * con['side'], 100 * con['end'])), color=INK, fontsize=11, loc='left')
         a.text(.02, .02, 'фиолетовая точка — спора, чёрные — её клоны на нормальном отрезке;\nзакрашено — клетка (отрезок, пронесённый потоком этого u вперёд и назад)', transform=a.transAxes, color=INK, fontsize=8.5, bbox=BX, va='bottom')
@@ -39,7 +44,7 @@ def draw():
         acc = np.diff(P[:, 1]) / dtn - (np.sin((P[1:, 0] + P[:-1, 0]) / 2) if pr.get('SYS') == 'pend' else 0.); cols = [PAL[k] for k in np.argmin(np.abs(acc[:, None] - np.array(US)[None]), 1)]   # управление на шаге — по приращению скорости
         for s_ in sh:                                                                         # путь не рвём: рисуем целиком в каждой копии, где он виден; цвет отрезка = управление
             if P[:, 0].max() + s_ < XV[0] or P[:, 0].min() + s_ > XV[1]: continue
-            a.add_collection(LineCollection(np.stack([P[:-1] + np.array([s_, 0.]), P[1:] + np.array([s_, 0.])], 1), colors=cols, linewidths=1.2 if many else 2.2, linestyles=(0, (4, 2)), alpha=PALPHA, zorder=4)); a.plot(P[0, 0] + s_, P[0, 1], 'o', color=INK, ms=3 if many else 6, mec='white', mew=.6 if many else 1.2, alpha=min(1., PALPHA * 1.5), zorder=5)
+            a.add_collection(LineCollection(np.stack([P[:-1] + np.array([s_, 0.]), P[1:] + np.array([s_, 0.])], 1), colors=cols, linewidths=1.2 if many else 2.2, linestyles=(0, (4, 2)), alpha=PALPHA, zorder=4)); a.plot(P[0, 0] + s_, P[0, 1], 'o', color=INK, ms=float(os.environ.get('STMS', 3)) if many else 6, mec='white', mew=.6 if many else 1.2, alpha=min(1., PALPHA * 1.5), zorder=5)
             if first and not many and XV[0] <= P[0, 0] + s_ <= XV[1]: a.annotate(('%.1f с' % p['T'] if np.isfinite(p['T']) else 'не дошёл') + ('' if p.get('ref') is None else ' / эталон %.1f' % p['ref']), (P[0, 0] + s_, P[0, 1]), (P[0, 0] + s_ + .06, P[0, 1] + .12), color=INK, fontsize=8, bbox=BX, zorder=6); first = False
     a.set_title('склейка трёх атласов: цена V (зелёная) и пути агента; число у старта — время до цели\nцвет пути = управление на этом участке: синий u = %+g, серый u = %+g, оранжевый u = %+g' % tuple(US), color=INK, fontsize=10.5, loc='left')
     for a in ax[:4]:
@@ -51,7 +56,7 @@ def draw():
         for sp in a.spines.values(): sp.set_color('#d0d5dd')
     a = ax[4]                                                                                 # статистика 1: качество по стартам
     if ag is not None and np.isfinite(ag['T']).any():
-        fz = np.isfinite(ag['T']); r = ag['T'][fz] / ag['ref'][fz]; a.hist(r, bins=np.arange(.95, max(1.6, r.max() + .05), .025), color='#2f8f5b', ec='white', lw=.6)
+        fz = np.isfinite(ag['T']); r = ag['T'][fz] / ag['ref'][fz]; bw = .025; cx = np.round(np.arange(.95, max(1.6, r.max() + .05), bw), 4); cnt = np.bincount(np.clip(np.round((r - cx[0]) / bw).astype(int), 0, len(cx) - 1), minlength=len(cx)); a.bar(cx, cnt, width=.7 * bw, align='center', color='#2f8f5b', ec='none')   # столбец по центру своего значения (слово пользователя: уже, центр под меткой x)
         for v, nm, ls in ((np.median(r), 'медиана %.3f' % np.median(r), '-'), (r.mean(), 'среднее %.3f' % r.mean(), (0, (4, 3)))): a.axvline(v, color=INK, lw=1.3, ls=ls); a.text(v, a.get_ylim()[1] * (.95 if ls == '-' else .85), ' ' + nm, color=INK, fontsize=9, va='top')
         a.axvline(1., color=MUT, lw=.8); a.set_title('качество агента: время / эталон, %d стартов (не дошли: %d)\nпереключений: медиана %.0f, макс %d' % (len(fz), int((~fz).sum()), np.median(ag['sw'][fz]), int(ag['sw'][fz].max())), color=INK, fontsize=10.5, loc='left')
         a.set_xlabel('время агента / эталонное время (1 — как эталон)', color=INK); a.set_ylabel('число стартов', color=INK)
