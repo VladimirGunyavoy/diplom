@@ -180,3 +180,4 @@ hub-v5chain-research-12 | started | acc2 | opus | 06:32:24
 hub-v5chain-worker-18 | incident | удалил v7/sessions_task_log (task_log писал туда из-за cwd): session_hub-worker-10 восстановлен git, session_hub-worker-14 (v7, untracked) утрачен; копия в v5chain/sessions_task_log цела | 07:02:34
 hub-v5chain-worker-18 | done | ctx 25% (заранее, п.14 тяжёлая) | g=2 честно + доводка IPOPT в v7 (×1.0016…1.26) | next=hub-v5chain-worker-19 | 09:30:39
 hub-v5chain-worker-19 | started | acc3 | sonnet | 09:31:23
+hub-v5chain-research-12 | done | ctx 27% | двойной маятник: путь атласа + доводка коридора IPOPT + топологии — g .3 ×1.000, g 1 ×1.01, g 2 ×1.002 (2/4) / ×1.066; многозапросность 6/8; задачи worker'у 12–14, 13а | next=hub-v5chain-research-13 | 12:24:09
