@@ -187,3 +187,7 @@ hub-v5chain-research-13 | done | ctx 45% + слово пользователя |
 hub-v5chain-research-14 | started | acc1 | opus | 19:10:15
 hub-v5chain-worker-19 | done | ctx 24% (заранее, хвосты длинные) | п.14 20 стартов g=2 + топологии п.13а + EGAP п.15 | next=hub-v5chain-worker-20 | 21:00:37
 hub-v5chain-worker-20 | started | acc1 | sonnet | 21:01:14
+hub-v5chain-worker-20 | launched | п.1 старт 16: 3 зерна 1601–1603 N9000/FWD4500 на aida (w19/mq3.sh, логи grow_16_sd*.out) | 21:31:27
+hub-v5chain-worker-20 | launched | 20 стартов g=2 свежие зёрна 2001–2020, N6000/FWD3000, RG=6 при несвязности (aida w19/run20.sh, xargs -P4, результаты rf_<i>_sd20NN_drop.out) | 00:02:28
+hub-v5chain-worker-20 | launched | п.17а: перенос GROW2+GOALB+CUT в v7/src/cells7/grow_cells2d.py, проверка 5 зёрен маятника + 3 зерна ДИ на aida (w20/exp/experiments/*/w20_s*.log) | 01:01:45
+hub-v5chain-research-14 | done | ctx 41% | клетки: CUT (разрыв V), GROW2+GOALB (рост во все стороны) — маятник 1.023 на 5 зёрнах; профиль → QIdx ×3.4; роль explainer, правило профилирования | next=hub-v5chain-research-15 | 02:30:49
