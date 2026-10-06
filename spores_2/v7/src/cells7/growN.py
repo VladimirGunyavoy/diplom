@@ -238,10 +238,22 @@ def build_layer(u, rng, log=None):
                 for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
         if COVTOL > 0 and len(cells) % COVN == 0:                                                               # w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL
             pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
+            if E('COVDBG') and len(pr): print('cov', len(cells), 'непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), 'проб', len(pr), flush=True)
             if len(pr) and 1. - idx.covered(wrapy(pr)).mean() < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), flush=True); break
         if log: log(u, cells)
     bar.close(); return cells, idx
 def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
+_PQ = None
+def _pq_work(a): return tuple(_PQ.query(a[1])[:3]) + (a[0],)
+def _pquery(qx, Y):
+    """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
+    global _PQ
+    k = int(E('SPAR', 0))
+    if k <= 1 or len(Y) < 50000: return qx.query(Y)
+    from multiprocessing import Pool
+    _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
+    with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
+    return np.concatenate([r[0] + r[3] for r in R]), np.concatenate([r[1] for r in R]), np.concatenate([r[2] for r in R])
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -259,7 +271,8 @@ class Atlas:
             s.qx = HexIdx()
             for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
-        Y = wrapy(Y); pi, hid, sc = s.qx.query(Y)
+        Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
+        if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
         ii = s.qx.I[hid].astype(np.int64); cid = ii[:, 0]; stv = np.array([M ** (m_ - k) for k in range(N)]); base = s.O[cid] + (ii[:, 1:] * stv).sum(1); off = VOFF @ stv
         W = np.prod(np.where(VOFF[None] == 1, sc[:, None, :], 1 - sc[:, None, :]), 2)
@@ -324,7 +337,9 @@ if __name__ == '__main__':
     if E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
     else:
         A = Atlas(); tb = time.time() - t0
-        print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref()
+        print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True)
+        if E('DUMPL'): import pickle; pickle.dump(dict(layers=A.layers), open(E('DUMPL'), 'wb')); print('слои сохранены', E('DUMPL'), flush=True)   # w22: после потери 2-часового построения — слои на диск до solve
+        A.solve(); Q, ref = starts_ref()
         if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V), open(E('DUMP'), 'wb'))
     T, sw, _ = A.rollout(Q); fz = np.isfinite(T) & np.isfinite(ref); r = T[fz] / ref[fz]
     print(json.dumps(dict(SYS=SYS, DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(np.isfinite(T).mean()), 3),

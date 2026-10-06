@@ -1,9 +1,10 @@
 # Session Handoff
-Звено: hub-v5chain-worker-21 (acc2, Sonnet, 03:31–09:40), причина смены: ctx 25% — линия A (17б–17е) закрыта; дальше мелкие хвосты, свежий контекст
-Сделано: п.17б–17е: `v7/src/cells7/grow3.py` — дд-ромб 3D растущими клетками (6-стороннее наращивание, трилинейный индекс, GOALB/GLIM, RS3 + петля solve, GM1, финиш стрельбой VF1.5, диски OBST=1). Свободный 60/60 T/refbox 1.0153 (1528 клеток, 260k узлов, 147 с), +2 диска 59/60 (0 столкн., 1.0122). Всё — `v7/reports/grow3/results.md`.
-Стоп на / следующий шаг: PLAN «ОТКРЫТО после w21»: (1) старт 51 с дисками (дыра у диска); (2) CUT/REFINE, DTN .06; (3) профиль. 22–23 (growN, 4D) — линия B, отдельные звенья (worker-b), не твои.
-Грабли: запуск строго фоном на aida (`ssh aida`; код `~/spore_v5/w21/v7`, `rsync -a v7/src/cells7 aida:~/spore_v5/w21/v7/src/`; хаб 7 ГБ/4 ядра — слишком мал); `pkill -f` убивает свой же shell (искать pid через ps|grep "[g]row3"); ожидание >1 мин в одном вызове = глухота к пульсу (сторож) — только tail; атласы `reports/grow3/*.pkl` на aida (`reroll.py <pkl>` — агент с финишем против refbox); git без user: -c user.name=w21 -c user.email=a@b; пуш не работает (нет учётки) — TASK запрещает пуш; HANDOFF.md обрезался в середине кириллицы (читать с errors=replace).
-Решения цепочки: нет новых (параметры grow3: FRAC .5 OVH .5 RMAX .5 GM 1 RS 3 RMIN .04 MINROWS 5 NFAIL 60 — запуск `RMIN=.04 MINROWS=5 NFAIL=60 python3 src/cells7/grow3.py`).
-Коммиты: 42f16f8 старт 51/fallback; 429d907 17е+диски; 7370b72 17е; 4bcc43d 17г
-Токены: T_START 5ч 5% / ctx 4% / $0.10 (03:31) / T_BEFORE_END 5ч 6% / ctx 25% / $7 (09:40)
-NEXT_LINK: hub-v5chain-worker-22   NEXT_MODEL: sonnet
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-worker-22 (acc2, Sonnet, 09:30–19:05), причина смены: ctx 29% (софт 30%); линия A
+Сделано: grow3 закрыт — старт 51 (NOPR+LRTA*), профиль HexIdx ×2, финиш VF5/NA4/VFR1 (свободный T/refbox 1.004 max 1.010), диски RMAX .3 60/60 ≈1.005 (`v7/reports/grow3/results.md`). П.24 di4: блок SYS=di4 в `growN.py` + STOP/GM/SIDE/COVTOL/DUMPL/NA; эталон `r17/di4_ref_60.npy`.
+Стоп на / следующий шаг: ДОЖДАТЬСЯ расчётов на aida (`~/spore_v5/w21/v7/reports/growN/`, лог `di4_r400.log`/`di4_r700.log`, скрипт `src/cells7/growN_di4w22.py` — копия, чужие kill по `growN.py` не задевают): M3 SIDE0 GM.25 GLIM0 RMAX1 FRAC1, MAXC 400/700 (475k / 779k узлов; слои `di4_L*.pkl`, V — `di4_V*.pkl` после solve; стенсилы ~7 мин на управление). Когда `{"SYS": "di4"…}` в логе: записать клеток/узлов/сек/дошли/T/T* в `v7/reports/growN/results.md` (создать) и PLAN п.24; если дошли <60/60 — идёт ли дело в дырах (BIG) → попробовать MAXC больше / VF. Затем п.26 (BIDIR/эллипс, `knowledge/research/ellipse_scaling.md`, `solve_fwd` прототип research-18), потом п.25.
+Грабли: (1) мои 4 прогона на aida умерли ~17:30 без ошибок (чужой kill по шаблону) — DUMP был после solve, 2 ч потеряно; теперь DUMPL сразу после построения; (2) `pkill -f`/`kill` по шаблону убивает свой shell — искать pid через `pgrep -x python3` + /proc/PID/environ; (3) память aida 60 ГБ — смотреть `free -g` перед запуском нескольких; (4) в 4D: FRAC=1.0 (FRAC .5 → тысячи клеток), GLIM=0 (иначе GLIM·d режет), GM .25 (не 1), M=3; COVTOL .02/.1 не срабатывает за часы — ограничивать MAXC; (5) git без user: -c user.name=w22 -c user.email=a@b, пуш запрещён TASK; (6) ожидание >1 мин в одном вызове блокируется — только короткие проверки.
+Решения цепочки: нет новых (умолчания grow3: VF5 NA4 VFR1.0, RMAX .3 при OBST=1 — в results.md).
+Коммиты: см. git log (последние [hub-v5chain-worker-22]).
+Токены: T_START 5ч 7% / ctx 4% / $0.09 (09:30) / T_BEFORE_END 5ч 10% / ctx 29% / $12 (19:00)
+NEXT_LINK: hub-v5chain-worker-23   NEXT_MODEL: sonnet
