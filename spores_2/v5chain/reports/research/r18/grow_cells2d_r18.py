@@ -185,15 +185,25 @@ def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None, brk=True):
         ke = i * NFSUB
         if ke >= K: break
         c = X[ke, nc]; fh = f(c, u); fh = fh / np.linalg.norm(fh)
-        if NFLAG:                                                                              # research-16: пересечение строки i — ПЕРВОЕ после пересечения строки i−1 этим же столбцом (у седла столбцы отстают от центра в разы; окно ±NFMARG от времени центра их убивало)
+        if NORMFRONT == 2:                                                                     # research-19 (идея пользователя): торец — ЛОМАНАЯ, почти нормальная каждому клону: от центра c_i наружу, клон j — пересечение его траектории с прямой через узел соседа (ближе к центру) ⟂ потоку В ЭТОМ узле
+            ks = np.floor(tprev * NFSUB + 1e-9).astype(int); k0 = int(ks.min()); k1 = min(K - 1, int(ks.max()) + NFLAG * NFSUB); ar = np.arange(k0, k1)
+            P = X[ke, :nc].copy(); t = np.full(nc, float(ke)); has = np.zeros(nc, bool); oo = np.asarray(offs); od = np.argsort(oo)
+            for side in ([j_ for j_ in od if oo[j_] >= 0], [j_ for j_ in od[::-1] if oo[j_] < 0]):
+                pp = c
+                for j_ in side:
+                    fj = f(pp, u); fj = fj / np.linalg.norm(fj); gj = sg * ((X[k0:k1 + 1, j_] - pp) @ fj); cj = (gj[:-1] <= 0) & (gj[1:] > 0) & (ar >= ks[j_])
+                    if not cj.any(): continue
+                    kj = int(cj.argmax()); wj = -gj[kj] / (gj[kj + 1] - gj[kj] if gj[kj + 1] != gj[kj] else 1.); has[j_] = True; t[j_] = k0 + kj + wj; P[j_] = X[k0 + kj, j_] * (1 - wj) + X[k0 + kj + 1, j_] * wj; pp = P[j_]
+        elif NFLAG:                                                                            # research-16: пересечение строки i — ПЕРВОЕ после пересечения строки i−1 этим же столбцом (у седла столбцы отстают от центра в разы; окно ±NFMARG от времени центра их убивало)
             ks = np.floor(tprev * NFSUB + 1e-9).astype(int); k0 = int(ks.min()); k1 = min(K - 1, int(ks.max()) + NFLAG * NFSUB)
             g = sg * ((X[k0:k1 + 1, :nc] - c) @ fh); cr = (g[:-1] <= 0) & (g[1:] > 0) & (np.arange(k0, k1)[:, None] >= ks[None]); has = cr.any(0); kk = cr.argmax(0); j = np.arange(nc)
         else:
             k0 = max(0, int(ke - NFMARG * ke) - NFSUB); k1 = min(K - 1, int(ke + NFMARG * ke) + NFSUB)
             g = sg * ((X[k0:k1 + 1, :nc] - c) @ fh); cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
             kk = np.where(cr, np.abs(np.arange(k0, k1)[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(nc)
-        ga, gb = g[kk, j], g[kk + 1, j]; w = np.where(has, -ga / np.where(gb - ga == 0, 1., gb - ga), 0.); t = k0 + kk + w
-        P = X[k0 + kk, j] * (1 - w)[:, None] + X[k0 + kk + 1, j] * w[:, None]
+        if NORMFRONT != 2:
+            ga, gb = g[kk, j], g[kk + 1, j]; w = np.where(has, -ga / np.where(gb - ga == 0, 1., gb - ga), 0.); t = k0 + kk + w
+            P = X[k0 + kk, j] * (1 - w)[:, None] + X[k0 + kk + 1, j] * w[:, None]
         bad = ~has | (t / NFSUB <= tprev + 1e-9)
         if strict == 'mask':                                                                   # research-16: годность ПО СТОЛБЦАМ (не обрывать всю строку из-за дальнего столбца-кандидата за сепаратрисой)
             dead |= bad; P = np.where(dead[:, None], X[ke, :nc], P); t = np.where(dead, ke, t)
