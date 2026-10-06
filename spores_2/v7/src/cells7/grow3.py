@@ -7,8 +7,8 @@ import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
 E = os.environ.get
 M = 5; BIG = 1e3; HALO = .1; PER = 2 * np.pi; EPSJ = 1e-5
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21)); RS = int(E('RS', 3))
-OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); XL = float(E('XL', 2.5)); QB = float(E('QB', .25))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .5)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21)); RS = int(E('RS', 3))
+OVH = float(E('OVH', .5)); FRAC = float(E('FRAC', .5)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); XL = float(E('XL', 2.5)); QB = float(E('QB', .25))
 US = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.)); SH = (0., PER, -PER)
 def f(y, u): th = y[..., 2]; return np.stack([u[0] * np.cos(th), u[0] * np.sin(th), u[1] + 0 * th], -1)
 def wrap(th): return (th + np.pi) % PER - np.pi
@@ -22,6 +22,8 @@ def ingoal(y): return (np.abs(y[..., 0]) <= RHO + 1e-9) & (np.abs(y[..., 1]) <= 
 OBST = int(E('OBST', 0)); DISCS = [(1., .3, .45), (-.8, -.9, .4)] if OBST else []               # 17г: two discs, same as v7/reports/bdd/obst_ref.py (reference dd_obst_ref_KB60_NG21.npy)
 def dobs(y): return np.min([np.hypot(y[..., 0] - cx, y[..., 1] - cy) - r for cx, cy, r in DISCS], 0) if DISCS else np.full(np.shape(y[..., 0]), 9.)   # signed distance to the nearest disc
 def inbox(y): return (np.abs(y[..., 0]) <= XL) & (np.abs(y[..., 1]) <= XL) & (dobs(y) > 0)
+GM = float(E('GM', 1.))
+def inbox_g(y): return (np.abs(y[..., 0]) <= XL + GM) & (np.abs(y[..., 1]) <= XL + GM) & (dobs(y) > 0)   # r17 GM: cells may grow GM beyond the field (seeds stay inside); the field border no longer cuts cell length
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(3)], 1)
 def bbt(th): c, s = np.cos(th), np.sin(th); return np.array([[c * c, c * s, 0], [c * s, s * s, 0], [0, 0, 1.]])            # B = ∂f/∂(v, ω), |δu| ≤ 1 в обоих каналах
 def wstep(W, A, Bq, h, sg):
@@ -118,7 +120,7 @@ def grow3(p, u, idx, rm, tm):
         y = base; yc = p.copy(); W = np.zeros((3, 3))
         for i in range(1, nmax + 1):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), bbt(yc[2]), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
-            if not inbox(yc): break
+            if not inbox_g(yc): break
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
     def bend(k1lo, k1hi, k2lo, k2hi, ilo, ihi):
         n1, n2 = k1hi - k1lo + 1, k2hi - k2lo + 1
@@ -142,21 +144,21 @@ def grow3(p, u, idx, rm, tm):
                     k = k2hi + 1 if pl else k2lo - 1
                     if k < 0 or k >= KF: act[d] = False; continue
                     face = R[ilo - imin:ihi - imin + 1, k1lo:k1hi + 1, k].reshape(-1, 3); nr = (k1lo, k1hi, min(k2lo, k), max(k2hi, k))
-                if not inbox(face).all() or bend(*nr, ilo, ihi) > DELTA or (BARRIER is not None and nearb(face).any()): act[d] = False; continue
+                if not inbox_g(face).all() or bend(*nr, ilo, ihi) > DELTA or (BARRIER is not None and nearb(face).any()): act[d] = False; continue
                 k1lo, k1hi, k2lo, k2hi = nr
                 if d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: act[d] = False
-                elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * ((k1hi - k1lo) if d[0] == 'a' else (k2hi - k2lo)) / (M - 1)))
+                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * ((k1hi - k1lo) if d[0] == 'a' else (k2hi - k2lo)) / (M - 1)))
             else:
                 i = ihi + 1 if d == 'F' else ilo - 1
                 if i < imin or i > imax: act[d] = False; continue
                 face = R[i - imin, k1lo:k1hi + 1, k2lo:k2hi + 1].reshape(-1, 3)
-                if not inbox(face).all() or bend(k1lo, k1hi, k2lo, k2hi, min(ilo, i), max(ihi, i)) > DELTA or (BARRIER is not None and nearb(face).any()): act[d] = False; continue
+                if not inbox_g(face).all() or bend(k1lo, k1hi, k2lo, k2hi, min(ilo, i), max(ihi, i)) > DELTA or (BARRIER is not None and nearb(face).any()): act[d] = False; continue
                 if d == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False
-                elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = 1
+                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r1 = (S[k1hi] - S[k1lo]) / 2; r2 = (S[k2hi] - S[k2lo]) / 2
     near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
