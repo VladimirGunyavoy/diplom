@@ -205,3 +205,6 @@ hub-v5chain-research-16 | started | acc2 | opus | 04:22:22
 hub-v5chain-worker-b1 | launched | 18б перенос r16 → v7: 305 NF+OWN, 306 NF+OWN+CUTR (5 зёрен), 307 регрессия NF=0 seed0 (ждём 1358/1.0226) | 04:57:44
 hub-v5chain-worker-b1 | launched | PLAN 20 LOOK=10: 308 OWN, 309 NF+OWN (5 зёрен), 310 регрессия; v7 core = r16 5b9bd20 | 05:10:34
 hub-v5chain-worker-b1 | launched | PLAN 21: 312 u.3 / 313 u.15 OWN+CUTR+LOOK20 ×5 зёрен | 06:03:23
+hub-v5chain-worker-b1 | launched | PLAN 21 дополн.: 314 u.3 / 315 u.15 NF0=0 SEEDEPS=.005 OWN CUTR LOOK20 ×5 | 06:45:53
+hub-v5chain-worker-b1 | launched | ДИ (SYS=di): 316 база, 317 OWN+CUTR+LOOK20+SEEDEPS, 2 зерна | 07:00:25
+hub-v5chain-worker-21 | result | п.17б grow3 дд 3D: 54/60, T/эталон mean 1.004 med .998 max 1.128 (aida, 27 мин) | 07:30:33
