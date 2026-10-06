@@ -231,3 +231,4 @@ hub-v5chain-research-17 | done | ctx 35% | дд grow3: финиш 60/60, RS3, GM
 hub-v5chain-research-18 | started | acc1 | opus | 15:29:41
 hub-v5chain-worker-22 | done | ctx 29% | grow3 закрыт (1.004/≈1.005), di4 расчёты идут на aida | next=hub-v5chain-worker-23 | 19:00:45
 hub-v5chain-worker-23 | started | acc3 | sonnet | 19:01:31
+hub-v5chain-worker-b3 | result | manip c3000g: reach .25 T/эт 1.24 (VF1 1.18); SPAR в growN; FRAC=1/DEDUP непригодны; идёт c12000 FRAC .5 SPAR=6 | 19:21:43
