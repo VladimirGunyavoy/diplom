@@ -12,7 +12,7 @@ def poly(c): g = c.G; return np.r_[g[:, 0], g[-1, 1:-1], g[::-1, -1], g[0, -2:0:
 def curv(c):                                                                                         # кривизна торцов: max по строкам (отклонение узлов от хорды) / длина хорды
     g = c.G; a_, b_ = g[:, 0], g[:, -1]; ch = b_ - a_; L = np.linalg.norm(ch, axis=1) + 1e-12; nrm_ = np.c_[-ch[:, 1], ch[:, 0]] / L[:, None]
     return float((np.abs(((g - a_[:, None]) * nrm_[:, None]).sum(-1)).max(1) / L).max())
-OUT = os.environ['OUT']; XR = float(os.environ.get('XR', 5.)); SHS = (0., 2 * np.pi, -2 * np.pi, 4 * np.pi, -4 * np.pi)   # XR: показывать θ ∈ [−XR, XR] с повторами через период (слово пользователя)
+OUT = os.environ['OUT']; XR = float(os.environ.get('XR', 6.)); SHS = (0., 2 * np.pi, -2 * np.pi, 4 * np.pi, -4 * np.pi)   # XR: показывать θ ∈ [−XR, XR] с повторами через период (слово пользователя)
 if os.environ['MODE'] == 'map':
     BAR = np.load(os.environ['BARRIER']); CV = os.environ.get('COLOR', 'stretch') == 'curv'; st = np.array([curv(c) if CV else max(wl(c.G[-1]) / wl(c.G[0]), wl(c.G[0]) / wl(c.G[-1])) for c in cells]); nrm = Normalize(0, .15) if CV else LogNorm(1, 15); cm = plt.cm.YlOrRd; from matplotlib.path import Path
     gq = np.stack(np.meshgrid(np.linspace(-np.pi, np.pi, 161), np.linspace(-G.WL, G.WL, 141)), -1).reshape(-1, 2); print('θ клеток: min %.2f max %.2f' % (min(c.G[..., 0].min() for c in cells), max(c.G[..., 0].max() for c in cells)))

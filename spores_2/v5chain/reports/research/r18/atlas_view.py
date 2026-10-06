@@ -5,7 +5,7 @@ plt.rcParams.update({'font.size': 11})
 D = sys.argv[1]; OUT = sys.argv[2]; TITLE = sys.argv[3]; RHO = .1; WL = 3.5
 cells = pickle.load(open(os.path.join(D, 'cells.pkl'), 'rb')); v = np.load(os.path.join(D, 'value.npz')); ok = (v['V'] < 500).astype(float); US = sorted({c['u'] for c in cells})
 fig, axs = plt.subplots(2, 3, figsize=(27, 14), constrained_layout=True)
-for r, (xl, yl) in enumerate((((-5., 5.), (-WL, WL)), ((-1.3, 1.3), (-1., 1.)))):
+for r, (xl, yl) in enumerate((((-6., 6.), (-WL, WL)), ((-1.3, 1.3), (-1., 1.)))):
     for ax, u in zip(axs[r], US):
         for c in cells:
             if c['u'] != u: continue
