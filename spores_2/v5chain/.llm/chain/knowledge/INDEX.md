@@ -57,3 +57,4 @@
 - [research/growN_4d.md](research/growN_4d.md) — growN 4D: covered() верен; число клеток = объём поля / объём клетки (~800/слой DI 4D), FRAC 1 ×10 меньше, GM в 4D ×3.8 объёма (research-17)
 - [research/ellipse_scaling.md](research/ellipse_scaling.md) — выход из экспоненты по n: атлас под запрос — эллипс T_s+V ≤ (1+ε)C (доля поля 7e-3 в 4D, 3e-4 в 6D); двунапр. рост накрывает его без эвристики; грубая оценка не годится (√d у концов) (research-18)
 - [research/lit_separatrix_detection.md](research/lit_separatrix_detection.md) — литобзор: автопоиск разрывов V/сепаратрис (ПМП-экстремали, эпиграф, полиномиальная аннигиляция; nD-метода с гарантиями нет; PDF не прочитаны) (searcher-1)
+- [research/nf_curved_ends.md](research/nf_curved_ends.md) — кривые торцы клеток (NORMFRONT=2: ломаная по нормалям клонов) + изгиб DELTA: 1.0085 без стен; мёртвые узлы NF, кольца (SELFOV), адаптивные клоны

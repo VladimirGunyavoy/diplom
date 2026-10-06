@@ -41,9 +41,10 @@ class Cell:
             offs = s.off + s.sn; rows = {0: s.p0 + offs[:, None] * s.n}; tt = {0: np.zeros(s.m)}; ok = {}
             for sg, nn in ((1, s.nf), (-1, s.nb)):
                 if nn:
-                    if NFDEAD: r_, _, o_ = nf_rows(s.p0, s.u, offs, nn, sg, strict='mask', brk=False); ok.update(o_)
-                    else: r_ = nf_rows(s.p0, s.u, offs, nn, sg, strict=False)[0]
-                    rows.update(r_); tt.update(nf_rows.TT)
+                    ob_ = s.off + np.linspace(s.sn[0], s.sn[-1], (s.m - 1) * BFINE + 1) if BFINE > 1 else offs   # research-19 BFINE: узлы готовой клетки — каждый BFINE-й клон мелкой цепочки (как при росте), а не грубая цепочка из m клонов: «недоезд» крайнего клона не убивает соседние узлы каскадом
+                    if NFDEAD: r_, _, o_ = nf_rows(s.p0, s.u, ob_, nn, sg, strict='mask', brk=False); ok.update({k_: v_[::BFINE] for k_, v_ in o_.items()})
+                    else: r_ = nf_rows(s.p0, s.u, ob_, nn, sg, strict=False)[0]
+                    rows.update({k_: v_[::BFINE] for k_, v_ in r_.items()}); tt.update({k_: v_[::BFINE] for k_, v_ in nf_rows.TT.items()})
             ks = sorted(rows); s.G = np.array([rows[k] for k in ks]); s.TT = np.array([tt[k] for k in ks]); s.DEAD = ~np.array([ok.get(k, np.ones(s.m, bool)) for k in ks])   # NFDEAD (research-16): узел-заплатка (столбец не пересёк нормаль — у барьера ушёл на другую сторону) — V = BIG навсегда, его четырёхугольники не интерполируются; assert ks == list(range(-s.nb, s.nf + 1)), (ks[0], ks[-1], s.nb, s.nf)   # research-16: TT — время узла вдоль своего столбца (узлы (i,j), (i+1,j) — на одной траектории u)
             if NORMFRONT == 3:                                                                    # рёбра «узел строки i → точка строки i+1»: шаг DTN по потоку, поправка 1-го порядка до ломаной строки i+1, время τ точное до O(поправка²); V — линейно между двумя узлами строки
                 s.TT = None; s.DEAD = np.zeros(s.G.shape[:2], bool); nt_, m_ = s.G.shape[:2]; q = step(s.G[:-1], s.u); Gn = s.G[1:]
@@ -246,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
