@@ -4,11 +4,12 @@
 Узлы M^(n−1) на строку (с гало), ячейки — гиперкубы 2^n вершин, индекс QB^n, обратная полилинейная карта Ньютоном n×n. По одному атласу на управление; агент каждые DTN берёт argmin."""
 import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
+import finish_gen as FG
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS == 'manip' else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9))
+BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
     N = 3; PERIOD = np.array([0, 0, PI2]); RHO = float(E('RHO', .05)); RHOV = np.full(3, RHO); XL = float(E('XL', 2.5)); XLV = np.array([XL, XL, 0.])
@@ -79,15 +80,15 @@ LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
-    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
+    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
     def add(s, c):
         g = c.G; nt = g.shape[0]; ns = (nt - 1,) + (M - 1,) * m_
         X = np.stack([g[tuple(slice(d, n_ + d) for d, n_ in zip(o, ns))] for o in VOFF], -2).reshape(-1, 2 ** N, N); n = len(X)
         ii = [a.ravel() for a in np.indices(ns)]
         if s.n + n > s.cap:
-            cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 2 ** N, N)); I2 = np.zeros((cap, N + 1), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; s.X, s.I, s.cap = X2, I2, cap
+            cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 2 ** N, N)); I2 = np.zeros((cap, N + 1), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; L2 = np.zeros((cap, N)); H2 = np.zeros((cap, N)); L2[:s.n] = s.LO[:s.n]; H2[:s.n] = s.HI[:s.n]; s.X, s.I, s.LO, s.HI, s.cap = X2, I2, L2, H2, cap
         s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[(np.full(n, s.nc),) + tuple(ii)]; hid = np.arange(s.n, s.n + n); s.n += n; s.R.append(c.r); s.nc += 1
-        lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; Ks, Vs = [], []
+        lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; s.LO[s.n - n:s.n] = lo; s.HI[s.n - n:s.n] = hi; Ks, Vs = [], []
         for si, sh in enumerate(SH):
             l, h = lo + sh, hi + sh; v = np.ones(n, bool)
             for k in NP_: v &= (h[:, k] >= -PERIOD[k] / 2 - QB) & (l[:, k] <= PERIOD[k] / 2 + QB)
@@ -120,17 +121,24 @@ class HexIdx:
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
     def _test(s, Y, pi, vv):
-        hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; X = s.X[hid]; ok = ((y >= X.min(1) - 1e-9) & (y <= X.max(1) + 1e-9)).all(1); pi, hid, y, X = pi[ok], hid[ok], y[ok], X[ok]
-        if not len(pi): return np.zeros(0, int), np.zeros(0, int), np.zeros((0, N))
-        X5 = X.reshape((-1,) + (2,) * N + (N,)); sc = np.full((len(pi), N), .5); dw = np.broadcast_to(np.array([-1., 1.]), (len(pi), 2))
-        def wts(sc): return [np.stack([1 - sc[:, k], sc[:, k]], 1) for k in range(N)]
-        for _ in range(8):
-            w = wts(sc); F = np.einsum(EIN, X5, *w) - y
-            J = np.stack([np.einsum(EIN, X5, *[dw if kk == j else w[kk] for kk in range(N)]) for j in range(N)], 2)
+        hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if not len(pi): return z
+        X = s.X[hid]; sc = np.full((len(pi), N), .5); alive = np.arange(len(pi)); dw = np.array([-1., 1.])
+        def wm(w, j=-1):
+            K = len(w[0]); dk = np.broadcast_to(dw, (K, 2)); out = dk if j == 0 else w[0]
+            for k in range(1, N): out = (out[:, :, None] * (dk if j == k else w[k])[:, None, :]).reshape(K, -1)
+            return out
+        for it in range(8):
+            Xa, ya, sa = X[alive], y[alive], sc[alive]; w = [np.stack([1 - sa[:, k], sa[:, k]], 1) for k in range(N)]
+            F = np.einsum('kv,kvz->kz', wm(w), Xa) - ya; J = np.stack([np.einsum('kv,kvz->kz', wm(w, j), Xa) for j in range(N)], 2)
             try: d = np.linalg.solve(J, F[..., None])[..., 0]
             except np.linalg.LinAlgError: d = np.linalg.solve(J + 1e-12 * np.eye(N), F[..., None])[..., 0]
-            sc = sc - d
-        F = np.einsum(EIN, X5, *wts(sc)) - y; tol = 1e-7
+            sc[alive] = sa - d
+            if it in (0, 2):                                                             # точка внутри почти аффинной ячейки сходится сразу; вылетевшие за запас — отброшены
+                lim = 1.0 if it == 0 else .2; alive = alive[((sc[alive] >= -lim) & (sc[alive] <= 1 + lim)).all(1)]
+                if not len(alive): return z
+        sc = sc[alive]; hid, X, y, pi = hid[alive], X[alive], y[alive], pi[alive]; w = [np.stack([1 - sc[:, k], sc[:, k]], 1) for k in range(N)]; F = np.einsum('kv,kvz->kz', wm(w), X) - y; tol = 1e-7
         k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
         return pi[k], hid[k], np.clip(sc[k], 0, 1)
     def covered(s, Y):
@@ -260,10 +268,14 @@ class Atlas:
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def rollout(s, Q, tmax=40.):
-        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]
+        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]; tried = np.zeros(n, bool); fin = np.zeros(n, bool)
         for _ in range(int(tmax / DTN)):
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
+            if VF > 0:
+                for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
+                    tried[i] = True; Ts, tp = FG.shoot(Y[i], f, US, RHOV, wrapy, FTMAX)
+                    if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
                 m = act & (k == ki)
@@ -272,7 +284,7 @@ class Atlas:
                 for i in range(1, 9): y_i = rk4(y8, ui, DTN / 8, 1); y8 = np.where((hh >= DTN * i / 8 - 1e-12)[:, None], y_i, y8)
                 Yn[m] = y8
             sw += act & (pk >= 0) & (k != pk); pk = np.where(act, k, pk); Y = wrapy(np.where(act[:, None], Yn, Y)); T += np.where(act, np.where(np.isfinite(tg), tg, DTN), 0.); T[~done & stuck] = np.inf; done |= ingoal(Y) | stuck; path.append(Y.copy())
-        T[~ingoal(Y)] = np.inf; return T, sw, np.array(path)
+        T[~ingoal(Y) & ~fin] = np.inf; return T, sw, np.array(path)
 HERE = os.path.dirname(os.path.abspath(__file__)); REF = os.path.join(HERE, '../../../v5chain/reports/research')
 def starts_ref():
     """(Q, эталон T)."""
@@ -286,9 +298,12 @@ def starts_ref():
     rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); fb = os.path.join(REF, 'pend_ref_best_u%s.npy' % E('UM', '0.3'))
     return Q, np.load(fb if os.path.exists(fb) else os.path.join(HERE, 'pend_ref_T.npy'))
 if __name__ == '__main__':
-    t0 = time.time(); A = Atlas(); tb = time.time() - t0
-    print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref()
+    t0 = time.time()
+    if E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
+    else:
+        A = Atlas(); tb = time.time() - t0
+        print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref()
+        if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V), open(E('DUMP'), 'wb'))
     T, sw, _ = A.rollout(Q); fz = np.isfinite(T) & np.isfinite(ref); r = T[fz] / ref[fz]
-    if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V, Q=Q, T=T, ref=ref), open(E('DUMP'), 'wb'))
     print(json.dumps(dict(SYS=SYS, DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(np.isfinite(T).mean()), 3),
                           T_over_ref=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), max=round(float(r.max()), 3), min=round(float(r.min()), 3)) if fz.any() else None, sec_build=round(tb, 1), sec=round(time.time() - t0, 1))), flush=True)
