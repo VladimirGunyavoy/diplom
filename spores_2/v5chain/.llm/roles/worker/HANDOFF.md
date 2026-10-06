@@ -1,5 +1,4 @@
 # Session Handoff
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-worker-20 (acc1, Sonnet, 21:00–03:35), причина смены: ctx 23% заранее — п.17а и п.1–3,13 закрыты, п.17б (grow3, дд-ромб 3D) — новый модуль с нуля, лучше начинать со свежим контекстом
 Сделано: п.1 старт 16 (зёрна 1601–04 + EGAP не связали), п.2 порт EGAP (butterfly_dp.regrow_gap, mq3.sh), п.13 девиации (DEVS/DEVR/DEVALL, dev*.sh — отриц.), 20 свежих зёрен; п.17а перенос в v7 (grow_cells2d.py): маятник ср. 1.0249, ДИ 1.021; профили.
 Стоп на / следующий шаг: PLAN «СДЕЛАНО w20» → п.17б: писать grow3 с нуля (схема в PLAN п.17б; 2D-ядро v7/src/cells7/grow_cells2d.py; эталон min(TGT,TGTGT) = reports/research/dd_rhombus_ref.py). 4D НЕ начинать (research-15 ещё не дал деталей). Досчитать ДИ зерно 2 (aida ~/spore_v5/w20/exp/experiments/di/w20t_s2) и дописать в cell_metric.md §w20.
