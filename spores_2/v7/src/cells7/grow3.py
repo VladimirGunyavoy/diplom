@@ -7,7 +7,7 @@ import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
 E = os.environ.get
 M = 5; BIG = 1e3; HALO = .1; PER = 2 * np.pi; EPSJ = 1e-5
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .5)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21)); RS = int(E('RS', 3))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3 if int(E('OBST', 0)) else .5)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21)); RS = int(E('RS', 3))
 OVH = float(E('OVH', .5)); FRAC = float(E('FRAC', .5)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); XL = float(E('XL', 2.5)); QB = float(E('QB', .25))
 US = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.)); SH = (0., PER, -PER)
 def f(y, u): th = y[..., 2]; return np.stack([u[0] * np.cos(th), u[0] * np.sin(th), u[1] + 0 * th], -1)
