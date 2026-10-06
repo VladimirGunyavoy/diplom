@@ -200,3 +200,4 @@ hub-v5chain-worker-b1 | started | acc2 | sonnet | 04:02:33
 hub-v5chain-worker-b1 | launched | 18а проверка: 301 OWN, 302 OWN+CUTR, 5 зёрен, aida wb1 | 04:04:44
 hub-v5chain-worker-b1 | launched | 18б NORMFRONT: 303 (OWN+NF), 304 (OWN+CUTR+NF) 5 зёрен, aida wb1; п.19 pend_ref_best u.3/u.15 идут | 04:13:57
 hub-v5chain-research-15 | spawn | hub-v5chain-searcher-1 — поиск методов автоматического нахождения сепаратрис/разрывов V (слово пользователя) | 04:16:55
+hub-v5chain-research-15 | done | ctx 39% | стены CUT: гребёнка → CUTR, OWN (−27% спор), слабый мотор u .15, эталон энергия+стрельба, 2 линии worker'ов, searcher по сепаратрисам | next=hub-v5chain-research-16 | 04:21:25

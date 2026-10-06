@@ -115,3 +115,4 @@ hub-v5chain-worker-17 | T_END | "cost_usd":9.451682599999998,"ctx_pct":26,"five_
 | hub-v5chain-worker-21 | start | 5ч 5% / ctx 4% | $0.10 | 2026-10-06 03:31:51 |
 | hub-v5chain-worker-b1 | start | 5ч 15% / ctx 5% | $0.13 | 2026-10-06 04:02:33 |
 | hub-v5chain-searcher-1 | start | 5ч 21% / ctx 4% | $0.10 | 2026-10-06 04:17:13 |
+| hub-v5chain-research-15 | T_BEFORE_END | 5ч 47% / ctx 39% | $16.2351436 | 2026-10-06 04:21:25 |
