@@ -45,6 +45,43 @@ elif os.environ['MODE'] == 'dead':                                              
         axs[r][0].set_ylabel('ω')
     fig.suptitle(os.environ.get('TITLE', 'Мёртвые узлы') + '   ·   красные точки — мёртвые узлы, оранжевые клетки — с мёртвыми узлами, зелёный квадрат — цель', fontsize=14); fig.savefig(OUT, dpi=85)
     print('готово', OUT, 'клеток', len(cells), 'с мёртвыми узлами', len(rep), 'мёртвых узлов', nd); [print('  клетка %d u %+g: мёртвых %d из %d, центр %s' % t) for t in rep]
+elif os.environ['MODE'] == 'clones':                                                              # research-19: одна клетка NORMFRONT подробно — каждый клон (столбец), центральная линия, нормали строк, узлы живые/мёртвые
+    K = int(os.environ['K']); c = cells[K]; u = c.u; nr, nc = c.G.shape[:2]; offs = c.off + c.sn; D = getattr(c, 'DEAD', np.zeros((nr, nc), bool)); sub = 16; h = G.DTN / sub
+    X0 = np.vstack([c.p0 + offs[:, None] * c.n, c.p0[None]]); ext = int(float(os.environ.get('EXT', 1.5)) / G.DTN)
+    def traj(sg, n):
+        X = [X0]
+        for _ in range(n * sub): X.append(G.rk4(X[-1], u, sg * h, 1))
+        return np.array(X)
+    F = traj(1., c.nf + ext); B = traj(-1., c.nb + ext); TR = np.concatenate([B[::-1], F[1:]]); tt = (np.arange(len(TR)) - (len(B) - 1)) * h; inc = (tt >= -c.nb * G.DTN - 1e-9) & (tt <= c.nf * G.DTN + 1e-9)
+    ths = np.arcsin(-u); eq = np.array([ths, 0.]); lam = np.sqrt(np.cos(ths)); seps = []                                      # седло слоя: sin θ + u = 0; λ = ±√cos θ*
+    for sg, ev in ((1., (1, lam)), (1., (-1, -lam)), (-1., (1, -lam)), (-1., (-1, lam))):
+        y = eq + 1e-3 * np.array(ev); P = [y]
+        for _ in range(int(8 / h)): P.append(G.rk4(P[-1], u, sg * h, 1))
+        seps.append((sg, np.array(P)))
+    dj = np.flatnonzero(D.any(0)); xs, ys = c.G[..., 0], c.G[..., 1]; pad = .25
+    boxes = [(xs.min() - pad, xs.max() + pad, ys.min() - pad, ys.max() + pad)]
+    if D.any(): boxes.append((xs[D].min() - .2, xs[D].max() + .2, ys[D].min() - .2, ys[D].max() + .2))
+    fig, axs = plt.subplots(1, len(boxes), figsize=(13 * len(boxes), 11), constrained_layout=True); axs = np.atleast_1d(axs); cmc = plt.cm.coolwarm
+    for a_, (ax, bx) in enumerate(zip(axs, boxes)):
+        for sg, P in seps: ax.plot(P[:, 0], P[:, 1], '-', color='tab:green' if sg < 0 else 'tab:purple', lw=1.6, alpha=.8)
+        ax.plot([], [], '-', color='tab:green', label='сепаратриса, ВХОДЯЩАЯ в седло слоя'); ax.plot([], [], '-', color='tab:purple', label='сепаратриса, ВЫХОДЯЩАЯ из седла слоя')
+        ax.plot(*eq, '*', ms=22, color='gold', mec='k', zorder=9, label='седло слоя u = %+g (θ = %.2f)' % (u, ths))
+        for j in range(nc):
+            col = cmc(j / max(1, nc - 1)); ax.plot(TR[:, j, 0], TR[:, j, 1], '-', lw=.7, color=col, alpha=.5); ax.plot(TR[inc, j, 0], TR[inc, j, 1], '-', lw=1.8, color=col)
+        ax.plot(TR[:, -1, 0], TR[:, -1, 1], 'k-', lw=1, alpha=.5); ax.plot(TR[inc, -1, 0], TR[inc, -1, 1], 'k-', lw=4, label='ЦЕНТРАЛЬНАЯ линия (в пределах клетки — жирно)', zorder=6)
+        L = 1.3 * np.abs(offs).max() * max(2., float(os.environ.get('NL', 3.)))
+        for i in range(-c.nb, c.nf + 1):
+            ci = TR[(len(B) - 1) + i * sub, -1]; nn = G.normal(ci, u); ax.plot([ci[0] - L * nn[0], ci[0] + L * nn[0]], [ci[1] - L * nn[1], ci[1] + L * nn[1]], '-', color='0.45', lw=.6, zorder=2)
+            ax.plot(*ci, 'ko', ms=5, zorder=7)
+        ax.plot([], [], '-', color='0.45', lw=.8, label='нормаль к потоку в точке центра (строка клетки)')
+        ax.plot(xs[~D], ys[~D], 'o', ms=5, mfc='w', mec='k', zorder=8, label='узел клетки (клон пересёк нормаль)'); ax.plot(xs[D], ys[D], 'X', ms=10, color='tab:red', mec='k', zorder=9, label='МЁРТВЫЙ узел (клон нормаль не пересёк)')
+        ax.plot(X0[:-1, 0], X0[:-1, 1], 's', ms=7, color='k', zorder=8, label='посев: старт клонов (t = 0)')
+        ax.add_patch(plt.Rectangle((-G.RHO, -G.RHO), 2 * G.RHO, 2 * G.RHO, fill=False, ec='tab:cyan', lw=2.5, label='цель'))
+        ax.set_xlim(bx[0], bx[1]); ax.set_ylim(bx[2], bx[3]); ax.set_xlabel('θ'); ax.set_ylabel('ω'); ax.set_title('вся клетка' if a_ == 0 else 'крупно: где клоны не пересекают нормаль')
+        if a_ == 0: ax.legend(loc='best', fontsize=10)
+    fig.suptitle('Клетка %d (u = %+g): %d клонов (цвет — номер клона, синий → красный), %d строк; мёртвых узлов %d, в клонах %s' % (K, u, nc, nr, int(D.sum()), dj.tolist()), fontsize=14); fig.savefig(OUT, dpi=85)
+    print('готово', OUT, 'G', c.G.shape, 'nb nf', c.nb, c.nf, 'p0', np.round(c.p0, 3).tolist(), 'offs', np.round(offs, 3).tolist(), 'седло', round(float(ths), 3)); print('мёртвые по клонам:', D.sum(0).tolist()); print('мёртвые по строкам:', D.sum(1).tolist())
+    print('по какую сторону от входящей сепаратрисы клоны (энергия относительно седла, знак):', np.round([.5 * p[1] ** 2 + np.cos(p[0]) - u * p[0] - (np.cos(ths) - u * ths) for p in X0], 4).tolist())
 else:
     K = int(os.environ.get('K', 160)); c = cells[K]; seg = c.c + np.linspace(-(1 + G.HALO) * c.r, (1 + G.HALO) * c.r, 101)[:, None] * c.n
     nmx = int(float(os.environ.get('TSPAN', 6.)) / G.DTN); T, Y = [0.], [seg.copy()]
