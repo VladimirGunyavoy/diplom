@@ -160,7 +160,7 @@ BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.envir
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
 OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
 GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
-NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFEDGE = int(os.environ.get('NFEDGE', 1)); NFLAG = int(os.environ.get('NFLAG', 12)); NFDEAD = int(os.environ.get('NFDEAD', 1)); LOOK = int(os.environ.get('LOOK', 0)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
+NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFEDGE = int(os.environ.get('NFEDGE', 1)); NFLAG = int(os.environ.get('NFLAG', 12)); NFDEAD = int(os.environ.get('NFDEAD', 1)); LOOK = int(os.environ.get('LOOK', 0)); SEEDEPS = float(os.environ.get('SEEDEPS', .005)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
 # NORMFRONT=1 (18б, гипотеза пользователя): строка i клетки — не образ отрезка за i·DTN, а пересечения траекторий-столбцов с прямой через центр c_i ⟂ f(c_i) (торец по нормали к потоку)
 import collections; GSTAT = collections.Counter()
 NFSTAT = dict(trunc=0, fill=0, nocross=0, mono=0, conv=0)
@@ -302,13 +302,15 @@ def grow2(p, u, idx, rm, tm):
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
-    cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
+    cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
     while fails < NFAIL:
         bar.n = len(cells); bar.set_postfix(fails=fails, queue=len(queue), refresh=False); bar.update(0)
         p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])
         if not inbox(p): continue
         p = np.array([wrap(p[0]), p[1]])
         if np.linalg.norm(f(p, u)) < FMIN or idx.covered(p[None])[0]: fails += 0 if queue else 1; continue          # у равновесия потока (|f| мало) клетку не строим
+        if SEEDEPS > 0 and len(seeds) and np.min(np.abs(np.array(seeds) - p).max(1)) < SEEDEPS: continue   # research-16 SEEDEPS: в точку рядом с прошлым посевом не сеем (цикл почти одинаковых клеток у края: посевы отличались на 1e-6)
+        seeds.append(p.copy())
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); n = normal(p, u); ext = []
         if GROW == 2:
             c = grow2(p, u, idx, rm, tm)
