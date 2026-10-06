@@ -396,7 +396,8 @@ class Atlas:
         Y = np.array(Q, float); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pu = np.full(n, np.nan); path = [Y.copy()]; UA = np.array(US)
         for _ in tqdm(range(int(tmax / DTN)), desc='agent rollout %d starts' % n, mininterval=MI, leave=False):
             if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
+            ai = np.flatnonzero(~done); Ya = Y[ai]; tgs = np.full((n, len(US)), np.inf); J = tgs.copy()   # only active points (profile research-15: done points were re-evaluated every step)
+            tgs[ai] = np.stack([s.tgoal(Ya, u) for u in US], 1); J[ai] = np.minimum(tgs[ai], DTN + np.stack([s.vstar(step(Ya, u)) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = np.where(np.isfinite(tg)[:, None], Y, Y) * 0.
             for ui in US:
                 m = act & (u == ui)
