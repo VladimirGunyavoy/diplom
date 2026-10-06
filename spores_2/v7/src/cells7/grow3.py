@@ -163,7 +163,7 @@ def grow3(p, u, idx, rm, tm):
     near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
     c = Cell(p + e1 * (S[k1lo] + S[k1hi]) / 2 + e2 * (S[k2lo] + S[k2hi]) / 2, u, r1 / (1 + HALO), r2 / (1 + HALO), e1, e2); c.nf, c.nb = ihi, -ilo; return c
-LRTA = float(E('LRTA', .03)); NOPR = int(E('NOPR', 6)); MACRO = int(E("MACRO", 0)); NOPD = float(E("NOPD", .02)); VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
+LRTA = float(E('LRTA', .03)); VF0 = float(E('VF0', 1.5)); VFR = float(E('VFR', 1.0)); NOPR = int(E('NOPR', 6)); MACRO = int(E("MACRO", 0)); NOPD = float(E("NOPD", .02)); VF = float(E('VF', 5.)); NA = int(E('NA', 4))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
 GLIM = float(E('GLIM', .25))
 def glimits(p, u):
     """cells near the goal must be as narrow as the goal box (else only a few nodes hit it and V does not propagate): half-width ~ GLIM·distance, length ~ 2·distance."""
@@ -269,7 +269,7 @@ class Atlas:
                 v = s.vstar(Y)
                 for i in np.flatnonzero(~done & (v <= vf)):
                     tf, tp = shoot(Y[i], 2.5 * max(v[i], .2))
-                    if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
+                    if tp is not None and (v[i] <= VF0 or tf <= VFR * v[i] + .05): T[i] += tf; done[i] = True; fin[i] = True   # w22: far from the goal take the shot only if it is not worse than the atlas estimate (SLSQP local optima around discs)
                 if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); Ys = [step(Y, u) for u in US]; Jv = DTN + np.stack([s.vstar(y_) for y_ in Ys], 1)
             if LRTA:                                                                                    # w22 (LRTA*): once an agent has stalled, every visit to a coarse cell adds LRTA to the cost of stepping into it — breaks limit cycles beside walls
