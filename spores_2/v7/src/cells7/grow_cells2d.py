@@ -5,6 +5,8 @@
 Цена: V(узел) = min_u [Δt + V*(φ_u(узел, Δt))], V*(точка) = min по клеткам любого атласа билинейно; агент каждые Δt берёт argmin.
 Системы: SYS=pend (φ̈ = sin φ + u, |u| ≤ .3, цель — верх ±RHO, φ периодична), SYS=di (проверка против di_grow_cells.py)."""
 import numpy as np, sys, os, json, time
+from tqdm import tqdm
+MI = float(os.environ.get('TQDM_MI', 10))   # tqdm mininterval for log files (user rule 2026-10-06)
 SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .3)); TMAX = float(os.environ.get('TMAX', 3.)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
@@ -14,7 +16,8 @@ CORE = int(os.environ.get('CORE', 0)); FASTLOC = int(os.environ.get('FASTLOC', 2
 NORM = os.environ.get('NORM', 'gram'); DELTA = float(os.environ.get('DELTA', .03)); SEL = os.environ.get('SEL', 'stop'); EPSJ = 1e-5; STEPS = int(os.environ.get('STEPS', 0)); DN = float(os.environ.get('DN', .003)); MMAX = int(os.environ.get('MMAX', 9))   # STEPS=1: узлы поперёк m и шаг строк kt — из той же метрики (ошибка интерполяции ≤ DN); ADAPT=2 (research-14): ошибка линейной модели среза в локальной метрике
 RMIN = float(os.environ.get('RMIN', .01)); FMIN = float(os.environ.get('FMIN', .2)); NFAIL = int(os.environ.get('NFAIL', 400))
 if SYS == 'pend':
-    UM = .3; UB = UM; US = (-UM, 0., UM); PER = 2 * np.pi; XL, WL = np.pi, float(os.environ.get('WS', 3.5))
+    UM = float(os.environ.get('UM', .3)); UB = UM;   # UM (research-15): мотор слабее — больше раскачек и сепаратрис
+    US = (-UM, 0., UM); PER = 2 * np.pi; XL, WL = np.pi, float(os.environ.get('WS', 3.5))
     def f(y, u): return np.stack([y[..., 1], np.sin(y[..., 0]) + u], -1)
 else:
     UB = 1.; US = (-1., 0., 1.); PER = None; XL, WL = 2.5, 2.5
@@ -145,7 +148,8 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.environ.get('BTOUCH', 1))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
-GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0))   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
+GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -169,6 +173,13 @@ def grow2(p, u, idx, rm, tm):
     def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
         return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
+    cov0 = idx.covered(rows[0]) | ~inbox(rows[0]) if OWN else None
+    def endcov(row, a, b):                                                                    # доля покрытой новой строки торца: при OWN — только по своим столбцам (свободным в строке споры)
+        cr = idx.covered(row) | ~inbox(row)
+        if OWN:
+            o_ = ~cov0[a:b + 1]
+            if o_.any(): return cr[o_].mean()
+        return cr.mean()
     klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}
     while any(act.values()):
         for d in 'RLFB':
@@ -183,7 +194,8 @@ def grow2(p, u, idx, rm, tm):
                     jd = max(1, int(np.ceil(OVH * (khi - klo + 1) / (M - 1)))); kin = k - jd if d == 'R' else k + jd
                     if 0 <= kin < KF:
                         inn = np.array([rows[i][kin] for i in range(ilo, ihi + 1)])
-                        if (idx.covered(col) & idx.covered(inn)).any(): act[d] = False; continue
+                        dp_ = idx.covered(col) & idx.covered(inn)
+                        if (dp_.mean() > DFRAC if DEPTH == 2 else dp_.any()): act[d] = False; continue
                     if d == 'R': khi = k
                     else: klo = k
                     continue
@@ -197,23 +209,26 @@ def grow2(p, u, idx, rm, tm):
                 i = ihi + 1 if d == 'F' else ilo - 1
                 if i not in rows: act[d] = False; continue
                 row = rows[i][klo:khi + 1]
-                if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()): act[d] = False; continue
+                if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
+                    act[d] = False; continue
                 if DEPTH:
                     iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
-                    if (idx.covered(row) & idx.covered(inn)).any(): act[d] = False; continue
+                    dp_ = idx.covered(row) & idx.covered(inn)
+                    if (dp_.mean() > DFRAC if DEPTH == 2 else dp_.any()): act[d] = False; continue
                     if d == 'F': ihi = i
                     else: ilo = i
                     continue
                 if d == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False
-                elif (idx.covered(row) | ~inbox(row)).mean() > FRAC: extra[d] = 1
+                elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
-    cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M)
+    cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
     while fails < NFAIL:
+        bar.n = len(cells); bar.set_postfix(fails=fails, queue=len(queue), refresh=False); bar.update(0)
         p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])
         if not inbox(p): continue
         p = np.array([wrap(p[0]), p[1]])
@@ -275,7 +290,7 @@ def build_layer(u, rng, log=None):
         queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
         for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
         if log: log(u, cells)
-    return cells, idx
+    bar.n = len(cells); bar.close(); return cells, idx
 class Atlas:
     def __init__(s, seed=0, log=None):
         rng = np.random.default_rng(seed); s.layers = []; s.idx = []
@@ -351,14 +366,14 @@ class Atlas:
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u)))
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
-        for n in range(it):
+        for n in tqdm(range(it), desc='value iteration', mininterval=MI, leave=False):
             val = DTN + s.interp(W, V[IDX], not JAG); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
-    def rollout(s, Q, tmax=30.):
+    def rollout(s, Q, tmax=float(os.environ.get('RTMAX', 30.))):
         Y = np.array(Q, float); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pu = np.full(n, np.nan); path = [Y.copy()]; UA = np.array(US)
-        for _ in range(int(tmax / DTN)):
+        for _ in tqdm(range(int(tmax / DTN)), desc='agent rollout %d starts' % n, mininterval=MI, leave=False):
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = np.where(np.isfinite(tg)[:, None], Y, Y) * 0.
@@ -383,7 +398,7 @@ def contact_stats(cells, idx):
     S = np.array(S) if S else np.zeros((0, 4)); return dict(all4=round(float(np.mean(ok)), 3) if ok else None, side=round(float((S[:, :2] >= .8).all(1).mean()), 3) if ok else None, end=round(float((S[:, 2:] >= .8).all(1).mean()), 3) if ok else None)
 def starts_ref():
     """старты и эталон: маятник — 100 стартов и pend_ref_T.npy (research-9); ДИ — точное T*."""
-    if SYS == 'pend': rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); return Q, np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pend_ref_T.npy'))
+    if SYS == 'pend': rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); rf = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get('REFF', 'pend_ref_T.npy'))); rf = rf[:, 0] if rf.ndim == 2 else rf; fin = np.isfinite(rf); return Q[fin], rf[fin]   # стрельба ≤ 3 дуг решает не все старты — нерешённые не сравниваем   # REFF (research-15): эталон для другой цели, напр. pend_shoot_ref_R0.05.npy[:, 0]
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from v7_faces_di import tstar_box; Q = np.random.default_rng(1).uniform(-1.5, 1.5, (200, 2)); return Q, tstar_box(Q[:, 0], Q[:, 1], RHO)
 if __name__ == '__main__':
     t0 = time.time(); A = Atlas(); tb = time.time() - t0; A.solve(); Q, ref = starts_ref(); ok = ref > .05; T, sw, _ = A.rollout(Q[ok]); fz = np.isfinite(T); r = T[fz] / ref[ok][fz]
