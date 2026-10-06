@@ -4,6 +4,8 @@
 Цена: V(узел) = min_u [Δt + V*(φ_u(узел, Δt))], V*(точка) = min по клеткам любого атласа билинейно; агент каждые Δt берёт argmin.
 Системы: SYS=pend (φ̈ = sin φ + u, |u| ≤ .3, цель — верх ±RHO, φ периодична), SYS=di (проверка против di_grow_cells.py)."""
 import numpy as np, sys, os, json, time
+from tqdm import tqdm
+MI = float(os.environ.get('TQDM_MI', 10))   # tqdm mininterval for log files (user rule 2026-10-06)
 SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .1)); TMAX = float(os.environ.get('TMAX', 1.5)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
@@ -13,7 +15,8 @@ CORE = int(os.environ.get('CORE', 0)); FASTLOC = int(os.environ.get('FASTLOC', 2
 NORM = os.environ.get('NORM', 'gram'); DELTA = float(os.environ.get('DELTA', .1)); SEL = os.environ.get('SEL', 'stop'); EPSJ = 1e-5; STEPS = int(os.environ.get('STEPS', 0)); DN = float(os.environ.get('DN', .003)); MMAX = int(os.environ.get('MMAX', 9))   # STEPS=1: узлы поперёк m и шаг строк kt — из той же метрики (ошибка интерполяции ≤ DN); ADAPT=2 (research-14): ошибка линейной модели среза в локальной метрике
 RMIN = float(os.environ.get('RMIN', .01)); FMIN = float(os.environ.get('FMIN', .2)); NFAIL = int(os.environ.get('NFAIL', 400))
 if SYS == 'pend':
-    UM = .3; UB = UM; US = (-UM, 0., UM); PER = 2 * np.pi; XL, WL = np.pi, float(os.environ.get('WS', 3.5))
+    UM = float(os.environ.get('UM', .3)); UB = UM;   # UM (research-15): мотор слабее — больше раскачек и сепаратрис
+    US = (-UM, 0., UM); PER = 2 * np.pi; XL, WL = np.pi, float(os.environ.get('WS', 3.5))
     def f(y, u): return np.stack([y[..., 1], np.sin(y[..., 0]) + u], -1)
 else:
     UB = 1.; US = (-1., 0., 1.); PER = None; XL, WL = 2.5, 2.5
@@ -244,8 +247,9 @@ def grow2(p, u, idx, rm, tm):
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
-    cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M)
+    cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
     while fails < NFAIL:
+        bar.n = len(cells); bar.set_postfix(fails=fails, queue=len(queue), refresh=False); bar.update(0)
         p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])
         if not inbox(p): continue
         p = np.array([wrap(p[0]), p[1]])
@@ -307,7 +311,7 @@ def build_layer(u, rng, log=None):
         queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
         for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
         if log: log(u, cells)
-    return cells, idx
+    bar.n = len(cells); bar.close(); return cells, idx
 class Atlas:
     def __init__(s, seed=0, log=None):
         rng = np.random.default_rng(seed); s.layers = []; s.idx = []
@@ -383,14 +387,14 @@ class Atlas:
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u)))
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
-        for n in range(it):
+        for n in tqdm(range(it), desc='value iteration', mininterval=MI, leave=False):
             val = DTN + s.interp(W, V[IDX], not JAG); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
-    def rollout(s, Q, tmax=30.):
+    def rollout(s, Q, tmax=float(os.environ.get('RTMAX', 30.))):
         Y = np.array(Q, float); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pu = np.full(n, np.nan); path = [Y.copy()]; UA = np.array(US)
-        for _ in range(int(tmax / DTN)):
+        for _ in tqdm(range(int(tmax / DTN)), desc='agent rollout %d starts' % n, mininterval=MI, leave=False):
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = np.where(np.isfinite(tg)[:, None], Y, Y) * 0.
