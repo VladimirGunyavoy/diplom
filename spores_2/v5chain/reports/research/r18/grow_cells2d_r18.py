@@ -214,7 +214,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0))
+SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -288,6 +288,11 @@ def grow2(p, u, idx, rm, tm):
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     act[d] = False; continue
+                if SSIGN > 0 and ihi > ilo:                                                           # research-19: знак d ln w/dt на новом торце против знака по уже выросшей клетке
+                    wl2 = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
+                    gc_ = np.log(wl2(rows[ihi][klo:khi + 1]) / wl2(rows[ilo][klo:khi + 1])) / ((ihi - ilo) * DTN)
+                    gn_ = np.log(wl2(row) / wl2(rows[ihi if d == 'F' else ilo][klo:khi + 1])) / DTN * (1 if d == 'F' else -1)
+                    if gn_ * gc_ < 0 and abs(gn_) > SSIGN and abs(gc_) > SSIGN: GSTAT['end_sign'] += 1; act[d] = False; continue
                 if SMAX > 0 or SLAM > 0:                                                              # research-18 (идея пользователя): ширина фронта w(t) — стоп при растяжении/сжатии > SMAX или |d ln w/dt| > SLAM
                     wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
                     w0_ = wl(rows[0][klo:khi + 1]); wi_ = wl(row); wp_ = wl(rows[ihi if d == 'F' else ilo][klo:khi + 1])
