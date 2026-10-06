@@ -58,7 +58,9 @@ def cut_adaptive(A, K=int(os.environ.get('CUTAK', 16)), ND=8):
     nmax = sc >= np.where(across, S[nb[ci]], -1.).max(1); ci, Nk = ci[nmax], Nk[nmax]; h = np.median(dist[ci, 1:4], 1)
     T = np.c_[-Nk[:, 1], Nk[:, 0]]; ns = np.maximum(2, np.ceil(h / .005).astype(int)); pts = [P[i] + np.linspace(-h_ / 2, h_ / 2, n_)[:, None] * t for i, h_, n_, t in zip(ci, h, ns, T)]
     print('CUTA: кандидатов', len(cand), 'стена', len(ci), 'узлов', flush=True); return np.concatenate(pts)
+NF_FINAL = G.NORMFRONT
 for ps in range(REFINE + 1):
+    if int(os.environ.get('NF0', 1)) == 0: G.NORMFRONT = NF_FINAL if ps == REFINE else 0   # research-16 NF0=0: проход 0 (поиск стен CUT) — без NORMFRONT; NF только в итоговом проходе
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
     for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
     if ps == REFINE: break

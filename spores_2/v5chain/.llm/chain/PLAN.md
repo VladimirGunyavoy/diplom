@@ -129,7 +129,7 @@
 ВАЖНО для 18б: в `nf_rows` строка за краем коробки сохраняется (`kout`, коммит 5b9bd20) — без этого на ДИ слой не заканчивается (клетки без конца в полосе у края).
 
 ## 21. Для hub-v5chain-worker-b1 (после 18б и 20) — рекомендуемая связка маятника в v7 (research-16, 05:45; `cut_walls.md`)
-NORMFRONT=1 OWN=1 CUTR=1 LOOK=20, LOOK внутри бисекции CUTR выключен (`CUTRLOOK`, compute.py r16). У research (252): 1.015 / ~895 спор / 51k узлов / ~200 с —
+ОБЩАЯ (все системы) — **OWN=1 CUTR=1 LOOK=20** (u .3: 1.012 / ~1090 спор; u .15: 0.996 к eshoot / ~1760 спор), LOOK внутри бисекции CUTR выключен (`CUTRLOOK`, compute.py r16). NORMFRONT=1 — пока только маятник u .3 (на u .15 и ДИ разрост клеток, research чинит). У research (252): 1.015 / ~895 спор / 51k узлов / ~200 с —
 против базы OWN 1.024 / 1320 / 71k. Проверка в v7: те же 5 зёрен; затем u .15 (UM .15 FMIN .08 REFF pend_ref_eshoot_u0.15.npy) — числа research 253 в заметке.
 
 ## research hub-v5chain-research-16 — открыто (от research-15, 2026-10-06 04:30; детали `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ)

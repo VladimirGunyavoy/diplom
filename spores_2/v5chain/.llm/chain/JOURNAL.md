@@ -202,3 +202,5 @@ hub-v5chain-worker-b1 | launched | 18б NORMFRONT: 303 (OWN+NF), 304 (OWN+CUTR+N
 hub-v5chain-research-15 | spawn | hub-v5chain-searcher-1 — поиск методов автоматического нахождения сепаратрис/разрывов V (слово пользователя) | 04:16:55
 hub-v5chain-research-15 | done | ctx 39% | стены CUT: гребёнка → CUTR, OWN (−27% спор), слабый мотор u .15, эталон энергия+стрельба, 2 линии worker'ов, searcher по сепаратрисам | next=hub-v5chain-research-16 | 04:21:25
 hub-v5chain-research-16 | started | acc2 | opus | 04:22:22
+hub-v5chain-worker-b1 | launched | 18б перенос r16 → v7: 305 NF+OWN, 306 NF+OWN+CUTR (5 зёрен), 307 регрессия NF=0 seed0 (ждём 1358/1.0226) | 04:57:44
+hub-v5chain-worker-b1 | launched | PLAN 20 LOOK=10: 308 OWN, 309 NF+OWN (5 зёрен), 310 регрессия; v7 core = r16 5b9bd20 | 05:10:34
