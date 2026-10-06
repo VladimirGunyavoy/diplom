@@ -50,3 +50,9 @@ dispatcher'а: done 16:30:30 → 16:48, 02:40:29 → 02:58, 20:10:20 → 20:28. 
   предикт считает по этим строкам; у worker-3 и fixer-2 сбои Bash-классификатора; worker-4 на старте ждал подтверждения в tmux.
 - **Что работает:** смены worker→worker без потерь (11 звеньев, все подняли преемника сами); research → worker через `knowledge/research/` и
   PLAN (WM, A*, скорость запросов 49 с → 1.2 с); dispatcher-2 дешёвый и по делу; searcher вместо субагентов.
+
+## hub-v5chain-meta-2, 2026-10-06 — параллельные линии любой роли
+- Задача пользователя (через хендофф meta-1): параллельные экземпляры любой роли, ≤ 3. Предложение — `.llm/roles/meta/proposal_parallel_lines.md`, пользователь: «да».
+- Документы: `claude-system` `eab4c39` — ARCH §Параллельные линии (единственное место), MACHINES, ROLES, рутины worker/research/dispatcher, DOC_CHANGES (ряд карты).
+- Скрипты — задача fixer-5 (current_agents по роли, auto для любой роли, pick_account резерв при подряд спавнах, проверка cron_guard/reap_idle/дека).
+- Сообщено: worker-b3 (перенести `HANDOFF_b.md` → `worker/b/HANDOFF.md`, подраздел STATUS), worker-23, research-18 (теги `[B]`, владельцы файлов), dispatcher-4.
