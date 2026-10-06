@@ -84,6 +84,11 @@ class Cell:
         s.G = np.array(bw[::-1] + fw)
 LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))                         # вершины гиперячейки: (строка, боковые…)
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
+def _contract(Xa, sa, j=-1):
+    """23а (research-18): значение (K, N) полилинейной карты гиперячейки в sa (K, N) свёрткой по осям; j ≥ 0 — производная по оси j. Вершины — порядок VOFF."""
+    T = Xa.reshape((len(Xa),) + (2,) * N + (N,))
+    for k in range(N): T = (T[:, 1] - T[:, 0]) if k == j else T[:, 0] + sa[:, k].reshape((-1,) + (1,) * (N - k)) * (T[:, 1] - T[:, 0])
+    return T
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
     def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
@@ -126,7 +131,7 @@ class HexIdx:
         if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(VV)))
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
-    def _test(s, Y, pi, vv):
+    def _test_orig(s, Y, pi, vv):
         hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
         if not len(pi): return z
@@ -145,6 +150,30 @@ class HexIdx:
                 lim = 1.0 if it == 0 else .2; alive = alive[((sc[alive] >= -lim) & (sc[alive] <= 1 + lim)).all(1)]
                 if not len(alive): return z
         sc = sc[alive]; hid, X, y, pi = hid[alive], X[alive], y[alive], pi[alive]; w = [np.stack([1 - sc[:, k], sc[:, k]], 1) for k in range(N)]; F = np.einsum('kv,kvz->kz', wm(w), X) - y; tol = 1e-7
+        k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
+        return pi[k], hid[k], np.clip(sc[k], 0, 1)
+    def _prep(s):
+        """23а (research-18, r18/affine_pre.py): центр A0 и J⁻¹ в центре на гиперячейку, инкрементально по s.n."""
+        p = getattr(s, '_pn', 0)
+        if p == s.n: return
+        X = s.X[p:s.n]; h = np.full((len(X), N), .5); A0 = _contract(X, h); J = np.stack([_contract(X, h, j) for j in range(N)], 2); JI = np.linalg.pinv(J)
+        s.A0 = A0 if p == 0 else np.concatenate([s.A0[:p], A0]); s.JI = JI if p == 0 else np.concatenate([s.JI[:p], JI]); s._pn = s.n
+    def _test(s, Y, pi, vv, tolc=1e-10):
+        """FASTT=0 — старый путь (_test_orig); иначе аффинный предфильтр sc0 ∈ [−MG, 1+MG] + Ньютон свёрткой по осям (множество пар то же, ×2 у research-18)."""
+        if not int(E('FASTT', 1)): return s._test_orig(Y, pi, vv)
+        s._prep(); hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
+        sc0 = .5 + np.einsum('kij,kj->ki', s.JI[hid], y - s.A0[hid]); MG = float(E('MG', .4)); ok = ((sc0 >= -MG) & (sc0 <= 1 + MG)).all(1); pi, hid, y, sc = pi[ok], hid[ok], y[ok], sc0[ok]
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if not len(pi): return z
+        X = s.X[hid]; alive = np.arange(len(pi))
+        for it in range(8):
+            Xa, ya, sa = X[alive], y[alive], sc[alive]; F = _contract(Xa, sa) - ya; J = np.stack([_contract(Xa, sa, j) for j in range(N)], 2)
+            try: d = np.linalg.solve(J, F[..., None])[..., 0]
+            except np.linalg.LinAlgError: d = np.linalg.solve(J + 1e-12 * np.eye(N), F[..., None])[..., 0]
+            sc[alive] = sa - d; keep = ((sc[alive] >= -.2) & (sc[alive] <= 1.2)).all(1) if it >= 1 else np.ones(len(alive), bool)
+            bad = alive[~keep]; sc[bad] = 9.; alive = alive[keep & (np.abs(d).max(1) >= tolc)]
+            if not len(alive): break
+        F = _contract(X, sc.clip(-1, 2)) - y; tol = 1e-7
         k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
         return pi[k], hid[k], np.clip(sc[k], 0, 1)
     def covered(s, Y):
