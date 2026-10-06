@@ -254,10 +254,22 @@ class Atlas:
         I = np.concatenate(I_); IDX = np.concatenate(IDX_); W = np.concatenate(W_); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         sf = IDX == I[:, None]; ws = (W * sf).sum(1); W = np.where(sf, 0, W).astype(np.float32); den = 1. - ws; den[den < 1e-6] = np.nan   # r17: self-loop (RS > 1: the step lands in its own hex) solved exactly: V = (DTN + sum_{j!=i} w_j V_j)/(1 - w_ii)
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
-        bar = tqdm(total=it, desc='solve', mininterval=10, leave=False)
+        bar = tqdm(total=it, desc='solve', mininterval=10, leave=False); NCH = int(E('GSN', 0)); bnd = np.linspace(0, len(nd), NCH + 1).astype(int) if NCH > 1 else None   # w23: GSN>1 — Гаусс–Зейдель блоками узлов (порядок узлов ≈ порядок роста от цели); 0 — Якоби
+        rows = np.r_[st, len(I)]
         for n in range(it):
-            bar.update(1); val = np.nan_to_num((DTN + s.interp(W, V[IDX])) / den, nan=BIG); val[val > BIG] = BIG; new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
-            d = np.max(np.abs(new - V)); V = new
+            bar.update(1)
+            if bnd is None:
+                val = np.nan_to_num((DTN + s.interp(W, V[IDX])) / den, nan=BIG); val[val > BIG] = BIG; new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
+                d = np.max(np.abs(new - V)); V = new
+            else:
+                Vo = V.copy(); order = range(NCH) if n % 2 == 0 else range(NCH - 1, -1, -1)   # вперёд / назад по очереди
+                for k in order:
+                    a, b = bnd[k], bnd[k + 1]
+                    if a == b: continue
+                    r0, r1 = rows[a], rows[b]
+                    val = np.nan_to_num((DTN + s.interp(W[r0:r1], V[IDX[r0:r1]])) / den[r0:r1], nan=BIG); val[val > BIG] = BIG
+                    V[nd[a:b]] = np.minimum(V[nd[a:b]], np.minimum.reduceat(val, st[a:b] - r0))
+                V[s.goal] = 0.; d = np.max(np.abs(V - Vo))
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def rollout(s, Q, tmax=40., vf=None):
