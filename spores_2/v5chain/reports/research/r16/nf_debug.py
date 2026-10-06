@@ -6,7 +6,7 @@ from scipy.spatial import cKDTree
 e_ = np.linspace(-G.RHO, G.RHO, 41); GB = np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]]; G.BARRIER = cKDTree(GB)
 t0 = time.time(); rng = np.random.default_rng(0); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []
 for u in G.US: l, ix = G.build_layer(u, rng); A.layers.append(l); A.idx.append(ix)
-A.finish(); print('cells', [len(l) for l in A.layers], 'N', A.N, 'goal nodes', int(A.goal.sum()), 'build s', round(time.time() - t0, 1), 'NFSTAT', G.NFSTAT, flush=True)
+A.finish(); print('cells', [len(l) for l in A.layers], 'N', A.N, 'goal nodes', int(A.goal.sum()), 'build s', round(time.time() - t0, 1), 'NFSTAT', G.NFSTAT, 'dead', int(A.dead.sum()), flush=True)
 Vg = np.full(A.N, np.inf)
 for u in G.US: Vg = np.minimum(Vg, A.tgoal(A.P, u))
 print('nodes tgoal finite', int(np.isfinite(Vg).sum()), flush=True)

@@ -98,6 +98,21 @@ A.finish(); con = [G.contact_stats(l, ix) for l, ix in zip(A.layers, A.idx)]; X 
 status('считаю цену V', cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), contact=con, cover=cov); A.solve()
 gx, gw = np.linspace(-G.XL, G.XL, 161), np.linspace(-G.WL, G.WL, 141); GX, GW = np.meshgrid(gx, gw); VV = A.vstar(np.c_[GX.ravel(), GW.ravel()]).reshape(GX.shape)
 np.savez(os.path.join(D, 'value.tmp.npz'), gx=gx, gw=gw, V=VV); os.replace(os.path.join(D, 'value.tmp.npz'), os.path.join(D, 'value.npz'))
+if os.environ.get('PROBE'):                                                                    # research-16: разбор заниженной V — какая клетка даёт минимум в точке
+    import pickle; PQ = np.array(json.loads(os.environ['PROBE'])); I, IDX, W = A.stencils(PQ); v = A.interp(W, A.V[IDX]); cid = np.searchsorted(np.array([c.o for c in A.cells]), IDX[:, 0], 'right') - 1; rep = []
+    for q in range(len(PQ)):
+        k = np.flatnonzero(I == q); k = k[np.argsort(v[k])][:4]
+        rep.append([dict(v=float(v[t]), cell=int(cid[t]), u=float(A.cells[cid[t]].u), VI=A.V[IDX[t]].round(3).tolist(), W=W[t].round(3).tolist(), P=A.P[IDX[t]].round(3).tolist()) for t in k])
+    pickle.dump(dict(rep=rep, cells=[dict(G=A.cells[i].G, u=A.cells[i].u, V=A.V[A.cells[i].o:A.cells[i].o + A.cells[i].G.shape[0] * A.cells[i].m].reshape(A.cells[i].G.shape[0], -1)) for i in sorted({r_['cell'] for rr in rep for r_ in rr})]), open(os.path.join(D, 'probe.pkl'), 'wb'))
+    for q, rr in enumerate(rep): print('PROBE', PQ[q].tolist(), json.dumps(rr[:2]), flush=True)
+    Tq, _, pq = A.rollout(PQ)
+    for q in range(len(PQ)):
+        pp = pq[:, q]; vv = A.vstar(pp); dv = vv[:-1] - vv[1:]                                 # вдоль пути V должна падать на DTN за шаг; падение больше — «короткий путь»
+        print('TRACE', q, 'T', round(float(Tq[q]), 3), 'V0', round(float(vv[0]), 3), flush=True)
+        print('  path', [(round(k * G.DTN, 2), pp[k].round(2).tolist(), round(float(vv[k]), 2)) for k in range(0, len(pp), 5) if k * G.DTN <= Tq[q] + .3], flush=True)
+        for k in np.flatnonzero(dv > 2.5 * G.DTN)[:8]:
+            I_, IDX_, W_ = A.stencils(pp[k:k + 1]); v_ = A.interp(W_, A.V[IDX_]); t_ = int(np.argmin(v_)) if len(v_) else -1; cid_ = (np.searchsorted(np.array([c.o for c in A.cells]), IDX_[t_, 0], 'right') - 1) if t_ >= 0 else -1
+            print('  JUMP k', int(k), 'x', pp[k].round(3).tolist(), '->', pp[k + 1].round(3).tolist(), 'V', round(float(vv[k]), 3), '->', round(float(vv[k + 1]), 3), 'cell', int(cid_), 'VI', A.V[IDX_[t_]].round(3).tolist() if t_ >= 0 else None, 'TT', None if cid_ < 0 or getattr(A.cells[cid_], 'TT', None) is None else A.cells[cid_].TT[:, 2].round(3).tolist()[:40], flush=True)
 base = dict(refine=hist, cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), contact=con, cover=cov, big_nodes=round(float((A.V >= G.BIG / 2).mean()), 3)); status('агент', **base)
 Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; T, sw, path = A.rollout(Q)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
