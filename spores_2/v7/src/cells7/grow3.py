@@ -163,7 +163,7 @@ def grow3(p, u, idx, rm, tm):
     near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
     c = Cell(p + e1 * (S[k1lo] + S[k1hi]) / 2 + e2 * (S[k2lo] + S[k2hi]) / 2, u, r1 / (1 + HALO), r2 / (1 + HALO), e1, e2); c.nf, c.nb = ihi, -ilo; return c
-VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
+LRTA = float(E('LRTA', .03)); NOPR = int(E('NOPR', 6)); MACRO = int(E("MACRO", 0)); NOPD = float(E("NOPD", .02)); VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
 GLIM = float(E('GLIM', .25))
 def glimits(p, u):
     """cells near the goal must be as narrow as the goal box (else only a few nodes hit it and V does not propagate): half-width ~ GLIM·distance, length ~ 2·distance."""
@@ -200,6 +200,7 @@ def _free(y, tp, d, n=30):
         if (dobs(pts) <= 0).any(): return False
         z = arc(z, US[k], dt)
     return True
+def _key(y): return (int(round(y[0] / .06)), int(round(y[1] / .06)), int(round(wrap(y[2]) / .2)))
 def shoot(y, tmax):
     """best shooting finish from y: arcs of the 4 rhombus vertices in closed form, durations by SLSQP, end inside the goal box; returns (time, topology) or (inf, None)."""
     from scipy.optimize import minimize
@@ -261,7 +262,7 @@ class Atlas:
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def rollout(s, Q, tmax=40., vf=None):
         vf = VF if vf is None else vf
-        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]; fin = np.zeros(n, bool)
+        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); vbest = np.full(n, np.inf); lr = np.zeros(n, bool); vis = [dict() for _ in range(n)]; nopr = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]; fin = np.zeros(n, bool)
         for _ in range(int(tmax / DTN)):
             if done.all(): break
             if vf > 0:
@@ -270,9 +271,25 @@ class Atlas:
                     tf, tp = shoot(Y[i], 2.5 * max(v[i], .2))
                     if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
                 if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
+            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); Ys = [step(Y, u) for u in US]; Jv = DTN + np.stack([s.vstar(y_) for y_ in Ys], 1)
+            if LRTA:                                                                                    # w22 (LRTA*): once an agent has stalled, every visit to a coarse cell adds LRTA to the cost of stepping into it — breaks limit cycles beside walls
+                for i in np.flatnonzero(lr & ~done):
+                    for ki in range(len(US)): Jv[i, ki] += LRTA * vis[i].get(_key(Ys[ki][i]), 0)
+                    vis[i][_key(Y[i])] = vis[i].get(_key(Y[i]), 0) + 1
+            J = np.minimum(tgs, Jv); k = J.argmin(1); tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2
             if vf > 0:                                                                                  # all 4 steps land in holes (e.g. beside a wall): finish by shooting from here, whatever V* is
+                vc = s.vstar(Y); nopr = np.where(vc <= vbest - NOPD, 0, nopr + 1); vbest = np.minimum(vbest, vc)
+                for i in np.flatnonzero(~done & (nopr >= NOPR)):                                          # w22: V* stopped decreasing (limit cycle beside a wall, start 51): try the shoot finish, keep going if it fails
+                    nopr[i] = 0; lr[i] = True; tf, tp = shoot(Y[i], 2.5 * max(float(vc[i]) if vc[i] < BIG / 2 else 4., .2))
+                    if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
+                    elif MACRO:                                                                                  # w22: escape — one long constant-control arc (4..16 DTN) with the best t + V*(end), outside the discs
+                        best = (np.inf, None)
+                        for ki, ui in enumerate(US):
+                            for m_ in (2, 4, 8, 16):
+                                z = arc(Y[i], ui, m_ * DTN); z = np.r_[z[:2], wrap(z[2])]; c = m_ * DTN + float(s.vstar(z[None])[0])
+                                if c < best[0] and inbox(z) and _free(Y[i], (ki,), (m_ * DTN,)): best = (c, (ki, m_, z))
+                        if best[1] is not None: k_, m_, z = best[1]; Y[i] = z; T[i] += m_ * DTN; vbest[i] = np.inf
                 for i in np.flatnonzero(~done & stuck):
                     tf, tp = shoot(Y[i], 2.5 * max(float(s.vstar(Y[i:i + 1])[0]) if s.vstar(Y[i:i + 1])[0] < BIG / 2 else 4., .2))
                     if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
