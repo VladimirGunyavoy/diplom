@@ -144,6 +144,7 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .02)); BTOUCH = int(os.environ.get('BTOUCH', 0))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
+OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
 SHRINK = int(os.environ.get('SHRINK', 0))   # SHRINK=1 (research-15, слово пользователя «максимальный объём при ограничениях»): рост вдоль потока упёрся в стену — сузить клетку до участка между касаниями, если площадь растёт
 GROW = int(os.environ.get('GROW', 0)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 def grow2(p, u, idx, rm, tm):
@@ -169,6 +170,13 @@ def grow2(p, u, idx, rm, tm):
     def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
         return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
+    cov0 = idx.covered(rows[0]) | ~inbox(rows[0]) if OWN else None
+    def endcov(row, a, b):                                                                    # доля покрытой новой строки торца: при OWN — только по своим столбцам (свободным в строке споры)
+        cr = idx.covered(row) | ~inbox(row)
+        if OWN:
+            o_ = ~cov0[a:b + 1]
+            if o_.any(): return cr[o_].mean()
+        return cr.mean()
     def area(a, b, lo, hi):                                                                  # площадь клетки в фазовом пространстве: ширина × длина пути по среднему столбцу
         kc = (a + b) // 2; P = np.array([rows[i][kc] for i in range(lo, hi + 1)]); return (S[b] - S[a]) * (np.linalg.norm(np.diff(P, axis=0), axis=1).sum() if len(P) > 1 else 0.)
     def reach(d, a, b, lo, hi):                                                               # докуда дорастёт клетка со столбцами [a, b] в направлении d (стена, изгиб, область, сосед)
@@ -176,7 +184,7 @@ def grow2(p, u, idx, rm, tm):
             i = hi + 1 if d == 'F' else lo - 1
             if i not in rows: break
             row = rows[i][a:b + 1]
-            if nearb(row[1:-1]).any() or not ok_rect(a, b, min(lo, i), max(hi, i)) or (idx.covered(row) | ~inbox(row)).mean() > FRAC: break
+            if nearb(row[1:-1]).any() or not ok_rect(a, b, min(lo, i), max(hi, i)) or endcov(row, a, b) > FRAC: break
             if d == 'F': hi = i
             else: lo = i
         return lo, hi
@@ -231,7 +239,7 @@ def grow2(p, u, idx, rm, tm):
                 if d == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False
-                elif (idx.covered(row) | ~inbox(row)).mean() > FRAC: extra[d] = 1
+                elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
