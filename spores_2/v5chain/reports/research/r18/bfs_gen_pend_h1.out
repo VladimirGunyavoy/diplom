@@ -1,0 +1,13 @@
+построено [85, 71, 93] узлов 43115 36 с
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]solve:   0%|          | 79/20000 [00:10<42:21,  7.84it/s]solve:   1%|          | 161/20000 [00:20<41:22,  7.99it/s]solve:   1%|          | 242/20000 [00:30<41:06,  8.01it/s]                                                          клеток 249 с конечной V 247
+покрытие поля (V конечна у проб) 0.957
+{'v': 0.0, 'cells_V_le_v': 32, 'gen_needed': -1, 'cells_up_to_gen': 35, 'overhead': np.float64(1.09)}
+{'v': 0.79, 'cells_V_le_v': 62, 'gen_needed': -1, 'cells_up_to_gen': 237, 'overhead': np.float64(3.82)}
+{'v': 2.32, 'cells_V_le_v': 124, 'gen_needed': -1, 'cells_up_to_gen': 248, 'overhead': np.float64(2.0)}
+{'v': 4.21, 'cells_V_le_v': 185, 'gen_needed': -1, 'cells_up_to_gen': 249, 'overhead': np.float64(1.35)}
+{'v': 6.78, 'cells_V_le_v': 222, 'gen_needed': -1, 'cells_up_to_gen': 249, 'overhead': np.float64(1.12)}
+корр. tch–V -0.14 tch/V мед 0.0
+корр. gen–V 0.867
