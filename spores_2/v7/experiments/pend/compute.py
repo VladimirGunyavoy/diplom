@@ -1,5 +1,6 @@
 """«Трейн» для 2D систем на общем ядре v5chain/reports/research/grow_cells2d.py: считает и пишет данные в <эксперимент>/data/ (картинку рисует plot.py).
 Запуск из этой папки: [SYS=pend] [TMAX=1.5] [OVL=.05] ... python3 compute.py 01_имя-эксперимента"""
+import time; _T0R19 = time.time()
 import numpy as np, sys, os, json, time, pickle
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, '../../src/cells7') if os.environ.get('GCORE') != 'research' else os.path.join(HERE, '../../../v5chain/reports/research'))   # GCORE=research — прототип research
 import grow_cells2d as G
@@ -99,7 +100,7 @@ for ps in range(REFINE + 1):
     hist.append(dict(cells=len(done), nodes=int(A.N), res_med=round(float(np.median(res[ok])), 4), res_p95=round(float(np.quantile(res[ok], .95)), 4), bad=round(float(bad.mean()), 3), lev_max=int(LEV.max()), lev_area=round(float((LEV > 0).mean()), 3)))
     print('проход', ps, hist[-1], flush=True); np.save(os.path.join(D, 'lev.npy'), LEV)
 A.finish(); con = [G.contact_stats(l, ix) for l, ix in zip(A.layers, A.idx)]; X = np.c_[rng.uniform(-G.XL, G.XL, 20000), rng.uniform(-G.WL, G.WL, 20000)]; cov = [round(float(ix.covered(X).mean()), 3) for ix in A.idx]
-status('считаю цену V', cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), contact=con, cover=cov); A.solve()
+import time as _tm; _tb = _tm.time() - _T0R19; status('считаю цену V', cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), contact=con, cover=cov); A.solve(); _ts = _tm.time() - _T0R19 - _tb   # research-19 (слово пользователя): время построения атласа и расчёта V
 gx, gw = np.linspace(-G.XL, G.XL, 161), np.linspace(-G.WL, G.WL, 141); GX, GW = np.meshgrid(gx, gw); VV = A.vstar(np.c_[GX.ravel(), GW.ravel()]).reshape(GX.shape)
 np.savez(os.path.join(D, 'value.tmp.npz'), gx=gx, gw=gw, V=VV); os.replace(os.path.join(D, 'value.tmp.npz'), os.path.join(D, 'value.npz'))
 if os.environ.get('PROBE'):                                                                    # research-16: разбор заниженной V — какая клетка даёт минимум в точке
@@ -118,7 +119,11 @@ if os.environ.get('PROBE'):                                                     
             I_, IDX_, W_ = A.stencils(pp[k:k + 1]); v_ = A.interp(W_, A.V[IDX_]); t_ = int(np.argmin(v_)) if len(v_) else -1; cid_ = (np.searchsorted(np.array([c.o for c in A.cells]), IDX_[t_, 0], 'right') - 1) if t_ >= 0 else -1
             print('  JUMP k', int(k), 'x', pp[k].round(3).tolist(), '->', pp[k + 1].round(3).tolist(), 'V', round(float(vv[k]), 3), '->', round(float(vv[k + 1]), 3), 'cell', int(cid_), 'VI', A.V[IDX_[t_]].round(3).tolist() if t_ >= 0 else None, 'TT', None if cid_ < 0 or getattr(A.cells[cid_], 'TT', None) is None else A.cells[cid_].TT[:, 2].round(3).tolist()[:40], flush=True)
 base = dict(refine=hist, cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), contact=con, cover=cov, big_nodes=round(float((A.V >= G.BIG / 2).mean()), 3)); status('агент', **base)
-Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; T, sw, path = A.rollout(Q)
+Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; _t1 = _tm.time(); T, sw, path = A.rollout(Q); _ta = _tm.time() - _t1
+_qt = []                                                                                      # research-19: время ОДНОГО запроса (старт → траектория до цели) — по одному старту, распределение
+from tqdm import tqdm as _tq
+for _i in _tq(range(min(len(Q), int(os.environ.get('QTIME', 20)))), desc='замер времени запроса (по одному старту)', mininterval=5): _t1 = _tm.time(); A.rollout(Q[_i:_i + 1]); _qt.append(_tm.time() - _t1)
+_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
 fz = np.isfinite(T); r = T[fz] / ref[fz]
 if G.SYS == 'pend':                                                                           # пути для картинки: 7 стартов + их зеркала (−φ, −ω) — видно закрутку в обе стороны

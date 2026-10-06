@@ -225,7 +225,8 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); QFAST = int(os.environ.get('QFAST', 1))   # п.30 (research-20): пакетный запрос агента — 3 управления и ветки look одним стеком точек (те же числа, меньше мелких вызовов); 0 — старый путь
+SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -502,20 +503,39 @@ class Atlas:
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
+    def tgoal3(s, Y, n=8):
+        """tgoal по всем 3 управлениям одним стеком → (len(Y), 3)."""
+        m = len(Y); y = np.tile(Y, (len(US), 1)); uu = np.repeat(np.array(US), m); tg = np.full(len(y), np.inf)
+        for i in range(1, n + 1): y = rk4(y, uu, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
+        return tg.reshape(len(US), m).T
+    def step3(s, Y):
+        """шаг по всем 3 управлениям одним стеком → (3·len(Y), 2), блоки по управлению."""
+        return step(np.tile(Y, (len(US), 1)), np.repeat(np.array(US), len(Y)))
     def look(s, Y, L):
         """LOOK (research-16): цена L шагов жадной политики из Y + V* в конце (rollout-улучшение: барьер на пути виден до того, как агент поверит заниженной V)."""
         Y = Y.copy(); n = len(Y); C = np.zeros(n); done = ingoal(Y); UA = np.array(US)
+        if QFAST: return s.look3(Y, L)
         for _ in range(L):
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); Ys = [step(Y, u) for u in US]; J = np.minimum(tgs, DTN + np.stack([s.vstar(y) for y in Ys], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             fin = np.isfinite(tg) & ~done; bad = (J.min(1) >= BIG / 2) & ~done
             C += np.where(done, 0., np.where(fin, tg, DTN)); C[bad] = BIG; Y = np.where(done[:, None], Y, np.stack(Ys, 1)[np.arange(n), k]); done |= fin | bad | ingoal(Y)
         return np.minimum(C + np.where(done, 0., s.vstar(Y)), BIG)
+    def look3(s, Y, L):
+        n = len(Y); C = np.zeros(n); done = ingoal(Y); ar = np.arange(n)
+        for _ in range(L):
+            if done.all(): break
+            tgs = s.tgoal3(Y); Ys = s.step3(Y); J = np.minimum(tgs, DTN + s.vstar(Ys).reshape(len(US), n).T); k = J.argmin(1); tg = tgs[ar, k]
+            fin = np.isfinite(tg) & ~done; bad = (J.min(1) >= BIG / 2) & ~done
+            C += np.where(done, 0., np.where(fin, tg, DTN)); C[bad] = BIG; Y = np.where(done[:, None], Y, Ys.reshape(len(US), n, 2)[k, ar]); done |= fin | bad | ingoal(Y)
+        return np.minimum(C + np.where(done, 0., s.vstar(Y)), BIG)
     def rollout(s, Q, tmax=float(os.environ.get('RTMAX', 30.))):
         Y = np.array(Q, float); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pu = np.full(n, np.nan); path = [Y.copy()]; UA = np.array(US)
         for _ in tqdm(range(int(tmax / DTN)), desc='agent rollout %d starts' % n, mininterval=MI, leave=False):
             if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([(s.look(step(Y, u), LOOK) if LOOK else s.vstar(step(Y, u))) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
+            if QFAST: tgs = s.tgoal3(Y); Ys3 = s.step3(Y); J = np.minimum(tgs, DTN + (s.look(Ys3, LOOK) if LOOK else s.vstar(Ys3)).reshape(len(US), n).T)
+            else: tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([(s.look(step(Y, u), LOOK) if LOOK else s.vstar(step(Y, u))) for u in US], 1))
+            k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = np.where(np.isfinite(tg)[:, None], Y, Y) * 0.
             for ui in US:
                 m = act & (u == ui)
