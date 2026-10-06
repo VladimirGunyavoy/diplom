@@ -6,7 +6,7 @@ import grow_cells2d as G
 tag = sys.argv[1]; D = os.path.join(HERE, tag, 'data'); os.makedirs(D, exist_ok=True); t0 = time.time()
 def dump(name, obj, js=True):
     tmp = os.path.join(D, name + '.tmp'); (json.dump(obj, open(tmp, 'w')) if js else pickle.dump(obj, open(tmp, 'wb'))); os.replace(tmp, os.path.join(D, name))
-PAR = dict(SYS=G.SYS, US=list(G.US), TMAX=G.TMAX, RMAX=G.RMAX, OVL=G.OVL, RHO=G.RHO, ADAPT=G.ADAPT, NORM=G.NORM, DELTA=G.DELTA, SEL=G.SEL, CORE=G.CORE, JUMP=G.JUMP, JMODE=G.JMODE, JAG=G.JAG, JDIR=G.JDIR, GROW=G.GROW, OVH=G.OVH, FRAC=G.FRAC, GOALB=int(os.environ.get('GOALB', 0)), DEPTH=getattr(G, 'DEPTH', 0), M=G.M, DTN=G.DTN, XL=G.XL, WL=G.WL, PER=G.PER)
+PAR = dict(SYS=G.SYS, US=list(G.US), TMAX=G.TMAX, RMAX=G.RMAX, OVL=G.OVL, RHO=G.RHO, ADAPT=G.ADAPT, NORM=G.NORM, DELTA=G.DELTA, SEL=G.SEL, CORE=G.CORE, JUMP=G.JUMP, JMODE=G.JMODE, JAG=G.JAG, JDIR=G.JDIR, GROW=G.GROW, OVH=G.OVH, FRAC=G.FRAC, GOALB=int(os.environ.get('GOALB', 1)), DEPTH=getattr(G, 'DEPTH', 0), M=G.M, DTN=G.DTN, XL=G.XL, WL=G.WL, PER=G.PER)
 def status(stage, **kw): dump('status.json', dict(stage=stage, sec=round(time.time() - t0, 1), params=PAR, **kw))
 def cells_dump(cells): dump('cells.pkl', [dict(u=float(c.u), c=c.c, r=float(c.r), n=c.n, G=c.G.astype(np.float32)) for c in cells], js=False)
 done = []
@@ -22,6 +22,31 @@ G.LIMITS = limits; hist = []
 GOALB = int(os.environ.get('GOALB', 1)); GB = None                                           # GOALB=1 (research-14): край цели ±RHO — стена с самого начала (клетка не лежит поперёк края цели)
 if GOALB:
     from scipy.spatial import cKDTree; e_ = np.linspace(-G.RHO, G.RHO, 41); GB = np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]]; G.BARRIER = cKDTree(GB)
+def cut_adaptive(A, K=int(os.environ.get('CUTAK', 16)), ND=8):
+    """разрыв V как край изображения, прямо по узлам (любая размерность — та же схема): k ближайших → плоскость; невязка > CUT/4 → кандидат;
+    у кандидата — разрез окрестности прямой через узел по ND направлениям, по плоскости с каждой стороны; скачок J = разность плоскостей в узле,
+    качество q = 1 − SSE_разрез / SSE_одна; стена — где J > CUT и J·q максимально поперёк разреза; точки стены — отрезок ±h/2 вдоль разреза."""
+    from scipy.spatial import cKDTree
+    fin = A.V < G.BIG / 2; P = A.P[fin].astype(float); V = A.V[fin]; P[:, 0] = G.wrap(P[:, 0]); per = G.PER is not None
+    Q = np.c_[(P[:, 0] + G.XL) % (2 * G.XL), P[:, 1] + G.WL + 5]; tr = cKDTree(Q, boxsize=[2 * G.XL, 2 * G.WL + 10] if per else None)
+    dist, nb = tr.query(Q, K); D = P[nb] - P[:, None]; D[..., 0] = G.wrap(D[..., 0]) if per else D[..., 0]; Vn = V[nb]
+    def fit(Dm, Vm, W):                                                                          # взвешенная плоскость по маске W: возвращает a (значение в узле) и SSE
+        X = np.concatenate([np.ones(Dm.shape[:2] + (1,)), Dm], -1); XtX = np.einsum('nk,nki,nkj->nij', W, X, X) + 1e-9 * np.eye(3); Xty = np.einsum('nk,nki,nk->ni', W, X, Vm)
+        c = np.linalg.solve(XtX, Xty[..., None])[..., 0]; r = (np.einsum('nki,ni->nk', X, c) - Vm) * W; return c[:, 0], (r * r).sum(1), c
+    a1, sse1, _ = fit(D, Vn, np.ones(Vn.shape)); res = np.sqrt(sse1 / K); cand = np.flatnonzero(res > CUT / 4)
+    if not len(cand): return np.zeros((0, 2))
+    Dc, Vc = D[cand], Vn[cand]; best = np.full(len(cand), -1.); J = np.zeros(len(cand)); Nn = np.zeros((len(cand), 2))
+    for th in np.linspace(0, np.pi, ND, endpoint=False):
+        nv = np.array([np.cos(th), np.sin(th)]); sd = Dc @ nv; L = (sd < 0).astype(float); R = (sd > 0).astype(float)
+        ok = (L.sum(1) >= 3) & (R.sum(1) >= 3); aL, sL, _ = fit(Dc, Vc, L); aR, sR, _ = fit(Dc, Vc, R)
+        q = 1 - (sL + sR) / np.maximum(sse1[cand], 1e-12); j = np.abs(aL - aR); sc = np.where(ok & (j > CUT), j * q, -1.); m = sc > best
+        best[m], J[m], Nn[m] = sc[m], j[m], nv
+    keep = best > 0; ci = cand[keep]; sc = best[keep]; Nk = Nn[keep]
+    if not len(ci): return np.zeros((0, 2))
+    S = np.full(len(P), -1.); S[ci] = sc; Dk = D[ci]; across = np.abs(np.einsum('nkj,nj->nk', Dk, Nk)) > np.abs(np.einsum('nkj,nj->nk', Dk, np.c_[-Nk[:, 1], Nk[:, 0]]))
+    nmax = sc >= np.where(across, S[nb[ci]], -1.).max(1); ci, Nk = ci[nmax], Nk[nmax]; h = np.median(dist[ci, 1:4], 1)
+    T = np.c_[-Nk[:, 1], Nk[:, 0]]; ns = np.maximum(2, np.ceil(h / .005).astype(int)); pts = [P[i] + np.linspace(-h_ / 2, h_ / 2, n_)[:, None] * t for i, h_, n_, t in zip(ci, h, ns, T)]
+    print('CUTA: кандидатов', len(cand), 'стена', len(ci), 'узлов', flush=True); return np.concatenate(pts)
 for ps in range(REFINE + 1):
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
     for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
@@ -33,7 +58,24 @@ for ps in range(REFINE + 1):
             g = c.G; v = A.V[c.o:c.o + len(g) * c.m].reshape(len(g), c.m)
             for a_, b_, va, vb in ((g[:, :-1], g[:, 1:], v[:, :-1], v[:, 1:]), (g[:-1], g[1:], v[:-1], v[1:])):
                 k = (np.abs(va - vb) > CUT) & (va < G.BIG / 2) & (vb < G.BIG / 2); DB.append(((a_ + b_) / 2)[k])
-        DB = np.concatenate(DB + ([GB] if GB is not None else [])); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
+        CUTG = float(os.environ.get('CUTG', 0))                                                  # CUTG = h > 0 (research-15): стена по V* (min по всем клеткам) на равномерной сетке шага h — одна согласованная стена вместо гребёнки обрывков от каждой клетки
+        if CUTG > 0:
+            gx_ = np.arange(-G.XL, G.XL, CUTG); gw_ = np.arange(-G.WL, G.WL + 1e-9, CUTG); GX_, GW_ = np.meshgrid(gx_, gw_, indexing='ij'); VG = A.vstar(np.c_[GX_.ravel(), GW_.ravel()]).reshape(GX_.shape); PG = np.stack([GX_, GW_], -1); DB = []
+            K_ = int(os.environ.get('CUTK', 5)); per = G.PER is not None                         # скачок > CUT на отрезке K_ шагов → стена в ОДНОЙ точке — где шаг V самый крутой (тонкая стена)
+            for ax_ in (0, 1):
+                V_ = np.moveaxis(VG, ax_, 0); P_ = np.moveaxis(PG, ax_, 0); n_ = V_.shape[0]; wr = per and ax_ == 0; ok_ = V_ < G.BIG / 2
+                idx_ = np.arange(n_) if wr else np.arange(n_ - K_)
+                for i0 in idx_:
+                    ii = (i0 + np.arange(K_ + 1)) % n_ if wr else i0 + np.arange(K_ + 1)
+                    seg = V_[ii]; good = ok_[ii].all(0); jump = (np.abs(seg[-1] - seg[0]) > CUT) & good
+                    if not jump.any(): continue
+                    d1 = np.abs(np.diff(seg, axis=0)); kk = d1.argmax(0); cols = np.flatnonzero(jump)
+                    a_ = P_[ii[kk[cols]], cols]; b_ = P_[ii[kk[cols] + 1], cols]
+                    if wr: b_ = np.where((b_[:, :1] < a_[:, :1]), b_ + np.array([2 * G.XL, 0.]), b_)
+                    DB.append((a_ + b_) / 2)
+            DB = [np.unique(np.round(np.concatenate(DB), 6), axis=0)] if DB else []
+        if int(os.environ.get('CUTA', 0)): DB = [cut_adaptive(A)]                              # CUTA=1 (research-15, идея пользователя): разрыв V по окрестности k узлов — плоскость → разрез на две плоскости → тонкая стена
+        DB = np.concatenate(DB + ([GB] if GB is not None else [])); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); np.save(os.path.join(D, 'barrier.npy'), DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
     for c in A.cells:
         g = c.G; nt = len(g); v = A.V[c.o:c.o + nt * c.m].reshape(nt, c.m); Y.append(((g[:-1, :-1] + g[1:, :-1] + g[:-1, 1:] + g[1:, 1:]) / 4).reshape(-1, 2)); Vo.append(((v[:-1, :-1] + v[1:, :-1] + v[:-1, 1:] + v[1:, 1:]) / 4).ravel())
     Y, Vo = np.concatenate(Y), np.concatenate(Vo); rhs = np.full(len(Y), np.inf)
