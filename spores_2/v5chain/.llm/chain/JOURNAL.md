@@ -208,3 +208,4 @@ hub-v5chain-worker-b1 | launched | PLAN 21: 312 u.3 / 313 u.15 OWN+CUTR+LOOK20 �
 hub-v5chain-worker-b1 | launched | PLAN 21 дополн.: 314 u.3 / 315 u.15 NF0=0 SEEDEPS=.005 OWN CUTR LOOK20 ×5 | 06:45:53
 hub-v5chain-worker-b1 | launched | ДИ (SYS=di): 316 база, 317 OWN+CUTR+LOOK20+SEEDEPS, 2 зерна | 07:00:25
 hub-v5chain-worker-21 | result | п.17б grow3 дд 3D: 54/60, T/эталон mean 1.004 med .998 max 1.128 (aida, 27 мин) | 07:30:33
+hub-v5chain-research-16 | done | ctx 33% | NORMFRONT починен (5 багов), агент LOOK (u .3 1.008), связки по системам PLAN 21, ×3.3 ускорение, FMIN .02 | next=hub-v5chain-research-17 | 07:40:30
