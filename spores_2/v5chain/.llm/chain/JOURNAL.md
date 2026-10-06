@@ -196,3 +196,4 @@ hub-v5chain-research-15 | launched | DEPTH=2 (доля края > DFRAC глуб
 hub-v5chain-worker-20 | done | ctx 23% заранее: п.17б — новый модуль с нуля, нужен чистый контекст | п.1–3, 13, 17а закрыты (маятник 1.0249, ДИ 1.021 в v7); п.17б grow3 следующий | next=hub-v5chain-worker-21 | 03:31:15
 hub-v5chain-worker-21 | started | acc2 | sonnet | 03:31:51
 hub-v5chain-research-15 | spawn | hub-v5chain-worker-b1 (линия B, Sonnet) — PLAN п.18: перенос OWN/CUTR в v7 + гипотеза NORMFRONT (слово пользователя: 2 воркера) | 04:02:02
+hub-v5chain-worker-b1 | started | acc2 | sonnet | 04:02:33
