@@ -7,9 +7,9 @@ from tqdm import tqdm
 import finish_gen as FG
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS == 'manip' else 41))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
     N = 3; PERIOD = np.array([0, 0, PI2]); RHO = float(E('RHO', .05)); RHOV = np.full(3, RHO); XL = float(E('XL', 2.5)); XLV = np.array([XL, XL, 0.])
@@ -31,6 +31,10 @@ elif SYS == 'manip':
     def f(y, u): return np.concatenate([y[..., 2:], accel(y, u)], -1)
     def Bq(y):
         c = np.cos(y[1]); m11, m12, m22 = AA + 2 * BB * c, DD + BB * c, DD; det = m11 * m22 - m12 ** 2; Mi = np.array([[m22, -m12], [-m12, m11]]) / det; Bm = np.zeros((4, 2)); Bm[2:] = Mi; return Bm @ Bm.T
+elif SYS == 'di4':                                                                                          # w22 (PLAN п.24): двойной интегратор по двум осям, ẍ₁ = u₁, ẍ₂ = u₂, |uᵢ| ≤ 1; состояние (x₁, x₂, v₁, v₂)
+    N = 4; PERIOD = np.zeros(4); RHO = float(E('RHO', .05)); RHOV = np.full(4, RHO); XL = float(E('XL', 2.5)); XLV = np.full(4, XL); US = ((1., 1.), (1., -1.), (-1., 1.), (-1., -1.))
+    def f(y, u): return np.concatenate([y[..., 2:], np.broadcast_to(np.asarray(u, float), y[..., :2].shape)], -1)
+    def Bq(y): return np.diag([0., 0., 1., 1.])
 else: raise SystemExit('SYS?')
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
@@ -203,8 +207,14 @@ def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
 def rand_seed(rng): return np.array([rng.uniform(-PERIOD[k] / 2, PERIOD[k] / 2) if PER[k] else rng.uniform(-XLV[k], XLV[k]) for k in range(N)])
+def goal_seeds(rng):
+    """GS точек на поверхности коробки цели (чуть снаружи): очередь FIFO растит клетки от цели назад по потоку (BFS), а не случайно по всему полю (4D: цель ≈ 3e-4 объёма)."""
+    ar = np.array([np.prod(np.delete(RHOV, k)) for k in range(N)]); ar = ar / ar.sum(); out = []
+    for _ in range(GS):
+        k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(y)
+    return out
 def build_layer(u, rng, log=None):
-    cells = []; fails = 0; idx = HexIdx(); queue = []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
+    cells = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
     while fails < NFAIL and len(cells) < MAXC:
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = queue.pop(0) if queue else rand_seed(rng)
@@ -274,7 +284,7 @@ class Atlas:
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
-                    tried[i] = True; Ts, tp = FG.shoot(Y[i], f, US, RHOV, wrapy, FTMAX)
+                    tried[i] = True; Ts, tp = FG.shoot(Y[i], f, US, RHOV, wrapy, FTMAX, NA=int(E('NA', 3)))
                     if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
@@ -289,6 +299,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); REF = os.path.join(HERE, '../
 def starts_ref():
     """(Q, эталон T)."""
     if SYS == 'dd': rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]; return Q, np.load(os.path.join(REF, 'dd_ref_60.npy'))
+    if SYS == 'di4':                                                                                        # research-17: T* = max(T₁*, T₂*) в коробку ±.05 (r17/di4_ref.py)
+        d_ = np.load(os.path.join(REF, 'r17/di4_ref_60.npy')); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]
     if SYS == 'manip':
         rng = np.random.default_rng(0)
         for _ in range(32): rng.uniform(-1, 1, 4)
