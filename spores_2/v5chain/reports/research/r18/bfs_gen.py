@@ -1,7 +1,7 @@
 # research-18: BFS-рост от цели (только yb + SIDE) — идут ли поколения клеток по уровням V? (допущение PLAN 26б)
 # Запуск: SYS=pend UM=.3 GS=60 python3 bfs_gen.py  (growN импортируется как модуль, src не трогаем)
 import os, sys, numpy as np, json, time
-sys.path.insert(0, os.path.expanduser('~/claude-work/projects/spore/spores_2/v7/src/cells7'))
+sys.path.insert(0, os.environ.get('CELLS7', os.path.expanduser('~/claude-work/projects/spore/spores_2/v7/src/cells7')))
 import growN as G, heapq
 HEAP = int(os.environ.get('HEAP', 0))
 def build_back(u, rng):

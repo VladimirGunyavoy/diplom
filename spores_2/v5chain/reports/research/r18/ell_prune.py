@@ -22,14 +22,24 @@ def sub_atlas(A, keep):
     A2.finish(); return A2
 if __name__ == '__main__':
     from multiprocessing import Pool
-    A = G.Atlas.__new__(G.Atlas)
-    with Pool(len(G.US)) as pool: A.layers = pool.map(B._l, [(u, k) for k, u in enumerate(G.US)])
-    A.finish(); A.solve(); Q, ref = G.starts_ref(); EPS = float(os.environ.get('ELLEPS', .2)); NQ = int(os.environ.get('NQ', 5))
+    A = G.Atlas.__new__(G.Atlas); NQ = int(os.environ.get('NQ', 5))
+    if os.environ.get('LOAD'): import pickle; d_ = pickle.load(open(os.environ['LOAD'], 'rb')); A.layers = d_['layers']; A.finish(); A.V = d_['V']
+    else:
+        with Pool(len(G.US)) as pool: A.layers = pool.map(B._l, [(u, k) for k, u in enumerate(G.US)])
+        A.finish(); A.solve()
+    Q, ref = G.starts_ref()
+    if os.environ.get('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V), open(os.environ['DUMP'], 'wb'))
+    if os.environ.get('INREACH'):                                              # старты — из накрытой атласом области (V̂ конечна), самые дальние по V̂; эталон — точная формула DI (точка)
+        from region_frac_lib import t2
+        rq = np.random.default_rng(5); Qc = rq.uniform(-2, 2, (4000, G.N)); vq = A.vstar(G.wrapy(Qc)); okq = np.flatnonzero(vq < G.BIG / 2); okq = okq[np.argsort(-vq[okq])]
+        Q = Qc[okq[:max(NQ * 3, 1)]][::3]; ref = np.maximum(t2(Q[:, 0], Q[:, 2], 0., 0.), t2(Q[:, 1], Q[:, 3], 0., 0.)) if G.SYS == 'di4' else np.full(len(Q), np.nan)
+        print('накрыто проб', len(okq), 'из 4000; V̂ стартов', np.round(vq[okq[:max(NQ * 3, 1)]][::3], 2).tolist(), flush=True); EPS = float(os.environ.get('ELLEPS', .2)); NQ = int(os.environ.get('NQ', 5))
     print('полный атлас: клеток', len(A.cells), 'узлов', A.N, flush=True)
-    for i in range(NQ):
+    Cs = A.vstar(G.wrapy(Q)); ok = np.flatnonzero(Cs < G.BIG / 2); print('стартов с конечной V', len(ok), 'из', len(Q), flush=True)
+    for i in ok[:NQ]:
         s = G.wrapy(Q[i]); T0 = A.rollout(s[None])[0][0]; C = float(A.vstar(s[None])[0]); Ts, nsrc = solve_fwd(A, s)
         cm = np.array([(Ts[c.o:c.o + c.G.shape[0] * G.M ** G.m_] + A.V[c.o:c.o + c.G.shape[0] * G.M ** G.m_]).min() for c in A.cells])
-        res = dict(q=i, ref=round(float(ref[i]), 3), C=round(C, 3), T_full=round(float(T0), 3), src=nsrc, ts_c_min=round(float(cm.min()), 3))
+        res = dict(q=int(i), ref=round(float(ref[i]), 3), C=round(C, 3), T_full=round(float(T0), 3), src=nsrc, ts_c_min=round(float(cm.min()), 3))
         for eps in (EPS, .5):
             keep = cm <= (1 + eps) * C; A2 = sub_atlas(A, keep); A2.solve(); T2 = A2.rollout(s[None])[0][0]
             res['eps%.1f' % eps] = dict(cells=int(keep.sum()), frac=round(float(keep.mean()), 3), T=round(float(T2), 3))
