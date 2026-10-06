@@ -162,6 +162,7 @@ OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинк�
 GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFEDGE = int(os.environ.get('NFEDGE', 1)); NFLAG = int(os.environ.get('NFLAG', 12)); NFDEAD = int(os.environ.get('NFDEAD', 1)); LOOK = int(os.environ.get('LOOK', 0)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
 # NORMFRONT=1 (18б, гипотеза пользователя): строка i клетки — не образ отрезка за i·DTN, а пересечения траекторий-столбцов с прямой через центр c_i ⟂ f(c_i) (торец по нормали к потоку)
+import collections; GSTAT = collections.Counter()
 NFSTAT = dict(trunc=0, fill=0, nocross=0, mono=0, conv=0)
 def quad_convex(ra, rb):
     """все четырёхугольники между строками ra, rb (по столбцам j, j+1) выпуклы (знаки векторных произведений обходов совпадают)."""
@@ -174,9 +175,11 @@ def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None, brk=True):
     Возвращает (rows {i: (len(offs),2)}, C {i: c_i})."""
     n = normal(p0, u); X0 = np.vstack([p0 + np.asarray(offs)[:, None] * n, p0[None]]); nc = len(offs); K = (int(np.ceil(nmax * (1 + NFMARG))) + NFLAG) * NFSUB + 1
     X = np.empty((K, nc + 1, 2)); X[0] = X0; hs = sg * DTN / NFSUB
+    kout = None
     for k in range(1, K):
         X[k] = rk4(X[k - 1], u, hs, 1)
-        if not inbox(X[k][nc]) or np.linalg.norm(f(X[k][nc], u)) < FMIN / 4: X = X[:k + 1]; break                       # центр ушёл — дальше строк нет
+        if kout is None and (not inbox(X[k][nc]) or np.linalg.norm(f(X[k][nc], u)) < FMIN / 4): kout = k                  # центр ушёл — ещё одна строка (как в базе: строка за краем коробки сохраняется, иначе полоса у края не покрыта и очередь сеет в неё без конца)
+        if kout is not None and k >= (kout // NFSUB + 1) * NFSUB + NFSUB: X = X[:k + 1]; break
     K = len(X); rows = {}; C = {}; OK = {}; TT = {}; nf_rows.TT = TT; dead = np.zeros(nc, bool); tprev = np.zeros(nc); rprev = X0[:nc]
     for i in range(1, nmax + 1):
         ke = i * NFSUB
@@ -259,7 +262,8 @@ def grow2(p, u, idx, rm, tm):
                 if k < 0 or k >= KF: act[d] = False; continue
                 if ihi - ilo < 3 and (act['F'] or act['B']): continue                         # сначала хоть немного длины (эллипс при T → 0 вырожден)
                 col = np.array([rows[i][k] for i in range(ilo, ihi + 1)])
-                if not all(okr(i)[k] for i in range(ilo, ihi + 1)) or not inbox(col).all() or not ok_rect(min(klo, k), max(khi, k), ilo, ihi) or (BARRIER is not None and nearb(col).any()): act[d] = False; continue
+                if not all(okr(i)[k] for i in range(ilo, ihi + 1)) or not inbox(col).all() or not ok_rect(min(klo, k), max(khi, k), ilo, ihi) or (BARRIER is not None and nearb(col).any()):
+                    GSTAT['side_' + ('mask' if not all(okr(i)[k] for i in range(ilo, ihi + 1)) else 'box' if not inbox(col).all() else 'bend' if not ok_rect(min(klo, k), max(khi, k), ilo, ihi) else 'bar')] += 1; act[d] = False; continue
                 if DEPTH:                                                                     # глубина: новый край И точка на OVH·h внутрь (в столбцах — растяжение учтено) покрыты соседом
                     jd = max(1, int(np.ceil(OVH * (khi - klo + 1) / (M - 1)))); kin = k - jd if d == 'R' else k + jd
                     if 0 <= kin < KF:
@@ -277,8 +281,10 @@ def grow2(p, u, idx, rm, tm):
                 elif (idx.covered(col) | ~inbox(col)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
             else:
                 i = ihi + 1 if d == 'F' else ilo - 1
-                if i not in rows: act[d] = False; continue
+                if i not in rows: GSTAT['end_norow'] += 1; act[d] = False; continue
                 row = rows[i][klo:khi + 1]
+                if not okr(i)[klo:khi + 1].all(): GSTAT['end_mask'] += 1
+                elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     act[d] = False; continue
                 if DEPTH:
