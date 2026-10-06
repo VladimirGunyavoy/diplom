@@ -3,7 +3,7 @@
 рост в 6 сторон по правилам grow2 (v7/grow_cells2d.py): изгиб среза (отклонение от билинейной заплатки по 4 углам) в эллипсоиде достижимости a²·T·W ≤ DELTA, наложение на соседа OVH·h.
 Узлы M×M на строку (с гало), шестигранники между строками; поиск — индекс по рамкам шестигранников + трилинейная обратная карта Ньютоном 3×3.
 Цена: V(узел) = min_u [Δt + V*(φ_u(узел, Δt))], V*(точка) = min по шестигранникам трилинейно; агент каждые DTN берёт argmin по 4 управлениям."""
-import numpy as np, os, sys, json, time
+import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
 E = os.environ.get
 M = 5; BIG = 1e3; HALO = .1; PER = 2 * np.pi; EPSJ = 1e-5
@@ -155,6 +155,7 @@ def grow3(p, u, idx, rm, tm):
     near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
     c = Cell(p + e1 * (S[k1lo] + S[k1hi]) / 2 + e2 * (S[k2lo] + S[k2hi]) / 2, u, r1 / (1 + HALO), r2 / (1 + HALO), e1, e2); c.nf, c.nb = ihi, -ilo; return c
+VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
 GLIM = float(E('GLIM', .25))
 def glimits(p, u):
     """cells near the goal must be as narrow as the goal box (else only a few nodes hit it and V does not propagate): half-width ~ GLIM·distance, length ~ 2·distance."""
@@ -178,6 +179,25 @@ def build_layer(u, rng, log=None):
         if log: log(u, cells)
     bar.close(); return cells, idx
 def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
+def arc(y, u, t):
+    x, yy, th = y; v, w = u
+    if w == 0: return np.array([x + v * t * np.cos(th), yy + v * t * np.sin(th), th])
+    return np.array([x, yy, th + w * t])
+TOPS = [tp for n in range(1, NA + 1) for tp in itertools.product(range(4), repeat=n) if all(tp[i] != tp[i + 1] for i in range(n - 1))]
+def shoot(y, tmax):
+    """best shooting finish from y: arcs of the 4 rhombus vertices in closed form, durations by SLSQP, end inside the goal box; returns (time, topology) or (inf, None)."""
+    from scipy.optimize import minimize
+    best = (np.inf, None); R = RHO * .9
+    for tp in TOPS:
+        def end(d):
+            z = np.array(y, float)
+            for k, dt in zip(tp, d): z = arc(z, US[k], dt)
+            return np.r_[z[:2], wrap(z[2])]
+        cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
+        for d0 in (np.full(len(tp), tmax / (2 * len(tp))), np.full(len(tp), tmax / len(tp))):
+            r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * len(tp), constraints=cons, options=dict(maxiter=100, ftol=1e-9))
+            if r.success and np.all(np.abs(end(r.x)) <= RHO) and r.x.sum() < best[0]: best = (r.x.sum(), tp)
+    return best
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []; s.idx = []
@@ -222,10 +242,17 @@ class Atlas:
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
-    def rollout(s, Q, tmax=40.):
-        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]
+    def rollout(s, Q, tmax=40., vf=None):
+        vf = VF if vf is None else vf
+        Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]; fin = np.zeros(n, bool)
         for _ in range(int(tmax / DTN)):
             if done.all(): break
+            if vf > 0:
+                v = s.vstar(Y)
+                for i in np.flatnonzero(~done & (v <= vf)):
+                    tf, tp = shoot(Y[i], 2.5 * max(v[i], .2))
+                    if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
+                if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
@@ -235,12 +262,13 @@ class Atlas:
                 for i in range(1, 9): y_i = rk4(y8, ui, DTN / 8, 1); y8 = np.where((hh >= DTN * i / 8 - 1e-12)[:, None], y_i, y8)
                 Yn[m] = y8
             sw += act & (pk >= 0) & (k != pk); pk = np.where(act, k, pk); Y = wrapy(np.where(act[:, None], Yn, Y)); T += np.where(act, np.where(np.isfinite(tg), tg, DTN), 0.); T[~done & stuck] = np.inf; done |= ingoal(Y) | stuck; path.append(Y.copy())
-        T[~ingoal(Y)] = np.inf; return T, sw, np.array(path)
+        T[~(ingoal(Y) | fin)] = np.inf; s.n_fin = int(fin.sum()); return T, sw, np.array(path)
 def starts_ref():
     rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]
     return Q, np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../v5chain/reports/research/dd_ref_60.npy'))
 if __name__ == '__main__':
     t0 = time.time(); A = Atlas(); tb = time.time() - t0
     print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref(); T, sw, _ = A.rollout(Q); fz = np.isfinite(T); r = T[fz] / ref[fz]
-    print(json.dumps(dict(DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(fz.mean()), 3),
+    if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V, Q=Q, T=T, ref=ref), open(E('DUMP'), 'wb'))
+    print(json.dumps(dict(DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(fz.mean()), 3), VF=VF, fin=getattr(A, 'n_fin', 0),
                           T_over_ref=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), max=round(float(r.max()), 3), min=round(float(r.min()), 3)) if fz.any() else None, sec_build=round(tb, 1), sec=round(time.time() - t0, 1))), flush=True)

@@ -212,3 +212,4 @@ hub-v5chain-research-16 | done | ctx 33% | NORMFRONT починен (5 баго�
 hub-v5chain-research-17 | started | acc1 | opus | 07:41:30
 hub-v5chain-worker-b1 | done | ctx ~21% заранее: PLAN 22 growN — новый модуль, нужен чистый контекст | 18а/18б/20/21 перенесены и сверены, п.19 u.3 ✓ (u.15 считается на aida) | next=hub-v5chain-worker-b2 | 07:45:10
 hub-v5chain-worker-b2 | started | acc1 | sonnet | 07:45:37
+hub-v5chain-worker-21 | result | 17в grow3 + финиш стрельбой: 60/60, T/эталон mean .970 max .991 | 08:12:09
