@@ -247,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -278,6 +278,7 @@ def grow2(p, u, idx, rm, tm):
         nn = np.array([-ch[1], ch[0]]) / L; d = (P[1:-1] - P[0]) @ nn; v = d[np.argmax(np.abs(d))] * nn
         lam, Q = np.linalg.eigh(Wc); q = Q.T @ v; return float(np.sqrt(np.sum(q * q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)))))
     def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
+        if DELTA >= 1e8: return True                                                          # research-20 (профиль): изгиб выключен — не считать bend (22% построения слоя)
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
         return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
     cov0 = idx.covered(rows[0]) | ~inbox(rows[0]) if OWN else None
@@ -287,7 +288,7 @@ def grow2(p, u, idx, rm, tm):
             o_ = ~cov0[a:b + 1]
             if o_.any(): return cr[o_].mean()
         return cr.mean()
-    klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}
+    klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}; why = {}
     while any(act.values()):
         for d in 'RLFB':
             if not act[d]: continue
@@ -312,19 +313,22 @@ def grow2(p, u, idx, rm, tm):
                 if d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: act[d] = False
+                elif SIDEOWN:                                                                         # research-20 (стык у цели — стопка коротких клеток, замечание пользователя): покрытие нового столбца — только в строках, свободных у прежнего края клетки (щель уже, чем длина клетки)
+                    ke_ = klo + 1 if d == 'L' else khi - 1; edge_ = np.array([rows[i][ke_] for i in range(ilo, ihi + 1)]); fr_ = ~(idx.covered(edge_) | ~inbox(edge_)); cn_ = idx.covered(col) | ~inbox(col)
+                    if (cn_[fr_].mean() if fr_.any() else 1.) > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
                 elif (idx.covered(col) | ~inbox(col)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
             else:
                 i = ihi + 1 if d == 'F' else ilo - 1
-                if i not in rows: GSTAT['end_norow'] += 1; act[d] = False; continue
+                if i not in rows: GSTAT['end_norow'] += 1; why[d] = 'norow'; act[d] = False; continue
                 row = rows[i][klo:khi + 1]
                 if not okr(i)[klo:khi + 1].all(): GSTAT['end_mask'] += 1
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
-                    act[d] = False; continue
+                    why[d] = 'mask' if not okr(i)[klo:khi + 1].all() else 'bend' if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) else 'bar'; act[d] = False; continue
                 if SELFOV and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
                     lo_, hi_ = (ilo, ihi - 2) if d == 'F' else (ilo + 2, ihi)
                     pg_ = np.array([rows[q][klo] for q in range(lo_, hi_ + 1)] + [rows[q][khi] for q in range(hi_, lo_ - 1, -1)]); pth_ = MPath(pg_)
-                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
+                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1; why[d] = 'self'   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
                 if SSIGN > 0 and ihi > ilo:                                                           # research-19: знак d ln w/dt на новом торце против знака по уже выросшей клетке
                     wl2 = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
                     gc_ = np.log(wl2(rows[ihi][klo:khi + 1]) / wl2(rows[ilo][klo:khi + 1])) / ((ihi - ilo) * DTN)
@@ -343,10 +347,10 @@ def grow2(p, u, idx, rm, tm):
                     continue
                 if d == 'F': ihi = i
                 else: ilo = i
-                if d in extra: act[d] = False
+                if d in extra: act[d] = False; why.setdefault(d, 'cov')
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
-    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; c.why = why; c.nmax = (imin, imax, ilo, ihi)
     if MADAPT > 0:                                                                            # research-19 (идея пользователя): число клонов-узлов клетки адаптивно — удваивать (5 → 9 → 17 → 33), пока ломаная торца по m узлам отходит от строки мелкой сетки больше MADAPT (в любой строке клетки)
         Sx = S[klo:khi + 1]
         for m_ in (5, 9, 17, 33):
