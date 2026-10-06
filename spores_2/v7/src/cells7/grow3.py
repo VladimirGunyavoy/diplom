@@ -271,7 +271,13 @@ class Atlas:
                     if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
                 if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
-            stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
+            stuck = J.min(1) >= BIG / 2
+            if vf > 0:                                                                                  # all 4 steps land in holes (e.g. beside a wall): finish by shooting from here, whatever V* is
+                for i in np.flatnonzero(~done & stuck):
+                    tf, tp = shoot(Y[i], 2.5 * max(float(s.vstar(Y[i:i + 1])[0]) if s.vstar(Y[i:i + 1])[0] < BIG / 2 else 4., .2))
+                    if tp is not None: T[i] += tf; done[i] = True; fin[i] = True
+                stuck &= ~done
+            act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
                 m = act & (k == ki)
                 if not m.any(): continue
