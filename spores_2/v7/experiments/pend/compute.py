@@ -26,7 +26,9 @@ def cut_rollout(A, pa, pb, NB=int(os.environ.get('CUTRN', 6))):
     """пары узлов со скачком V > CUT (проход 0): время агента из концов; скачок не подтвердился (|Ta − Tb| ≤ CUT) — шум, стены нет;
     иначе бисекция отрезка NB раз: середина — к тому концу, на чьё время похоже её время; стена — середина последнего отрезка (обрывки разных клеток сходятся в одну линию)."""
     TH = float(os.environ.get('CUTRT', 2.))                                                     # short horizon + V* of the atlas (profile research-15: long rollouts = 57% of run time)
-    def T_(Y): T, _, P_ = A.rollout(Y, tmax=TH); return np.where(np.isfinite(T), T, np.minimum(TH + A.vstar(P_[-1]), 1e3))
+    def T_(Y):
+        lk = G.LOOK; G.LOOK = int(os.environ.get('CUTRLOOK', 0)); T, _, P_ = A.rollout(Y, tmax=TH); G.LOOK = lk   # research-16: прокатка LOOK — только итоговому агенту (в бисекции CUTR она ×4 ко времени)
+        return np.where(np.isfinite(T), T, np.minimum(TH + A.vstar(P_[-1]), 1e3))
     pb = pa + np.c_[G.wrap(pb[:, 0] - pa[:, 0]), pb[:, 1] - pa[:, 1]]; Ta, Tb = T_(pa), T_(pb); real = np.abs(Ta - Tb) > CUT; a, b, ta, tb = pa[real], pb[real], Ta[real], Tb[real]
     for _ in range(NB):
         m = (a + b) / 2; tm = T_(m); la = np.abs(tm - ta) < np.abs(tm - tb); a = np.where(la[:, None], m, a); ta = np.where(la, tm, ta); b = np.where(la[:, None], b, m); tb = np.where(la, tb, tm)
@@ -56,7 +58,9 @@ def cut_adaptive(A, K=int(os.environ.get('CUTAK', 16)), ND=8):
     nmax = sc >= np.where(across, S[nb[ci]], -1.).max(1); ci, Nk = ci[nmax], Nk[nmax]; h = np.median(dist[ci, 1:4], 1)
     T = np.c_[-Nk[:, 1], Nk[:, 0]]; ns = np.maximum(2, np.ceil(h / .005).astype(int)); pts = [P[i] + np.linspace(-h_ / 2, h_ / 2, n_)[:, None] * t for i, h_, n_, t in zip(ci, h, ns, T)]
     print('CUTA: кандидатов', len(cand), 'стена', len(ci), 'узлов', flush=True); return np.concatenate(pts)
+NF_FINAL = G.NORMFRONT
 for ps in range(REFINE + 1):
+    if int(os.environ.get('NF0', 1)) == 0: G.NORMFRONT = NF_FINAL if ps == REFINE else 0   # research-16 NF0=0: проход 0 (поиск стен CUT) — без NORMFRONT; NF только в итоговом проходе
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
     for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
     if ps == REFINE: break
@@ -98,6 +102,21 @@ A.finish(); con = [G.contact_stats(l, ix) for l, ix in zip(A.layers, A.idx)]; X 
 status('считаю цену V', cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), contact=con, cover=cov); A.solve()
 gx, gw = np.linspace(-G.XL, G.XL, 161), np.linspace(-G.WL, G.WL, 141); GX, GW = np.meshgrid(gx, gw); VV = A.vstar(np.c_[GX.ravel(), GW.ravel()]).reshape(GX.shape)
 np.savez(os.path.join(D, 'value.tmp.npz'), gx=gx, gw=gw, V=VV); os.replace(os.path.join(D, 'value.tmp.npz'), os.path.join(D, 'value.npz'))
+if os.environ.get('PROBE'):                                                                    # research-16: разбор заниженной V — какая клетка даёт минимум в точке
+    import pickle; PQ = np.array(json.loads(os.environ['PROBE'])); I, IDX, W = A.stencils(PQ); v = A.interp(W, A.V[IDX]); cid = np.searchsorted(np.array([c.o for c in A.cells]), IDX[:, 0], 'right') - 1; rep = []
+    for q in range(len(PQ)):
+        k = np.flatnonzero(I == q); k = k[np.argsort(v[k])][:4]
+        rep.append([dict(v=float(v[t]), cell=int(cid[t]), u=float(A.cells[cid[t]].u), VI=A.V[IDX[t]].round(3).tolist(), W=W[t].round(3).tolist(), P=A.P[IDX[t]].round(3).tolist()) for t in k])
+    pickle.dump(dict(rep=rep, cells=[dict(G=A.cells[i].G, u=A.cells[i].u, V=A.V[A.cells[i].o:A.cells[i].o + A.cells[i].G.shape[0] * A.cells[i].m].reshape(A.cells[i].G.shape[0], -1)) for i in sorted({r_['cell'] for rr in rep for r_ in rr})]), open(os.path.join(D, 'probe.pkl'), 'wb'))
+    for q, rr in enumerate(rep): print('PROBE', PQ[q].tolist(), json.dumps(rr[:2]), flush=True)
+    Tq, _, pq = A.rollout(PQ)
+    for q in range(len(PQ)):
+        pp = pq[:, q]; vv = A.vstar(pp); dv = vv[:-1] - vv[1:]                                 # вдоль пути V должна падать на DTN за шаг; падение больше — «короткий путь»
+        print('TRACE', q, 'T', round(float(Tq[q]), 3), 'V0', round(float(vv[0]), 3), flush=True)
+        print('  path', [(round(k * G.DTN, 2), pp[k].round(2).tolist(), round(float(vv[k]), 2)) for k in range(0, len(pp), 5) if k * G.DTN <= Tq[q] + .3], flush=True)
+        for k in np.flatnonzero(dv > 2.5 * G.DTN)[:8]:
+            I_, IDX_, W_ = A.stencils(pp[k:k + 1]); v_ = A.interp(W_, A.V[IDX_]); t_ = int(np.argmin(v_)) if len(v_) else -1; cid_ = (np.searchsorted(np.array([c.o for c in A.cells]), IDX_[t_, 0], 'right') - 1) if t_ >= 0 else -1
+            print('  JUMP k', int(k), 'x', pp[k].round(3).tolist(), '->', pp[k + 1].round(3).tolist(), 'V', round(float(vv[k]), 3), '->', round(float(vv[k + 1]), 3), 'cell', int(cid_), 'VI', A.V[IDX_[t_]].round(3).tolist() if t_ >= 0 else None, 'TT', None if cid_ < 0 or getattr(A.cells[cid_], 'TT', None) is None else A.cells[cid_].TT[:, 2].round(3).tolist()[:40], flush=True)
 base = dict(refine=hist, cells=len(done), cells_by_layer=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), contact=con, cover=cov, big_nodes=round(float((A.V >= G.BIG / 2).mean()), 3)); status('агент', **base)
 Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; T, sw, path = A.rollout(Q)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
