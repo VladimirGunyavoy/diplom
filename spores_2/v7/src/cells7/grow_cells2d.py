@@ -110,8 +110,13 @@ class QIdx:
     def arrays(s):
         if s.dirty and s.parts: s.T = [np.concatenate(z) for z in zip(*s.parts)]; s.dirty = False
         return s.T
+    def freeze(s):
+        """п.30: индекс больше не растёт (готовый атлас) — корзины в CSR-массивы, запрос без питоновского цикла по корзинам."""
+        ks = list(s.bins); s.fk = np.array([a * 100003 + b for a, b in ks], np.int64); o = np.argsort(s.fk); s.fk = s.fk[o]; L = [s.bins[ks[i]] for i in o]
+        ln = np.array([len(l) for l in L], np.int64); s.fst = np.r_[0, np.cumsum(ln)]; fl = np.array([x for l in L for x in l]) if L else np.zeros((0, 2)); s.fq = fl[:, 0].astype(np.int64); s.fsh = fl[:, 1].astype(float); s.frozen = True
     def query(s, Y):
         """все пары (точка, четырёхугольник), где точка внутри: pi, qi, a, b (координаты в четырёхугольнике), sh."""
+        if getattr(s, 'frozen', False) and QFAST: return s.query_csr(Y)
         if not s.parts: return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
         A0, A1, B1, B0 = s.arrays()[:4]; key = np.floor(Y / s.QB).astype(int); kk = key[:, 0] * 100003 + key[:, 1]; order = np.argsort(kk, kind='stable'); uk, st = np.unique(kk[order], return_index=True); st = np.r_[st, len(order)]
         out = []; PI, QI, SH_ = [], [], []; cnt = 0
@@ -123,11 +128,26 @@ class QIdx:
         if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(QI), np.concatenate(SH_)))
         if not out: return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
         return [np.concatenate(z) for z in zip(*out)]
+    def query_csr(s, Y):
+        if not s.parts or not len(s.fk): return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
+        key = np.floor(Y / s.QB).astype(np.int64); kk = key[:, 0] * 100003 + key[:, 1]; pos = np.searchsorted(s.fk, kk); pos = np.minimum(pos, len(s.fk) - 1); hit = s.fk[pos] == kk
+        pts = np.flatnonzero(hit)
+        if not len(pts): return [np.zeros(0, int)] * 2 + [np.zeros(0)] * 3
+        st = s.fst[pos[pts]]; cn = s.fst[pos[pts] + 1] - st; tot = int(cn.sum()); pi = np.repeat(pts, cn); off = np.arange(tot) - np.repeat(np.cumsum(cn) - cn, cn); ix = np.repeat(st, cn) + off
+        out = []; step_ = 2_000_000
+        for a in range(0, tot, step_): out.append(s._test(Y, pi[a:a + step_], s.fq[ix[a:a + step_]], s.fsh[ix[a:a + step_]]))
+        return [np.concatenate(z) for z in zip(*out)]
     def _test(s, Y, pi, qi, sh):
-        A0, A1, B1, B0 = s.arrays()[:4]; y = Y[pi] - np.c_[sh, 0 * sh]; pos = np.ones(len(pi), bool); neg = pos.copy()
-        for p_, q_ in ((A0, A1), (A1, B1), (B1, B0), (B0, A0)):
-            P_, Q_ = p_[qi], q_[qi]; cr = (Q_[:, 0] - P_[:, 0]) * (y[:, 1] - P_[:, 1]) - (Q_[:, 1] - P_[:, 1]) * (y[:, 0] - P_[:, 0]); pos &= cr >= -1e-10; neg &= cr <= 1e-10
-        k = pos | neg; pi, qi, sh, y = pi[k], qi[k], sh[k], y[k]; p0, p1, p2, p3 = A0[qi], A1[qi], B0[qi], B1[qi]; a = np.full(len(pi), .5); b = a.copy()
+        s.arrays()
+        if QFAST:                                                                                # п.30: рамка четырёхугольника — один gather (n, 4, 2), 4 ребра разом
+            if getattr(s, 'QA', None) is None or len(s.QA) != s.n: A0, A1, B1, B0 = s.T[:4]; s.QA = np.stack([A0, A1, B1, B0], 1); s.QAn = np.roll(s.QA, -1, axis=1) - s.QA
+            P_ = s.QA[qi]; D_ = s.QAn[qi]; y = Y[pi] - np.c_[sh, 0 * sh]; cr = D_[..., 0] * (y[:, None, 1] - P_[..., 1]) - D_[..., 1] * (y[:, None, 0] - P_[..., 0])
+            k = (cr >= -1e-10).all(1) | (cr <= 1e-10).all(1); pi, qi, sh, y, P_ = pi[k], qi[k], sh[k], y[k], P_[k]; p0, p1, p2, p3 = P_[:, 0], P_[:, 1], P_[:, 3], P_[:, 2]; a = np.full(len(pi), .5); b = a.copy()
+        else:
+            A0, A1, B1, B0 = s.arrays()[:4]; y = Y[pi] - np.c_[sh, 0 * sh]; pos = np.ones(len(pi), bool); neg = pos.copy()
+            for p_, q_ in ((A0, A1), (A1, B1), (B1, B0), (B0, A0)):
+                P_, Q_ = p_[qi], q_[qi]; cr = (Q_[:, 0] - P_[:, 0]) * (y[:, 1] - P_[:, 1]) - (Q_[:, 1] - P_[:, 1]) * (y[:, 0] - P_[:, 0]); pos &= cr >= -1e-10; neg &= cr <= 1e-10
+            k = pos | neg; pi, qi, sh, y = pi[k], qi[k], sh[k], y[k]; p0, p1, p2, p3 = A0[qi], A1[qi], B0[qi], B1[qi]; a = np.full(len(pi), .5); b = a.copy()
         for _ in range(5):
             F = ((1 - a) * (1 - b))[:, None] * p0 + (a * (1 - b))[:, None] * p1 + ((1 - a) * b)[:, None] * p2 + (a * b)[:, None] * p3 - y
             Fa = (1 - b)[:, None] * (p1 - p0) + b[:, None] * (p3 - p2); Fb = (1 - a)[:, None] * (p2 - p0) + a[:, None] * (p3 - p1); det = Fa[:, 0] * Fb[:, 1] - Fa[:, 1] * Fb[:, 0]; det = np.where(np.abs(det) < 1e-14, 1e-14, det)
@@ -440,6 +460,7 @@ class Atlas:
             if not hasattr(s, 'qx'):
                 s.qx = QIdx()
                 for ci, c in enumerate(s.cells): s.qx.add(c, ci)
+                s.qx.freeze()
             pi, qi, a, b, sh = s.qx.query(Y)
             if not len(pi): return np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4))
             T_ = s.qx.arrays(); it, j, o, m = T_[5][qi], T_[6][qi], T_[10][qi], T_[11][qi]; I = pi
@@ -504,10 +525,13 @@ class Atlas:
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def tgoal3(s, Y, n=8):
-        """tgoal по всем 3 управлениям одним стеком → (len(Y), 3)."""
-        m = len(Y); y = np.tile(Y, (len(US), 1)); uu = np.repeat(np.array(US), m); tg = np.full(len(y), np.inf)
+        """tgoal по всем 3 управлениям одним стеком → (len(Y), 3). Шаг DTN уходит не дальше DTN·(WL+2): точки дальше RHO + этого от цели в цель не попадут — их не считаем."""
+        m = len(Y); out = np.full((m, len(US)), np.inf); mg = RHO + DTN * (WL + 2.) + .02
+        near = np.flatnonzero((np.abs(wrap(Y[:, 0])) <= mg) & (np.abs(Y[:, 1]) <= mg))
+        if not len(near): return out
+        k = len(near); y = np.tile(Y[near], (len(US), 1)); uu = np.repeat(np.array(US), k); tg = np.full(len(y), np.inf)
         for i in range(1, n + 1): y = rk4(y, uu, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
-        return tg.reshape(len(US), m).T
+        out[near] = tg.reshape(len(US), k).T; return out
     def step3(s, Y):
         """шаг по всем 3 управлениям одним стеком → (3·len(Y), 2), блоки по управлению."""
         return step(np.tile(Y, (len(US), 1)), np.repeat(np.array(US), len(Y)))
