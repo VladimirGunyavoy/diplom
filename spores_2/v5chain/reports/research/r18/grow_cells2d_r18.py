@@ -45,6 +45,13 @@ class Cell:
                     else: r_ = nf_rows(s.p0, s.u, offs, nn, sg, strict=False)[0]
                     rows.update(r_); tt.update(nf_rows.TT)
             ks = sorted(rows); s.G = np.array([rows[k] for k in ks]); s.TT = np.array([tt[k] for k in ks]); s.DEAD = ~np.array([ok.get(k, np.ones(s.m, bool)) for k in ks])   # NFDEAD (research-16): узел-заплатка (столбец не пересёк нормаль — у барьера ушёл на другую сторону) — V = BIG навсегда, его четырёхугольники не интерполируются; assert ks == list(range(-s.nb, s.nf + 1)), (ks[0], ks[-1], s.nb, s.nf)   # research-16: TT — время узла вдоль своего столбца (узлы (i,j), (i+1,j) — на одной траектории u)
+            if NORMFRONT == 3:                                                                    # рёбра «узел строки i → точка строки i+1»: шаг DTN по потоку, поправка 1-го порядка до ломаной строки i+1, время τ точное до O(поправка²); V — линейно между двумя узлами строки
+                s.TT = None; s.DEAD = np.zeros(s.G.shape[:2], bool); nt_, m_ = s.G.shape[:2]; q = step(s.G[:-1], s.u); Gn = s.G[1:]
+                jn = ((q[:, :, None] - Gn[:, None]) ** 2).sum(-1).argmin(2); Pn = np.take_along_axis(Gn, jn[..., None], 1); fq = f(q, s.u); sp = np.linalg.norm(fq, axis=-1) + 1e-12; fh = fq / sp[..., None]
+                dist = ((Pn - q) * fh).sum(-1); tau = DTN + dist / sp; ql = q + fh * dist[..., None]; a_, b_ = Gn[:, None, :-1], Gn[:, None, 1:]; ab = b_ - a_; L2 = (ab ** 2).sum(-1) + 1e-18
+                tt_ = (((ql[:, :, None] - a_) * ab).sum(-1) / L2); tc = np.clip(tt_, 0., 1.); res = np.linalg.norm(ql[:, :, None] - (a_ + tc[..., None] * ab), axis=-1); ks_ = res.argmin(2)
+                w_ = np.take_along_axis(tc, ks_[..., None], 2)[..., 0]; r_ = np.take_along_axis(res, ks_[..., None], 2)[..., 0]; ok_ = (r_ < .25 * np.sqrt(np.take_along_axis(np.broadcast_to(L2, tt_.shape), ks_[..., None], 2)[..., 0])) & (tau > 1e-6)
+                ii, jj = np.nonzero(ok_); s.E2 = (ii * m_ + jj, (ii + 1) * m_ + ks_[ii, jj], w_[ii, jj], tau[ii, jj])
             s.bb = (s.G[..., 0].min() - 1e-6, s.G[..., 0].max() + 1e-6, s.G[..., 1].min() - 1e-6, s.G[..., 1].max() + 1e-6)
             s.Q = [s.G[:-1, :-1].reshape(-1, 2), s.G[:-1, 1:].reshape(-1, 2), s.G[1:, 1:].reshape(-1, 2), s.G[1:, :-1].reshape(-1, 2)]; return
         for _ in range(s.nf): fw.append(step(fw[-1], s.u))
@@ -181,6 +188,21 @@ def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None, brk=True):
         if kout is None and (not inbox(X[k][nc]) or np.linalg.norm(f(X[k][nc], u)) < FMIN / 4): kout = k                  # центр ушёл — ещё одна строка (как в базе: строка за краем коробки сохраняется, иначе полоса у края не покрыта и очередь сеет в неё без конца)
         if kout is not None and k >= (kout // NFSUB + 1) * NFSUB + NFSUB: X = X[:k + 1]; break
     K = len(X); rows = {}; C = {}; OK = {}; TT = {}; nf_rows.TT = TT; dead = np.zeros(nc, bool); tprev = np.zeros(nc); rprev = X0[:nc]
+    if NORMFRONT == 3:                                                                         # research-19 (идея пользователя): клоны заново на КАЖДОМ шаге центральной линии — строка i = ортогональная кривая потока через c_i (dy/ds = n(y)), узлы на дуговых смещениях offs; столбцы НЕ траектории, мёртвых узлов нет
+        nI = min(nmax, (K - 1) // NFSUB)
+        if nI < 1: return (rows, C, OK) if strict == 'mask' else (rows, C)
+        Cc = X[np.arange(1, nI + 1) * NFSUB, nc]; oo = np.asarray(offs, float); od = np.argsort(oo); Pm = np.empty((nI, nc, 2))
+        def nrm_(Y): v = f(Y, u); return np.stack([-v[:, 1], v[:, 0]], 1) / (np.linalg.norm(v, axis=1, keepdims=True) + 1e-12)
+        for side in ([j_ for j_ in od if oo[j_] >= 0], [j_ for j_ in od[::-1] if oo[j_] < 0]):
+            Y = Cc.copy(); s0 = 0.
+            for j_ in side:
+                ds = (oo[j_] - s0) / 2
+                for _ in range(2): k1 = nrm_(Y); k2 = nrm_(Y + ds / 2 * k1); k3 = nrm_(Y + ds / 2 * k2); k4 = nrm_(Y + ds * k3); Y = Y + ds / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+                Pm[:, j_] = Y; s0 = oo[j_]
+        for i in range(1, nI + 1):
+            c = Cc[i - 1]; rows[sg * i] = Pm[i - 1]; C[sg * i] = c; OK[sg * i] = np.ones(nc, bool); TT[sg * i] = np.full(nc, sg * i * DTN)
+            if stop is not None and stop(i, c): break
+        return (rows, C, OK) if strict == 'mask' else (rows, C)
     for i in range(1, nmax + 1):
         ke = i * NFSUB
         if ke >= K: break
@@ -224,7 +246,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -298,6 +320,10 @@ def grow2(p, u, idx, rm, tm):
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     act[d] = False; continue
+                if SELFOV and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
+                    lo_, hi_ = (ilo, ihi - 2) if d == 'F' else (ilo + 2, ihi)
+                    pg_ = np.array([rows[q][klo] for q in range(lo_, hi_ + 1)] + [rows[q][khi] for q in range(hi_, lo_ - 1, -1)]); pth_ = MPath(pg_)
+                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
                 if SSIGN > 0 and ihi > ilo:                                                           # research-19: знак d ln w/dt на новом торце против знака по уже выросшей клетке
                     wl2 = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
                     gc_ = np.log(wl2(rows[ihi][klo:khi + 1]) / wl2(rows[ilo][klo:khi + 1])) / ((ihi - ilo) * DTN)
@@ -319,7 +345,16 @@ def grow2(p, u, idx, rm, tm):
                 if d in extra: act[d] = False
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
-    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; return c
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2
+    if MADAPT > 0:                                                                            # research-19 (идея пользователя): число клонов-узлов клетки адаптивно — удваивать (5 → 9 → 17 → 33), пока ломаная торца по m узлам отходит от строки мелкой сетки больше MADAPT (в любой строке клетки)
+        Sx = S[klo:khi + 1]
+        for m_ in (5, 9, 17, 33):
+            sn_ = np.linspace(Sx[0], Sx[-1], m_); dev = 0.
+            for i in range(ilo, ihi + 1):
+                R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
+            if dev <= MADAPT: break
+        c.m = m_; GSTAT['m_%d' % m_] += 1
+    return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
@@ -470,9 +505,12 @@ class Atlas:
             if getattr(c, 'TT', None) is None or not NFEDGE: continue
             nt, m = c.G.shape[:2]; a = c.o + np.arange((nt - 1) * m); ea.append(a); eb.append(a + m); ec.append(np.maximum(np.diff(c.TT, axis=0).ravel(), 1e-6))
         ea, eb, ec = (np.concatenate(ea), np.concatenate(eb), np.concatenate(ec)) if ea else (np.zeros(0, int), np.zeros(0, int), np.zeros(0))
+        e2 = [(c.o + c.E2[0], c.o + c.E2[1], c.E2[2], c.E2[3]) for c in s.cells if getattr(c, 'E2', None) is not None]   # research-19 NORMFRONT=3: ребро в точку следующей строки (между узлами b и b+1, вес w)
+        e2a, e2b, e2w, e2t = [np.concatenate(x) for x in zip(*e2)] if e2 else (np.zeros(0, int), np.zeros(0, int), np.zeros(0), np.zeros(0))
         for n in tqdm(range(it), desc='value iteration', mininterval=MI, leave=False):
             val = DTN + s.interp(W, V[IDX], not JAG); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st))
             if len(ea): np.minimum.at(new, ea, np.where(V[eb] < BIG / 2, ec + V[eb], BIG))
+            if len(e2a): np.minimum.at(new, e2a, np.where((V[e2b] < BIG / 2) & (V[e2b + 1] < BIG / 2), e2t + (1 - e2w) * V[e2b] + e2w * V[e2b + 1], BIG))
             new[s.goal] = 0.; new[dead] = BIG
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
