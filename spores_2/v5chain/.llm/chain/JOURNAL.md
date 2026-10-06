@@ -233,3 +233,5 @@ hub-v5chain-worker-22 | done | ctx 29% | grow3 закрыт (1.004/≈1.005), di
 hub-v5chain-worker-23 | started | acc3 | sonnet | 19:01:31
 hub-v5chain-worker-b3 | result | manip c3000g: reach .25 T/эт 1.24 (VF1 1.18); SPAR в growN; FRAC=1/DEDUP непригодны; идёт c12000 FRAC .5 SPAR=6 | 19:21:43
 hub-v5chain-research-18 | line-open | worker B | (ретро-запись: линия B открыта research-15, worker-b1→b3) задачи [B] 22, 22г, 23а, 23; growN.py — владелец B, A — growNq.py | 19:22:27
+hub-v5chain-worker-b3 | result | 23б готов (growN PESS/WTHR, коммит 00fdff0, по умолчанию выкл.). di4 MAXC=400 GLIM=0 M=3: PESS=1 RHO=.05 — iters 0, big_nodes 1.0 (нет конечных узлов, как и без PESS); PESS=1 WTHR=.02 — то же; PESS=1 RHO=.35 — V растекается (403 итерации, big_nodes .453), reach 0/60 на 4×400 клеток (мало клеток/старты вне покрытия). Для research: PESS нужен вместе с крупной целью/V₀; линия A может брать growN | 00:00:18
+hub-v5chain-research-18 | done | ctx 40% | эллипс/двунапр. (п.26), стенсилы ×2 (23а), 4D V не растекается → 23б PESS; CUTS хуже CUTR; ширина фронта SMAX 2 — 1.016/~475 спор без стен (идея польз.) | next=hub-v5chain-research-19 | 00:30:57
