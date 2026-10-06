@@ -254,7 +254,7 @@ class Atlas:
         I = np.concatenate(I_); IDX = np.concatenate(IDX_); W = np.concatenate(W_); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         sf = IDX == I[:, None]; ws = (W * sf).sum(1); W = np.where(sf, 0, W).astype(np.float32); den = 1. - ws; den[den < 1e-6] = np.nan   # r17: self-loop (RS > 1: the step lands in its own hex) solved exactly: V = (DTN + sum_{j!=i} w_j V_j)/(1 - w_ii)
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
-        bar = tqdm(total=it, desc='solve', mininterval=10, leave=False); NCH = int(E('GSN', 0)); bnd = np.linspace(0, len(nd), NCH + 1).astype(int) if NCH > 1 else None   # w23: GSN>1 — Гаусс–Зейдель блоками узлов (порядок узлов ≈ порядок роста от цели); 0 — Якоби
+        bar = tqdm(total=it, desc='solve', mininterval=10, leave=False); NCH = int(E('GSN', 64)); bnd = np.linspace(0, len(nd), NCH + 1).astype(int) if NCH > 1 else None   # w23: GSN>1 — Гаусс–Зейдель блоками узлов (умолч. 64; порядок узлов ≈ порядок роста от цели); 0 — Якоби
         rows = np.r_[st, len(I)]
         for n in range(it):
             bar.update(1)
