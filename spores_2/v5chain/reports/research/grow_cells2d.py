@@ -144,6 +144,7 @@ class Index:
         return m
 BARRIER = None; BEPS = float(os.environ.get('BEPS', .02)); BTOUCH = int(os.environ.get('BTOUCH', 0))   # BTOUCH=1: отрезок до барьера + BEPS (касание), рост стоп — только внутренние узлы среза у барьера   # CUT (research-14): точки разрыва V из прохода 0 (KD-дерево) — отрезок и рост клетки на них останавливаются
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
+SHRINK = int(os.environ.get('SHRINK', 0))   # SHRINK=1 (research-15, слово пользователя «максимальный объём при ограничениях»): рост вдоль потока упёрся в стену — сузить клетку до участка между касаниями, если площадь растёт
 GROW = int(os.environ.get('GROW', 0)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
@@ -168,6 +169,24 @@ def grow2(p, u, idx, rm, tm):
     def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
         return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
+    def area(a, b, lo, hi):                                                                  # площадь клетки в фазовом пространстве: ширина × длина пути по среднему столбцу
+        kc = (a + b) // 2; P = np.array([rows[i][kc] for i in range(lo, hi + 1)]); return (S[b] - S[a]) * (np.linalg.norm(np.diff(P, axis=0), axis=1).sum() if len(P) > 1 else 0.)
+    def reach(d, a, b, lo, hi):                                                               # докуда дорастёт клетка со столбцами [a, b] в направлении d (стена, изгиб, область, сосед)
+        while True:
+            i = hi + 1 if d == 'F' else lo - 1
+            if i not in rows: break
+            row = rows[i][a:b + 1]
+            if nearb(row[1:-1]).any() or not ok_rect(a, b, min(lo, i), max(hi, i)) or (idx.covered(row) | ~inbox(row)).mean() > FRAC: break
+            if d == 'F': hi = i
+            else: lo = i
+        return lo, hi
+    def shrink(d, klo, khi, ilo, ihi, i):                                                     # варианты: участки между точками касания стены в новой строке, спора (k0) внутри
+        bl = np.flatnonzero(nearb(rows[i][klo:khi + 1])) + klo; cuts = sorted(set([klo] + bl.tolist() + [khi])); best = None; a0 = area(klo, khi, ilo, ihi)
+        for a, b in zip(cuts[:-1], cuts[1:]):
+            if not (a < k0 < b) or b - a < 2 or (a, b) == (klo, khi): continue
+            lo, hi = reach(d, a, b, ilo, ihi); ar = area(a, b, lo, hi)
+            if ar > a0 * 1.02 and (best is None or ar > best[0]): best = (ar, a, b)
+        return best
     klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}
     while any(act.values()):
         for d in 'RLFB':
@@ -197,7 +216,11 @@ def grow2(p, u, idx, rm, tm):
                 i = ihi + 1 if d == 'F' else ilo - 1
                 if i not in rows: act[d] = False; continue
                 row = rows[i][klo:khi + 1]
-                if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()): act[d] = False; continue
+                if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
+                    if SHRINK and BARRIER is not None and nearb(row[1:-1]).any():
+                        bs = shrink(d, klo, khi, ilo, ihi, i)
+                        if bs is not None: klo, khi = bs[1], bs[2]; act['L'] = act['R'] = False; continue     # сузились — бока больше не растут (иначе снова в стену), торец растёт дальше
+                    act[d] = False; continue
                 if DEPTH:
                     iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
                     dp_ = idx.covered(row) & idx.covered(inn)
