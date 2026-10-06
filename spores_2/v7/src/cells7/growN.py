@@ -50,6 +50,8 @@ def step(y, u, sg=1.): return rk4(y, u, sg * DTN / 2, 2)
 def ingoal(y): return (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
+GM = float(E('GM', 0.))
+def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
     A = sg * A; Ph = np.eye(N) + h * A + h * h / 2 * A @ A
@@ -159,6 +161,7 @@ def mlin(Pb, n_):
     for j in range(m_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
+import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
     e = basis(p, u); S = np.linspace(-rm, rm, KF); k0 = KF // 2; nmax = int(tm / DTN + 1e-9); lat = np.stack(np.meshgrid(*([S] * m_), indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
@@ -166,7 +169,7 @@ def growN(p, u, idx, rm, tm):
         y = base; yc = p.copy(); W = np.zeros((N, N))
         for i in range(1, nmax + 1):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
-            if not inbox(yc): break
+            if not inbox_g(yc): break
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
@@ -183,23 +186,25 @@ def growN(p, u, idx, rm, tm):
             if d[0] == 'a':
                 if ihi - ilo < 3 and (act[('F',)] or act[('B',)]): continue
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
-                if nk < 0 or nk >= KF: act[d] = False; continue
+                if nk < 0 or nk >= KF: act[d] = False; STOP['kf'] += 1; continue
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
-                if not inbox(face).all() or bend(nlo, nhi, ilo, ihi) > DELTA or (GOALB and nearb(face).any()): act[d] = False; continue
+                fb = not inbox_g(face).all(); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                if fb or bb or gb: act[d] = False; STOP['field' if fb else 'bend' if bb else 'goal'] += 1; continue
                 klo, khi = nlo, nhi
                 if d in extra:
                     extra[d] -= 1
-                    if extra[d] <= 0: act[d] = False
-                elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
+                    if extra[d] <= 0: act[d] = False; STOP['ovh'] += 1
+                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
             else:
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
-                if i < imin or i > imax: act[d] = False; continue
+                if i < imin or i > imax: act[d] = False; STOP['rows'] += 1; continue
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
-                if not inbox(face).all() or bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA or (GOALB and nearb(face).any()): act[d] = False; continue
+                fb = not inbox_g(face).all(); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                if fb or bb or gb: act[d] = False; STOP['tfield' if fb else 'tbend' if bb else 'tgoal'] += 1; continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i
-                if d in extra: act[d] = False
-                elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = 1
+                if d in extra: act[d] = False; STOP['tovh'] += 1
+                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
@@ -224,6 +229,7 @@ def build_layer(u, rng, log=None):
         if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); c = growN(p, u, idx, rm, tm)
         if c is None: fails += 0 if queue else 1; continue
+        if E('STOPS') and len(cells) % 50 == 0: print('stops', len(cells), dict(STOP), flush=True)
         fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[ctr]; yb = g1[ctr]
         for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
         queue += [yf, yb]
