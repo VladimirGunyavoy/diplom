@@ -48,15 +48,15 @@ class Cell:
         if RS > 1: nt = len(s.G); keep = sorted(set(range(0, nt, RS)) | {nt - 1}); s.G = s.G[keep]                 # r17: rows every RS·DTN (dd flow is linear in t at fixed u — geometry exact)
 class HexIdx:
     """индекс шестигранников: ячейки QB³ (θ с копиями ±2π), запрос — все точки сразу; трилинейная обратная карта Ньютоном."""
-    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 8, 3)); s.I = np.zeros((0, 4), np.int32); s.bins = {}; s.R1 = []; s.R2 = []; s.nc = 0
+    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 8, 3)); s.XL = np.zeros((0, 3)); s.XH = np.zeros((0, 3)); s.I = np.zeros((0, 4), np.int32); s.bins = {}; s.R1 = []; s.R2 = []; s.nc = 0
     def add(s, c):
         g = c.G; nt, m = g.shape[0], g.shape[1]
         X = np.stack([g[di:nt - 1 + di, d1:m - 1 + d1, d2:m - 1 + d2] for di in (0, 1) for d1 in (0, 1) for d2 in (0, 1)], 3).reshape(-1, 8, 3)
         it, j1, j2 = [a.ravel() for a in np.indices((nt - 1, m - 1, m - 1))]; n = len(X)
         if s.n + n > s.cap:
-            cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 8, 3)); I2 = np.zeros((cap, 4), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; s.X, s.I, s.cap = X2, I2, cap
+            cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 8, 3)); I2 = np.zeros((cap, 4), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; L2 = np.zeros((cap, 3)); H2 = np.zeros((cap, 3)); L2[:s.n] = s.XL[:s.n]; H2[:s.n] = s.XH[:s.n]; s.X, s.I, s.cap, s.XL, s.XH = X2, I2, cap, L2, H2
         s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[np.full(n, s.nc), it, j1, j2]; hid = np.arange(s.n, s.n + n); s.n += n; s.R1.append(c.r1); s.R2.append(c.r2); s.nc += 1
-        lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; Ks, Vs = [], []
+        lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; s.XL[s.n - n:s.n] = lo; s.XH[s.n - n:s.n] = hi; Ks, Vs = [], []
         for si, sh in enumerate(SH):
             l, h = lo.copy(), hi.copy(); l[:, 2] += sh; h[:, 2] += sh; v = (h[:, 2] >= -np.pi - QB) & (l[:, 2] <= np.pi + QB)
             if not v.any(): continue
@@ -85,7 +85,7 @@ class HexIdx:
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
     def _test(s, Y, pi, vv):
-        hid = vv // 3; sh = np.array(SH)[vv % 3]; y = Y[pi].copy(); y[:, 2] -= sh; X = s.X[hid]; ok = ((y >= X.min(1) - 1e-9) & (y <= X.max(1) + 1e-9)).all(1); pi, hid, y, X = pi[ok], hid[ok], y[ok], X[ok]
+        hid = vv // 3; sh = np.array(SH)[vv % 3]; y = Y[pi].copy(); y[:, 2] -= sh; ok = ((y >= s.XL[hid]) & (y <= s.XH[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]; X = s.X[hid]   # w22: precomputed per-hex bounds (the gather+min/max of all 8 corners was ~60% of build)
         if not len(pi): return np.zeros(0, int), np.zeros(0, int), np.zeros(0), np.zeros(0), np.zeros(0)
         X5 = X.reshape(-1, 2, 2, 2, 3); t = np.full(len(pi), .5); p = t.copy(); q = t.copy()
         for _ in range(6):
