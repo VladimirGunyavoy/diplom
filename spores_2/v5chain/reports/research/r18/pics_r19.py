@@ -5,28 +5,46 @@ from scipy.spatial import cKDTree
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt; from matplotlib.colors import LogNorm, Normalize
 plt.rcParams.update({'font.size': 11})
 e_ = np.linspace(-G.RHO, G.RHO, 41); G.BARRIER = cKDTree(np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]])
-rng = np.random.default_rng(0); cells = []
+rng = np.random.default_rng(int(os.environ.get('SEED', 0))); cells = []
 for u in G.US: l, _ = G.build_layer(u, rng); cells += l
 wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
-OUT = os.environ['OUT']
+OUT = os.environ['OUT']; XR = float(os.environ.get('XR', 5.)); SHS = (0., 2 * np.pi, -2 * np.pi, 4 * np.pi, -4 * np.pi)   # XR: показывать θ ∈ [−XR, XR] с повторами через период (слово пользователя)
 if os.environ['MODE'] == 'map':
     BAR = np.load(os.environ['BARRIER']); st = np.array([max(wl(c.G[-1]) / wl(c.G[0]), wl(c.G[0]) / wl(c.G[-1])) for c in cells]); nrm = LogNorm(1, 15); cm = plt.cm.YlOrRd; from matplotlib.path import Path
     gq = np.stack(np.meshgrid(np.linspace(-np.pi, np.pi, 161), np.linspace(-G.WL, G.WL, 141)), -1).reshape(-1, 2); print('θ клеток: min %.2f max %.2f' % (min(c.G[..., 0].min() for c in cells), max(c.G[..., 0].max() for c in cells)))
-    fig, axs = plt.subplots(1, 3, figsize=(21, 7), sharey=True, constrained_layout=True)
+    fig, axs = plt.subplots(1, 3, figsize=(27, 7), sharey=True, constrained_layout=True)
     for ax, u in zip(axs, G.US):
         cov = np.zeros(len(gq), bool)
         for c, sv in zip(cells, st):
             if c.u != u: continue
             px, py = np.r_[c.G[:, 0, 0], c.G[::-1, -1, 0]], np.r_[c.G[:, 0, 1], c.G[::-1, -1, 1]]
-            for sh in (0., 2 * np.pi, -2 * np.pi):                                                                           # копии через период: клетка, ушедшая за ±π, рисуется и с другой стороны
-                if px.min() + sh > np.pi or px.max() + sh < -np.pi: continue
+            for sh in SHS:                                                                                                   # копии через период: клетка, ушедшая за ±π, рисуется и с другой стороны
+                if px.min() + sh > XR or px.max() + sh < -XR: continue
                 ax.fill(px + sh, py, fc=cm(nrm(sv))[:3] + (.55,), lw=.8, ec='0.2'); cov = cov | Path(np.c_[px + sh, py]).contains_points(gq)
         print('слой u %+g: закрашено %.3f поля' % (u, cov.mean()))
-        ax.plot(BAR[:, 0], BAR[:, 1], '.', ms=2.5, color='tab:blue'); ax.set_xlim(-np.pi, np.pi); ax.set_ylim(-G.WL, G.WL); ax.set_xlabel('θ')
+        [ax.plot(BAR[:, 0] + sh, BAR[:, 1], '.', ms=2.5, color='tab:blue') for sh in SHS[:3]]; [ax.axvline(x, color='0.4', ls=':', lw=1) for x in (-np.pi, np.pi)]; ax.set_xlim(-XR, XR); ax.set_ylim(-G.WL, G.WL); ax.set_xlabel('θ')
         ax.set_title('u = %+.1f  (%d клеток)' % (u, sum(c.u == u for c in cells)))
     axs[0].set_ylabel('ω'); fig.suptitle(os.environ.get('TITLE', 'Растяжение среза клетки'), fontsize=14)
     fig.colorbar(plt.cm.ScalarMappable(nrm, cm), ax=axs, shrink=.8, pad=.01, label='во сколько раз растянут срез'); fig.savefig(OUT, dpi=95)
     print('готово', OUT, 'растяжение кв.', np.quantile(st, [.5, .9, .99, 1]).round(1).tolist(), '>3:', int((st > 3).sum()), 'клеток', len(cells), flush=True)
+elif os.environ['MODE'] == 'dead':                                                                # research-19: где мёртвые узлы NORMFRONT (столбец не пересёк нормаль через центр строки)
+    fig, axs = plt.subplots(2, 3, figsize=(27, 14), constrained_layout=True); nd = 0; rep = []
+    for r, (xl, yl) in enumerate((((-XR, XR), (-G.WL, G.WL)), ((-1.3, 1.3), (-1., 1.)))):
+        for ax, u in zip(axs[r], G.US):
+            for k, c in enumerate(cells):
+                if c.u != u: continue
+                D = getattr(c, 'DEAD', None); has = D is not None and D.any(); px, py = np.r_[c.G[:, 0, 0], c.G[::-1, -1, 0]], np.r_[c.G[:, 0, 1], c.G[::-1, -1, 1]]
+                for sh in SHS:
+                    if px.min() + sh > xl[1] or px.max() + sh < xl[0]: continue
+                    ax.fill(px + sh, py, fc=(1., .75, .3, .55) if has else (.45, .65, .9, .3), ec='0.2', lw=.8)
+                    if has: ax.plot(c.G[..., 0][D] + sh, c.G[..., 1][D], 'o', ms=3 if r == 0 else 6, color='tab:red', zorder=5)
+                    if has and r == 1: ax.plot(c.G[..., 0][~D] + sh, c.G[..., 1][~D], '.', ms=3, color='0.3', zorder=4)
+                if has and r == 0: nd += int(D.sum()); rep.append((k, u, int(D.sum()), int(D.size), np.round(c.c, 2).tolist()))
+            ax.add_patch(plt.Rectangle((-G.RHO, -G.RHO), 2 * G.RHO, 2 * G.RHO, fill=False, ec='tab:green', lw=2.5, zorder=6)); ax.set_xlim(*xl); ax.set_ylim(*yl); ax.set_xlabel('θ')
+            ax.set_title(('u = %+.1f  (%d клеток)' % (u, sum(c.u == u for c in cells))) if r == 0 else 'u = %+.1f — у цели' % u)
+        axs[r][0].set_ylabel('ω')
+    fig.suptitle(os.environ.get('TITLE', 'Мёртвые узлы') + '   ·   красные точки — мёртвые узлы, оранжевые клетки — с мёртвыми узлами, зелёный квадрат — цель', fontsize=14); fig.savefig(OUT, dpi=85)
+    print('готово', OUT, 'клеток', len(cells), 'с мёртвыми узлами', len(rep), 'мёртвых узлов', nd); [print('  клетка %d u %+g: мёртвых %d из %d, центр %s' % t) for t in rep]
 else:
     K = int(os.environ.get('K', 160)); c = cells[K]; seg = c.c + np.linspace(-(1 + G.HALO) * c.r, (1 + G.HALO) * c.r, 101)[:, None] * c.n
     nmx = int(float(os.environ.get('TSPAN', 6.)) / G.DTN); T, Y = [0.], [seg.copy()]
