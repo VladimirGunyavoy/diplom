@@ -93,7 +93,7 @@ def inbb(c, Y): return (Y[:, 0] >= c.bb[0]) & (Y[:, 0] <= c.bb[1]) & (Y[:, 1] >=
 class QIdx:
     """FASTLOC=2 (research-14, по профилю: locate = 58% времени, 674k мелких вызовов): индекс по ЧЕТЫРЁХУГОЛЬНИКАМ сеток клеток.
     Четырёхугольник регистрируется во всех ячейках QB, которые задевает его рамка (с копиями по периоду). Запрос — все точки сразу, векторно."""
-    QB = .1
+    QB = float(os.environ.get("QB", .1))
     def __init__(s): s.bins = {}; s.C = []; s.n = 0; s.parts = []; s.dirty = True
     def add(s, c, cid):
         g = c.G; nt, m = g.shape[0], g.shape[1]; A0, A1, B1, B0 = g[:-1, :-1].reshape(-1, 2), g[:-1, 1:].reshape(-1, 2), g[1:, 1:].reshape(-1, 2), g[1:, :-1].reshape(-1, 2)
@@ -462,7 +462,7 @@ class Atlas:
         Y = Y.copy(); n = len(Y); C = np.zeros(n); done = ingoal(Y); UA = np.array(US)
         for _ in range(L):
             if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); Ys = [step(Y, u) for u in US]; J = np.minimum(tgs, DTN + np.stack([s.vstar(y) for y in Ys], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
+            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); Ys = [step(Y, u) for u in US]; J = np.minimum(tgs, DTN + s.vstar(np.concatenate(Ys)).reshape(len(US), n).T); k = J.argmin(1); tg = tgs[np.arange(n), k]   # один vstar на все u (профиль research-16: look 47% времени, 69k мелких вызовов)
             fin = np.isfinite(tg) & ~done; bad = (J.min(1) >= BIG / 2) & ~done
             C += np.where(done, 0., np.where(fin, tg, DTN)); C[bad] = BIG; Y = np.where(done[:, None], Y, np.stack(Ys, 1)[np.arange(n), k]); done |= fin | bad | ingoal(Y)
         return np.minimum(C + np.where(done, 0., s.vstar(Y)), BIG)
@@ -470,7 +470,7 @@ class Atlas:
         Y = np.array(Q, float); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pu = np.full(n, np.nan); path = [Y.copy()]; UA = np.array(US)
         for _ in tqdm(range(int(tmax / DTN)), desc='agent rollout %d starts' % n, mininterval=MI, leave=False):
             if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([(s.look(step(Y, u), LOOK) if LOOK else s.vstar(step(Y, u))) for u in US], 1)); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
+            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + (s.look if LOOK else (lambda y, L: s.vstar(y)))(np.concatenate([step(Y, u) for u in US]), LOOK).reshape(len(US), n).T); k = J.argmin(1); u = UA[k]; tg = tgs[np.arange(n), k]
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = np.where(np.isfinite(tg)[:, None], Y, Y) * 0.
             for ui in US:
                 m = act & (u == ui)
