@@ -310,9 +310,12 @@ class Atlas:
         Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
         if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
-        ii = s.qx.I[hid].astype(np.int64); cid = ii[:, 0]; stv = np.array([M ** (m_ - k) for k in range(N)]); base = s.O[cid] + (ii[:, 1:] * stv).sum(1); off = VOFF @ stv
-        W = np.prod(np.where(VOFF[None] == 1, sc[:, None, :], 1 - sc[:, None, :]), 2)
-        return pi, base[:, None] + off[None], W.astype(np.float32)
+        stv = np.array([M ** (m_ - k) for k in range(N)]); off = VOFF @ stv; n_ = len(pi); idt = np.int32 if s.N < 2 ** 31 else np.int64
+        IDX = np.empty((n_, 2 ** N), idt); W = np.empty((n_, 2 ** N), np.float32); CH = 1 << 21                       # чанками: 41M пар × 16 вершин × N в float64 не помещались в память (b3)
+        for a in range(0, n_, CH):
+            b = min(a + CH, n_); ii = s.qx.I[hid[a:b]].astype(np.int64); base = s.O[ii[:, 0]] + (ii[:, 1:] * stv).sum(1); IDX[a:b] = base[:, None] + off[None]
+            sb = sc[a:b]; W[a:b] = np.prod(np.where(VOFF[None] == 1, sb[:, None, :], 1 - sb[:, None, :]), 2)
+        return pi, IDX, W
     @staticmethod
     def interp(W, VI):
         v = (W * VI).sum(1); bad = ((W > 1e-6) & (VI >= BIG / 2)).any(1); v[bad] = BIG; return v
