@@ -220,3 +220,10 @@ hub-v5chain-worker-21 | result | 17е+диски GM1: 59/60, 0 столкнов�
 hub-v5chain-worker-21 | done | ctx 25%: линия A (17б–17е) закрыта | grow3 дд 3D 60/60 T/refbox 1.015, диски 59/60 | next=hub-v5chain-worker-22 | 09:30:37
 hub-v5chain-worker-22 | started | acc2 | sonnet | 09:31:16
 hub-v5chain-worker-22 | result | старт 51 (диски): предельный цикл, NOPR+LRTA* → диски 60/60, свободный без изменений | 09:37:44
+hub-v5chain-worker-22 | result | 17ж профиль grow3: XL/XH в HexIdx, 367→184 с, результат тот же | 10:00:17
+hub-v5chain-worker-22 | NEEDS-RESEARCH | очередь линии A пуста (17б–з, старт 51, DTN .06 готовы); жду задачу; пока — CUT/REFINE из 2D в grow3 | 10:30:09
+hub-v5chain-worker-22 | result | финиш VF5/NA4/VFR1: свободный T/refbox 1.004 max 1.010; диски мед .9716, выброс старт 51 | 11:20:20
+hub-v5chain-worker-22 | result | диски RMAX .3 + финиш VF5/NA4: 60/60, mean .9697 max 1.027 (≈1.005 к refbox) | 11:50:21
+hub-v5chain-worker-b2 | died | tmux пропал ~12:05, без хендоффа; работа принята b3 | 13:00:29
+hub-v5chain-worker-b3 | started | acc1 | sonnet | 12:18:36
+hub-v5chain-worker-b3 | result | manip 4D c3000g (затравки от цели): reach .25, T/эт 1.24 (VF1: 1.18) — покрытие; идёт MAXC=12000 на aida | 13:00:29

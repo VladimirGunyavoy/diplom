@@ -1,3 +1,7 @@
+## hub-v5chain-worker-b1 → b2 (линия B, 04:02–07:45) и hub-v5chain-worker-b2 (07:45–~12:05, умер внезапно, без хендоффа) — линия B
+Сделано b1: п.18а/18б/20/21 в v7, п.19 эталон u .3 ✓ (u .15 позже сделал research-17). b2: v7/src/cells7/growN.py (n-мерный grow3: dd/pend/manip), (а) dd 54/60 T/эт 1.0059 ✓, (б) pend n=2 1.055 ✓, п.22г финиш VF встроен, п.23 частично (HexIdx 105→13 с), goal_seeds для manip.
+Стоп: (в) manip 4D — MAXC=3000 с затравками от цели: reach .25 (2/8), T/эт 1.24 (VF 1.0: 1.18); полное покрытие 4D не сходится (очередь >10^5 клеток). Грабли: aida в ssh — ставить фон без stdout-привязки; tail лога tqdm — только через tr "\r" "\n" и tail -c; после конца расчёта висят процессы пула growN — убивать по PID.
+
 ## hub-v5chain-worker-21 (линия A, acc2, Sonnet, 03:31–09:40, ctx 25%)
 Сделано: п.17б–17е: `v7/src/cells7/grow3.py` дд-ромб 3D растущими клетками (RS3, GM1, финиш стрельбой, диски OBST=1): свободный 60/60 T/refbox 1.0153 (1528 клеток/260k/147 с), +2 диска 59/60 (1.0122). Отчёт `v7/reports/grow3/results.md`.
 Стоп: PLAN «ОТКРЫТО после w21» (старт 51 дыра у диска; CUT/REFINE; профиль 17ж; диски 17з). Грабли: запуск только фоном на aida (`~/spore_v5/w21/v7`), `pkill -f` убивает свой shell, ожидание >1 мин = глухота к пульсу, git без user (-c user.name=w21 -c user.email=a@b), пуш запрещён TASK.
@@ -13,19 +17,3 @@
 Грабли: aida общая — гасить только по PID (pkill -f убил чужие прогоны, память kill-only-own-pids); refine.py теперь берёт START из env (раньше зашитый X0 → Infeasible); drop.sh = dp_arc_drop INS=1 над rf_*.npz (код в ~/spore_v5/r12); раунд EGAP на lazy-атласе 33k не завершается — применять до lazy; файлы aida: ~/spore_v5/w19/ (rf_*.out, rf_*_drop.out, results собраны в v7/reports/bdp/mq/results.md); task_log писать из корня проекта; идущих расчётов нет.
 Решения цепочки: нет новых (эталон случайных стартов = лучшее известное по зёрнам: ocp_arcs 0/33 допустимых).
 
-## hub-v5chain-worker-17 (acc3, Sonnet, 13:41–23:45, ctx 26%)
-Сделано: v7 butterfly_dp.py: RRT=1, snap, lazy_nodes (+LAZYFIN), wfilter, агент research-11 (WCHK/ONK/PEND, портирован блоком), PRUNE=1, OCP/TS по G (п.7–п.9 частично, п.10 агент); g=2 связан (V 23.36); дд+2 диска против эталона с дисками (п.6): N3000 1.040; дд шум: порог ĝ 20σ (1.50→1.35); 4D 200k mean 1.07, выбросы = дребезг агента.
-ГЛАВНОЕ/КОРРЕКЦИЯ: мои g=2 числа ×1.087/×1.18 были БЕЗ проверки |w|≤3 (wmax 5.8–6.55) — недопустимы. Допустимо (WCHK=1): g=2 25k спор ×1.326 (но wmax 3.22!), g=1 7k ×1.64 (wmax 2.44). Записано в PLAN/knowledge/research/butterfly_dp.md.
-Стоп на / следующий шаг: PLAN §«ОТКРЫТО после w17» п.(1): выяснить wmax 3.22 при WCHK, портировать KN=4 KF=1.3 NT=1 в GrowAtlas, цель-замер G=2 FWD=6000 grow→wfilter→FORCEPLAN WCHK на 3 зёрнах; затем повторить сравнения глубина/TS с WCHK=1.
-Грабли: на aida код v7 копируется rsync'ом в ~/spore_v5/w17/v7/src (после правок v7 — rsync -a src/cells7 aida:~/spore_v5/w17/v7/src/); запуск PYTHONPATH=. из ~/spore_v5/w17/v7 (fp.py — замер атласа FORCEPLAN, ms.py — агент по N стартам с wmax, оба там же); butterfly_dd при импорте chdir в research — пути абсолютные. Фоновый ssh — (ssh … 'nohup … &' </dev/null >/dev/null 2>&1 &). BEAM/BEAMREL (отсечение дерева агента) не работает. Пуш невозможен (нет кредов), коммиты локальные с -c user.name=w17 -c user.email=a@b. Агент без WCHK даёт недопустимо хорошие числа. Эталон стартов вокруг «висит» у ms.py — нет, сравнивать только варианты между собой.
-Решения цепочки: нет новых.
-Коммиты: a34b43a [hub-v5chain-worker-17]: WCHK замеры g=1/g=2;7816cf9 [hub-v5chain-worker-17]: п.10 агент research-11 в v7 (WCHK/ONK/PEND);2b00753 [hub-v5chain-worker-17]: коррекция g=2 (wmax), п.9 wfilter;
-
-## hub-v5chain-worker-18 (acc2, Sonnet, 23:40–09:35, причина смены: ctx 25% (софт 30%, финиш заранее: п.14 тяжёлая, лучше свежему звену))
-Сделано: g=2 честные числа (WFILT/WCHK WK=30/WTOL; wmax≤3): FORCEPLAN ×1.50–1.97; доводка коридора IPOPT в v7 (refine.py, trajdump.py, TRAJALL): s4 ×1.0016, остальные ×1.19–1.26; п.13 смещение s — выигрыш ≤6%; g=1 ×1.64 без изменений.
-Стоп на / следующий шаг: PLAN «ОТКРЫТО после w18» п.(1) — п.14 (20 стартов g=2, эталон K 40), п.(2) k путей (Йен); s2 не связан.
-Грабли: task_log писать из корня проекта (мой rm -r снёс чужие логи в v7/sessions_task_log: worker-10 восстановлен git, worker-14 — копией из v5chain, оригинал утрачен; ISSUES.md); rsync кода на aida только в v7/src/ (иначе старый код); aida: ~/spore_v5/w18run/ (атласы s1–s6, ref/ — пути и доводка, pipe.sh); пуша нет. Проверка |w|: WK=30 подотрезков (доли пропускали ранний пик).
-Решения цепочки: нет новых (WFILT=1 и WCHK обязательны для g=2).
-Коммиты: 9dff3ed [hub-v5chain-research-12]: START — старт прямого дерева через окружение;89bbaf3 [hub-v5chain-research-12]: многозапросность g=2 — 3/8 стартов, рост от нового старта нужен; PLAN п.14;ee79ee0 [hub-v5chain-research-12]: X0 — старт в произвольной точке (многозапросность);
-Токены: T_START 5ч 1% / ctx 4% / $0.13 (23:40) / T_BEFORE_END 5ч 34% / ctx 25% / $8.27 (09:35)
-NEXT_LINK: hub-v5chain-worker-19   NEXT_MODEL: sonnet
