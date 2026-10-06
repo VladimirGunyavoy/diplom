@@ -7,7 +7,7 @@ import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
 E = os.environ.get
 M = 5; BIG = 1e3; HALO = .1; PER = 2 * np.pi; EPSJ = 1e-5
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); RHO = float(E('RHO', .05)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21)); RS = int(E('RS', 3))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); XL = float(E('XL', 2.5)); QB = float(E('QB', .25))
 US = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.)); SH = (0., PER, -PER)
 def f(y, u): th = y[..., 2]; return np.stack([u[0] * np.cos(th), u[0] * np.sin(th), u[1] + 0 * th], -1)
@@ -19,7 +19,9 @@ def rk4(y, u, h, n):
     return y
 def step(y, u, sg=1.): return rk4(y, u, sg * DTN / 2, 2)
 def ingoal(y): return (np.abs(y[..., 0]) <= RHO + 1e-9) & (np.abs(y[..., 1]) <= RHO + 1e-9) & (np.abs(wrap(y[..., 2])) <= RHO + 1e-9)
-def inbox(y): return (np.abs(y[..., 0]) <= XL) & (np.abs(y[..., 1]) <= XL)
+OBST = int(E('OBST', 0)); DISCS = [(1., .3, .45), (-.8, -.9, .4)] if OBST else []               # 17г: two discs, same as v7/reports/bdd/obst_ref.py (reference dd_obst_ref_KB60_NG21.npy)
+def dobs(y): return np.min([np.hypot(y[..., 0] - cx, y[..., 1] - cy) - r for cx, cy, r in DISCS], 0) if DISCS else np.full(np.shape(y[..., 0]), 9.)   # signed distance to the nearest disc
+def inbox(y): return (np.abs(y[..., 0]) <= XL) & (np.abs(y[..., 1]) <= XL) & (dobs(y) > 0)
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(3)], 1)
 def bbt(th): c, s = np.cos(th), np.sin(th); return np.array([[c * c, c * s, 0], [c * s, s * s, 0], [0, 0, 1.]])            # B = ∂f/∂(v, ω), |δu| ≤ 1 в обоих каналах
 def wstep(W, A, Bq, h, sg):
@@ -41,6 +43,7 @@ class Cell:
         for _ in range(s.nf): fw.append(step(fw[-1], s.u))
         for _ in range(s.nb): y = step(y, s.u, -1.); bw.append(y)
         s.G = np.array(bw[::-1] + fw)
+        if RS > 1: nt = len(s.G); keep = sorted(set(range(0, nt, RS)) | {nt - 1}); s.G = s.G[keep]                 # r17: rows every RS·DTN (dd flow is linear in t at fixed u — geometry exact)
 class HexIdx:
     """индекс шестигранников: ячейки QB³ (θ с копиями ±2π), запрос — все точки сразу; трилинейная обратная карта Ньютоном."""
     def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 8, 3)); s.I = np.zeros((0, 4), np.int32); s.bins = {}; s.R1 = []; s.R2 = []; s.nc = 0
@@ -152,14 +155,14 @@ def grow3(p, u, idx, rm, tm):
                 if d in extra: act[d] = False
                 elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = 1
     r1 = (S[k1hi] - S[k1lo]) / 2; r2 = (S[k2hi] - S[k2lo]) / 2
-    near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
+    near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR or float(dobs(p)) < .3                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
     c = Cell(p + e1 * (S[k1lo] + S[k1hi]) / 2 + e2 * (S[k2lo] + S[k2hi]) / 2, u, r1 / (1 + HALO), r2 / (1 + HALO), e1, e2); c.nf, c.nb = ihi, -ilo; return c
 VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
 GLIM = float(E('GLIM', .25))
 def glimits(p, u):
     """cells near the goal must be as narrow as the goal box (else only a few nodes hit it and V does not propagate): half-width ~ GLIM·distance, length ~ 2·distance."""
-    d = float(np.linalg.norm(np.r_[p[:2], wrap(p[2])])); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
+    d = min(float(np.linalg.norm(np.r_[p[:2], wrap(p[2])])), 3 * max(float(dobs(p)), .05) if DISCS else 9.); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = HexIdx(); queue = []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=10, leave=False)   # bar = consecutive covered random seeds, resets on each new cell
@@ -184,6 +187,14 @@ def arc(y, u, t):
     if w == 0: return np.array([x + v * t * np.cos(th), yy + v * t * np.sin(th), th])
     return np.array([x, yy, th + w * t])
 TOPS = [tp for n in range(1, NA + 1) for tp in itertools.product(range(4), repeat=n) if all(tp[i] != tp[i + 1] for i in range(n - 1))]
+def _free(y, tp, d, n=30):
+    """arcs of the shooting finish stay outside the discs (n points per arc)"""
+    z = np.array(y, float)
+    for k, dt in zip(tp, d):
+        pts = np.array([arc(z, US[k], dt * a) for a in np.linspace(0, 1, n)])
+        if (dobs(pts) <= 0).any(): return False
+        z = arc(z, US[k], dt)
+    return True
 def shoot(y, tmax):
     """best shooting finish from y: arcs of the 4 rhombus vertices in closed form, durations by SLSQP, end inside the goal box; returns (time, topology) or (inf, None)."""
     from scipy.optimize import minimize
@@ -196,7 +207,7 @@ def shoot(y, tmax):
         cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
         for d0 in (np.full(len(tp), tmax / (2 * len(tp))), np.full(len(tp), tmax / len(tp))):
             r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * len(tp), constraints=cons, options=dict(maxiter=100, ftol=1e-9))
-            if r.success and np.all(np.abs(end(r.x)) <= RHO) and r.x.sum() < best[0]: best = (r.x.sum(), tp)
+            if r.success and np.all(np.abs(end(r.x)) <= RHO) and r.x.sum() < best[0] and (not DISCS or _free(y, tp, r.x)): best = (r.x.sum(), tp)
     return best
 class Atlas:
     def __init__(s, seed=0, log=None):
@@ -235,10 +246,11 @@ class Atlas:
         I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True); I_.append(a); IDX_.append(b); W_.append(c_)
         I = np.concatenate(I_); IDX = np.concatenate(IDX_); W = np.concatenate(W_); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
+        sf = IDX == I[:, None]; ws = (W * sf).sum(1); W = np.where(sf, 0, W).astype(np.float32); den = 1. - ws; den[den < 1e-6] = np.nan   # r17: self-loop (RS > 1: the step lands in its own hex) solved exactly: V = (DTN + sum_{j!=i} w_j V_j)/(1 - w_ii)
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
         bar = tqdm(total=it, desc='solve', mininterval=10, leave=False)
         for n in range(it):
-            bar.update(1); val = DTN + s.interp(W, V[IDX]); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
+            bar.update(1); val = np.nan_to_num((DTN + s.interp(W, V[IDX])) / den, nan=BIG); val[val > BIG] = BIG; new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
@@ -264,11 +276,12 @@ class Atlas:
             sw += act & (pk >= 0) & (k != pk); pk = np.where(act, k, pk); Y = wrapy(np.where(act[:, None], Yn, Y)); T += np.where(act, np.where(np.isfinite(tg), tg, DTN), 0.); T[~done & stuck] = np.inf; done |= ingoal(Y) | stuck; path.append(Y.copy())
         T[~(ingoal(Y) | fin)] = np.inf; s.n_fin = int(fin.sum()); return T, sw, np.array(path)
 def starts_ref():
+    if OBST: o = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../v5chain/reports/research/dd_obst_ref_KB60_NG21.npy')); return o[:, :3], o[:, 3]
     rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]
     return Q, np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../v5chain/reports/research/dd_ref_60.npy'))
 if __name__ == '__main__':
     t0 = time.time(); A = Atlas(); tb = time.time() - t0
-    print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref(); T, sw, _ = A.rollout(Q); fz = np.isfinite(T); r = T[fz] / ref[fz]
+    print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True); A.solve(); Q, ref = starts_ref(); T, sw, pth = A.rollout(Q); fz = np.isfinite(T); print('collisions (path points inside discs):', int((dobs(pth.reshape(-1, 3)) <= 0).sum()) if DISCS else 0, flush=True); r = T[fz] / ref[fz]
     if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V, Q=Q, T=T, ref=ref), open(E('DUMP'), 'wb'))
     print(json.dumps(dict(DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(fz.mean()), 3), VF=VF, fin=getattr(A, 'n_fin', 0),
                           T_over_ref=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), max=round(float(r.max()), 3), min=round(float(r.min()), 3)) if fz.any() else None, sec_build=round(tb, 1), sec=round(time.time() - t0, 1))), flush=True)
