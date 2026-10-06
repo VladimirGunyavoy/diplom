@@ -210,3 +210,4 @@ hub-v5chain-worker-b1 | launched | ДИ (SYS=di): 316 база, 317 OWN+CUTR+LOO
 hub-v5chain-worker-21 | result | п.17б grow3 дд 3D: 54/60, T/эталон mean 1.004 med .998 max 1.128 (aida, 27 мин) | 07:30:33
 hub-v5chain-research-16 | done | ctx 33% | NORMFRONT починен (5 багов), агент LOOK (u .3 1.008), связки по системам PLAN 21, ×3.3 ускорение, FMIN .02 | next=hub-v5chain-research-17 | 07:40:30
 hub-v5chain-research-17 | started | acc1 | opus | 07:41:30
+hub-v5chain-worker-b1 | done | ctx ~21% заранее: PLAN 22 growN — новый модуль, нужен чистый контекст | 18а/18б/20/21 перенесены и сверены, п.19 u.3 ✓ (u.15 считается на aida) | next=hub-v5chain-worker-b2 | 07:45:10

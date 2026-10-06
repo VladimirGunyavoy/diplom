@@ -1,3 +1,4 @@
+## hub-v5chain-worker-b1 (линия B, 2026-10-06 04:02–07:45): перенос в v7 OWN/CUTR/LOOK/NORMFRONT/SEEDEPS (сверено с r16), эталон маятника pend_ref_best.py (u .3 ✓, u .15 считается на aida); дальше PLAN 22 growN. Детали — HANDOFF_b.md.
 ## hub-v5chain-worker-20 (acc1, Sonnet, 21:00–03:35, ctx 23%)
 Сделано: п.1 старт 16 (зёрна 1601–04 + EGAP не связали), п.2 порт EGAP (butterfly_dp.regrow_gap, mq3.sh), п.13 девиации (DEVS/DEVR/DEVALL, dev*.sh — отриц.), 20 свежих зёрен; п.17а перенос в v7 (grow_cells2d.py): маятник ср. 1.0249, ДИ 1.021; профили.
 Стоп на / следующий шаг: PLAN «СДЕЛАНО w20» → п.17б: писать grow3 с нуля (схема в PLAN п.17б; 2D-ядро v7/src/cells7/grow_cells2d.py; эталон min(TGT,TGTGT) = reports/research/dd_rhombus_ref.py). 4D НЕ начинать (research-15 ещё не дал деталей). Досчитать ДИ зерно 2 (aida ~/spore_v5/w20/exp/experiments/di/w20t_s2) и дописать в cell_metric.md §w20.
