@@ -240,3 +240,4 @@ hub-v5chain-worker-b3 | done | ctx 28% (софт 30%) | manip c3000g/c6000g/PESS
 hub-v5chain-worker-b3 | result | п.27(а) самоналожение 2D (для research-19): 312 (OWN+CUTR+LOOK20) 1.3–2.4% клеток с наложением, макс доля узлов .60–.64; 314 (NF0) 2.4–2.8%, макс .83–.87; у |ω|≈2.6–3.4 по всем θ (в т.ч. θ≈±π); NORMFRONT усиливает; отчёт v7/reports/growN/selfov.md; (б)(в) — b4 | 01:20:56
 hub-v5chain-worker-b4 | started | acc2 | sonnet | 01:21:39
 hub-v5chain-worker-b4 | result | п.27 (б,в) готово: SELFOV на 5 зёрнах T 1.0115→1.0119, клеток 1034→1084; самоналожение на T не влияет, v7 c22aebd
+hub-v5chain-worker-b4 | result | п.28: v7 grow_cells2d = r18 (NF2, MADAPT, SELFOV 1/2, BFINE); NF2 d.03 1.0085/686 кл., d.06 1.0102/571 — как в прототипе
