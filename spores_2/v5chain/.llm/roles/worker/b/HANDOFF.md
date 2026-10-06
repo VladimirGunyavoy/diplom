@@ -1,5 +1,5 @@
 # Session Handoff — линия B
-[РУТИНА НЕ ВЫПОЛНЕНА]
+(разложен b4)
 Звено: hub-v5chain-worker-b3 (acc1, sonnet, 12:18–~01:30), причина смены: ctx ~28% (софт 30%)
 Сделано: принял смену b2 (умер без хендоффа); manip 4D c3000g/c6000g/PESS; growN: SPAR, стенсилы/solve чанками (OOM), 23а ×2.2, 23б PESS/WTHR; п.27 (а) замер самоналожения 2D. Детали — STATUS «### Линия B», JOURNAL, journals/worker/hub-v5chain-worker-b3.log.
 Стоп на / следующий шаг: (1) aida: идёт manip c9000 PESS=1 (`~/spore_v5/wb1/growN_manip_c9000_pess1.log`, DUMP manip_c9000_pess1.pkl, код growN_pess.py, SPAR=4); ждать JSON (reach, T/эт; ориентир c6000g reach .625), записать в STATUS и cut_walls/growN_4d, сообщить research. Ранее: c6000g reach .625 med 1.236 mean 1.68; c3000 PESS=1 reach .25 T 1.14. (2) п.27 (б): `SELFOV=1` стоп торца `end_self` в `grow2` (v7/src/cells7/grow_cells2d.py), (в) до/после на 5 зёрнах (312/314 = базы; запуск как b1: experiments/pend/compute.py, окружение в journals/worker/hub-v5chain-worker-b1.log), строкой research-19. (3) П.23 профиль solve на 4D (solve 9–15 с/итер, Якоби; Гаусс–Зейдель/Дейкстра).
