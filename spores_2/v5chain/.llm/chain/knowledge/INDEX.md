@@ -54,4 +54,5 @@
 - [research/dp_ocp_ref.md](research/dp_ocp_ref.md) — эталон OCP двойного маятника висит→вверх: g=1 5.098 (v6 1.036), g=2 при |ω|≤3 7.636 — решаем
 - research/cut_walls.md — скопление спор у цели = гребёнка стен CUT; CUTR (бисекция по траекториям), OWN, слабый мотор u .15 и эталон энергия+стрельба (research-15)
 - [research/grow3_dd.md](research/grow3_dd.md) — grow3 дд: отказы = дребезг у цели → финиш стрельбой ≤3 дуг (60/60); строки RS 3 + петля на себя в solve (×2.6 узлов, ×2.8 быстрее); эталон в коробку dd_refbox_60 (точка дороже на ~4%) (research-17)
+- [research/growN_4d.md](research/growN_4d.md) — growN 4D: covered() верен; число клеток = объём поля / объём клетки (~800/слой DI 4D), FRAC 1 ×10 меньше, GM в 4D ×3.8 объёма (research-17)
 - [research/lit_separatrix_detection.md](research/lit_separatrix_detection.md) — литобзор: автопоиск разрывов V/сепаратрис (ПМП-экстремали, эпиграф, полиномиальная аннигиляция; nD-метода с гарантиями нет; PDF не прочитаны) (searcher-1)
