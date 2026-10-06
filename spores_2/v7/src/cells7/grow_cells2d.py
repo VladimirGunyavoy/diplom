@@ -41,9 +41,10 @@ class Cell:
             offs = s.off + s.sn; rows = {0: s.p0 + offs[:, None] * s.n}; tt = {0: np.zeros(s.m)}; ok = {}
             for sg, nn in ((1, s.nf), (-1, s.nb)):
                 if nn:
-                    if NFDEAD: r_, _, o_ = nf_rows(s.p0, s.u, offs, nn, sg, strict='mask', brk=False); ok.update(o_)
-                    else: r_ = nf_rows(s.p0, s.u, offs, nn, sg, strict=False)[0]
-                    rows.update(r_); tt.update(nf_rows.TT)
+                    ob_ = s.off + np.linspace(s.sn[0], s.sn[-1], (s.m - 1) * BFINE + 1) if BFINE > 1 else offs   # research-19 BFINE: узлы готовой клетки — каждый BFINE-й клон мелкой цепочки (как при росте), а не грубая цепочка из m клонов: «недоезд» крайнего клона не убивает соседние узлы каскадом
+                    if NFDEAD: r_, _, o_ = nf_rows(s.p0, s.u, ob_, nn, sg, strict='mask', brk=False); ok.update({k_: v_[::BFINE] for k_, v_ in o_.items()})
+                    else: r_ = nf_rows(s.p0, s.u, ob_, nn, sg, strict=False)[0]
+                    rows.update({k_: v_[::BFINE] for k_, v_ in r_.items()}); tt.update({k_: v_[::BFINE] for k_, v_ in nf_rows.TT.items()})
             ks = sorted(rows); s.G = np.array([rows[k] for k in ks]); s.TT = np.array([tt[k] for k in ks]); s.DEAD = ~np.array([ok.get(k, np.ones(s.m, bool)) for k in ks])   # NFDEAD (research-16): узел-заплатка (столбец не пересёк нормаль — у барьера ушёл на другую сторону) — V = BIG навсегда, его четырёхугольники не интерполируются; assert ks == list(range(-s.nb, s.nf + 1)), (ks[0], ks[-1], s.nb, s.nf)   # research-16: TT — время узла вдоль своего столбца (узлы (i,j), (i+1,j) — на одной траектории u)
             s.bb = (s.G[..., 0].min() - 1e-6, s.G[..., 0].max() + 1e-6, s.G[..., 1].min() - 1e-6, s.G[..., 1].max() + 1e-6)
             s.Q = [s.G[:-1, :-1].reshape(-1, 2), s.G[:-1, 1:].reshape(-1, 2), s.G[1:, 1:].reshape(-1, 2), s.G[1:, :-1].reshape(-1, 2)]; return
@@ -160,7 +161,6 @@ BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.envir
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
 OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
 GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
-SELFOV = int(os.environ.get('SELFOV', 0))   # п.27 (research-19): 1 — стоп торца, если узлы новой строки попадают в четырёхугольники своих же строк (|i−j| ≥ 2, копии θ ± 2π); GSTAT['end_self']
 NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFEDGE = int(os.environ.get('NFEDGE', 1)); NFLAG = int(os.environ.get('NFLAG', 12)); NFDEAD = int(os.environ.get('NFDEAD', 1)); LOOK = int(os.environ.get('LOOK', 0)); SEEDEPS = float(os.environ.get('SEEDEPS', .005)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
 # NORMFRONT=1 (18б, гипотеза пользователя): строка i клетки — не образ отрезка за i·DTN, а пересечения траекторий-столбцов с прямой через центр c_i ⟂ f(c_i) (торец по нормали к потоку)
 import collections; GSTAT = collections.Counter()
@@ -186,15 +186,25 @@ def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None, brk=True):
         ke = i * NFSUB
         if ke >= K: break
         c = X[ke, nc]; fh = f(c, u); fh = fh / np.linalg.norm(fh)
-        if NFLAG:                                                                              # research-16: пересечение строки i — ПЕРВОЕ после пересечения строки i−1 этим же столбцом (у седла столбцы отстают от центра в разы; окно ±NFMARG от времени центра их убивало)
+        if NORMFRONT == 2:                                                                     # research-19 (идея пользователя): торец — ЛОМАНАЯ, почти нормальная каждому клону: от центра c_i наружу, клон j — пересечение его траектории с прямой через узел соседа (ближе к центру) ⟂ потоку В ЭТОМ узле
+            ks = np.floor(tprev * NFSUB + 1e-9).astype(int); k0 = int(ks.min()); k1 = min(K - 1, int(ks.max()) + NFLAG * NFSUB); ar = np.arange(k0, k1)
+            P = X[ke, :nc].copy(); t = np.full(nc, float(ke)); has = np.zeros(nc, bool); oo = np.asarray(offs); od = np.argsort(oo)
+            for side in ([j_ for j_ in od if oo[j_] >= 0], [j_ for j_ in od[::-1] if oo[j_] < 0]):
+                pp = c
+                for j_ in side:
+                    fj = f(pp, u); fj = fj / np.linalg.norm(fj); gj = sg * ((X[k0:k1 + 1, j_] - pp) @ fj); cj = (gj[:-1] <= 0) & (gj[1:] > 0) & (ar >= ks[j_])
+                    if not cj.any(): continue
+                    kj = int(cj.argmax()); wj = -gj[kj] / (gj[kj + 1] - gj[kj] if gj[kj + 1] != gj[kj] else 1.); has[j_] = True; t[j_] = k0 + kj + wj; P[j_] = X[k0 + kj, j_] * (1 - wj) + X[k0 + kj + 1, j_] * wj; pp = P[j_]
+        elif NFLAG:                                                                            # research-16: пересечение строки i — ПЕРВОЕ после пересечения строки i−1 этим же столбцом (у седла столбцы отстают от центра в разы; окно ±NFMARG от времени центра их убивало)
             ks = np.floor(tprev * NFSUB + 1e-9).astype(int); k0 = int(ks.min()); k1 = min(K - 1, int(ks.max()) + NFLAG * NFSUB)
             g = sg * ((X[k0:k1 + 1, :nc] - c) @ fh); cr = (g[:-1] <= 0) & (g[1:] > 0) & (np.arange(k0, k1)[:, None] >= ks[None]); has = cr.any(0); kk = cr.argmax(0); j = np.arange(nc)
         else:
             k0 = max(0, int(ke - NFMARG * ke) - NFSUB); k1 = min(K - 1, int(ke + NFMARG * ke) + NFSUB)
             g = sg * ((X[k0:k1 + 1, :nc] - c) @ fh); cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
             kk = np.where(cr, np.abs(np.arange(k0, k1)[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(nc)
-        ga, gb = g[kk, j], g[kk + 1, j]; w = np.where(has, -ga / np.where(gb - ga == 0, 1., gb - ga), 0.); t = k0 + kk + w
-        P = X[k0 + kk, j] * (1 - w)[:, None] + X[k0 + kk + 1, j] * w[:, None]
+        if NORMFRONT != 2:
+            ga, gb = g[kk, j], g[kk + 1, j]; w = np.where(has, -ga / np.where(gb - ga == 0, 1., gb - ga), 0.); t = k0 + kk + w
+            P = X[k0 + kk, j] * (1 - w)[:, None] + X[k0 + kk + 1, j] * w[:, None]
         bad = ~has | (t / NFSUB <= tprev + 1e-9)
         if strict == 'mask':                                                                   # research-16: годность ПО СТОЛБЦАМ (не обрывать всю строку из-за дальнего столбца-кандидата за сепаратрисой)
             dead |= bad; P = np.where(dead[:, None], X[ke, :nc], P); t = np.where(dead, ke, t)
@@ -215,6 +225,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
+MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -288,7 +299,15 @@ def grow2(p, u, idx, rm, tm):
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     act[d] = False; continue
-                if SELFOV and self_hit(rows, i, klo, khi, ilo, ihi, rows[0][k0, 0]): GSTAT['end_self'] += 1; act[d] = False; continue
+                if SELFOV == 2 and self_hit(rows, i, klo, khi, ilo, ihi, rows[0][k0, 0]): GSTAT['end_self'] += 1; act[d] = False; continue   # b4 (п.27): строгий стоп, 0 строк наложения
+                if SELFOV == 1 and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
+                    lo_, hi_ = (ilo, ihi - 2) if d == 'F' else (ilo + 2, ihi)
+                    pg_ = np.array([rows[q][klo] for q in range(lo_, hi_ + 1)] + [rows[q][khi] for q in range(hi_, lo_ - 1, -1)]); pth_ = MPath(pg_)
+                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
+                if SMAX > 0 or SLAM > 0:                                                              # research-18 (идея пользователя): ширина фронта w(t) — стоп при растяжении/сжатии > SMAX или |d ln w/dt| > SLAM
+                    wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
+                    w0_ = wl(rows[0][klo:khi + 1]); wi_ = wl(row); wp_ = wl(rows[ihi if d == 'F' else ilo][klo:khi + 1])
+                    if (SMAX > 0 and max(wi_ / w0_, w0_ / wi_) > SMAX) or (SLAM > 0 and abs(np.log(wi_ / wp_)) / DTN > SLAM): GSTAT['end_stretch'] += 1; act[d] = False; continue
                 if DEPTH:
                     iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
                     dp_ = idx.covered(row) & idx.covered(inn)
@@ -301,7 +320,16 @@ def grow2(p, u, idx, rm, tm):
                 if d in extra: act[d] = False
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
-    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; return c
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2
+    if MADAPT > 0:                                                                            # research-19 (идея пользователя): число клонов-узлов клетки адаптивно — удваивать (5 → 9 → 17 → 33), пока ломаная торца по m узлам отходит от строки мелкой сетки больше MADAPT (в любой строке клетки)
+        Sx = S[klo:khi + 1]
+        for m_ in (5, 9, 17, 33):
+            sn_ = np.linspace(Sx[0], Sx[-1], m_); dev = 0.
+            for i in range(ilo, ihi + 1):
+                R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
+            if dev <= MADAPT: break
+        c.m = m_; GSTAT['m_%d' % m_] += 1
+    return c
 def in_tri(P, A, B, C):
     cr = lambda a, b, p: (b[None, :, 0] - a[None, :, 0]) * (p[:, None, 1] - a[None, :, 1]) - (b[None, :, 1] - a[None, :, 1]) * (p[:, None, 0] - a[None, :, 0])
     d1, d2, d3 = cr(A, B, P), cr(B, C, P), cr(C, A, P)
