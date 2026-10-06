@@ -26,7 +26,9 @@ def cut_rollout(A, pa, pb, NB=int(os.environ.get('CUTRN', 6))):
     """пары узлов со скачком V > CUT (проход 0): время агента из концов; скачок не подтвердился (|Ta − Tb| ≤ CUT) — шум, стены нет;
     иначе бисекция отрезка NB раз: середина — к тому концу, на чьё время похоже её время; стена — середина последнего отрезка (обрывки разных клеток сходятся в одну линию)."""
     TH = float(os.environ.get('CUTRT', 2.))                                                     # short horizon + V* of the atlas (profile research-15: long rollouts = 57% of run time)
-    def T_(Y): T, _, P_ = A.rollout(Y, tmax=TH); return np.where(np.isfinite(T), T, np.minimum(TH + A.vstar(P_[-1]), 1e3))
+    def T_(Y):
+        lk = G.LOOK; G.LOOK = int(os.environ.get('CUTRLOOK', 0)); T, _, P_ = A.rollout(Y, tmax=TH); G.LOOK = lk   # research-16: прокатка LOOK — только итоговому агенту (в бисекции CUTR она ×4 ко времени)
+        return np.where(np.isfinite(T), T, np.minimum(TH + A.vstar(P_[-1]), 1e3))
     pb = pa + np.c_[G.wrap(pb[:, 0] - pa[:, 0]), pb[:, 1] - pa[:, 1]]; Ta, Tb = T_(pa), T_(pb); real = np.abs(Ta - Tb) > CUT; a, b, ta, tb = pa[real], pb[real], Ta[real], Tb[real]
     for _ in range(NB):
         m = (a + b) / 2; tm = T_(m); la = np.abs(tm - ta) < np.abs(tm - tb); a = np.where(la[:, None], m, a); ta = np.where(la, tm, ta); b = np.where(la[:, None], b, m); tb = np.where(la, tb, tm)
