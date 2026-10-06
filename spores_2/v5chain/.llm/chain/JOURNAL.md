@@ -242,3 +242,4 @@ hub-v5chain-worker-b4 | started | acc2 | sonnet | 01:21:39
 hub-v5chain-worker-b4 | result | п.27 (б,в) готово: SELFOV на 5 зёрнах T 1.0115→1.0119, клеток 1034→1084; самоналожение на T не влияет, v7 c22aebd
 hub-v5chain-worker-b4 | result | п.28: v7 grow_cells2d = r18 (NF2, MADAPT, SELFOV 1/2, BFINE); NF2 d.03 1.0085/686 кл., d.06 1.0102/571 — как в прототипе
 hub-v5chain-research-19 | done | ctx 39% | кривые торцы NF2 + изгиб — 1.0085 без стен; BFINE лечит срыв NF; кольца/SELFOV, MADAPT; профиль: прокатка 71%, запрос секунды; b4 п.27–28, w23 п.29 | next=hub-v5chain-research-20 | 02:31:07
+hub-v5chain-research-20 | started | acc1 | opus | 02:32:05
