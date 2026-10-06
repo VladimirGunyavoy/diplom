@@ -1,5 +1,4 @@
 # Session Handoff
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-worker-22 (acc2, Sonnet, 09:30–19:05), причина смены: ctx 29% (софт 30%); линия A
 Сделано: grow3 закрыт — старт 51 (NOPR+LRTA*), профиль HexIdx ×2, финиш VF5/NA4/VFR1 (свободный T/refbox 1.004 max 1.010), диски RMAX .3 60/60 ≈1.005 (`v7/reports/grow3/results.md`). П.24 di4: блок SYS=di4 в `growN.py` + STOP/GM/SIDE/COVTOL/DUMPL/NA; эталон `r17/di4_ref_60.npy`.
 Стоп на / следующий шаг: ДОЖДАТЬСЯ расчётов на aida (`~/spore_v5/w21/v7/reports/growN/`, лог `di4_r400.log`/`di4_r700.log`, скрипт `src/cells7/growN_di4w22.py` — копия, чужие kill по `growN.py` не задевают): M3 SIDE0 GM.25 GLIM0 RMAX1 FRAC1, MAXC 400/700 (475k / 779k узлов; слои `di4_L*.pkl`, V — `di4_V*.pkl` после solve; стенсилы ~7 мин на управление). Когда `{"SYS": "di4"…}` в логе: записать клеток/узлов/сек/дошли/T/T* в `v7/reports/growN/results.md` (создать) и PLAN п.24; если дошли <60/60 — идёт ли дело в дырах (BIG) → попробовать MAXC больше / VF. Затем п.26 (BIDIR/эллипс, `knowledge/research/ellipse_scaling.md`, `solve_fwd` прототип research-18), потом п.25.
