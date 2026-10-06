@@ -7,7 +7,7 @@
 import numpy as np, sys, os, json, time
 from tqdm import tqdm
 MI = float(os.environ.get('TQDM_MI', 10))   # tqdm mininterval for log files (user rule 2026-10-06)
-SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
+SYS = os.environ.get('SYS', 'pend'); M = int(os.environ.get('M', 5)); BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .3)); TMAX = float(os.environ.get('TMAX', 3.)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
 CORE = int(os.environ.get('CORE', 0)); FASTLOC = int(os.environ.get('FASTLOC', 2)); JUMP = float(os.environ.get('JUMP', 0)); JMODE = os.environ.get('JMODE', 'max'); JAG = int(os.environ.get('JAG', 0)); JDIR = int(os.environ.get('JDIR', 0));   # JDIR=1: разрыв — только скачок поперёк столбцов в ОБЕИХ строках (барьер вдоль потока); JMODE drop — четырёхугольник не используется
