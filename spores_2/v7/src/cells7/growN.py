@@ -244,12 +244,19 @@ def build_layer(u, rng, log=None):
     bar.close(); return cells, idx
 def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
 _PQ = None
-def _pq_work(a): return tuple(_PQ.query(a[1])[:3]) + (a[0],)
+def _dedup(pi, hid, sc):
+    """DEDUP=K (b3): на точку оставить K ячеек с наибольшим запасом до границы (min по координатам min(sc, 1-sc)) — при FRAC 1 пар на узел много (память стенсилов)."""
+    K = int(E('DEDUP', 0))
+    if K <= 0 or not len(pi): return pi, hid, sc
+    mg = np.minimum(sc, 1 - sc).min(1); o = np.lexsort((-mg, pi)); pi, hid, sc = pi[o], hid[o], sc[o]
+    st = np.r_[0, np.flatnonzero(np.diff(pi)) + 1]; rk = np.arange(len(pi)) - np.repeat(st, np.diff(np.r_[st, len(pi)]))
+    k = rk < K; return pi[k], hid[k], sc[k]
+def _pq_work(a): return tuple(_dedup(*_PQ.query(a[1])[:3])) + (a[0],)
 def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
     k = int(E('SPAR', 0))
-    if k <= 1 or len(Y) < 50000: return qx.query(Y)
+    if k <= 1 or len(Y) < 50000: return _dedup(*qx.query(Y))
     from multiprocessing import Pool
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
