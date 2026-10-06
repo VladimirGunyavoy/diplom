@@ -1,0 +1,39 @@
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                полный атлас: клеток 252 узлов 40405
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                {"q": 0, "ref": 4.872, "C": 4.968, "T_full": 4.95, "src": 134, "ts_c_min": 4.555, "eps0.2": {"cells": 115, "frac": 0.456, "T": 4.95}, "eps0.5": {"cells": 134, "frac": 0.532, "T": 4.95}}
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                {"q": 1, "ref": 3.837, "C": 3.856, "T_full": 3.875, "src": 145, "ts_c_min": 3.735, "eps0.2": {"cells": 104, "frac": 0.413, "T": 3.95}, "eps0.5": {"cells": 115, "frac": 0.456, "T": 3.875}}
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                {"q": 2, "ref": 6.312, "C": 6.179, "T_full": 6.325, "src": 156, "ts_c_min": 5.559, "eps0.2": {"cells": 126, "frac": 0.5, "T": 6.325}, "eps0.5": {"cells": 196, "frac": 0.778, "T": 6.325}}
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                {"q": 3, "ref": 3.096, "C": 3.163, "T_full": 3.188, "src": 172, "ts_c_min": 2.878, "eps0.2": {"cells": 82, "frac": 0.325, "T": 3.188}, "eps0.5": {"cells": 90, "frac": 0.357, "T": 3.188}}
+stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                stencils built for u = -0.3
+stencils built for u = 0.0
+stencils built for u = 0.3
+solve:   0%|          | 0/20000 [00:00<?, ?it/s]                                                {"q": 4, "ref": 5.493, "C": 5.539, "T_full": 5.575, "src": 136, "ts_c_min": 5.012, "eps0.2": {"cells": 114, "frac": 0.452, "T": 5.575}, "eps0.5": {"cells": 150, "frac": 0.595, "T": 5.562}}
