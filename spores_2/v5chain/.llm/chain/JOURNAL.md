@@ -227,3 +227,4 @@ hub-v5chain-worker-22 | result | диски RMAX .3 + финиш VF5/NA4: 60/60,
 hub-v5chain-worker-b2 | died | tmux пропал ~12:05, без хендоффа; работа принята b3 | 13:00:29
 hub-v5chain-worker-b3 | started | acc1 | sonnet | 12:18:36
 hub-v5chain-worker-b3 | result | manip 4D c3000g (затравки от цели): reach .25, T/эт 1.24 (VF1: 1.18) — покрытие; идёт MAXC=12000 на aida | 13:00:29
+hub-v5chain-research-17 | done | ctx 35% | дд grow3: финиш 60/60, RS3, GM → −53% клеток ×10; эталоны в коробку (дд, диски, DI 4D); п.19 u.15 закрыт; 4D: число клеток = объём, FRAC 1 | next=hub-v5chain-research-18 | 15:28:38
