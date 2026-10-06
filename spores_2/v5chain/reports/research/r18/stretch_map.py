@@ -14,6 +14,6 @@ for j, u in enumerate(G.US):
     for c, sv in zip(cells, st):
         if c.u != u: continue
         ax.fill(np.r_[c.G[:, 0, 0], c.G[::-1, -1, 0]], np.r_[c.G[:, 0, 1], c.G[::-1, -1, 1]], color=cm(nrm(sv)), alpha=.85, lw=.3, ec='k')
-    ax.plot(BAR[:, 0], BAR[:, 1], '.', ms=1.5, color='tab:cyan'); ax.set_xlim(-np.pi, np.pi); ax.set_ylim(-G.WL, G.WL); ax.set_title('слой u %+g: %d клеток; цвет — растяжение среза max(w_вых/w_вх, обратное)' % (u, sum(c.u == u for c in cells)), fontsize=9); ax.set_xlabel('θ')
-axs[0].set_ylabel('ω'); fig.colorbar(plt.cm.ScalarMappable(nrm, cm), ax=axs, label='растяжение (лог)'); fn = os.environ['OUT']; fig.savefig(fn, dpi=100)
+    ax.plot(BAR[:, 0], BAR[:, 1], '.', ms=1.5, color='tab:cyan'); ax.set_xlim(-np.pi, np.pi); ax.set_ylim(-G.WL, G.WL); ax.set_title('u = %+g · %d клеток' % (u, sum(c.u == u for c in cells)), fontsize=12); ax.set_xlabel('θ')
+axs[0].set_ylabel('ω'); fig.colorbar(plt.cm.ScalarMappable(nrm, cm), ax=axs, label='растяжение среза, раз'); fig.suptitle(os.environ.get('TITLE', 'Растяжение среза клеток (выход / вход)') + '   ·   голубые точки — стена CUTR, квадрат — цель', fontsize=13); fn = os.environ['OUT']; fig.savefig(fn, dpi=100)
 print('готово', fn, 'клеток', len(cells), 'растяжение кв.', np.quantile(st, [.5, .9, .99, 1]).round(1).tolist(), '>3:', int((st > 3).sum()), '>10:', int((st > 10).sum()), flush=True)
