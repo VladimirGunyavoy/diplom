@@ -22,8 +22,16 @@ G.LIMITS = limits; hist = []
 GOALB = int(os.environ.get('GOALB', 1)); GB = None                                           # GOALB=1 (research-14): край цели ±RHO — стена с самого начала (клетка не лежит поперёк края цели)
 if GOALB:
     from scipy.spatial import cKDTree; e_ = np.linspace(-G.RHO, G.RHO, 41); GB = np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]]; G.BARRIER = cKDTree(GB)
+def cut_rollout(A, pa, pb, NB=int(os.environ.get('CUTRN', 6))):
+    """пары узлов со скачком V > CUT (проход 0): время агента из концов; скачок не подтвердился (|Ta − Tb| ≤ CUT) — шум, стены нет;
+    иначе бисекция отрезка NB раз: середина — к тому концу, на чьё время похоже её время; стена — середина последнего отрезка (обрывки разных клеток сходятся в одну линию)."""
+    def T_(Y): T, _, _ = A.rollout(Y, tmax=float(os.environ.get('CUTRT', 25.))); return np.where(np.isfinite(T), T, 1e3)
+    pb = pa + np.c_[G.wrap(pb[:, 0] - pa[:, 0]), pb[:, 1] - pa[:, 1]]; Ta, Tb = T_(pa), T_(pb); real = np.abs(Ta - Tb) > CUT; a, b, ta, tb = pa[real], pb[real], Ta[real], Tb[real]
+    for _ in range(NB):
+        m = (a + b) / 2; tm = T_(m); la = np.abs(tm - ta) < np.abs(tm - tb); a = np.where(la[:, None], m, a); ta = np.where(la, tm, ta); b = np.where(la[:, None], b, m); tb = np.where(la, tb, tm)
+    W = (a + b) / 2; W[:, 0] = G.wrap(W[:, 0]); print('CUTR: пар', len(pa), 'подтверждено', int(real.sum()), flush=True); return W
 def cut_adaptive(A, K=int(os.environ.get('CUTAK', 16)), ND=8):
-    """разрыв V как край изображения, прямо по узлам (любая размерность — та же схема): k ближайших → плоскость; невязка > CUT/4 → кандидат;
+    """разрыв V как край изображения, прямо по узлам (любая размерность — та же схема): k ближайших; размах V > CUT → кандидат;
     у кандидата — разрез окрестности прямой через узел по ND направлениям, по плоскости с каждой стороны; скачок J = разность плоскостей в узле,
     качество q = 1 − SSE_разрез / SSE_одна; стена — где J > CUT и J·q максимально поперёк разреза; точки стены — отрезок ±h/2 вдоль разреза."""
     from scipy.spatial import cKDTree
@@ -33,7 +41,7 @@ def cut_adaptive(A, K=int(os.environ.get('CUTAK', 16)), ND=8):
     def fit(Dm, Vm, W):                                                                          # взвешенная плоскость по маске W: возвращает a (значение в узле) и SSE
         X = np.concatenate([np.ones(Dm.shape[:2] + (1,)), Dm], -1); XtX = np.einsum('nk,nki,nkj->nij', W, X, X) + 1e-9 * np.eye(3); Xty = np.einsum('nk,nki,nk->ni', W, X, Vm)
         c = np.linalg.solve(XtX, Xty[..., None])[..., 0]; r = (np.einsum('nki,ni->nk', X, c) - Vm) * W; return c[:, 0], (r * r).sum(1), c
-    a1, sse1, _ = fit(D, Vn, np.ones(Vn.shape)); res = np.sqrt(sse1 / K); cand = np.flatnonzero(res > CUT / 4)
+    a1, sse1, _ = fit(D, Vn, np.ones(Vn.shape)); cand = np.flatnonzero(Vn.max(1) - Vn.min(1) > CUT)                     # размах V в окрестности > CUT (невязка RMS не годится: узел со скачком обычно один из K)
     if not len(cand): return np.zeros((0, 2))
     Dc, Vc = D[cand], Vn[cand]; best = np.full(len(cand), -1.); J = np.zeros(len(cand)); Nn = np.zeros((len(cand), 2))
     for th in np.linspace(0, np.pi, ND, endpoint=False):
@@ -53,11 +61,11 @@ for ps in range(REFINE + 1):
     if ps == REFINE: break
     A.finish(); A.solve(); Y, Vo = [], []
     if CUT > 0:                                                                                # CUT: середины пар соседних узлов (поперёк и вдоль) с перепадом V > CUT — барьер для прохода 1
-        from scipy.spatial import cKDTree; DB = []
+        from scipy.spatial import cKDTree; DB = []; PA, PB = [], []
         for c in A.cells:
             g = c.G; v = A.V[c.o:c.o + len(g) * c.m].reshape(len(g), c.m)
             for a_, b_, va, vb in ((g[:, :-1], g[:, 1:], v[:, :-1], v[:, 1:]), (g[:-1], g[1:], v[:-1], v[1:])):
-                k = (np.abs(va - vb) > CUT) & (va < G.BIG / 2) & (vb < G.BIG / 2); DB.append(((a_ + b_) / 2)[k])
+                k = (np.abs(va - vb) > CUT) & (va < G.BIG / 2) & (vb < G.BIG / 2); DB.append(((a_ + b_) / 2)[k]); PA.append(a_[k]); PB.append(b_[k])
         CUTG = float(os.environ.get('CUTG', 0))                                                  # CUTG = h > 0 (research-15): стена по V* (min по всем клеткам) на равномерной сетке шага h — одна согласованная стена вместо гребёнки обрывков от каждой клетки
         if CUTG > 0:
             gx_ = np.arange(-G.XL, G.XL, CUTG); gw_ = np.arange(-G.WL, G.WL + 1e-9, CUTG); GX_, GW_ = np.meshgrid(gx_, gw_, indexing='ij'); VG = A.vstar(np.c_[GX_.ravel(), GW_.ravel()]).reshape(GX_.shape); PG = np.stack([GX_, GW_], -1); DB = []
@@ -74,6 +82,7 @@ for ps in range(REFINE + 1):
                     if wr: b_ = np.where((b_[:, :1] < a_[:, :1]), b_ + np.array([2 * G.XL, 0.]), b_)
                     DB.append((a_ + b_) / 2)
             DB = [np.unique(np.round(np.concatenate(DB), 6), axis=0)] if DB else []
+        if int(os.environ.get('CUTR', 0)): DB = [cut_rollout(A, np.concatenate(PA), np.concatenate(PB))]   # CUTR=1 (research-15): место разрыва — бисекцией по времени реальных траекторий агента
         if int(os.environ.get('CUTA', 0)): DB = [cut_adaptive(A)]                              # CUTA=1 (research-15, идея пользователя): разрыв V по окрестности k узлов — плоскость → разрез на две плоскости → тонкая стена
         DB = np.concatenate(DB + ([GB] if GB is not None else [])); DB[:, 0] = G.wrap(DB[:, 0]); G.BARRIER = cKDTree(DB); np.save(os.path.join(D, 'barrier.npy'), DB); hist.append(dict(cells=len(done), nodes=int(A.N), barrier_pts=len(DB))); print('проход', ps, hist[-1], flush=True); continue                                                       # невязка: V в центре четырёхугольника (среднее 4 узлов) против шага Беллмана из этой точки
     for c in A.cells:
