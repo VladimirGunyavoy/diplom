@@ -214,3 +214,4 @@ hub-v5chain-worker-b1 | done | ctx ~21% заранее: PLAN 22 growN — нов
 hub-v5chain-worker-b2 | started | acc1 | sonnet | 07:45:37
 hub-v5chain-worker-21 | result | 17в grow3 + финиш стрельбой: 60/60, T/эталон mean .970 max .991 | 08:12:09
 hub-v5chain-worker-21 | result | 17д grow3 RS=3+петля: 60/60, T/refbox 1.010 max 1.039, 535k узлов/512 с | 08:30:56
+hub-v5chain-worker-21 | result | 17г grow3 + 2 диска: 60/60, 0 столкновений, T/эталон mean .975 max 1.03 | 08:50:21

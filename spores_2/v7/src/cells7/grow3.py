@@ -106,7 +106,10 @@ BARRIER = None; BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1))
 if GOALB:                                                                                       # goal box surface is a wall from the start (cf. 2D GOALB): cells end at it, so their last nodes reach the goal within one step
     from scipy.spatial import cKDTree
     _e = np.linspace(-RHO, RHO, 21); _a, _b = np.meshgrid(_e, _e); _a, _b = _a.ravel(), _b.ravel(); _o = np.zeros_like(_a)
-    BARRIER = cKDTree(np.concatenate([np.c_[_a, _b, _o + s_ * RHO][:, p_] for s_ in (-1, 1) for p_ in ([0, 1, 2], [0, 2, 1], [2, 0, 1])]))
+    _B = [np.concatenate([np.c_[_a, _b, _o + s_ * RHO][:, p_] for s_ in (-1, 1) for p_ in ([0, 1, 2], [0, 2, 1], [2, 0, 1])])]
+    for cx, cy, r in DISCS:                                                                         # disc walls (17g): cylinder surface x, y on the circle, any θ
+        _t = np.linspace(0, 2 * np.pi, int(2 * np.pi * r / .005), endpoint=False); _z = np.arange(-np.pi, np.pi, .015); _B.append(np.c_[np.repeat(cx + r * np.cos(_t), len(_z)), np.repeat(cy + r * np.sin(_t), len(_z)), np.tile(_z, len(_t))])
+    BARRIER = cKDTree(np.concatenate(_B))
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(wrapy(P), distance_upper_bound=BEPS)[0] < BEPS
 def grow3(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (a±, b±, F, B) растёт, пока: в поле, изгиб среза в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
@@ -155,14 +158,14 @@ def grow3(p, u, idx, rm, tm):
                 if d in extra: act[d] = False
                 elif (idx.covered(face) | ~inbox(face)).mean() > FRAC: extra[d] = 1
     r1 = (S[k1hi] - S[k1lo]) / 2; r2 = (S[k2hi] - S[k2lo]) / 2
-    near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR or float(dobs(p)) < .3                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
+    near = np.linalg.norm(np.r_[p[:2], wrap(p[2])]) < GNEAR                                   # near the goal slivers are kept (walls make cells small there, holes would break V propagation)
     if ihi - ilo < (1 if near else MINROWS) or min(r1, r2) < (.02 if near else RMIN): return None   # MINROWS/RMIN: refuse sliver cells, overlap (OVH) covers the gaps instead
     c = Cell(p + e1 * (S[k1lo] + S[k1hi]) / 2 + e2 * (S[k2lo] + S[k2hi]) / 2, u, r1 / (1 + HALO), r2 / (1 + HALO), e1, e2); c.nf, c.nb = ihi, -ilo; return c
 VF = float(E('VF', 1.5)); NA = int(E('NA', 3))                                              # finish by shooting (research-17): at V* <= VF the agent switches to <= NA rhombus-vertex arcs (cure for chattering at |y|~.17 near the goal)
 GLIM = float(E('GLIM', .25))
 def glimits(p, u):
     """cells near the goal must be as narrow as the goal box (else only a few nodes hit it and V does not propagate): half-width ~ GLIM·distance, length ~ 2·distance."""
-    d = min(float(np.linalg.norm(np.r_[p[:2], wrap(p[2])])), 3 * max(float(dobs(p)), .05) if DISCS else 9.); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
+    d = float(np.linalg.norm(np.r_[p[:2], wrap(p[2])])); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = HexIdx(); queue = []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=10, leave=False)   # bar = consecutive covered random seeds, resets on each new cell
