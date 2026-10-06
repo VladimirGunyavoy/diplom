@@ -247,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -354,6 +354,15 @@ def grow2(p, u, idx, rm, tm):
             for i in range(ilo, ihi + 1):
                 R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
             if dev <= MADAPT: break
+        c.m = m_; GSTAT['m_%d' % m_] += 1
+    if MGRAM > 0:                                                                             # research-20 (выбор пользователя 02:42): число клонов — удваивать (5 → 9 → 17 → 33), пока расстояние между соседними клонами в метрике грамиана клетки Wc (как в ok_rect: вся длительность) ≤ MGRAM в любой строке
+        Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; Wc = Wc * ((ihi - ilo) * DTN / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Qw = np.linalg.eigh(Wc); lam = np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)); Sx = S[klo:khi + 1]
+        for m_ in (5, 9, 17, 33):
+            sn_ = np.linspace(Sx[0], Sx[-1], m_); dg = 0.
+            for i in range(ilo, ihi + 1):
+                R_ = rows[i][klo:khi + 1]; P_ = np.c_[np.interp(sn_, Sx, R_[:, 0]), np.interp(sn_, Sx, R_[:, 1])]; q_ = np.diff(P_, axis=0) @ Qw; dg = max(dg, float(np.sqrt((q_ * q_ / lam).sum(1).max())))
+            if m_ == 5: MGD.append(dg)
+            if dg <= MGRAM: break
         c.m = m_; GSTAT['m_%d' % m_] += 1
     return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана

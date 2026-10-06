@@ -123,7 +123,7 @@ Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; _t1 = _tm.time
 _qt = []                                                                                      # research-19: время ОДНОГО запроса (старт → траектория до цели) — по одному старту, распределение
 from tqdm import tqdm as _tq
 for _i in _tq(range(min(len(Q), int(os.environ.get('QTIME', 20)))), desc='замер времени запроса (по одному старту)', mininterval=5): _t1 = _tm.time(); A.rollout(Q[_i:_i + 1]); _qt.append(_tm.time() - _t1)
-_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
+_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
 fz = np.isfinite(T); r = T[fz] / ref[fz]
 if G.SYS == 'pend':                                                                           # пути для картинки: 7 стартов + их зеркала (−φ, −ω) — видно закрутку в обе стороны
