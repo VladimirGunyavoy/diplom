@@ -53,4 +53,5 @@
 - [research/dp_corridor_refine.md](research/dp_corridor_refine.md) — g = 2: путь OCP чистый bang-bang (нет сингулярной дуги), потолок K дуг, запас |u| .9 стоит 16%; путь хода по рёбрам + доводка коридора IPOPT → T 7.6485 = ×1.0017 OCP (+ поиск топологий: лучший на атлас ×1.002 ×2, ×1.066 ×2); g = 1 ×1.01, g = .3 ×1.000 (research-12)
 - [research/dp_ocp_ref.md](research/dp_ocp_ref.md) — эталон OCP двойного маятника висит→вверх: g=1 5.098 (v6 1.036), g=2 при |ω|≤3 7.636 — решаем
 - research/cut_walls.md — скопление спор у цели = гребёнка стен CUT; CUTR (бисекция по траекториям), OWN, слабый мотор u .15 и эталон энергия+стрельба (research-15)
+- [research/grow3_dd.md](research/grow3_dd.md) — grow3 дд: отказы = дребезг у цели → финиш стрельбой ≤3 дуг (60/60); строки RS 3 + петля на себя в solve (×2.6 узлов, ×2.8 быстрее); эталон в коробку dd_refbox_60 (точка дороже на ~4%) (research-17)
 - [research/lit_separatrix_detection.md](research/lit_separatrix_detection.md) — литобзор: автопоиск разрывов V/сепаратрис (ПМП-экстремали, эпиграф, полиномиальная аннигиляция; nD-метода с гарантиями нет; PDF не прочитаны) (searcher-1)
