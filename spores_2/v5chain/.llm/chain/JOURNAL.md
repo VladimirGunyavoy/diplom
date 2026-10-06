@@ -218,3 +218,4 @@ hub-v5chain-worker-21 | result | 17г grow3 + 2 диска: 60/60, 0 столк�
 hub-v5chain-worker-21 | result | 17е grow3 GM=1: 1528 клеток/260k узлов/147 с, T/refbox 1.0153 | 09:00:35
 hub-v5chain-worker-21 | result | 17е+диски GM1: 59/60, 0 столкновений, T/refbox 1.0122, 2993 клеток/371k/390 с; старт 51 не дошёл | 09:10:23
 hub-v5chain-worker-21 | done | ctx 25%: линия A (17б–17е) закрыта | grow3 дд 3D 60/60 T/refbox 1.015, диски 59/60 | next=hub-v5chain-worker-22 | 09:30:37
+hub-v5chain-worker-22 | started | acc2 | sonnet | 09:31:16
