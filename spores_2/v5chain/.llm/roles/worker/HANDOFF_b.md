@@ -1,7 +1,10 @@
-# WORKER HANDOFF — линия B (hub-v5chain-worker-bN), создан hub-v5chain-research-15 2026-10-06 04:10
-Вторая параллельная линия worker'ов (слово пользователя: «запускай по 2 воркера, думай над номерами»). Линия A — hub-v5chain-worker-20 → 21 … (хендофф `HANDOFF.md`, задача PLAN 17б, дифдрайв 3D) — её файлы не трогать.
-Твои файлы: этот хендофф, журнал `journals/worker/hub-v5chain-worker-bN.log`, sid `journals/_sentinel/sid_worker-hub-v5chain-worker-bN.txt`, cron-пульс с именем hub-v5chain-worker-bN; преемник — hub-v5chain-worker-b(N+1).
-recent.md/archive.md — общие (строка с пометкой «линия B»).
-Задача: PLAN п.18 (18а — перенос OWN/CUTR/barrier/UM/FMIN/tqdm в v7; 18б — гипотеза пользователя NORMFRONT). Числа и контекст — `.llm/chain/knowledge/research/cut_walls.md`.
-Расчёты — на aida (`ssh -p 2222 random@127.0.0.1`), своё дерево `~/spore_v5/wb1/` (rsync с хаба); долгие команды только в фоне, с tqdm (правило пользователя). Дерево research — `~/spore_v5/r13/` (не трогать), worker-20 — `~/spore_v5/w20/`.
-Номера экспериментов маятника: у линии B — 300+ (research занимает 1xx–2xx), картинки `v7/experiments/pend/pics/NNN_*.png`.
+# WORKER HANDOFF — линия B (hub-v5chain-worker-bN)
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-worker-b1 (acc2, sonnet, 04:02–07:45), причина смены: ctx ~21% заранее — PLAN 22 (growN.py, n-мерный grow3) новый модуль с нуля, нужен чистый контекст.
+Сделано: п.18а/18б/20/21 перенесены в v7 (grow_cells2d.py/compute.py = r16 f5196de) и сверены с research (cut_walls.md §Перенос); п.19: pend_ref_best.py (u .3 ✓ .9973, max 1.0017).
+Стоп на / следующий шаг: (1) п.19 u .15 — на aida идёт `UM=.15 NP=10 python3 pend_ref_best.py` (~/spore_v5/wb1/spores_2/v5chain/reports/research/, лог best_u0.15.log; с 04:23, tqdm по порядку — стоит на 4/100 пока не кончится медленный старт); ждёт файл `pend_ref_best_u0.15.npy`: сверить T атласов (311, 313, 315, 224–228 agent.npz; Q→индекс по Q0 seed 0) — ни один не быстрее >.5%; .npy скопировать в reports/research/, строка в cut_walls.md; если процессов нет и файла нет — упал, перезапустить (NP=10, лог). (2) PLAN 22 — v7/src/cells7/growN.py (grow3 на n измерений, не трогать grow3.py — линия A), проверки (а)–(в); затем п.23 профиль.
+Грабли: sleep > ~1 мин и until-циклы блокируются в foreground — только run_in_background. pkill -f из ssh-строки убивает сам ssh (паттерн в командной строке). REFF для compute.py ищется в src/cells7 (копировать pend_ref_*.npy туда). git: нет user.email — коммиты через GIT_AUTHOR_*/GIT_COMMITTER_* env (имя звена, gun.vladimir26@gmail.com), push без кредов не проходит (по TASK пуш не нужен). aida: 32 ядра, моё дерево ~/spore_v5/wb1/ (rsync v7/ с хаба, спец. флаги в журнале). Прогресс-бар imap идёт по порядку — не показывает готовность.
+Решения цепочки: нет
+Коммиты: 01650b8 [hub-v5chain-research-17]: старт;0ecc52b [hub-v5chain-research-16]: финиш — хендофф research-17;b9d8a2a [hub-v5chain-worker-21]: п.17б grow3 (дд 3D): 54/60, T/эталон 1.004 med ;
+Токены: T_START 5ч 15%/ctx 5%/$0.13 04:02 / T_BEFORE_END 5ч ~78%/ctx ~21%/$~4.5 07:45
+NEXT_LINK: hub-v5chain-worker-b2   NEXT_MODEL: sonnet
