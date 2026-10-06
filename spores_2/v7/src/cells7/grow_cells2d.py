@@ -33,10 +33,17 @@ def inbox(y): return (np.abs(y[..., 1]) <= WL) & ((np.abs(y[..., 0]) <= XL) if P
 def normal(c, u): v = f(c, u); n = np.array([-v[1], v[0]]); return n / np.linalg.norm(n)
 SH = (0.,) if PER is None else (0., PER, -PER)
 class Cell:
-    def __init__(s, c, u, r): s.c, s.u, s.r = np.array(c, float), u, r; s.n = normal(s.c, u); s.nb = 0; s.nf = 0; s.m = M; s.kt = 1
+    def __init__(s, c, u, r): s.c, s.u, s.r = np.array(c, float), u, r; s.n = normal(s.c, u); s.nb = 0; s.nf = 0; s.m = M; s.kt = 1; s.p0 = None; s.off = 0.
     def build(s):
         """сетка узлов G (nt, M, 2): отрезок с гало, пронесённый потоком на nb шагов назад и nf вперёд."""
         s.sn = np.linspace(-(1 + HALO) * s.r, (1 + HALO) * s.r, s.m); seg = s.c + s.sn[:, None] * s.n; fw = [seg]; bw = []
+        if NORMFRONT and s.p0 is not None:                                                        # NORMFRONT: строки по нормали к потоку через центр c_i (траектория p0); столбцы — мелко проинтегрированные клоны
+            offs = s.off + s.sn; rows = {0: s.p0 + offs[:, None] * s.n}
+            for sg, nn in ((1, s.nf), (-1, s.nb)):
+                if nn: rows.update(nf_rows(s.p0, s.u, offs, nn, sg, strict=False)[0])
+            ks = sorted(rows); s.G = np.array([rows[k] for k in ks]); assert ks == list(range(-s.nb, s.nf + 1)), (ks[0], ks[-1], s.nb, s.nf)
+            s.bb = (s.G[..., 0].min() - 1e-6, s.G[..., 0].max() + 1e-6, s.G[..., 1].min() - 1e-6, s.G[..., 1].max() + 1e-6)
+            s.Q = [s.G[:-1, :-1].reshape(-1, 2), s.G[:-1, 1:].reshape(-1, 2), s.G[1:, 1:].reshape(-1, 2), s.G[1:, :-1].reshape(-1, 2)]; return
         for _ in range(s.nf): fw.append(step(fw[-1], s.u))
         y = seg
         for _ in range(s.nb): y = step(y, s.u, -1.); bw.append(y)
@@ -150,19 +157,61 @@ BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.envir
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
 OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
 GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
+# NORMFRONT=1 (18б, гипотеза пользователя): строка i клетки — не образ отрезка за i·DTN, а пересечения траекторий-столбцов с прямой через центр c_i ⟂ f(c_i) (торец по нормали к потоку)
+NFSTAT = dict(trunc=0, fill=0, nocross=0, mono=0, conv=0)
+def quad_convex(ra, rb):
+    """все четырёхугольники между строками ra, rb (по столбцам j, j+1) выпуклы (знаки векторных произведений обходов совпадают)."""
+    A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
+    for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
+    cs = np.array(cs); return bool((cs >= -1e-12).all() or (cs <= 1e-12).all())
+def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None):
+    """строки i = sg·1..nmax: столбцы offs (смещения вдоль n(p0)) интегрируются мелко (DTN/NFSUB, запас по времени ±NFMARG); строка i = пересечения столбцов с прямой через
+    c_i (траектория p0 шагом DTN) ⟂ f(c_i). strict: столбец не пересёк, время не растёт или четырёхугольник невыпуклый — стоп (строки до этого); иначе — запасной образ за i·DTN.
+    Возвращает (rows {i: (len(offs),2)}, C {i: c_i})."""
+    n = normal(p0, u); X0 = np.vstack([p0 + np.asarray(offs)[:, None] * n, p0[None]]); nc = len(offs); K = int(np.ceil(nmax * (1 + NFMARG))) * NFSUB + 2 * NFSUB + 1
+    X = np.empty((K, nc + 1, 2)); X[0] = X0; hs = sg * DTN / NFSUB
+    for k in range(1, K):
+        X[k] = rk4(X[k - 1], u, hs, 1)
+        if not inbox(X[k][nc]) or np.linalg.norm(f(X[k][nc], u)) < FMIN / 4: X = X[:k + 1]; break                       # центр ушёл — дальше строк нет
+    K = len(X); rows = {}; C = {}; tprev = np.zeros(nc); rprev = X0[:nc]
+    for i in range(1, nmax + 1):
+        ke = i * NFSUB
+        if ke >= K: break
+        c = X[ke, nc]; fh = f(c, u); fh = fh / np.linalg.norm(fh); k0 = max(0, int(ke - NFMARG * ke) - NFSUB); k1 = min(K - 1, int(ke + NFMARG * ke) + NFSUB)
+        g = sg * ((X[k0:k1 + 1, :nc] - c) @ fh); cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
+        kk = np.where(cr, np.abs(np.arange(k0, k1)[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(nc)
+        ga, gb = g[kk, j], g[kk + 1, j]; w = np.where(has, -ga / np.where(gb - ga == 0, 1., gb - ga), 0.); t = k0 + kk + w
+        P = X[k0 + kk, j] * (1 - w)[:, None] + X[k0 + kk + 1, j] * w[:, None]
+        bad = ~has | (t / NFSUB <= tprev + 1e-9)
+        if bad.any():
+            if strict: NFSTAT['trunc'] += 1; NFSTAT['nocross'] += int((~has).any()); NFSTAT['mono'] += int((has & (t / NFSUB <= tprev + 1e-9)).any()); break
+            NFSTAT['fill'] += int(bad.sum()); P = np.where(bad[:, None], X[ke, :nc], P); t = np.where(bad, ke, t)
+        if strict and not quad_convex(rprev, P): NFSTAT['trunc'] += 1; NFSTAT['conv'] += 1; break
+        rows[sg * i] = P; C[sg * i] = c; tprev = t / NFSUB; rprev = P
+        if stop is not None and stop(i, c): break
+    return rows, C
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
     (край покрыт > FRAC) — добираем наложение OVH·h (h = ширина/(M−1)) или 1 строку и стоп."""
     n = normal(p, u); S = np.linspace(-rm, rm, KF); ds = S[1] - S[0]; k0 = KF // 2; nmax = int(tm / DTN + 1e-9)
     rows = {0: p + S[:, None] * n}; Wt = {0: np.zeros((2, 2))}
-    for sg in (1, -1):
-        y = rows[0]; W = np.zeros((2, 2))
-        for i in range(1, nmax + 1):
-            y = step(y, u, float(sg)); A = jac(y[k0], u)
-            W = wstep(W, A, DTN, sg)
-            rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)                                       # эллипс энергии a²·t (куб |δu| ≤ a внутри него)
-            if not inbox(y[k0:k0 + 1]).all() or np.linalg.norm(f(y[k0], u)) < FMIN / 2: break
+    if NORMFRONT:
+        rows = {0: p + S[:, None] * n}; Wt = {0: np.zeros((2, 2))}
+        for sg in (1, -1):
+            r_, C_ = nf_rows(p, u, S, nmax, sg); W = np.zeros((2, 2))
+            for i in range(1, max(abs(k) for k in r_ if k * sg > 0) + 1 if any(k * sg > 0 for k in r_) else 1):
+                W = wstep(W, jac(C_[sg * i], u), DTN, sg); rows[sg * i] = r_[sg * i]; Wt[sg * i] = W * (i * DTN)
+                if not inbox(C_[sg * i][None]).all() or np.linalg.norm(f(C_[sg * i], u)) < FMIN / 2: break
+    else:
+        for sg in (1, -1):
+            y = rows[0]; W = np.zeros((2, 2))
+            for i in range(1, nmax + 1):
+                y = step(y, u, float(sg)); A = jac(y[k0], u)
+                W = wstep(W, A, DTN, sg)
+                rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)                                       # эллипс энергии a²·t (куб |δu| ≤ a внутри него)
+                if not inbox(y[k0:k0 + 1]).all() or np.linalg.norm(f(y[k0], u)) < FMIN / 2: break
     imin, imax = min(rows), max(rows)
     def bend(klo, khi, i, Wc):
         if khi - klo < 2: return 0.
@@ -223,7 +272,7 @@ def grow2(p, u, idx, rm, tm):
                 if d in extra: act[d] = False
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
-    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; return c
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; return c
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)

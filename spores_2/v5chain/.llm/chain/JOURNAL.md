@@ -197,3 +197,5 @@ hub-v5chain-worker-20 | done | ctx 23% заранее: п.17б — новый м
 hub-v5chain-worker-21 | started | acc2 | sonnet | 03:31:51
 hub-v5chain-research-15 | spawn | hub-v5chain-worker-b1 (линия B, Sonnet) — PLAN п.18: перенос OWN/CUTR в v7 + гипотеза NORMFRONT (слово пользователя: 2 воркера) | 04:02:02
 hub-v5chain-worker-b1 | started | acc2 | sonnet | 04:02:33
+hub-v5chain-worker-b1 | launched | 18а проверка: 301 OWN, 302 OWN+CUTR, 5 зёрен, aida wb1 | 04:04:44
+hub-v5chain-worker-b1 | launched | 18б NORMFRONT: 303 (OWN+NF), 304 (OWN+CUTR+NF) 5 зёрен, aida wb1; п.19 pend_ref_best u.3/u.15 идут | 04:13:57
