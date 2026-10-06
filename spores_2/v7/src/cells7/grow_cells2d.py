@@ -160,6 +160,7 @@ BARRIER = None; BEPS = float(os.environ.get('BEPS', .01)); BTOUCH = int(os.envir
 def nearb(P): return np.zeros(len(P), bool) if BARRIER is None else BARRIER.query(np.c_[wrap(P[:, 0]), P[:, 1]], distance_upper_bound=BEPS)[0] < BEPS
 OWN = int(os.environ.get('OWN', 0))   # OWN=1 (research-15, по картинке пользователя: щель заполняли цепочкой коротких спор): торец стоп по покрытию СВОИХ столбцов — свободных в строке споры
 GROW = int(os.environ.get('GROW', 2)); KF = 41; OVH = float(os.environ.get('OVH', .5)); FRAC = float(os.environ.get('FRAC', .5)); DEPTH = int(os.environ.get('DEPTH', 0)); DFRAC = float(os.environ.get('DFRAC', .5))   # DEPTH=2 (research-15): стоп, когда глубже OVH·h зашла доля края > DFRAC (DEPTH=1 — хоть одна точка, режет клетки рано)   # DEPTH=1 (слово пользователя 2026-10-06): стоп, когда зашли в соседа глубже OVH·h (h — местный шаг узлов)   # GROW=2 (research-14, слово пользователя): рост во все 4 стороны, тормоз по наложению
+SELFOV = int(os.environ.get('SELFOV', 0))   # п.27 (research-19): 1 — стоп торца, если узлы новой строки попадают в четырёхугольники своих же строк (|i−j| ≥ 2, копии θ ± 2π); GSTAT['end_self']
 NORMFRONT = int(os.environ.get('NORMFRONT', 0)); NFEDGE = int(os.environ.get('NFEDGE', 1)); NFLAG = int(os.environ.get('NFLAG', 12)); NFDEAD = int(os.environ.get('NFDEAD', 1)); LOOK = int(os.environ.get('LOOK', 0)); SEEDEPS = float(os.environ.get('SEEDEPS', .005)); NFSUB = int(os.environ.get('NFSUB', 8)); NFMARG = float(os.environ.get('NFMARG', .5))
 # NORMFRONT=1 (18б, гипотеза пользователя): строка i клетки — не образ отрезка за i·DTN, а пересечения траекторий-столбцов с прямой через центр c_i ⟂ f(c_i) (торец по нормали к потоку)
 import collections; GSTAT = collections.Counter()
@@ -287,6 +288,7 @@ def grow2(p, u, idx, rm, tm):
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     act[d] = False; continue
+                if SELFOV and self_hit(rows, i, klo, khi, ilo, ihi, rows[0][k0, 0]): GSTAT['end_self'] += 1; act[d] = False; continue
                 if DEPTH:
                     iin = i - 1 if d == 'F' else i + 1; inn = rows[iin][klo:khi + 1]
                     dp_ = idx.covered(row) & idx.covered(inn)
@@ -300,6 +302,21 @@ def grow2(p, u, idx, rm, tm):
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; return c
+def in_tri(P, A, B, C):
+    cr = lambda a, b, p: (b[None, :, 0] - a[None, :, 0]) * (p[:, None, 1] - a[None, :, 1]) - (b[None, :, 1] - a[None, :, 1]) * (p[:, None, 0] - a[None, :, 0])
+    d1, d2, d3 = cr(A, B, P), cr(B, C, P), cr(C, A, P)
+    return ~(((d1 < 0) | (d2 < 0) | (d3 < 0)) & ((d1 > 0) | (d2 > 0) | (d3 > 0)))
+def self_hit(rows, i, klo, khi, ilo, ihi, th0):
+    """SELFOV: попадают ли узлы новой строки i (столбцы klo..khi) внутрь четырёхугольников строк q, q+1 этой же клетки, не соседних с i."""
+    qs = [q for q in range(ilo, ihi) if (q + 1 <= i - 2 if i > ihi else q >= i + 2)]
+    if not qs: return False
+    uw = lambda Y: np.stack([th0 + (Y[:, 0] - th0 + PER / 2) % PER - PER / 2, Y[:, 1]], 1) if PER else Y
+    R = {j: uw(rows[j][klo:khi + 1]) for j in qs + [qs[-1] + 1]}; P = uw(rows[i][klo:khi + 1])
+    A = np.concatenate([R[q][:-1] for q in qs]); B = np.concatenate([R[q][1:] for q in qs]); C = np.concatenate([R[q + 1][1:] for q in qs]); D = np.concatenate([R[q + 1][:-1] for q in qs])
+    for k in ((-1, 0, 1) if PER else (0,)):
+        Pk = P + np.array([k * (PER or 0.), 0.])
+        if (in_tri(Pk, A, B, C) | in_tri(Pk, A, C, D)).any(): return True
+    return False
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
