@@ -475,6 +475,7 @@ def starts_ref():
     if SYS == 'manip':
         rng = np.random.default_rng(0)
         for _ in range(32): rng.uniform(-1, 1, 4)
+        if E('MREF'): a_ = np.load(os.path.join(REF, E('MREF'))); Q = np.array([[*rng.uniform(-np.pi, np.pi, 2), *rng.uniform(-1, 1, 2)] for _ in range(len(a_))]); assert np.abs(Q - a_[:, :4]).max() < 1e-3; return Q, a_[:, 4]   # п.45 (b6): MREF=r23/manip_ref_ocp_20.npy — эталон OCP, 20 стартов
         Q = np.array([[*rng.uniform(-np.pi, np.pi, 2), *rng.uniform(-1, 1, 2)] for _ in range(8)]); ref = np.full(8, np.nan)
         for i in (0, 1, 3, 5): ref[i] = json.load(open(os.path.join(REF, 'manip_bruteforce_%d.json' % i)))[str(i)]['T']
         return Q, ref
