@@ -41,11 +41,12 @@ def cell_outline(G, ax, halo=False):
 
 def build_strips(snap, ax=(0, 1)):
     """линии слоёв как ломаные (по одной на клетку): строки — зигзаг по узлам подряд (L₋₁→C₋₁→R₋₁→L₀→…), контур ядра и гало — замкнутая ломаная; dict имя слоя -> список (n, 3)"""
-    out = {k: [] for k in ('segs_rows_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_core_cur', 'segs_halo_cur')}
+    out = {k: [] for k in ('segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')}
     def ring(o): return np.concatenate([o[:, 0], o[-1:, 1]], 0)
     def cell(G, suf):
         P = proj(G, ax)
         if P.shape[1] > 1: out['segs_rows_' + suf].append(P.reshape(-1, 3))
+        if P.shape[0] > 1: out['segs_center_' + suf].append(P[:, P.shape[1] // 2])        # траектория зерна: центральные узлы строк
         out['segs_core_' + suf].append(ring(cell_outline(G, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))
     for c in snap.get('cells') or []: cell(c['G'], 'done')
     cur = snap.get('cell')
@@ -107,11 +108,15 @@ def _discs(P, R, res=16):
     return V, idx
 
 
-def _geom_node(V, kind, idx=None):
+def _geom_node(V, kind, idx=None, col=(1., 1., 1., 1.)):
     """GeomNode напрямую из panda3d: kind='lines' — пары вершин (один GeomLines), 'tris' — индексированные треугольники (один GeomTriangles)"""
     from panda3d.core import GeomVertexData, GeomVertexFormat, Geom, GeomLines, GeomTriangles, GeomNode, GeomEnums
+    from panda3d.core import GeomVertexArrayFormat, InternalName
     V = np.ascontiguousarray(V, np.float32).reshape(-1, 3); n = len(V)
-    vd = GeomVertexData('gv', GeomVertexFormat.get_v3(), Geom.UH_dynamic); vd.unclean_set_num_rows(n); memoryview(vd.modify_array(0)).cast('B').cast('f')[:] = memoryview(V.ravel()).cast('B').cast('f')
+    af = GeomVertexArrayFormat(); af.add_column(InternalName.get_vertex(), 3, Geom.NT_float32, Geom.C_point); af.add_column(InternalName.get_color(), 4, Geom.NT_float32, Geom.C_color)
+    fmt = GeomVertexFormat(); fmt.add_array(af); fmt = GeomVertexFormat.register_format(fmt)
+    D = np.empty((n, 7), np.float32); D[:, :3] = V; D[:, 3:] = col                         # вершинные цвета: без них шейдер Ursina красит такой узел в серый
+    vd = GeomVertexData('gv', fmt, Geom.UH_dynamic); vd.unclean_set_num_rows(n); memoryview(vd.modify_array(0)).cast('B').cast('f')[:] = memoryview(D.ravel()).cast('B').cast('f')
     if kind == 'strips':
         from panda3d.core import GeomLinestrips
         prim = GeomLinestrips(Geom.UH_dynamic)
@@ -125,15 +130,16 @@ def _geom_node(V, kind, idx=None):
 
 def _make_batch():
     from ursina import Entity
+    from panda3d.core import TransparencyAttrib
 
     class _Batch(Entity):
         """слой: один GeomNode; вершины в реальных координатах, a и b — масштаб/позиция самого узла (перестройка меша только при смене снимка)"""
         def __init__(self):
-            super().__init__(); self._gn = None; self.real_position = np.zeros(3); self.real_scale = np.ones(3)
+            super().__init__(); self._gn = None; self.col = (1., 1., 1., 1.); self.real_position = np.zeros(3); self.real_scale = np.ones(3)
         def set_geometry(self, V, idx=None, kind='lines', thick=None):
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
-            self._gn = self.attach_new_node(_geom_node(V, kind, idx))
+            self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
             if kind != 'tris': self._gn.set_render_mode_thickness(thick or 2)
             else: self._gn.set_two_sided(True)
             self._gn.set_depth_offset(1)                                   # поверх пола (y = 0), без z-fighting
@@ -148,9 +154,10 @@ def _Batch():
 
 class GrowView:
     """Ursina-часть: создаёт по Scalable на слой геометрии и перерисовывает при смене снимка. Импорт Ursina — лениво."""
-    COL = {'points_done': (0.55, 0.75, 1.0, .8), 'segs_rows_done': (0.4, 0.55, 0.9, .5), 'segs_core_done': (1.0, 1.0, 1.0, .9), 'segs_halo_done': (0.6, 0.6, 0.6, .4),
-           'points_cur': (1.0, .8, .2, 1), 'segs_rows_cur': (1.0, .6, .1, .9), 'segs_core_cur': (1.0, .3, .1, 1), 'segs_halo_cur': (1.0, .5, .3, .5),
-           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.2, 1.0, .3, .9)}
+    # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — голубые; текущая клетка ярче, готовые приглушены
+    COL = {'points_done': (.50, .70, .90, .9), 'segs_rows_done': (.40, .62, .82, .6), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .45),
+           'points_cur': (.30, .85, 1.0, 1), 'segs_rows_cur': (.30, .80, 1.0, .9), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
+           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9)}
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
         s.sm = spore_manager; s._pts = {}; s._built_size = None; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
@@ -158,8 +165,7 @@ class GrowView:
     def _layer(s, name):
         """один объект Ursina на слой (один GeomNode, один примитив); зум/сдвиг — трансформ узла, вершины в реальных координатах"""
         if name not in s.layers:
-            from ursina import color
-            e = _Batch(); e.color = color.rgba(*s.COL[name]); e.alpha = s.COL[name][3]
+            e = _Batch(); e.col = tuple(float(x) for x in s.COL[name])
             s.zm.register_object(e, name='growview_' + name); s.layers[name] = e
         return s.layers[name]
 
