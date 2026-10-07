@@ -62,3 +62,4 @@
 - [research/manip3d_2link.md](research/manip3d_2link.md) — 3D двузвенный манипулятор (основание+плечо+локоть, 6D, без g): модель точечных масс, сводится к плоскому 2-зв. v6; эталон OCP r21/ref_m3d.py; коридор v6 (research-21)
 - [research/static_car.md](research/static_car.md) — «статик кар» (машинка-велосипед из journal-2026: (x,y,θ,v), a и ω, 3 диска, цель-круг): модель, границы, эталон (research-21)
 - [research/gpu_solve.md](research/gpu_solve.md) — solve атласа на GPU aida: тот же Якоби di4 301 с → 6.0 / 2.4 с (f64/f32), V та же; почему вёдра и итерация по политике в 4D не работают (92% лучших стенсилов непричинны); неединственность V при PESS — гипотеза (research-22)
+- [research/solve_latch.md](research/solve_latch.md) — защёлка V ← min(V, TV) в solve: V зависит от порядка обновлений (max|ΔV| 1.3), при оптимистичной интерполяции V ниже нижней оценки в 1.5–2 раза; без защёлки — единственное решение Беллмана за те же проходы; PESS .3 ближе к LB (research-22)
