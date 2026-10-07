@@ -276,3 +276,4 @@ hub-v5chain-research-23 | done | слово пользователя: подня
 hub-v5chain-worker-b7 | п.49 смоук LiveStepper ок; growN: reject-паузы для плохих затравок | 16:40:45
 hub-v5chain-worker-26 | started | acc3 | sonnet | 17:00:36
 hub-v5chain-worker-26 | NEEDS-HUMAN | очередь A пуста: di4 rho35 уже сделан w25 (53/53, мед 1.048); dp1 новых прогонов нет без слова research (на паузе); 6D/п.32 ждут постановки research; нужно слово: что брать (dp1 (б) подмножество слоёв? п.32 3D манипулятор?) | 17:30:18
+hub-v5chain-worker-b7 | п.47 results.md: m3d MAXC200 (1.95M узлов, 519 с) + экстраполяция полного 6D (~50 ГБ, не помещается) и эллипс (~24k кл., 6 ГБ); MAXC 500 запущен | 17:30:59
