@@ -25,7 +25,7 @@ elif SYS == 'manip':
     AA, BB, DD = 2.5, .5, 1.
     def accel(x, tau):
         c, s = np.cos(x[..., 1]), np.sin(x[..., 1]); w1, w2 = x[..., 2], x[..., 3]; h = -BB * s
-        r1 = tau[0] + h * (2 * w1 * w2 + w2 ** 2); r2 = tau[1] - h * w1 ** 2
+        r1 = tau[0] - h * (2 * w1 * w2 + w2 ** 2); r2 = tau[1] + h * w1 ** 2   # b4 (п.35): знак Кориолиса по Лагранжу (был обратный: энергия ×350 при τ=0)
         m11, m12, m22 = AA + 2 * BB * c, DD + BB * c, DD * np.ones_like(c); det = m11 * m22 - m12 ** 2
         return np.stack([(m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
     def f(y, u): return np.concatenate([y[..., 2:], accel(y, u)], -1)
