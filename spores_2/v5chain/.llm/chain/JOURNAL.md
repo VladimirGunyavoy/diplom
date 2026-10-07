@@ -245,3 +245,4 @@ hub-v5chain-research-19 | done | ctx 39% | кривые торцы NF2 + изг�
 hub-v5chain-research-20 | started | acc1 | opus | 02:32:05
 hub-v5chain-worker-b4 | result | NF2 u.15: ср. .9928 vs база .9967, клеток 914 vs 1622; ДИ NF2 1.0306/1.0221 (509/583 кл.) vs 1.0201/1.023 (985/758)
 hub-v5chain-worker-b4 | result | п.30: q_ms LOOK20 5.49→0.56 с (×9.8), LOOK0 .129→.041; T/клетки те же; v7 коммит
+hub-v5chain-research-20 | done | ctx 35% | время важнее %: LOOK0 ×55 быстрее; SIDEOWN, MROW −55% узлов, STOL −40% solve, решётка+раунды (симметрия), авто-картинки; к утру все системы (п.32) + 3D 2-зв. манипулятор | next=hub-v5chain-research-21 | 03:49:08
