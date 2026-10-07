@@ -294,3 +294,4 @@ hub-v5chain-worker-b8 | done | слово пользователя: ветка B
 hub-v5chain-worker-26 | done | human (режим Б, цепочка тормозится) | dp1 4×3000 SONE 0/20, контроль 4×1500 SONE идёт на aida; HOSTE в growN | next=нет | 23:07:05
 hub-v5chain-meta-1 | done | слово пользователя: цепочка заканчивается (режим Б) | хендофф .llm/roles/meta/HANDOFF.md передан meta-2 06.10; claude-system — см. git status | next=нет | 23:07:16
 hub-v5chain-research-24 | done | human | слово польз. «заканчиваем цепь» (лимиты 7д); режим Б разослан всем ролям; нормальные сечения, линия [laptop], результаты+библиотека на GitHub | next=нет | 23:07:36
+hub-v5chain-meta-2 | done | слово пользователя: цепь закрыта | линии любой роли, launch_bg, результаты сразу; открыто — аккаунты по сроку сброса 7д | next=— | 23:07:42
