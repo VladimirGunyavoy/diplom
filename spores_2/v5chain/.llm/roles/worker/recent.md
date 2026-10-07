@@ -1,7 +1,16 @@
+## hub-v5chain-worker-25 (acc1, Sonnet, 08:30–16:25, линия A) — ctx 28%
+Сделано: п.26 di4 pool отрицательно (C=∞); di4 Lfull+V_Lfull(r22/18)+FINGRID 53/53 в поле, T/эт rho35 мед 1.048 (2ea9046); п.25 dp1: SYS=dp1 в growN (9ff9268; BUILDONLY/LOADL/GPULOCK), 4×1500 8/20 мед 1.247; п.49 [A] v8: GrowView/LiveStepper/DemoStepper + main.py N/M/C/G (9ba95b6, 3 теста), GUI не проверен (нет дисплея).
+Стоп на / следующий шаг: идёт на aida dp1 4×2000 (PID через ps | grep w25; лог journals/w25/dp1_solve2000.log, GPULOCK, стенсилы CPU 2/4 на 16:20) → V → rollout 20 стартов r23/dp1_ref_ocp_20.npy; результат (последняя строка-JSON) записать в results.md §п.25. Дальше см. PLAN [w25→w26]: чанки GPU-solve (просьба B) или подмножество слоёв. Новых dp1-прогонов — по слову research.
+Грабли: (1) GPU одна на 3 агента: GPU-solve только с GPULOCK=1 (замок /tmp/gpu.lock внутри solve; внешний flock держит замок и на CPU-часть), стенсилы STGPU=0; (2) 4×3000 dp1 на GPU не влезает (тензор рёбер 8.4 ГБ), на CPU 18–24 с/ит и процесс умер на ит.135 (OOM-killer?); (3) pkl слоёв грузить после setattr(__main__, классы) (см. journals/w25/subset.py); (4) launch_bg не передаёт stdin (скрипт — scp на aida); pkill -f убивает свою же ssh-сессию — убивать по PID; (5) LOADFULL V: Lfull.pkl/L1600.pkl без V — подкладывать LOADV (V_Lfull.npy r22/18) или solve; (6) v8: импорт только через src.*; на хабе нет дисплея — смотреть окно на лаптопе; (7) push запрещён, коммиты — -c user.name=w25 -c user.email=a@b, только свои пути; (8) классификатор блокирует kill чужих/очередных процессов — по PID только свои.
+Решения цепочки: нет
+Коммиты: afe6346 [hub-v5chain-worker-b7]: п.49 frames.py — headless PNG-просмотр пот�;9ba95b6 [hub-v5chain-worker-25]: п.49 v8 — GrowView/LiveStepper/DemoStepper + прив�;a7930c9 [hub-v5chain-worker-b7]: п.49 v8 — stepper.py (pause, N/M/C, время) + grow;
+Токены: T_START 5ч 1% / ctx 5% / $0.12 (08:30) / T_BEFORE_END 5ч 50% / ctx 28% / $10.8 (16:20)
+
 ## hub-v5chain-worker-24 (acc2, sonnet, 03:51–08:30, линия A) — limit 5ч 86%
 Сделано: п.29б di4 пул FAR (852/1600 кл.); п.34 вёдра в grow3 (×1.4, SOLVEB, выкл.); **п.36 car ЗАКРЫТ**: `v7/src/cells7/growCar.py` (перебазирован на свежий growN: GPU solve, FINGRID; SYS=car, 6 слоёв, диски, цель-круг, финиш shoot_pol, VCLIP): c1600 (6×1600 кл., 5.69M узлов) 20/20, T/эт mean 1.0825 (1.031–1.182), build 632 с, solve 392 с (GPU), q_ms мед./p90/max 425/538/732; п.41 REFFILE в growNq. Всё — `v7/reports/growN/results.md`, STATUS, PLAN.
 Стоп на / следующий шаг: очередь линии A пуста — взять у research следующее (PLAN п.32 «все системы к утру»: 3D двузвенный манипулятор, GPU; di4 с эталоном `r22/di4_ref_60_rho35.npy` через `REFFILE`; вынос SYS=car в growN — владелец B; п.26 growNq на di4 с GPU solve). Запуск car: aida `cd ~/spore_v5/w24/v7; SYS=car M=3 SIDE=0 GM=.25 GLIM=0 FRAC=1 PESS=1 GS=300 MAXC=1600 SOLVEGPU=1 STGPU=1 VF=1.5 DUMPL=… DUMP=… ~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python src/cells7/growCar.py` через launch_bg+ssh (`| stdbuf -oL tr '\r' '\n'`); диагностика — `reports/car_diag.py` (LOAD=pkl).
 Грабли: (1) pickle слоёв грузить только после `setattr(__main__, <классы>)` (см. car_diag.py); (2) дамп V делается ДО starts_ref (файл эталона r21/car_ref20.npy нужен и на aida: ~/spore_v5/w24/v5chain/reports/research/r21/); (3) SLSQP-финиш для car не использовать (>10 мин на 20; нужен shoot_pol); (4) в 4D вёдра и ГЗ не ускоряют solve (b4 п.33); (5) tqdm через ssh|tr — только с `stdbuf -oL`; (6) kill только по PID; (7) git: -c user.name=w24 -c user.email=a@b, пуш запрещён, коммитить только свои пути (growN.py — владелец B); (8) di4 «T/эталон» со старым ±.05 завышено ~17% (п.41).
+
 
 ## hub-v5chain-worker-23 (acc3, Sonnet, 19:01–03:55, линия A)
 Сделано: GS в grow3.solve (GSN=64); п.26 на маятнике: `v7/src/cells7/growNq.py` (Tree, solve_fwd, bidir, WARM=Inc, pool_run, prune; `v7/reports/growNq/results.md`); п.29а di4 PESS1 RHO.35 MAXC400 (reach 46/60, med 1.012, петли); а2 профиль solve di4 (`profSolve.py`, `solve_wl`, `profWL.py`); runNq.py (build/solve/q_ms).
@@ -11,14 +20,12 @@
 Коммиты: см. git log (последние [hub-v5chain-worker-23]).
 Токены: T_START 5ч 35% / ctx 4% / $0.05 (19:01 по часам задачи) / T_BEFORE_END 5ч 47% / ctx 25% / $7.78 (03:50)
 
+
 ## hub-v5chain-worker-22 (линия A, acc2, Sonnet, 09:30–19:05, ctx 29%)
 Сделано: grow3 закрыт (старт 51, профиль HexIdx, финиш VF5/NA4/VFR1; свободный 1.004, диски 60/60 ≈1.005); п.24 блок SYS=di4 в growN.py. Стоп: дождаться di4_r400/r700 на aida (`~/spore_v5/w21/v7/reports/growN/`), записать в results.md и PLAN п.24; затем п.26, п.25. Грабли: чужой kill по шаблону убил прогоны; pkill -f убивает свой shell; память aida 60 ГБ; 4D: FRAC=1, GLIM=0, GM .25, M=3.
+
 
 ## hub-v5chain-worker-21 (линия A, acc2, Sonnet, 03:31–09:40, ctx 25%)
 Сделано: п.17б–17е: `v7/src/cells7/grow3.py` дд-ромб 3D растущими клетками (RS3, GM1, финиш стрельбой, диски OBST=1): свободный 60/60 T/refbox 1.0153 (1528 клеток/260k/147 с), +2 диска 59/60 (1.0122). Отчёт `v7/reports/grow3/results.md`.
 Стоп: PLAN «ОТКРЫТО после w21» (старт 51 дыра у диска; CUT/REFINE; профиль 17ж; диски 17з). Грабли: запуск только фоном на aida (`~/spore_v5/w21/v7`), `pkill -f` убивает свой shell, ожидание >1 мин = глухота к пульсу, git без user (-c user.name=w21 -c user.email=a@b), пуш запрещён TASK.
 
-## hub-v5chain-worker-20 (acc1, Sonnet, 21:00–03:35, ctx 23%)
-Сделано: п.1 старт 16 (зёрна 1601–04 + EGAP не связали), п.2 порт EGAP (butterfly_dp.regrow_gap, mq3.sh), п.13 девиации (DEVS/DEVR/DEVALL, dev*.sh — отриц.), 20 свежих зёрен; п.17а перенос в v7 (grow_cells2d.py): маятник ср. 1.0249, ДИ 1.021; профили.
-Стоп на / следующий шаг: PLAN «СДЕЛАНО w20» → п.17б: писать grow3 с нуля (схема в PLAN п.17б; 2D-ядро v7/src/cells7/grow_cells2d.py; эталон min(TGT,TGTGT) = reports/research/dd_rhombus_ref.py). 4D НЕ начинать (research-15 ещё не дал деталей). Досчитать ДИ зерно 2 (aida ~/spore_v5/w20/exp/experiments/di/w20t_s2) и дописать в cell_metric.md §w20.
-Грабли: ВАЖНО TMAX=3 RMAX=.3 (умолч. v7 теперь) — с 1.5/.1 получается 97k узлов вместо 72k; git без user — коммитил с -c user.name=w19 -c user.email=a@b; aida: код w20 в ~/spore_v5/w20 (src, exp), чужие compute.py не трогать; профиль grow g=2: acc 64% (оптимизация только по профилю; numba/C не пробовал); SSH aida падал 23:29 (reboot), поднял fixer; долгое — только фоном (nohup/Monitor); для research-15 пишу через tmux send-keys -l + Enter и проверяю capture-pane.

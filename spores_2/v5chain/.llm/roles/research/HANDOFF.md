@@ -1,5 +1,5 @@
 # RESEARCH_HANDOFF — hub-v5chain-research-23 (2026-10-07 09:24 → ~17:15; acc1, Opus)
-[РУТИНА НЕ ВЫПОЛНЕНА]
+[разложен hub-v5chain-research-24, 2026-10-07: recent.md, PLAN п.49а]
 Звено: hub-v5chain-research-23. Причина смены: слово пользователя ~17:15 — поднять research-24 БЕЗ ПУЛЬСА: ждать задачу от пользователя или laptop-v5chain-worker-1 (ноут, Remote Control; почта msg_yoga, на хабе запущен диспетчер tmux `msg-from-yoga`). Концепция меняется («мы закончили, меняем концепцию» ~16:20) — новых экспериментов не запускать. Пользователь не на связи с ~06:25. Диспетчер ввёл протокол GPU: стенсилы на CPU (`STGPU=0`), GPU-solve только под `flock /tmp/gpu.lock <команда>` на aida, чужие GPU-процессы не трогать.
 
 ## Сделано (manip 4D — главное; всё в `knowledge/research/manip4d_cover.md`, скрипты `reports/research/r23/NN_*`, на aida `~/spore_v5/r23/`)
@@ -14,7 +14,7 @@
 
 ## ПРОДОЛЖЕНИЕ (research-24) — СНАЧАЛА: пульс НЕ ставить, ждать задачу (пользователь / laptop-v5chain-worker-1)
 0. **Пользователь вернулся ~15:30, сменил направление:** (а) концепция меняется — п.46/47/48 на паузе; его слова дня в `concepts.md` (MAXC поднять; GPU-OOM и 1.5 ч недопустимы — обыграть нейронки, 4D быстро; один алгоритм на все среды; нормальные срезы со своим временем клона; граммиан/8-угольник — «поресерчить при мне»); (б) **v8 — пошаговый просмотр алгоритма в Ursina (PLAN п.49)**: v8 = копия v4_ort; b7 сделал stepper (pause/N/M/C/время) + growN SYS=di с паузами + безголовые кадры (`v8/reports/frames/`); w25 — growview/main.py (9ba95b6), GUI не проверен (на хабе нет дисплея) — проверка на ноуте; смоук main.py — b7; (в) **GitHub: пушить можно** — `git push git@github-paper:VladimirGunyavoy/diplom.git master` из ~/claude-work/projects/spore (TASK); ноут работает через GitHub.
-1. Досчитываются на aida (забрать, записать в `manip4d_cover.md` §Ресурсы): `r23/09_manip_m2/` — M 2 + RMAX .3 (1.62M узлов; `m2r3.log`, `vstart_m2r3.out`); `r23/08_manip_rmax3/` — M 3 + RMAX .3 на CPU (5.27M; `r3c6_cpu.log`, `vstart_r3.out`). Уже: M 2 + RMAX .6 — узлов ×3.2 меньше, но T/эт ср. 1.375 (хуже), занижение V сильнее.
+1. Досчитываются на aida (забрать, записать в `manip4d_cover.md` §Ресурсы): `r23/09_manip_m2/` M 2 + RMAX .3 — ГОТОВО (research-23 записал: 18/20, ср. 1.171 — M 2 хуже); `r23/08_manip_rmax3/` — M 3 + RMAX .3 на CPU (5.27M; `r3c6_cpu.log`, `vstart_r3.out`). Уже: M 2 + RMAX .6 — узлов ×3.2 меньше, но T/эт ср. 1.375 (хуже), занижение V сильнее.
 2. **manip 4D итог** (`manip4d_cover.md`): 20/20, DELTA .1 — T/эт мед. 1.076 / ср. 1.109 (b6 — мед. 1.056); V ниже T* на 3 стартах — гиперячейки поперёк излома V (`kink.py`); SMEAN, GOALX, M 5 (b6) не лечат.
 3. Линии: A — hub-v5chain-worker-26 (dp1 4×2000 на aida, досчёт); B — hub-v5chain-worker-b7 (п.49). explainer-2 остановил объяснение на шаге 1б (концепция меняется).
 

@@ -668,7 +668,7 @@ class Atlas:
     def solve(s, it=20000):
         if int(os.environ.get('SOLVEB', 0)):                                                  # research-21: solve по вёдрам V (та же V, рёбра 2–3 раза) — `solve_bucket.md`
             sys.path.insert(0, os.path.expanduser('~/spore_v5/r18')); import solve_bucket as SB
-            r = SB.solve_bucket(s, float(os.environ.get('SOLVEBD', 2 * DTN))); s.V = s.V_b; s.n_it = r['buckets']; s.edges = r['edges']; SOLVED.append(0.); return s
+            _t0 = time.time(); r = SB.solve_bucket(s, float(os.environ.get('SOLVEBD', 2 * DTN))); print('SOLVEB', r, 'вызов %.1f с' % (time.time() - _t0), flush=True); s.V = s.V_b; s.n_it = r['buckets']; s.edges = r['edges']; SOLVED.append(0.); return s
         E = []; Vg = np.full(s.N, np.inf)
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u)))
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]

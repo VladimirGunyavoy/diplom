@@ -44,7 +44,7 @@ def pump(q, s0, tau0):
     while t < min(TMAX, best[0]):
         if abs(wrap(x)) <= ANG and t >= nxt:
             nxt = t + HO; Tf, pl = PS.shoot(np.array([wrap(x), w]), B)
-            if np.isfinite(Tf) and t + Tf < best[0]:
+            if np.isfinite(Tf) and pl is not None and t + Tf < best[0]:
                 s, t1, t2, t3 = pl; S, T = merge(sg + [s, -s, s], tau + [t1, t2, t3]); best = (t + Tf, (S, T))
         E = w * w / 2 + math.cos(x); u = 1. if w * (1 - E) + 1e-12 > 0 else -1.
         x, w = rk(x, w, u * UM, H); t += H
@@ -59,7 +59,7 @@ def polish(q, sg, tau):
     return (float(sum(T)), (S, T)) if ingoal(x, w) else (np.inf, None)
 def one(q):
     q = np.array(q, float); cands = []; T0, p0 = PS.shoot(q, B)
-    if np.isfinite(T0): s, t1, t2, t3 = p0; cands.append((T0, merge([s, -s, s], [t1, t2, t3])))
+    if np.isfinite(T0) and p0 is not None: s, t1, t2, t3 = p0; cands.append((T0, merge([s, -s, s], [t1, t2, t3])))
     for s0, tau0 in [(1., 0.)] + [(s, t) for s in (1., -1.) for t in TAU0]:
         r = pump(q, s0, tau0)
         if r[1] is not None: cands.append(r)
