@@ -24,7 +24,9 @@ def edges(s):
         for ci, c in enumerate(s.cells):
             nt, m = c.G.shape[:2]; own[c.o:c.o + nt * m] = ci; last[c.o + (nt - 1) * m:c.o + nt * m] = True; lay[c.o:c.o + nt * m] = list(G.US).index(c.u)
         ul = np.concatenate([np.full(len(e[0]), k) for k, e in enumerate(E)]); hasc = np.array([getattr(c, 'TT', None) is not None for c in s.cells])
-        drop = (ul == lay[I]) & (own[IDX[:, 0]] == own[I]) & ~last[I] & hasc[own[I]] & bool(G.NFEDGE); print('SBCAUS: убрано стенсилов своего u в свою клетку', int(drop.sum()), 'из', len(I), flush=True)
+        drop = (ul == lay[I]) & (own[IDX[:, 0]] == own[I]) & ~last[I] & hasc[own[I]] & bool(G.NFEDGE)
+        if int(os.environ.get('SBLAY', 0)): drop |= lay[IDX[:, 0]] != ul   # research-21 (мысль пользователя «узел — часть траектории»): переключение на u2 — V только из слоя u2
+        print('SBCAUS: убрано стенсилов своего u в свою клетку', int(drop.sum()), 'из', len(I), flush=True)
         I, IDX, W, C = I[~drop], IDX[~drop], W[~drop], C[~drop]
         sl = (IDX == I[:, None]).any(1) & (W.max(1) > 1e-6); n_ = I[sl]; hm = np.array([getattr(c, 'nxt', None) is not None for c in s.cells])
         print('петли на себя после SBCAUS:', int(sl.sum()), '| последняя строка', int(last[n_].sum()), '| клетка без TT', int((~hasc[own[n_]]).sum()), '| клетка с MROW-продолжением', int(hm[own[n_]].sum()),
