@@ -206,8 +206,9 @@ def _resize(sign):
 
 input_manager.bind('1', _resize, mode='scroll', description='size', value_getter=lambda: spore_manager.size)
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
-input_manager.bind('left mouse down', lambda: None if held_keys['alt'] else (_finer() if held_keys['shift'] else _step('N')), description='next step')
-input_manager.add_help('Shift+LMB', 'finer + step')    # input() forwards every key to input_manager; Alt = free cursor (mouse off)
+input_manager.bind('left mouse down', lambda: None if held_keys['alt'] else _step('N'), description='next step')
+input_manager.bind('control+left mouse down', lambda: None if held_keys['alt'] else _finer())    # InputManager turns every key into 'control+<key>' while Ctrl is held; Shift is taken (fly down, SceneManager)
+input_manager.add_help('Ctrl+LMB', 'finer + step')    # input() forwards every key to input_manager; Alt = free cursor (mouse off)
 input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _up(), description='up a level (in a spore: finish it; on a spore: end of layer)')
 input_manager.bind('middle mouse down', lambda: None if held_keys['alt'] else _seed_click(), description='restart with a seed at the click\n      (in the goal: algorithm seeds)')
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
