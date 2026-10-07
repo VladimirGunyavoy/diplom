@@ -190,6 +190,7 @@ def _resize(sign):
 
 input_manager.bind('1', _resize, mode='scroll', description='size', value_getter=lambda: spore_manager.size)
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
+input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _step('N'), description='RMB: next step (same as N)')    # input() forwards every key to input_manager; Alt = free cursor
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
 input_manager.bind('c', lambda: _step('C'), description='to the end')
 input_manager.bind('x', _restart, description='restart: algorithm seeds (drop click)')
