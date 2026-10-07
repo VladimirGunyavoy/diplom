@@ -51,7 +51,7 @@ print("=" * 50)
 print("PLAYER ZOOM - Sandbox")
 print("=" * 50)
 
-app = Ursina()
+app = Ursina(window_type=os.environ.get('V8_WINDOW', 'onscreen'))    # V8_WINDOW=offscreen for benchmarks without a visible window
 
 # Шрифт с кириллицей (дефолтный OpenSans/VeraMono её не содержит)
 from ursina import Text
@@ -233,6 +233,7 @@ update_manager.register(
 # ===== LOOP =====
 def update():
     update_manager.update_all()
+    growview.refresh()    # spore size ('1') changed -> rebuild the point discs
 
 def input(key):
     input_manager.handle_input(key)

@@ -79,6 +79,50 @@ class TimeTable:
         return '\n'.join(rows)
 
 
+def _discs(P, R, res=16):
+    """K центров (K, 3) → вершины (K·(res+1), 3) и индексы треугольников: плоские диски радиуса R в плоскости XZ (как Spore: Circle, rotation 90°)"""
+    K = len(P)
+    if K == 0: return np.zeros((0, 3), np.float32), np.zeros((0,), np.uint32)
+    t = np.linspace(0, 2 * np.pi, res, endpoint=False); rim = np.stack([R * np.cos(t), np.zeros(res), R * np.sin(t)], 1)
+    V = np.concatenate([P[:, None, :], P[:, None, :] + rim[None]], 1).reshape(-1, 3).astype(np.float32)
+    tri = np.stack([np.zeros(res, np.int64), 1 + np.arange(res), 1 + (np.arange(res) + 1) % res], 1)
+    idx = (np.arange(K)[:, None, None] * (res + 1) + tri[None]).reshape(-1).astype(np.uint32)
+    return V, idx
+
+
+def _geom_node(V, kind, idx=None):
+    """GeomNode напрямую из panda3d: kind='lines' — пары вершин (один GeomLines), 'tris' — индексированные треугольники (один GeomTriangles)"""
+    from panda3d.core import GeomVertexData, GeomVertexFormat, Geom, GeomLines, GeomTriangles, GeomNode, GeomEnums
+    V = np.ascontiguousarray(V, np.float32).reshape(-1, 3); n = len(V)
+    vd = GeomVertexData('gv', GeomVertexFormat.get_v3(), Geom.UH_dynamic); vd.unclean_set_num_rows(n); memoryview(vd.modify_array(0)).cast('B').cast('f')[:] = memoryview(V.ravel()).cast('B').cast('f')
+    if kind == 'lines': prim = GeomLines(Geom.UH_dynamic); prim.add_consecutive_vertices(0, n)
+    else:
+        prim = GeomTriangles(Geom.UH_dynamic); prim.set_index_type(GeomEnums.NT_uint32); ia = prim.modify_vertices(); ia.unclean_set_num_rows(len(idx)); memoryview(ia).cast('B').cast('I')[:] = memoryview(np.ascontiguousarray(idx, np.uint32)).cast('B').cast('I')
+    prim.close_primitive(); g = Geom(vd); g.add_primitive(prim); node = GeomNode('gv'); node.add_geom(g); return node
+
+
+def _make_batch():
+    from ursina import Entity
+
+    class _Batch(Entity):
+        """слой: один GeomNode; вершины в реальных координатах, a и b — масштаб/позиция самого узла (перестройка меша только при смене снимка)"""
+        def __init__(self):
+            super().__init__(); self._gn = None; self.real_position = np.zeros(3); self.real_scale = np.ones(3)
+        def set_geometry(self, V, idx=None, kind='lines', thick=None):
+            if self._gn is not None: self._gn.remove_node(); self._gn = None
+            if len(V) == 0: return
+            self._gn = self.attach_new_node(_geom_node(V, kind, idx))
+            if kind == 'lines': self._gn.set_render_mode_thickness(thick or 2)
+            else: self._gn.set_two_sided(True)
+        def apply_transform(self, a, b, **kw): self.position = b; self.scale = a
+    return _Batch
+
+
+def _Batch():
+    global _Batch
+    _Batch = _make_batch(); return _Batch()
+
+
 class GrowView:
     """Ursina-часть: создаёт по Scalable на слой геометрии и перерисовывает при смене снимка. Импорт Ursina — лениво."""
     COL = {'points_done': (0.55, 0.75, 1.0, .8), 'segs_rows_done': (0.4, 0.55, 0.9, .5), 'segs_core_done': (1.0, 1.0, 1.0, .9), 'segs_halo_done': (0.6, 0.6, 0.6, .4),
@@ -86,23 +130,27 @@ class GrowView:
            'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.2, 1.0, .3, .9)}
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s.pools = {}; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
 
     def _layer(s, name):
+        """один объект Ursina на слой (один GeomNode, один примитив); зум/сдвиг — трансформ узла, вершины в реальных координатах"""
         if name not in s.layers:
-            from ursina import Mesh, Vec3
-            from ..core.scalable import Scalable
-            pts = name.startswith('points'); mode = 'point' if pts else 'line'
-            col = s.COL[name]
-
-            class _Multi(Scalable):
-                def __init__(self):
-                    self.real_v = np.zeros((0, 3)); super().__init__(model=Mesh(vertices=[], mode=mode, thickness=(.04 if name in ('points_seed', 'points_cur') else .02) if pts else 2))
-                def apply_transform(self, a, b, **kw):
-                    v = self.real_v * a + b; self.model.vertices = [Vec3(*p) for p in v]; self.model.triangles = seg_index(len(v) // 2) if mode == 'line' else None; self.model.generate()
-            e = _Multi(); from ursina import color; e.color = color.rgba(*col); e.alpha = col[3]
+            from ursina import color
+            e = _Batch(); e.color = color.rgba(*s.COL[name]); e.alpha = s.COL[name][3]
             s.zm.register_object(e, name='growview_' + name); s.layers[name] = e
         return s.layers[name]
+
+    def _set_layer(s, name, arr):
+        e = s._layer(name); arr = np.asarray(arr, float).reshape(-1, 3)
+        if name.startswith('points'):
+            s._pts[name] = arr; R = .5 * (s.sm.size if s.sm is not None else .02); s._built_size = None if s.sm is None else s.sm.size    # диски как у Spore (Circle r = .5·size), в мире
+            e.set_geometry(*_discs(arr, R), kind='tris')
+        else: e.set_geometry(arr, kind='lines', thick=2)
+
+    def refresh(s):
+        """размер спор ('1') поменялся — пересобрать диски (зум этого не требует)"""
+        if s.sm is not None and getattr(s, '_built_size', None) not in (None, s.sm.size):
+            for name, arr in list(s._pts.items()): s._set_layer(name, arr)
 
     def draw(s, snap):
         """нарисовать снимок (None — очистить). Время отрисовки уходит в TimeTable по имени паузы."""
@@ -112,10 +160,7 @@ class GrowView:
             s.times.draw, s.times.n = (dict(x) for x in s.draw_hist[id(snap)]); t0 = None
         g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
         g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
-        for name in s.COL:
-            arr = g.get(name, np.zeros((0, 3)))
-            if s.sm is not None and name.startswith('points'): s._spores(name, arr.reshape(-1, 3)); continue    # точки — обычные Spore из v4 (масштаб/размер как у остальных)
-            e = s._layer(name); e.real_v = arr.reshape(-1, 3); e.apply_transform(s.zm.a_transformation, s.zm.b_translation)
+        for name in s.COL: s._set_layer(name, g.get(name, np.zeros((0, 3))))
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
 
@@ -131,17 +176,6 @@ class GrowView:
                 for i, (a_, b_) in enumerate(C): P[i, ax[0]] = a_; P[i, ax[1]] = b_
             Q = proj(P, ax); s._goal_segs = np.stack([Q[:-1], Q[1:]], 1)
         return s._goal_segs
-
-    def _spores(s, name, arr):
-        from ursina import color
-        from ..spores.spore import Spore
-        pool = s.pools.setdefault(name, []); col = s.COL[name]
-        while len(pool) < len(arr):
-            sp = s.sm.create(Spore, name='gv_%s_%d' % (name, len(pool)), position=(0., 0.)); sp.color = color.rgba(*col); pool.append(sp)
-        for i, sp in enumerate(pool):
-            if i < len(arr): sp.real_position = np.array([arr[i, 0], sp.y_offset, arr[i, 2]], float); sp.enabled = True
-            else: sp.enabled = False
-        s.zm.update_transform()
 
     def retransform(s):
         """после зума/сдвига камеры ZoomManager сам вызывает apply_transform у зарегистрированных объектов — отдельно не нужно."""
