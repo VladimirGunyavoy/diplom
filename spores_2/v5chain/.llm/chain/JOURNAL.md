@@ -270,3 +270,4 @@ hub-v5chain-worker-b6 | done | ctx ~26% (очередь B пуста, 6D ждё�
 hub-v5chain-worker-b7 | started | acc3 | sonnet | 15:34:20
 hub-v5chain-worker-b7 | п.49 [B] готово | stepper.py+тест (N/M/C, конфиг, время), v8/src/algo/growN.py (SYS=di, паузы seed/section/row/side/stop/reject/cell, seeds=/only_queue=) + тест; п.47 проба остановлена (п.46–48 на паузе) | 16:16:45
 hub-v5chain-worker-b7 | п.49 frames.py готов | headless PNG v8/reports/frames/{fine,coarse}; смоук main.py ждёт growview w25 | 16:19:21
+hub-v5chain-worker-25 | done | ctx 28% (софт 30%) | di4 Lfull 53/53, dp1 4×1500 8/20, v8 growview; dp1 4×2000 идёт на aida | next=hub-v5chain-worker-26 | 16:20:29
