@@ -285,3 +285,4 @@ hub-v5chain-worker-b7 | п.48: ДИ NF2 RMIN .01 — T/эт мед 1.003–1.011
 hub-v5chain-worker-b7 | п.48: разрост 247 не воспроизведён (compute.py CUT по умолчанию, зерно 1: 1104 кл., без разроста); тред закрыт | 20:08:37
 hub-v5chain-worker-b7 | п.48 nD NF: nf_rows реализован; dd NF1 — нет узлов в цели (reach 0), NF0 воспроизведён; разбор у цели — следующий шаг (results.md) | 20:47:58
 hub-v5chain-worker-b7 | п.48 nD NF: геометрия у цели ок, reach 0 на dd — хрупкость старта; следующий шаг di4/manip NF0 vs NF1 | 20:53:53
+hub-v5chain-worker-b7 | п.48 di4: NF1 хуже базы (reach 75% vs 95%, мед 1.19 vs 1.036) — строки короче (has.all()); NF по умолч. выкл | 21:07:27
