@@ -448,7 +448,7 @@ def starts_ref():
     """(Q, эталон T)."""
     if SYS == 'dd': rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]; return Q, np.load(os.path.join(REF, 'dd_ref_60.npy'))
     if SYS == 'di4':                                                                                        # research-17: T* = max(T₁*, T₂*) в коробку ±.05 (r17/di4_ref.py)
-        d_ = np.load(os.path.join(REF, 'r17/di4_ref_60.npy')); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]
+        d_ = np.load(os.path.join(REF, E('DI4REF', 'r17/di4_ref_60.npy'))); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]   # п.41: для RHO .35 — DI4REF=r22/di4_ref_60_rho35.npy (эталон в коробку ±RHO; по умолч. ±.05 занижает T/эталон ~17%)
     if SYS == 'manip':
         rng = np.random.default_rng(0)
         for _ in range(32): rng.uniform(-1, 1, 4)
