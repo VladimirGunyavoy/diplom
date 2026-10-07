@@ -1,6 +1,10 @@
 """LiveStepper — настоящий рост ДИ 2D (v8/src/algo/growN.py, SYS=di) под Stepper (b6) для main.py; тот же интерфейс, что у DemoStepper:
 snapshot (последний, с переносом cells/queue/seed между снимками), times, key('N'|'M'|'C'), seed_at(xv)."""
 import os, threading
+import sys
+for _s in (sys.stdout, sys.stderr):                           # growN печатает по-русски; на cp1252-консоли print в потоке алгоритма падал и слой «кончался» с error
+    try: _s.reconfigure(encoding='utf-8', errors='replace')
+    except Exception: pass
 import numpy as np
 for k, v in dict(SYS='di', M='3', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения
 from ..algo import growN as g
