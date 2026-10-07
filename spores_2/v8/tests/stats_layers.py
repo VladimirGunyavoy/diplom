@@ -38,15 +38,23 @@ def run_json(modname):
                             e = G[i, -1] if b >= 0 else G[i, 0]; P.append(G[i, mid] + abs(b) * (e - G[i, mid]) / (1 + g.HALO))
                     m = idx2.covered(np.array(P)); ar = c.r[0] * nr; wt += ar; wc += ar * m.mean()
                 idx2.add(c)
+            err = 0.; lx = []                                                                              # ошибка линейной интерполяции по времени на оси (доли RMAX) и длина клеток по x в зоне |v|<.5
+            for c in cells:
+                if hasattr(c, 'Gt') and len(c.tt) > 1:
+                    Gc = c.Gt[:, c.Gt.shape[1] // 2]
+                    for k in range(len(Gc) - 1):
+                        hh = c.tt[k + 1] - c.tt[k]; mid = g.rk4(Gc[k], u, hh / 4, 2); err = max(err, float(np.linalg.norm(mid - (Gc[k] + Gc[k + 1]) / 2)) / g.RMAX)
+                Gm = c.G[:, c.G.shape[1] // 2]
+                if abs(c.c[1]) < .5: lx.append(float(Gm[:, 0].max() - Gm[:, 0].min()))
             r = np.array([c.r[0] for c in cells]); rows = np.array([c.nb + c.nf for c in cells])
             out.append(dict(u=u, seed=sd, cells=len(cells), nodes=nodes, nodes_h=nodes_h, area_per_node=area / max(nodes, 1), unc_core=1 - float(cov.mean()), unc_halo=1 - float(ins.mean()), overlap=wc / wt if wt else 0.,
                             r_med=float(np.median(r)), r_min=float(r.min()), r_max=float(r.max()), rows_med=float(np.median(rows)), rows_min=int(rows.min()), rows_max=int(rows.max()),
-                            dtau_med=float(np.median(dm)) if dm else None, dtau_min=float(min(dm)) if dm else None, stops={k: v for k, v in stops.items() if v}, rej=dict(rej), ms=1e3 * t, ms_cell=1e3 * t / max(len(cells), 1)))
+                            dtau_med=float(np.median(dm)) if dm else None, dtau_min=float(min(dm)) if dm else None, stops={k: v for k, v in stops.items() if v}, rej=dict(rej), err=err, lx=float(np.median(lx)) if lx else None, ms=1e3 * t, ms_cell=1e3 * t / max(len(cells), 1)))
     return out
 
 
-def sub(mod):
-    env = dict(os.environ); env.update(ENV); env['PYTHONIOENCODING'] = 'utf-8'
+def sub(mod, extra=None):
+    env = dict(os.environ); env.update(ENV); env.update(extra or {}); env['PYTHONIOENCODING'] = 'utf-8'
     if mod != 'growN': env.update(MAXC='60', NFAIL='40')
     p = subprocess.run([sys.executable, os.path.abspath(__file__), '--json', mod], cwd=ROOT, env=env, capture_output=True, text=True, encoding='utf-8')
     for ln in p.stdout.splitlines()[::-1]:
@@ -67,7 +75,7 @@ def main():
     rows = [('клеток', 'cells', '%.1f'), ('узлов без гало-строк', 'nodes', '%.0f'), ('узлов с гало-строками', 'nodes_h', '%.0f'), ('площадь поля на узел', 'area_per_node', '%.4f'),
             ('непокрыто, ядро', 'unc_core', '%.4f'), ('непокрыто, ядро∪гало', 'unc_halo', '%.4f'), ('нахлёст по площади', 'overlap', '%.3f'),
             ('r медиана', 'r_med', '%.3f'), ('r мин', 'r_min', '%.3f'), ('r макс', 'r_max', '%.3f'), ('строк медиана', 'rows_med', '%.1f'), ('строк мин', 'rows_min', '%.0f'), ('строк макс', 'rows_max', '%.0f'),
-            ('min Δτ/DTN, медиана по клеткам', 'dtau_med', '%.2f'), ('min Δτ/DTN, минимум', 'dtau_min', '%.2f'), ('время build_layer, мс', 'ms', '%.0f'), ('мс на клетку', 'ms_cell', '%.0f')]
+            ('min Δτ/DTN, медиана по клеткам', 'dtau_med', '%.2f'), ('min Δτ/DTN, минимум', 'dtau_min', '%.2f'), ('ошибка интерполяции по времени на оси, макс (доли RMAX)', 'err', '%.4f'), ('длина клеток по x, медиана при |v|<.5', 'lx', '%.2f'), ('время build_layer, мс', 'ms', '%.0f'), ('мс на клетку', 'ms_cell', '%.0f')]
     lines += ['# Статистика слоёв v8 (HEAD, env как live.py, посевы rng 0..4; среднее ± разброс)', '', '| метрика | ' + ' | '.join('u=%g' % u for u in layers) + ' |', '|---|' + '---|' * len(layers)]
     for name, key, f in rows: lines.append('| %s | ' % name + ' | '.join(ms([r[key] for r in cur if r['u'] == u], f) for u in layers) + ' |')
     for title, key in (('причины стопов (сумма за 5 посевов)', 'stops'), ('reject-и затравок (сумма за 5 посевов)', 'rej')):
@@ -90,6 +98,10 @@ def main():
                   % (BASE, ms([r['cells'] for r in b], '%.1f'), ms([r['nodes'] for r in b], '%.0f'), ms([r['unc_core'] for r in b], '%.3f'), ms([r['unc_halo'] for r in b], '%.3f'), ms([r['ms'] for r in b], '%.0f'),
                      ms([r['cells'] for r in cur if r['u'] == 1.], '%.1f'), ms([r['nodes'] for r in cur if r['u'] == 1.], '%.0f'), ms([r['unc_core'] for r in cur if r['u'] == 1.], '%.3f'), ms([r['ms'] for r in cur if r['u'] == 1.], '%.0f'))]
     except Exception as e: lines += ['', 'Сравнение с %s пропущено: %r' % (BASE, e)]
+    if '--adapt' in sys.argv:
+        lines += ['', '**Адаптивный шаг строки (клеток / узлов / непокрыто ядро / время мс / макс ошибка интерп.), посевы rng 0..4**', '', '| вариант | ' + ' | '.join('u=%g' % u for u in layers) + ' |', '|---|' + '---|' * len(layers)]
+        for name, ex in (('ADAPT=0 (шаг DTN)', dict(ADAPT='0')), ('ETOL .01', dict(ADAPT='1', ETOL='.01')), ('ETOL .003', dict(ADAPT='1', ETOL='.003'))):
+            v = sub('growN', ex); lines.append('| %s | ' % name + ' | '.join('%s / %s / %s / %s / %s' % (ms([r['cells'] for r in v if r['u'] == u], '%.1f'), ms([r['nodes'] for r in v if r['u'] == u], '%.0f'), ms([r['unc_core'] for r in v if r['u'] == u], '%.3f'), ms([r['ms'] for r in v if r['u'] == u], '%.0f'), ms([r['err'] for r in v if r['u'] == u], '%.3f')) for u in layers) + ' |')
     txt = '\n'.join(lines) + '\n'; print(txt); os.makedirs(os.path.join(ROOT, 'reports'), exist_ok=True); open(os.path.join(ROOT, 'reports', 'stats_layers.md'), 'w', encoding='utf-8', newline='\n').write(txt)
 
 
