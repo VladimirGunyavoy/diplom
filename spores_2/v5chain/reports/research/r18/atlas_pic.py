@@ -17,7 +17,17 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
     """cells: список dict(u, G) ; VG: V* на сетке gx × gw ; P: (шаги+1, n, 2) ; U: (шаги+1, n)"""
     plt.rcParams.update({'font.size': 12}); VG = np.where(VG > 500, np.nan, VG)
     US = sorted(set(round(float(c['u']), 3) for c in cells))
-    fig, axs = plt.subplots(2, 2, figsize=(22, 13), sharex=True, sharey=True); axs = axs.ravel()
+    fig = plt.figure(figsize=(30, 14)); gs = fig.add_gridspec(2, 3); a0 = fig.add_subplot(gs[0, 0])
+    axs = [a0, fig.add_subplot(gs[0, 1], sharex=a0, sharey=a0), fig.add_subplot(gs[0, 2], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 1:], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 0], sharex=a0, sharey=a0)]
+    ax = axs[4]; sd = {}                                                                          # research-20 (слово пользователя): посев спор — только затравки: цвет = порядок посева, размер = во скольких слоях затравка дала клетку
+    for i, c in enumerate(cells):
+        if c.get('p0') is None: continue
+        k = int(c['seq']) if c.get('seq', -1) is not None and int(c.get('seq', -1)) >= 0 else i; sd.setdefault(k, [np.array(c['p0'], float), 0]); sd[k][1] += 1
+    if sd:
+        ks = sorted(sd); Pq = np.array([sd[k][0] for k in ks]); nl = np.array([sd[k][1] for k in ks]); oc = np.arange(len(ks))
+        for sh in SH: sc = ax.scatter(Pq[:, 0] + sh, Pq[:, 1], c=oc, cmap='viridis', s=12 + 22 * nl, alpha=.85, edgecolors='k', linewidths=.4)
+        fig.colorbar(sc, ax=ax, pad=.01, shrink=.9, label='порядок посева')
+    ax.set_title('посев спор: %d затравок → %d клеток (размер точки — сколько слоёв дала затравка)' % (len(sd), sum(v[1] for v in sd.values())))
     for ax, u in zip(axs, US):
         cs = [c for c in cells if round(float(c['u']), 3) == u]
         for c in cs:
@@ -38,7 +48,7 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
         for j in range(k - 1):
             if np.isnan(U[j, i]): continue
             for sh in SH: segs.setdefault(round(float(U[j, i]), 1), []).append(p[j:j + 2] + [sh, 0])
-    for u, sg in segs.items(): ax.add_collection(LineCollection(sg, colors=UC.get(u, 'k'), linewidths=1.5, alpha=.5))
+    for u, sg in segs.items(): ax.add_collection(LineCollection(sg, colors=UC.get(u, 'k'), linewidths=1.3, alpha=.25))
     for sh in SH: ax.plot(P[0, :, 0] + sh, P[0, :, 1], 'o', ms=3, color='k', alpha=.6)
     ax.set_title('V* (фон, белые линии через 1 с) + пути агента из %d стартов, дошли %d — цвет = управление на шаге' % (P.shape[1], int(np.isfinite(T).sum())))
     fig.colorbar(im, ax=axs[3], pad=.01, shrink=.9, label='V*, с')
@@ -46,12 +56,12 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
         for sh in SH: ax.add_patch(plt.Rectangle((-RHO + sh, -RHO), 2 * RHO, 2 * RHO, fill=False, ec='k', lw=2))
         ax.set_xlim(-XR, XR); ax.set_ylim(-WL, WL); ax.grid(alpha=.25)
         for v in (-np.pi, np.pi): ax.axvline(v, color='0.4', ls=':', lw=1)
-    for ax in axs[2:]: ax.set_xlabel('θ  (повтор через 2π; пунктир — ±π)')
-    for ax in axs[::2]: ax.set_ylabel('ω')
+    for ax in axs[3:]: ax.set_xlabel('θ  (повтор через 2π; пунктир — ±π)')
+    for ax in (axs[0], axs[4]): ax.set_ylabel('ω')
     cnt = {k: sum(np.shape(c['G'])[1] == k for c in cells) for k in MC}
     h = [plt.Rectangle((0, 0), 1, 1, fc=MC[k], ec=EC[k], alpha=.6) for k in MC] + [plt.Line2D([], [], color=c, lw=4) for c in UC.values()]
     fig.legend(h, ['%d клонов (%d кл.)' % (k, cnt[k]) for k in MC] + ['u = %+.1f' % u for u in UC], loc='lower center', ncol=7, fontsize=12, frameon=False)
-    fig.suptitle(title, fontsize=14); fig.subplots_adjust(left=.04, right=.99, top=.94, bottom=.07, wspace=.04, hspace=.1)
+    fig.suptitle(title, fontsize=14); fig.subplots_adjust(left=.03, right=.99, top=.94, bottom=.07, wspace=.06, hspace=.12)
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True); fig.savefig(out, dpi=80); plt.close(fig); return out
 if __name__ == '__main__':
     import sys, pickle, json

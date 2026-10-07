@@ -247,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -323,6 +323,13 @@ def grow2(p, u, idx, rm, tm):
                 row = rows[i][klo:khi + 1]
                 if not okr(i)[klo:khi + 1].all(): GSTAT['end_mask'] += 1
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
+                if ENDSHRINK and not okr(i)[klo:khi + 1].all():                                       # research-20 (слово пользователя: при недоезде клона торец не обрывать, а сужать): самый длинный непрерывный кусок живых столбцов строки i, если он ≥ ESHR ширины — клетка сужается до него и растёт дальше
+                    ok_ = okr(i)[klo:khi + 1]; best_, cur_, st_ = (0, 0), 0, 0
+                    for q_, v_ in enumerate(ok_):
+                        if v_: cur_ += 1; st_ = q_ - cur_ + 1
+                        else: cur_ = 0
+                        if cur_ > best_[1] - best_[0]: best_ = (st_, st_ + cur_)
+                    if best_[1] - best_[0] - 1 >= max(2, ESHR * (khi - klo)): klo, khi = klo + best_[0], klo + best_[1] - 1; GSTAT['end_shrink'] += 1; row = rows[i][klo:khi + 1]
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
                     why[d] = 'mask' if not okr(i)[klo:khi + 1].all() else 'bend' if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) else 'bar'; act[d] = False; continue
                 if SELFOV and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
@@ -369,6 +376,28 @@ def grow2(p, u, idx, rm, tm):
             if dg <= MGRAM: break
         c.m = m_; GSTAT['m_%d' % m_] += 1
     return c
+def build_all(rng, log=None):
+    """research-20 (слово пользователя: «одна спора рождает сразу все слои»): общая очередь затравок; затравка p растит клетку в КАЖДОМ слое u, где p не покрыта; c.seq — номер затравки."""
+    L = {u: [] for u in US}; IX = {u: Index() for u in US}; queue = []; seeds = []; fails = 0; ns = 0; bar = tqdm(desc='все слои: клетки', unit='cell', mininterval=MI)
+    while fails < NFAIL:
+        bar.n = sum(len(v) for v in L.values()); bar.set_postfix(fails=fails, queue=len(queue), seeds=ns, refresh=False); bar.update(0)
+        fromq = bool(queue); p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])
+        if not inbox(p): continue
+        p = np.array([wrap(p[0]), p[1]])
+        if SEEDEPS > 0 and len(seeds) and np.min(np.abs(np.array(seeds) - p).max(1)) < SEEDEPS: continue
+        got = 0
+        for u in US:
+            if np.linalg.norm(f(p, u)) < FMIN or IX[u].covered(p[None])[0]: continue
+            c = grow2(p, u, IX[u], RMAX, TMAX)
+            if c is None: continue
+            c.build(); c.seq = ns; L[u].append(c); IX[u].add(c); got += 1; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+            queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
+            for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
+        if got: seeds.append(p.copy()); ns += 1; fails = 0
+        elif not fromq: fails += 1
+        if log and got: log(US[0], sum(L.values(), []))
+    bar.close(); return [L[u] for u in US], [IX[u] for u in US]
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
