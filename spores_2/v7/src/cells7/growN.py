@@ -432,7 +432,7 @@ class Atlas:
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
-                    tried[i] = True; Ts, tp = FG.shoot(Y[i], f, US, RHOV, wrapy, FTMAX, NA=int(E('NA', 3)))
+                    tried[i] = True; Ts, tp = (FG.shoot_pol if int(E('FINGRID', 0)) == 2 else FG.shoot_grid if int(E('FINGRID', 0)) else FG.shoot)(Y[i], f, US, RHOV, wrapy, FTMAX, NA=int(E('NA', 3)))
                     if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
