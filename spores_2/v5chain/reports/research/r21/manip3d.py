@@ -40,3 +40,23 @@ if __name__ == '__main__':
 def flow(P, s, t, dt_max=.05, g=0.):
     """API коридора v6 (как manip3dyn.flow): слой s — вершина US[s], время t (может быть < 0), rk4 с шагом ≤ dt_max"""
     P = np.asarray(P, float); n = max(1, int(np.ceil(abs(t) / dt_max))); return rk4(P, US[s], t / n, n)
+import math
+def _flow_scalar(x, tau, t, dt_max):
+    """одна точка на math (SLSQP зовёт поток точкой; numpy-накладные ×13–22, `query_speed.md`)"""
+    q0, q1, q2, w0, w1, w2 = (float(v) for v in x); t0, t1, t2 = (float(v) for v in tau); n = max(1, int(math.ceil(abs(t) / dt_max))); h = t / n
+    def fd(q1, q2, w0, w1, w2):
+        c1, s1 = math.cos(q1), math.sin(q1); c12, s12 = math.cos(q1 + q2), math.sin(q1 + q2); r1 = L1 * c1; r2 = r1 + L2 * c12; J = I0 + M1 * r1 * r1 + M2 * r2 * r2
+        d1 = -2 * (M1 * r1 * L1 * s1 + M2 * r2 * (L1 * s1 + L2 * s12)); d2 = -2 * M2 * r2 * L2 * s12; a0 = (t0 - (d1 * w1 + d2 * w2) * w0) / J
+        c, s = math.cos(q2), math.sin(q2); hh = -B * s; ra = t1 - hh * (2 * w1 * w2 + w2 * w2) + .5 * d1 * w0 * w0; rb = t2 + hh * w1 * w1 + .5 * d2 * w0 * w0
+        m11, m12 = A + 2 * B * c, D + B * c; det = m11 * D - m12 * m12; return a0, (D * ra - m12 * rb) / det, (-m12 * ra + m11 * rb) / det
+    for _ in range(n):
+        a1 = fd(q1, q2, w0, w1, w2); v1 = (w0, w1, w2)
+        v2 = (w0 + h / 2 * a1[0], w1 + h / 2 * a1[1], w2 + h / 2 * a1[2]); a2 = fd(q1 + h / 2 * v1[1], q2 + h / 2 * v1[2], *v2)
+        v3 = (w0 + h / 2 * a2[0], w1 + h / 2 * a2[1], w2 + h / 2 * a2[2]); a3 = fd(q1 + h / 2 * v2[1], q2 + h / 2 * v2[2], *v3)
+        v4 = (w0 + h * a3[0], w1 + h * a3[1], w2 + h * a3[2]); a4 = fd(q1 + h * v3[1], q2 + h * v3[2], *v4)
+        q0 += h / 6 * (v1[0] + 2 * v2[0] + 2 * v3[0] + v4[0]); q1 += h / 6 * (v1[1] + 2 * v2[1] + 2 * v3[1] + v4[1]); q2 += h / 6 * (v1[2] + 2 * v2[2] + 2 * v3[2] + v4[2])
+        w0 += h / 6 * (a1[0] + 2 * a2[0] + 2 * a3[0] + a4[0]); w1 += h / 6 * (a1[1] + 2 * a2[1] + 2 * a3[1] + a4[1]); w2 += h / 6 * (a1[2] + 2 * a2[2] + 2 * a3[2] + a4[2])
+    return np.array([q0, q1, q2, w0, w1, w2])
+_flow_np = flow
+def flow(P, s, t, dt_max=.05, g=0.):
+    P = np.asarray(P, float); return _flow_scalar(P, US[s], t, dt_max) if P.ndim == 1 else _flow_np(P, s, t, dt_max)
