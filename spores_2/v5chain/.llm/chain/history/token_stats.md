@@ -187,3 +187,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | hub-v5chain-research-24 | T_END | 5ч 8% / ctx 17% / 7д 77% | $5.26 | 2026-10-07 23:07:36 |
 | hub-v5chain-explainer-2 | T_END | 5ч 26% / ctx 10% / 7д 81% | $1.89 | 2026-10-07 23:07:40 |
 | hub-v5chain-dispatcher-5 | end | 5ч 3% / ctx 7% | $0.2 | 2026-10-07 23:08:48 |
+| yoga-v5chain-fixer-1 | start | 5ч 7% / ctx 4% | $0.05 | 2026-10-07 22:27:57 |
