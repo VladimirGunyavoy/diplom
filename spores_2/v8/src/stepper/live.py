@@ -2,7 +2,7 @@
 snapshot (последний, с переносом cells/queue/seed между снимками), times, key('N'|'M'|'C'), seed_at(xv)."""
 import os, threading
 import numpy as np
-for k, v in dict(SYS='di', M='3', KF='21', MAXC='60', NFAIL='40', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения
+for k, v in dict(SYS='di', M='3', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения
 from ..algo import growN as g
 from . import stepper as S
 
