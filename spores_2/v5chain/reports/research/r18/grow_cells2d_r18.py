@@ -247,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); SEEDGRID = int(os.environ.get('SEEDGRID', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); SEEDGRID = int(os.environ.get('SEEDGRID', 0)); MROW = int(os.environ.get('MROW', 0)); TRIM = int(os.environ.get('TRIM', 0)); SGRAND = int(os.environ.get('SGRAND', 0)); MROWL = int(os.environ.get('MROWL', 4)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -366,6 +366,14 @@ def grow2(p, u, idx, rm, tm):
                 R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
             if dev <= MADAPT: break
         c.m = m_; GSTAT['m_%d' % m_] += 1
+        if MROW and m_ > 5:                                                                   # research-20 (идея пользователя: узлы только где нужны): своё число клонов в каждой строке — первое m из 5/9/17/33, при котором строка отходит ≤ MADAPT
+            mr_ = np.full(ihi - ilo + 1, 33)
+            for m2 in (17, 9, 5):
+                sn_ = np.linspace(Sx[0], Sx[-1], m2)
+                for q_, i in enumerate(range(ilo, ihi + 1)):
+                    R_ = rows[i][klo:khi + 1]
+                    if float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()) <= MADAPT: mr_[q_] = m2
+            c.mrow = np.minimum(mr_, m_)
     if MGRAM > 0:                                                                             # research-20 (выбор пользователя 02:42): число клонов — удваивать (5 → 9 → 17 → 33), пока расстояние между соседними клонами в метрике грамиана клетки Wc (как в ok_rect: вся длительность) ≤ MGRAM в любой строке
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; Wc = Wc * ((ihi - ilo) * DTN / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Qw = np.linalg.eigh(Wc); lam = np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)); Sx = S[klo:khi + 1]
         for m_ in (5, 9, 17, 33):
@@ -390,7 +398,7 @@ def build_all(rng, log=None):
             if np.linalg.norm(f(p, u)) < FMIN or IX[u].covered(p[None])[0]: continue
             c = grow2(p, u, IX[u], RMAX, TMAX)
             if c is None: continue
-            c.build(); c.seq = ns; L[u].append(c); IX[u].add(c); got += 1; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            c.build(); c.seq = ns; [L[u].append(d) or IX[u].add(d) for d in split_rows(c)]; got += 1; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
             for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
             queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
             for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
@@ -398,6 +406,38 @@ def build_all(rng, log=None):
         elif not fromq: fails += 1
         if log and got: log(US[0], sum(L.values(), []))
     bar.close(); return [L[u] for u in US], [IX[u] for u in US]
+def split_rows(c):
+    """research-20 MROW: клетка с разным числом клонов по строкам → блоки строк (≥ MROWL строк) со своим m; соседние блоки делят граничную строку; клоны вложены (5 ⊂ 9 ⊂ 17 ⊂ 33) — блок = прореживание столбцов."""
+    mr = getattr(c, 'mrow', None)
+    if not MROW or mr is None or len(set(mr.tolist())) == 1 or len(mr) != c.G.shape[0]: return [c]
+    mr = mr.copy()
+    while True:                                                                                # короткие блоки — к соседу с бо́льшим m
+        R = []; a_ = 0
+        for i in range(1, len(mr) + 1):
+            if i == len(mr) or mr[i] != mr[a_]: R.append([a_, i - 1, int(mr[a_])]); a_ = i
+        sh = [k for k, (a_, b_, m_) in enumerate(R) if b_ - a_ + 1 < MROWL]
+        if not sh or len(R) == 1: break
+        k = sh[0]; a_, b_, m_ = R[k]; nb = [R[j][2] for j in (k - 1, k + 1) if 0 <= j < len(R)]
+        if max(nb) > m_: mr[a_:b_ + 1] = max(nb)                                               # короткий блок с меньшим m — поднять до соседа
+        else:                                                                                  # короткий блок с наибольшим m — удлинить за счёт соседей (иначе бесконечный цикл: research-20, прогоны 80/81)
+            need = MROWL - (b_ - a_ + 1); hi_ = min(len(mr) - 1, b_ + need); mr[a_:hi_ + 1] = m_; lo_ = max(0, a_ - (need - (hi_ - b_))); mr[lo_:a_] = m_
+    if len(R) == 1: c.m_full = c.m; return [c]
+    import copy; out = []
+    for k, (a_, b_, m_) in enumerate(R):
+        b2 = b_ + 1 if k < len(R) - 1 else b_; st = (c.m - 1) // (m_ - 1); d = copy.copy(c); d.G = c.G[a_:b2 + 1, ::st]; d.m = m_; d.sn = c.sn[::st]
+        if getattr(c, 'TT', None) is not None: d.TT = c.TT[a_:b2 + 1, ::st]
+        if getattr(c, 'DEAD', None) is not None: d.DEAD = c.DEAD[a_:b2 + 1, ::st]
+        d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
+        d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; d.mrow = None; d.sub = (a_, b2); out.append(d)
+    GSTAT['mrow_split'] += 1; GSTAT['mrow_blocks'] += len(out); return out
+def trim_rows(c, a_, b_):
+    """research-20 TRIM: клетка, обрезанная по строкам a_..b_ (те же клоны; mrow — тоже)."""
+    import copy; d = copy.copy(c); d.G = c.G[a_:b_ + 1]
+    for k_ in ('TT', 'DEAD'):
+        if getattr(c, k_, None) is not None: setattr(d, k_, getattr(c, k_)[a_:b_ + 1])
+    if getattr(c, 'mrow', None) is not None and len(c.mrow) == c.G.shape[0]: d.mrow = c.mrow[a_:b_ + 1]
+    d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
+    d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; return d
 _GIX = None
 def _grow_one(a):                                                                             # рабочий пула: рост и сборка одной клетки против покрытия прошлых раундов (_GIX — снимок при fork)
     p, u, k = a; c = grow2(p, u, _GIX[US.index(u)], RMAX, TMAX)
@@ -411,13 +451,14 @@ def build_grid(log=None):
     import multiprocessing as mp
     SG0 = float(os.environ.get('SG0', 1.)); SGMIN = float(os.environ.get('SGMIN', .1)); OVR = float(os.environ.get('OVR', .3)); NP = int(os.environ.get('NPROC', 8))
     L = [[] for _ in US]; IX = [Index() for _ in US]; h = SG0; rnd = 0; k0 = 0; RS = []
-    lev = [None] if int(os.environ.get('SGGOAL', 1)) else []                                  # уровень 0 (research-20: прогон 76 — ни одна клетка решётки не задела цель, V не стартовала): 8 затравок по контуру цели, симметрично
+    _SR = np.random.default_rng(int(os.environ.get('SEED', 0))); lev = [None] if int(os.environ.get('SGGOAL', 1)) else []                                  # уровень 0 (research-20: прогон 76 — ни одна клетка решётки не задела цель, V не стартовала): 8 затравок по контуру цели, симметрично
     while h >= SGMIN - 1e-12: lev.append(h); h /= 2
     for h in lev:
         if h is None: r_ = RHO * 1.5; P = np.array([[a_ * r_, b_ * r_] for a_ in (-1, 0, 1) for b_ in (-1, 0, 1) if a_ or b_], float); h = 0.
         else:
             nt = max(2, int(round(2 * XL / h))); nw = max(2, int(round(2 * WL / h)))
             P = np.stack(np.meshgrid(-XL + (np.arange(nt) + .5) * 2 * XL / nt, -WL + (np.arange(nw) + .5) * 2 * WL / nw, indexing='ij'), -1).reshape(-1, 2)
+            if SGRAND: P = np.c_[_SR.uniform(-XL, XL, len(P)), _SR.uniform(-WL, WL, len(P))]          # research-20 (идея пользователя «сеять вообще рандомно»): столько же затравок, сколько в решётке, но случайно
         ids = k0 + np.arange(len(P)); k0 += len(P)
         while True:
             jobs = [(P[i], u, int(ids[i])) for li, u in enumerate(US) for i in np.flatnonzero(~IX[li].covered(P)) if np.linalg.norm(f(P[i], u)) >= FMIN]
@@ -426,9 +467,17 @@ def build_grid(log=None):
             with mp.get_context('fork').Pool(NP) as pool: out = list(tqdm(pool.imap(_grow_one, jobs, chunksize=1), total=len(jobs), desc='шаг %.3g раунд %d: рост %d кандидатов' % (h, rnd, len(jobs)), mininterval=MI, leave=False))
             C = [c for c in out if c is not None]; C.sort(key=lambda c: -(c.nf + c.nb) * 2 * c.r); RI = [Index() for _ in US]; acc = 0
             for c in C:
-                li = US.index(c.u); g = c.G.reshape(-1, 2)
+                li = US.index(c.u)
+                if TRIM and RI[li].nc:                                                        # research-20 (идея пользователя «клетки поджимаются, потому что большая может расти»): с концов по времени снять строки, покрытые принятыми в этом раунде (> FRAC), оставив 1 строку гало
+                    rc_ = np.array([RI[li].covered(row).mean() for row in c.G]); a_, b_ = 0, len(rc_) - 1
+                    while a_ < b_ and rc_[a_] > FRAC and rc_[a_ + 1] > FRAC: a_ += 1
+                    while b_ > a_ and rc_[b_] > FRAC and rc_[b_ - 1] > FRAC: b_ -= 1
+                    if b_ - a_ < 2: continue
+                    if (a_, b_) != (0, len(rc_) - 1): c = trim_rows(c, a_, b_); GSTAT['trim'] += 1
+                g = c.G.reshape(-1, 2)
                 if RI[li].nc and RI[li].covered(g).mean() > OVR: continue
-                RI[li].add(c); IX[li].add(c); L[li].append(c); acc += 1
+                RI[li].add(c); acc += 1
+                for d in split_rows(c): IX[li].add(d); L[li].append(d)
             RS.append(dict(h=round(h, 3), round=rnd, jobs=len(jobs), grown=len(C), acc=acc, sec=round(time.time() - t_, 1))); print('посев', RS[-1], flush=True); rnd += 1
             if log: log(US[0], sum(L, []))
             if acc == 0: break
@@ -448,7 +497,7 @@ def build_layer(u, rng, log=None):
         if GROW == 2:
             c = grow2(p, u, idx, rm, tm)
             if c is None: fails += 0 if queue else 1; continue
-            fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            fails = 0; c.build(); [cells.append(d) or idx.add(d) for d in split_rows(c)]; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
             for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
             queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
             for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]

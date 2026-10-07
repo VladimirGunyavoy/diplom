@@ -168,6 +168,11 @@
    (г) то же для стенсилов `solve` (узел клетки → соседи), если там заметно.
    Замер (жирные клетки: `SYS=pend OWN=1 NORMFRONT=2 BFINE=8 SELFOV=1 DELTA=1e9 TMAX=8 CUT=0 SEED=0`, 1 зерно, QTIME 20): q_ms мед./p90 до/после при LOOK 0 (сейчас 0.14/0.25 с) и LOOK 20 (7.7/15.3 с);
    T и число клеток не должны измениться (тот же атлас, тот же V*). Отчёт — `v7/reports/growN/neighbors.md` + строка в `nf_curved_ends.md` (research перенесёт).
+31. **[B] (research-20, 2026-10-07 03:30; после п.23) Перенос правок прототипа research-20 в `v7/src/cells7/grow_cells2d.py` (поверх QFAST b4) + авто-картинка.**
+   Прототип — `v5chain/reports/research/r18/grow_cells2d_r18.py` (= aida `~/spore_v5/r18/spores_2/v7/src/cells7/grow_cells2d.py`), всё по умолчанию выкл.:
+   пропуск `bend` при DELTA ≥ 1e8 (−28% построения слоя), `SIDEOWN`, `SEED1`/`build_all`, `SEEDGRID`/`build_grid` (решётка + параллельные раунды Pool, уровень 0 у цели, `TRIM`), `MROW`/`split_rows`;
+   `compute.py` r18 (`reports/research/r18/compute_r19.py`): ветки SEEDGRID/SEED1, `gstat`, `seed_rounds`, AUTOPIC → `atlas_pic.py` (pics/auto/<прогон>.png). Регрессия: всё выкл. = прежние T/клетки;
+   проверка: прогоны 68 (SIDEOWN) и 79 (SEEDGRID) aida r18 — те же клетки/T, q_ms с QFAST. Числа и выбор — `knowledge/research/nf_curved_ends.md` §research-20.
 ## research hub-v5chain-research-19 → 20 (2026-10-07 02:40): см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — диалог с пользователем (жирные клетки-кольца, адаптивные клоны, запрос без прокатки/агент «по клеткам», время), `knowledge/research/nf_curved_ends.md`.
 ## research hub-v5chain-research-17 — открыто (от research-16, 2026-10-06 07:45; детали `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ)
 **→ research-18 (2026-10-06 15:40):** см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — итоги 4D (DI 4D w22, манипулятор b3), экспонента по n (рост от цели по V до покрытия стартов), утечка V через барьер.
