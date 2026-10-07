@@ -79,8 +79,8 @@ class GrowView:
            'points_cur': (1.0, .8, .2, 1), 'segs_rows_cur': (1.0, .6, .1, .9), 'segs_core_cur': (1.0, .3, .1, 1), 'segs_halo_cur': (1.0, .5, .3, .5),
            'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8)}
 
-    def __init__(s, zoom_manager, ax=(0, 1), halo=HALO):
-        s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
+    def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
+        s.sm = spore_manager; s.pools = {}; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
 
     def _layer(s, name):
         if name not in s.layers:
@@ -103,8 +103,21 @@ class GrowView:
         t0 = time.perf_counter(); s.snap = snap
         g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
         for name in s.COL:
-            arr = g.get(name, np.zeros((0, 3))); e = s._layer(name); e.real_v = arr.reshape(-1, 3); e.apply_transform(s.zm.a_transformation, s.zm.b_translation)
+            arr = g.get(name, np.zeros((0, 3)))
+            if s.sm is not None and name.startswith('points'): s._spores(name, arr.reshape(-1, 3)); continue    # точки — обычные Spore из v4 (масштаб/размер как у остальных)
+            e = s._layer(name); e.real_v = arr.reshape(-1, 3); e.apply_transform(s.zm.a_transformation, s.zm.b_translation)
         if snap is not None: s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0)
+
+    def _spores(s, name, arr):
+        from ursina import color
+        from ..spores.spore import Spore
+        pool = s.pools.setdefault(name, []); col = s.COL[name]
+        while len(pool) < len(arr):
+            sp = s.sm.create(Spore, name='gv_%s_%d' % (name, len(pool)), position=(0., 0.)); sp.color = color.rgba(*col); pool.append(sp)
+        for i, sp in enumerate(pool):
+            if i < len(arr): sp.real_position = np.array([arr[i, 0], sp.y_offset, arr[i, 2]], float); sp.enabled = True
+            else: sp.enabled = False
+        s.zm.update_transform()
 
     def retransform(s):
         """после зума/сдвига камеры ZoomManager сам вызывает apply_transform у зарегистрированных объектов — отдельно не нужно."""

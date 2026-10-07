@@ -142,25 +142,34 @@ shared_context.bind('model', lambda: model, default=model)
 from src.stepper.growview import GrowView
 try:
     from src.stepper.live import LiveStepper                 # настоящий алгоритм (b6, src/algo/growN.py SYS=di) под Stepper
-    stepper = LiveStepper(seed=(0., 0.))
+    stepper = LiveStepper(seed=None)
 except ImportError as e_:
     print('[v8] live algorithm unavailable (%s) - DemoStepper' % e_)
     from src.stepper.demo import DemoStepper
     stepper = DemoStepper(seed=(0., 0.))
-growview = GrowView(zoom_manager, ax=(0, 1))
+growview = GrowView(zoom_manager, ax=(0, 1), spore_manager=spore_manager)
+growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first seed) is visible right at start
 
 def _step(k):
     t0 = time.perf_counter(); stepper.key(k); growview.draw(stepper.snapshot)
     print(f"[stepper] {k}: {stepper.snapshot and stepper.snapshot.get('phase')}  {1e3 * (time.perf_counter() - t0):.1f} ms")
 
+_last_seed = [None]
+
 def _seed_here():
-    x, v = shared_context.look_point; stepper.seed_at((float(x), float(v))); growview.draw(None); _step('N')
+    x, v = shared_context.look_point; _last_seed[0] = (float(x), float(v)); stepper.seed_at((float(x), float(v))); growview.draw(None); _step('N')
 
 def _seed_click():
     wp = mouse.world_point
     if wp is None: return
     a, b = zoom_manager.a_transformation, zoom_manager.b_translation
-    stepper.seed_at(((wp.x - b[0]) / a, (wp.z - b[2]) / a)); growview.draw(None); _step('N')
+    _last_seed[0] = ((wp.x - b[0]) / a, (wp.z - b[2]) / a)
+    stepper.seed_at(_last_seed[0]); growview.draw(None); _step('N')
+
+def _restart():
+    """X: drop everything built so far and start over from the last seed (or the algorithm's own seeds if none was set by hand)."""
+    growview.draw(None); growview.times = type(growview.times)()
+    stepper.seed_at(_last_seed[0]); growview.draw(None); _step('N')
 
 floor.collider = 'box'
 screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.40 + my), getter=lambda: growview.caption()))
@@ -178,6 +187,7 @@ input_manager.bind('1', _resize, mode='scroll', description='size', value_getter
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
 input_manager.bind('c', lambda: _step('C'), description='to the end')
+input_manager.bind('x', _restart, description='restart from the last seed')
 input_manager.bind('g', _seed_here, description='seed at look point')
 
 

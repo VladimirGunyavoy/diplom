@@ -8,18 +8,18 @@ from . import stepper as S
 
 
 class LiveStepper:
-    def __init__(s, seed=(0., 0.), u=None, max_lvl=3):
+    def __init__(s, seed=None, u=None, max_lvl=3):
         s.u = g.US[1] if u is None else u; s.max_lvl = max_lvl; s._st = None; s.snapshot = None; s._ver = -1; s._carry = {}; s.seed_at(seed)
 
     @property
     def times(s): return dict(s._st.times) if s._st else {}
 
     def _layer(s, seed):
-        return g.build_layer(s.u, np.random.default_rng(0), seeds=[np.asarray(seed, float)], only_queue=True)[0]
+        return g.build_layer(s.u, np.random.default_rng(0), seeds=None if seed is None else [np.asarray(seed, float)], only_queue=seed is not None)[0]    # seed=None — затравки выбирает сам алгоритм
 
     def seed_at(s, xv):
         if s._st is not None: s._st.abort()
-        s.snapshot = None; s._ver = -1; s._carry = {}; seed = tuple(float(x) for x in xv)
+        s.snapshot = None; s._ver = -1; s._carry = {}; seed = None if xv is None else tuple(float(x) for x in xv)
         s._st = S.Stepper(max_lvl=s.max_lvl).start(lambda: s._layer(seed)); s._st.wait_paused(10.); s._pull()    # первая пауза (посев) сразу
 
     def _pull(s):
