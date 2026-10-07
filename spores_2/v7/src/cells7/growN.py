@@ -331,11 +331,35 @@ class Atlas:
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
-        I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
-        for u in US:
-            Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True); I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
-        I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+        if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
+        else:
+            I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
+            for u in US:
+                Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True); I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
+            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+            if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
+        if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
+            Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
+            for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
+                a = st[g0]; b = st[g1] if g1 < G_ else len(I)
+                if SBSELF:                                                                          # research-21 SBSELF: петля на себя (вершина стенсила = сам узел, вес s_) решается точно: V = (c + Σ_{j≠i} w_j V_j) / (1 − s_)
+                    sm = (IDX[a:b] == I[a:b, None]) & (W[a:b] > 1e-6); s_ = (W[a:b] * sm).sum(1); kk = (s_ > 0) & (s_ < 1 - 1e-9); nself += int(kk.sum()); Wc = np.where(sm, 0., W[a:b]); Wc[kk] /= (1 - s_[kk])[:, None]; W[a:b] = Wc; cc = Cc[a:b]; cc[kk] = DTN / (1 - s_[kk]); cc[s_ >= 1 - 1e-9] = BIG
+                w = W[a:b] > 1e-6; own = np.broadcast_to(I[a:b, None], w.shape)[w]; keys.append(np.unique(IDX[a:b][w].astype(np.int64) * Nn + own))   # вход → владелец (узел), по узлам: карта в ~20× компактнее, чем по рёбрам
+            K_ = np.sort(np.concatenate(keys)); del keys; own_ = (K_ % Nn).astype(np.int32); ptr = np.searchsorted(K_ // Nn, np.arange(Nn + 1)); del K_
+            D = float(E('BD', DTN)); fixed = s.goal; pend = V < BIG / 2; th = 0.; nb = 0; nev = 0; bar = tqdm(desc='solve вёдра', mininterval=TQ, leave=False)
+            while pend.any():
+                th = max(th, V[pend].min()); thr = th + D; nb += 1; bar.update(1); bt = np.flatnonzero(pend & (V < thr)); rd = 0; ne0 = nev; nb0 = len(bt)
+                while len(bt):
+                    rd += 1
+                    pend[bt] = False; lo, hi = ptr[bt], ptr[bt + 1]; n_ = hi - lo; tot = int(n_.sum())
+                    if not tot: break
+                    ow = np.unique(own_[np.repeat(lo - np.r_[0, np.cumsum(n_)[:-1]], n_) + np.arange(tot)]); gi = gpos[ow]; ea_ = stE[gi]; cn = stE[gi + 1] - ea_; cs = np.r_[0, np.cumsum(cn)[:-1]]
+                    e = np.repeat(ea_ - cs, cn) + np.arange(int(cn.sum())); nev += len(e); val = Cc[e] + s.interp(W[e], V[IDX[e]]); mv = np.minimum.reduceat(val, cs)
+                    imp = (mv < V[ow] - SBTOL) & ~fixed[ow]; un = ow[imp]; V[un] = mv[imp]; pend[un] = True; bt = un[mv[imp] < thr]
+                if nb <= 30 or nb % 20 == 0: print('ведро', nb, 'th %.2f' % th, 'узлов', nb0, 'раундов', rd, 'рёбер', nev - ne0, flush=True)
+                th = thr
+            print('solve вёдра: петель на себя', nself, 'SBTOL', SBTOL, 'вёдер', nb, 'вычислений рёбер', nev, 'на ребро %.2f' % (nev / len(I)), flush=True); s.V = V; s.n_it = nb; s.edges = len(I); return s
         bar = tqdm(total=it, desc='solve', mininterval=TQ, leave=False)
         for n in range(it):
             bar.update(1); val = np.empty(len(I))
