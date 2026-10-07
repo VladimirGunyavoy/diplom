@@ -103,6 +103,7 @@ def nf2_rows(P0, p, u, sg, nmax):
 def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
+ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); ZSEED = float(E('ZSEED', 1.02))        # зацеп: сторона с соседом растёт до стыка ядер; затравки соседям ZSEED·r от края (1.0 + запас, иначе край = уже покрыто)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
@@ -257,7 +258,8 @@ def cell_dict(c):
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
-    e = basis(p, u); S = np.linspace(-rm, rm, KF); k0 = KF // 2; nmax = int(tm / DTN + 1e-9); lat = np.stack(np.meshgrid(*([S] * m_), indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
+    e = basis(p, u); S = np.linspace(-2 * rm, 2 * rm, 2 * KF - 1) if ZACEP else np.linspace(-rm, rm, KF); k0 = len(S) // 2; nmax = int(tm / DTN + 1e-9) * (2 if ZACEP else 1);   # ZACEP: общий предел 2·rm по ширине и 2·nmax по строкам, не rm/nmax в каждую сторону
+    nmax1 = nmax // 2 if ZACEP else nmax; lat = np.stack(np.meshgrid(*([S] * m_), indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
     for sg in (1, -1):
         y = base; yc = p.copy(); W = np.zeros((N, N))
         for i in range(1, nmax + 1):
@@ -275,7 +277,24 @@ def growN(p, u, idx, rm, tm):
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Q = np.linalg.eigh(Wc); Wi = (Q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30))) @ Q.T
         Pb = R0[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d = Pb - mlin(Pb, n_)
         return float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, Wi, d))))
-    klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0
+    klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dn = {}; chain = []
+    if ZACEP:                                                                                              # разведка: сосед на луче от зерна вдоль ±e_k в пределах 2·rm → расстояние до ядра соседа (бисекция по idx.covered)
+        h_ = S[1] - S[0]; ts = np.arange(1, int(2 * rm / h_ + 1e-9) + 1) * h_
+        for k in range(m_):
+            for sg in (1, -1):
+                cv = idx.covered(p + sg * ts[:, None] * e[k])
+                if cv.any():
+                    j = int(np.argmax(cv)); lo, hi = (ts[j - 1] if j else 0.), ts[j]
+                    for _ in range(6):
+                        mid = (lo + hi) / 2
+                        if idx.covered((p + sg * mid * e[k])[None])[0]: hi = mid
+                        else: lo = mid
+                    dn[(k, sg)] = hi
+    def sat(d):
+        """зацеп: ядро (центр ± r) дошло до ядра соседа, гало (центр ± w > r) заходит на него"""
+        if d[0] != 'a' or (d[1], d[2]) not in dn: return False
+        k = d[1]; cc = (S[klo[k]] + S[khi[k]]) / 2; w = (S[khi[k]] - S[klo[k]]) / 2; r_ = w / (1 + HALO)
+        return cc + r_ >= dn[(k, 1)] if d[2] > 0 else cc - r_ <= -dn[(k, -1)]
     def cur():
         c_ = Cell(p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)), u, np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]) / (1 + HALO), e); c_.p = p; c_.nf, c_.nb = ihi, -ilo; c_.build(); return cell_dict(c_)
     def halt(d, key, face=None): act[d] = False; STOP[key] += 1; pause('stop', 2, u=u, seed=p, reason=REASON[key], dir=d, face=face, cell=cur)
@@ -288,18 +307,24 @@ def growN(p, u, idx, rm, tm):
             if d[0] == 'a':
                 if ihi - ilo < 3 and (act[('F',)] or act[('B',)]): continue
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
-                if nk < 0 or nk >= KF: halt(d, 'kf'); continue
+                if nk < 0 or nk >= len(S) or (ZACEP and khi[k] - klo[k] >= KF - 1): halt(d, 'kf'); continue
+                if ZACEP and sat(d):                                                                      # зацеп состоялся: ждём, пока кончат остальные (свободная сторона может сдвинуть центр), потом закрываем
+                    if any(act[x] and not sat(x) for x in dirs): continue
+                    halt(d, 'ovh'); continue
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
                 fb = not inbox_g(face).all(); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
-                if fb or bb or gb: halt(d, 'field' if fb else 'bend' if bb else 'goal', face); continue
+                if fb or bb or gb:
+                    if bb and (k, d[2]) in dn: chain.append(d)                                              # изгиб упёрся раньше зацепа — цепочка: затравка на краю
+                    halt(d, 'field' if fb else 'bend' if bb else 'goal', face); continue
                 klo, khi = nlo, nhi; pause('side', 3, u=u, seed=p, dir=d, face=face, cell=cur)
-                if d in extra:
+                if (k, d[2]) in dn: pass                                                                  # сторона с соседом: правило OVH не нужно
+                elif d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: halt(d, 'ovh')
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
             else:
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
-                if i < imin or i > imax: halt(d, 'rows'); continue
+                if i < imin or i > imax or (ZACEP and ihi - ilo >= 2 * nmax1): halt(d, 'rows'); continue
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
                 fb = not inbox_g(face).all(); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: halt(d, 'tfield' if fb else 'tbend' if bb else 'tgoal', face); continue
@@ -310,7 +335,10 @@ def growN(p, u, idx, rm, tm):
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
-    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; return c
+    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; c.chain = []
+    for d in chain:                                                                                       # затравка на краю в ту же сторону: центр строки 0 + ZSEED·r_ядра·e_k
+        k = d[1]; c.chain.append(p + sum(e[j] * (S[klo[j]] + S[khi[j]]) / 2 for j in range(m_)) + d[2] * ZSEED * c.r[k] * e[k]); pause('chain', 2, u=u, seed=p, dir=d, reason='bend before neighbor: chain seed', cell=cur)
+    return c
 def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
@@ -363,7 +391,8 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         queue += [yf, yb]
         if SIDE:
             for e0 in (c.c, g0[ctr], g1[ctr]):
-                for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
+                for k in range(m_): queue += [e0 + (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k], e0 - (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k]]
+        for q_ in c.chain[::-1]: queue.insert(0, q_)                                                          # цепочка зацепа — первой
         pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         if COVTOL > 0 and len(cells) % COVN == 0 and covdone(): break
         if log: log(u, cells)
