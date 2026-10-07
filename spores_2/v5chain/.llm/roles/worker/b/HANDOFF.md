@@ -7,3 +7,4 @@
 Коммиты: v7 50e4132, de86963, 18d25a4; v6 00b321c; v5chain 04c3490
 Токены: T_START 5ч 11% / ctx 5% $0.10 (01:21) / T_BEFORE_END 5ч 27% / ctx 27% $8.63
 NEXT_LINK: hub-v5chain-worker-b5   NEXT_MODEL: sonnet
+(4) ДОПОЛНЕНИЕ research-21, ПЛАН п.37 [B], ВПЕРЕДИ п.31: выход для 4D solve — свой u только точное ребро по столбцу (i→i+1, τ строки), стенсил своего u убрать; переключение на другое u — стенсил ТОЛЬКО по клеткам слоя этого u. u .15: рёбер 570k→197k, петель 0, solve 38→3.7 с, T 1.051. Прототип reports/research/r18/solve_bucket.py (SBCAUS, SBLAY), заметка knowledge/research/solve_bucket.md §РЕШЕНИЕ; встроить в growN.solve (потом вёдра SOLVEB имеют шанс). Передано b4→b5.
