@@ -31,7 +31,9 @@ def stats_panel(ax, cells, st, ratio, T):
     nl = {u: sum(round(float(c['u']), 3) == u for c in cells) for u in US}; nn = {u: sum(int(np.prod(np.shape(c['G'])[:2])) for c in cells if round(float(c['u']), 3) == u) for u in US}
     cl = {k: sum(np.shape(c['G'])[1] == k for c in cells) for k in (5, 9, 17, 33)}
     r = np.asarray(ratio, float) if ratio is not None else None; rf = r[np.isfinite(r)] if r is not None else np.zeros(0)
-    rows = [('клеток (слои ' + ' / '.join('%+.1f' % u for u in US) + ')', '%d  (%s)' % (len(cells), ' / '.join(str(nl[u]) for u in US))),
+    npar = len(set((int(c.get('seq', -1)), round(float(c['u']), 3)) for c in cells)) if all(c.get('seq', -1) not in (None, -1) for c in cells) else len(cells)
+    rows = [('клеток / подклеток', '%d / %d' % (npar, len(cells))),
+            ('подклеток по слоям ' + ' / '.join('%+.1f' % u for u in US), ' / '.join(str(nl[u]) for u in US)),
             ('узлов', '%d  (%s)' % (sum(nn.values()), ' / '.join('%dk' % round(nn[u] / 1e3) for u in US))),
             ('клонов 5/9/17/33 (клеток)', ' / '.join(str(cl[k]) for k in cl)),
             ('наложение: площадь под ≥2 кл.', ' / '.join('%d%%' % round(100 * ov[u]) for u in US)),
@@ -46,7 +48,7 @@ def stats_panel(ax, cells, st, ratio, T):
     for (i, j), cell in tb.get_celld().items(): cell.set_edgecolor('0.8'); cell.set_facecolor('#f4f4f4' if i % 2 else 'white')
     if len(rf):
         ah = ax.inset_axes([.08, .03, .88, .32]); ah.hist(rf, bins=np.linspace(min(.98, rf.min()), max(1.2, min(rf.max(), 1.6)), 40), color='#3182bd', alpha=.8)
-        ah.axvline(1, color='k', lw=1); ah.axvline(rf.mean(), color='#de2d26', lw=1.5, label='среднее'); ah.set_xlabel('T/эталон по стартам'); ah.set_ylabel('стартов'); ah.legend(frameon=False)
+        ah.axvline(1, color='k', lw=1); ah.axvline(rf.mean(), color='#de2d26', lw=1.5, label='среднее %.4f' % rf.mean()); ah.axvline(np.median(rf), color='#31a354', lw=1.5, ls='--', label='медиана %.4f' % np.median(rf)); ah.set_xlabel('T/эталон по стартам'); ah.set_ylabel('стартов'); ah.legend(frameon=False)
     ax.set_title('статистика прогона')
 def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5, st=None, ratio=None):
     """cells: список dict(u, G) ; VG: V* на сетке gx × gw ; P: (шаги+1, n, 2) ; U: (шаги+1, n)"""
@@ -57,12 +59,12 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5, st=None, ratio=N
     ax = axs[4]; sd = {}                                                                          # research-20 (слово пользователя): посев спор — только затравки: цвет = порядок посева, размер = во скольких слоях затравка дала клетку
     for i, c in enumerate(cells):
         if c.get('p0') is None: continue
-        k = int(c['seq']) if c.get('seq', -1) is not None and int(c.get('seq', -1)) >= 0 else i; sd.setdefault(k, [np.array(c['p0'], float), 0]); sd[k][1] += 1
+        k = int(c['seq']) if c.get('seq', -1) is not None and int(c.get('seq', -1)) >= 0 else i; sd.setdefault(k, [np.array(c['p0'], float), 0.]); pg_ = contour(np.array(c['G'], float)); sd[k][1] += .5 * abs(np.dot(pg_[:, 0], np.roll(pg_[:, 1], 1)) - np.dot(pg_[:, 1], np.roll(pg_[:, 0], 1)))   # слово пользователя: размер точки — площадь выросших из затравки клеток (сумма по слоям и подклеткам)
     if sd:
-        ks = sorted(sd); Pq = np.array([sd[k][0] for k in ks]); nl = np.array([sd[k][1] for k in ks]); oc = np.arange(len(ks))
-        for sh in SH: sc = ax.scatter(Pq[:, 0] + sh, Pq[:, 1], c=oc, cmap='viridis', s=12 + 22 * nl, alpha=.85, edgecolors='k', linewidths=.4)
+        ks = sorted(sd); Pq = np.array([sd[k][0] for k in ks]); ar = np.array([sd[k][1] for k in ks]); oc = np.arange(len(ks))
+        for sh in SH: sc = ax.scatter(Pq[:, 0] + sh, Pq[:, 1], c=oc, cmap='viridis', s=8 + 600 * ar / max(ar.max(), 1e-9), alpha=.85, edgecolors='k', linewidths=.4)
         fig.colorbar(sc, ax=ax, pad=.01, shrink=.9, label='порядок посева')
-    ax.set_title('посев: %d затравок → %d клеток (размер — число слоёв)' % (len(sd), sum(v[1] for v in sd.values())))
+    ax.set_title('посев: %d затравок (размер точки — площадь выросших клеток, цвет — порядок)' % len(sd), fontsize=11)
     for ax, u in zip(axs, US):
         cs = [c for c in cells if round(float(c['u']), 3) == u]
         for c in cs:
