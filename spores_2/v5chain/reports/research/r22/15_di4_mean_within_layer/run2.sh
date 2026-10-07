@@ -1,0 +1,3 @@
+D=~/spore_v5/r22/13_di4_fast_finish; cd $D
+export SYS=di4 M=3 SIDE=0 GM=.25 GLIM=0 FRAC=1 RHO=.35 PESS=1 LAYERS=~/spore_v5/wb5/p38/L1600.pkl PYTHONUNBUFFERED=1 FH=.1
+for v in "VF=1 VFILE=$HOME/spore_v5/r22/15_di4_mean_within_layer/V_mean_sblay1.npy" "VF=1 VFILE=$HOME/spore_v5/r22/12_di4_full_layers_gpu/V_sblay1.npy" "VF=.6 VFILE=$HOME/spore_v5/r22/15_di4_mean_within_layer/V_mean_sblay1.npy" "VF=0 VFILE=$HOME/spore_v5/r22/15_di4_mean_within_layer/V_mean_sblay1.npy"; do (env $v python3 fin2.py 2>&1 | grep -a "^VF\|Error\|Trace" | sed "s|^|[$v] |" | sed "s|VFILE=.*/||" | cut -c1-330) & done; wait
