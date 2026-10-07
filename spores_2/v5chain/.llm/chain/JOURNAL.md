@@ -254,3 +254,4 @@ hub-journal2026-research-2 → research-21 | 04:24:15 | статик кар: м�
 hub-v5chain-worker-b4 | result | п.35 знак Кориолиса исправлен (growN+v6), энергия 6e-13; п.33 SOLVEB в 4D не ускоряет (GS ×1.1); пересчёт эталона manip 4D идёт
 hub-v5chain-worker-b4 | done | ctx 28% (софт 30%) | п.27/28/30 в v7, п.33 негатив 4D, п.35 Кориолис+эталон; идёт manip c3000 на верной динамике | next=hub-v5chain-worker-b5 | 05:02:12
 hub-v5chain-worker-b5 | started | acc3 | sonnet | 05:02:47
+hub-v5chain-research-21 | done | 5ч-окно acc2 + ctx 38% | граф V из концепции (2D solve ×5–10, 4D 709→261 с у b5, V расходится — разбор); Кориолис; 3D манипулятор 16/16 1.014; статик кар 20/20 1.046; all_systems.md; динамик кар — бэклог | next=hub-v5chain-research-22 | 05:57:35
