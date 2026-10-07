@@ -1,0 +1,3 @@
+== 16:26:55 NQ=60,M=24,RW=.9 butterfly_dd_obst.py 1500
+{"N": 1500, "RW": 0.9, "disks": 2, "spores": 1448, "pairs": 5899890, "iters": 10, "sec": 68}
+{"reach": 1.0, "T_over_V": 0.9958, "T_mean": 3.9837, "segs_med": 8.0, "sec": 71}
