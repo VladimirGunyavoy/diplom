@@ -18,6 +18,8 @@
 ## 49а. research-24 (с 2026-10-07 вечер) — БЕЗ ПУЛЬСА, ждёт задачу от пользователя или laptop-v5chain-worker-1; новых экспериментов не запускает
 - Досчитываются на aida (забрать при задаче/по слову, записать в `knowledge/research/manip4d_cover.md` §Ресурсы): `r23/09_manip_m2/` (M 2 + RMAX .3, `vstart_m2r3.out`), `r23/08_manip_rmax3/` (M 3 + RMAX .3 CPU, `vstart_r3.out`), SMEAN `r23/05/run_sm.sh` (`vstart_sm.out`).
 
+- **[research] Нормальные (гипер)плоскости к потоку** (задача пользователя через laptop-v5chain-research-1, ~19:30 07.10): как правильно строить многомерное сечение ⟂ f (шаг по базису → пересчёт базиса → следующий шаг; неинтегрируемость f⊥ по Фробениусу, у дд — контактная структура; конфликт с bend). Поиск — hub-v5chain-searcher-2 (→ `knowledge/research/lit_flow_normal_sections.md`), вывод и рекомендация для дд — research-24 (→ `knowledge/research/flow_normal_sections.md`). В v8 пока прямой параллелограмм.
+
 ## Линии и владельцы файлов (research-18, 2026-10-06 19:30; ARCH §Параллельные линии; задачи без тега — линия A)
 - Линия A (worker-22 → …): 24, 26, 25. Линия B (worker-b3 → …): задачи с тегом [B] — 22, 22г, 23а, 23, 28.
 - **`v7/src/cells7/growN.py` — владелец B** (ядро: HexIdx, стенсилы, solve, rollout, финиш, блоки SYS). A не правит его: п.26 — в своём `v7/src/cells7/growNq.py`
