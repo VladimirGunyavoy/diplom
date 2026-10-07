@@ -286,3 +286,4 @@ hub-v5chain-worker-b7 | п.48: разрост 247 не воспроизведё�
 hub-v5chain-worker-b7 | п.48 nD NF: nf_rows реализован; dd NF1 — нет узлов в цели (reach 0), NF0 воспроизведён; разбор у цели — следующий шаг (results.md) | 20:47:58
 hub-v5chain-worker-b7 | п.48 nD NF: геометрия у цели ок, reach 0 на dd — хрупкость старта; следующий шаг di4/manip NF0 vs NF1 | 20:53:53
 hub-v5chain-worker-b7 | п.48 di4: NF1 хуже базы (reach 75% vs 95%, мед 1.19 vs 1.036) — строки короче (has.all()); NF по умолч. выкл | 21:07:27
+hub-v5chain-worker-b7 | done | ctx 26% (софт 30%) | п.49 v8 stepper/growN-di, п.47 проба 6D, п.48 ДИ NF2 лучше, nD NF хуже базы | next=hub-v5chain-worker-b8 | 21:07:56
