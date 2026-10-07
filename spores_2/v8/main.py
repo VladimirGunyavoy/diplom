@@ -80,6 +80,7 @@ scene_setup = SceneManager(
 
 zoom_manager = ZoomManager(scene_setup, color_manager=color_manager)
 scene_setup.register_frame_in_zoom(zoom_manager)
+scene_setup.frame.toggle_visibility()    # start with the frame (axes + cube at 0) hidden: zero is marked by the goal; U toggles it
 
 floor = ScalableFloor(
     model='quad',
