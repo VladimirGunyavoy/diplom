@@ -66,7 +66,7 @@ def run_v0(B, r):
     d = grid_metrics(X, r); d.update(time_spread=0., f_per_front=calls, ms_per_front=ms, nodes=int(X.size // N)); return d
 
 
-def run_v2(B, r):
+def run_v2(B, r, sparse=True):
     X = grid0(B, r); nn = X.size // N; shp = X.shape[:-1]; c = tuple([K // 2] * m); ci = int(np.ravel_multi_index(c, shp)); Tcum = np.zeros(nn)
     pairs = []; ids = np.arange(nn).reshape(shp)
     for a in range(m):
@@ -76,9 +76,13 @@ def run_v2(B, r):
     for k in range(STEPS):
         X = flow(X, H); xf = X.reshape(nn, N); fx = g.f(xf, u); i, j = pairs[:, 0], pairs[:, 1]
         nh = fx[i] + fx[j]; nh /= np.linalg.norm(nh, axis=1, keepdims=True)
-        A = np.zeros((len(pairs), nn)); rr = np.arange(len(pairs)); A[rr, j] = (fx[j] * nh).sum(1); A[rr, i] = -(fx[i] * nh).sum(1)
-        rhs = -((xf[j] - xf[i]) * nh).sum(1); keep = np.arange(nn) != ci
-        sol = np.linalg.lstsq(A[:, keep], rhs, rcond=None)[0]; dl = np.zeros(nn); dl[keep] = sol
+        rr = np.arange(len(pairs)); aj = (fx[j] * nh).sum(1); ai = -(fx[i] * nh).sum(1); rhs = -((xf[j] - xf[i]) * nh).sum(1); keep = np.arange(nn) != ci
+        if sparse:
+            import scipy.sparse as sp, scipy.sparse.linalg as spl
+            A = sp.csr_matrix((np.r_[aj, ai], (np.r_[rr, rr], np.r_[j, i])), shape=(len(pairs), nn)); sol = spl.lsqr(A[:, np.flatnonzero(keep)], rhs, atol=1e-13, btol=1e-13, iter_lim=5000)[0]
+        else:
+            A = np.zeros((len(pairs), nn)); A[rr, j] = aj; A[rr, i] = ai; sol = np.linalg.lstsq(A[:, keep], rhs, rcond=None)[0]
+        dl = np.zeros(nn); dl[keep] = sol
         res = rhs - A @ dl; res_hist.append(float(np.sqrt((res ** 2).mean())) / r)         # невязка МНК (в долях r) — неинтегрируемость в nD
         X = flow(xf, dl[:, None]).reshape(X.shape); Tcum += dl
     ms = (time.perf_counter() - t0) / STEPS * 1e3; calls = CALLS[0] / STEPS
@@ -126,12 +130,12 @@ def single_idx(W):
 
 
 def run_v3(B0, r, W, label):
-    c = p.copy(); B = B0.copy(); front_prev = None; CALLS[0] = 0; ms_tot = 0.; devs = []; last = None
+    c = p.copy(); B = B0.copy(); front_prev = None; CALLS[0] = 0; ms_tot = 0.; devs = []; last = None; cons_k = []
     for k in range(1, STEPS + 1):
         t0 = time.perf_counter(); c = flow(c, H); B = transport(B, g.f(c, u)); cur = build_front(c, B, r, W); ms_tot += time.perf_counter() - t0
         nodes = np.concatenate([[c], cur[:, 5::5].reshape(-1, N)]);
         if k >= 2:
-            c_ = CALLS[0]; t1 = time.perf_counter(); dist, tau = consistency(front_prev, nodes, r); last_cons = (dist, tau); CALLS[0] = c_     # проверка — не часть стоимости фронта
+            c_ = CALLS[0]; t1 = time.perf_counter(); dist, tau = consistency(front_prev, nodes, r); last_cons = (dist, tau); CALLS[0] = c_; cons_k.append((float(dist.mean()), float(dist.max()), float(tau.mean()), float(tau.min()), float(tau.max())))     # проверка — не часть стоимости фронта
         front_prev = nodes
         # метрика 5: отклонение комбинированных узлов от аддитивной суперпозиции одноканальных кривых (линейная интерполяция по s)
         if label == 'V3b':
@@ -157,8 +161,9 @@ def run_v3(B0, r, W, label):
     for a in range(m):
         lo = [q for q in si if W[q][a] == -1][0]; hi = [q for q in si if W[q][a] == 1][0]; wd.append(np.linalg.norm(cur[hi, 50] - cur[lo, 50]))
     dist, tau = last_cons
+    ck = np.array(cons_k)
     d = dict(cos_mean=float(cs.mean()), cos_max=float(cs.max()), width=float(np.mean(wd) / (2 * r)), time_spread=float(tau.max() - tau.min()), time_mean=float(tau.mean()),
-             cons_dist_mean=float(dist.mean()), cons_dist_max=float(dist.max()), f_per_front=calls, ms_per_front=ms_tot / STEPS * 1e3, nodes=int(len(nodes)), curves=int(len(W)))
+             cons_dist_mean=float(dist.mean()), cons_dist_max=float(dist.max()), cons_k_mean=float(ck[:, 0].mean()), cons_k_max=float(ck[:, 1].max()), cons_first_mean=float(ck[0, 0]), cons_last_mean=float(ck[-1, 0]), tau_k_mean=float(ck[:, 2].mean()), tau_k_spread_mean=float((ck[:, 4] - ck[:, 3]).mean()), tau_k_spread_max=float((ck[:, 4] - ck[:, 3]).max()), tau_min=float(ck[:, 3].min()), tau_max=float(ck[:, 4].max()), f_per_front=calls, ms_per_front=ms_tot / STEPS * 1e3, nodes=int(len(nodes)), curves=int(len(W)))
     if label == 'V3b': d.update(comb_dev_last_mean=devs[-1][0], comb_dev_last_max=devs[-1][1], comb_dev_all_mean=float(np.mean([a for a, b in devs])), comb_dev_all_max=float(np.max([b for a, b in devs])))
     return d
 
@@ -198,7 +203,7 @@ if __name__ == '__main__':
     B0 = g.basis(p, u); res = dict(SYS=SYS, u=list(U), seed=list(P0), n=N, m=m, H=H, K=K, steps=STEPS, f_seed=[float(v) for v in g.f(p, u)], runs=[], holonomy=[])
     Wb = dirs_all(); Wa = Wb[(Wb != 0).sum(1) == 1]
     for r in RS:
-        for name, fn in (('V0', lambda: run_v0(B0, r)), ('V2', lambda: run_v2(B0, r)), ('V3a', lambda: run_v3(B0, r, Wa, 'V3a')), ('V3b', lambda: run_v3(B0, r, Wb, 'V3b'))):
+        for name, fn in (('V0', lambda: run_v0(B0, r)), ('V2', lambda: dict(run_v2(B0, r, True), ms_dense=run_v2(B0, r, False)['ms_per_front'])), ('V3a', lambda: run_v3(B0, r, Wa, 'V3a')), ('V3b', lambda: run_v3(B0, r, Wb, 'V3b'))):
             t0 = time.perf_counter(); d = fn(); d.update(variant=name, r=r, wall_s=round(time.perf_counter() - t0, 2)); res['runs'].append(d); print(SYS, U, name, r, {k: (round(v, 4) if isinstance(v, float) else v) for k, v in d.items()}, flush=True)
     for r in sorted(set(RS + [.1, .2, .5])):
         for order in (2, 1): res['holonomy'].append(dict(r=r, order=order, pairs=holonomy(B0, r, order)))
