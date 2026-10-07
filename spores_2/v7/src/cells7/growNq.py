@@ -134,6 +134,25 @@ def pool_run(Qs, log=print):
         cm = inc.cell_min(inc.Ts + inc.A.V); keep = {id(c): cm[i] <= (1 + EPS) * C for i, c in enumerate(inc.A.cells)}
         out.append(dict(s=s, C=C, pool=len(inc.A.cells), new=len(inc.A.cells) - n_before, keep_ids={k for k, v in keep.items() if v}, sec=round(time.time() - t0, 1)))
     return trees, inc, out
+def solve_wl(A, it=20000, tols=(0.,)):
+    """w23 (PLAN п.29а2): solve по рабочему списку — на итерации пересчитываются только рёбра, у которых изменилась вершина интерполяции (обратный CSR вершина→ребро).
+    Тот же Якоби (значения итерации по снимку V), то же решение, что A.solve; цена итерации ∝ изменившейся доле, а не всем рёбрам."""
+    t0 = time.time(); I_, IDX_, W_ = [], [], []; Vg = np.full(A.N, np.inf)
+    for u in G.US:
+        Vg = np.minimum(Vg, A.tgoal(A.P, u)); a, b, c_ = A.stencils(G.step(A.P, u)); I_.append(a); IDX_.append(b.astype(np.int32 if A.N < 2 ** 31 else np.int64)); W_.append(c_)
+    I = np.concatenate(I_); IDX = np.concatenate(IDX_); W = np.concatenate(W_); del I_, IDX_, W_; o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]; del o
+    t_st = time.time() - t0; K = IDX.shape[1]; nrow = len(I); flat = IDX.ravel(); order = np.argsort(flat, kind='stable'); ptr = np.searchsorted(flat[order], np.arange(A.N + 1)); rows_of = (order // K).astype(np.int32); del order, flat
+    t_csr = time.time() - t0 - t_st; res = []; V0 = np.minimum(A.V, Vg); V0[A.goal] = 0.
+    for tol in tols:                                                         # tol — порог «изменился»: узел попадает в рабочий список, если V упала больше tol (0 → строго как A.solve)
+        V = V0.copy(); ch = np.flatnonzero(V < G.BIG / 2); n = 0; tw = time.time(); nev = 0
+        while len(ch) and n < it:
+            ln = ptr[ch + 1] - ptr[ch]; tot = int(ln.sum())
+            if not tot: break
+            off = np.repeat(ptr[ch] - np.r_[0, np.cumsum(ln)[:-1]], ln) + np.arange(tot); rows = np.unique(rows_of[off]); nev += len(rows)
+            val = G.DTN + A.interp(W[rows], V[IDX[rows]]); nodes = I[rows]; new = V.copy(); np.minimum.at(new, nodes, val); new[A.goal] = 0.
+            ch = np.flatnonzero(new < V - max(tol, 1e-9)); V = new; n += 1
+        res.append(dict(tol=tol, sec_stencils=round(t_st, 1), sec_csr=round(t_csr, 1), sec_iter=round(time.time() - tw, 1), iters=n, rows_evaluated=nev, rows=nrow, V=V))
+    A.edges = nrow; return res
 def prune(A, Ts, C, eps, s_=None):
     cm = cell_min(A, Ts + A.V); keep = cm <= (1 + eps) * C; A2 = G.Atlas.__new__(G.Atlas); A2.layers = [[c for c in l if keep[A.cells.index(c)]] for l in A.layers]; A2.finish(); quiet(A2.solve); T2 = A2.rollout(s_[None])[0][0] if s_ is not None else None
     n_ = 0
