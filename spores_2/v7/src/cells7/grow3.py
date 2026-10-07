@@ -249,6 +249,30 @@ class Atlas:
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
+        if int(E('SOLVEB', 0)): return s.solve_bucket()
+        return s.solve_j(it)
+    def solve_bucket(s, D=None, tol=None):
+        """w24 (п.34, research-21 solve_bucket.py): вёдра по V (Dial/Δ-stepping, коррекция меток) вместо Якоби/ГЗ; петли на себя точно (как в solve_j), SBTOL — порог рассылки."""
+        tol = float(E('SBTOL', 1e-4)) if tol is None else tol; D = D or float(E('SBD', 2 * DTN)); t0 = time.time()
+        I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
+        for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); I_.append(a); IDX_.append(b); W_.append(c_)
+        I = np.concatenate(I_); IDX = np.concatenate(IDX_).astype(np.int32); W = np.concatenate(W_); sf = IDX == I[:, None]; ws = (W * sf).sum(1); W = np.where(sf, 0, W).astype(np.float32); den = 1. - ws; ok = den >= 1e-6
+        I, IDX, W, den = I[ok], IDX[ok], W[ok], den[ok]; I = I.astype(np.int32); te = time.time() - t0; BIGh = BIG / 2
+        V = np.minimum(s.V, Vg); V[s.goal] = 0.; K = IDX.shape[1]
+        M_ = (W > 1e-6).ravel(); ev = np.repeat(np.arange(len(I), dtype=np.int32), K)[M_]; vv = IDX.ravel()[M_]; o = np.argsort(vv, kind='stable'); ev = ev[o]; ptr = np.searchsorted(vv[o], np.arange(s.N + 1)); del o, vv
+        pend = V < BIGh; nev = 0; nb = 0; th = 0.
+        while pend.any():
+            th = max(th, V[pend].min()); thr = th + D; nb += 1; bt = np.flatnonzero(pend & (V < thr))
+            while len(bt):
+                pend[bt] = False; lo, hi = ptr[bt], ptr[bt + 1]; n_ = hi - lo; tot = int(n_.sum())
+                if not tot: break
+                e = np.unique(ev[np.repeat(lo - np.r_[0, np.cumsum(n_)[:-1]], n_) + np.arange(tot)]); nev += len(e)
+                val = np.nan_to_num((DTN + s.interp(W[e], V[IDX[e]])) / den[e], nan=BIG); val[val > BIG] = BIG
+                nd = I[e]; oo = np.argsort(nd, kind='stable'); nd, val = nd[oo], val[oo]; st = np.flatnonzero(np.r_[True, nd[1:] != nd[:-1]])
+                un = nd[st]; mv = np.minimum.reduceat(val, st); imp = (mv < V[un] - tol) & ~s.goal[un]; un, mv = un[imp], mv[imp]; V[un] = mv; pend[un] = True; bt = un[mv < thr]
+            th = thr
+        s.V = V; s.n_it = nb; s.edges = len(I); s.solve_info = dict(t_edges=round(te, 1), t_total=round(time.time() - t0, 1), buckets=nb, evals_per_edge=round(nev / max(len(I), 1), 2)); return s
+    def solve_j(s, it=20000):
         I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True); I_.append(a); IDX_.append(b); W_.append(c_)
         I = np.concatenate(I_); IDX = np.concatenate(IDX_); W = np.concatenate(W_); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
