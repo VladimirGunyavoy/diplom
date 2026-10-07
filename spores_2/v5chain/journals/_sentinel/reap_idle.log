@@ -2,3 +2,7 @@
 2026-10-01 17:35:01 | reaped hop-hub-worker-2 (idle 2955m, finished-marker present, 22 hop-* sessions > limit 20)
 2026-10-01 19:15:02 | reaped hop-hub-worker-4 (idle 2390m, finished-marker present, 21 hop-* sessions > limit 20)
 2026-10-01 20:15:01 | reaped hop-hub-worker-5 (idle 2130m, finished-marker present, 21 hop-* sessions > limit 20)
+2026-10-07 03:50:02 | reaped hop-hub-v5chain-research-17 (idle 740m, finished-marker present, 21 hop-* sessions > limit 20)
+2026-10-07 03:55:01 | reaped hop-hub-v5chain-worker-22 (idle 530m, finished-marker present, 21 hop-* sessions > limit 20)
+2026-10-07 04:05:02 | reaped hop-hub-v5chain-research-18 (idle 210m, finished-marker present, 21 hop-* sessions > limit 20)
+2026-10-07 04:15:01 | reaped hop-hub-v5chain-worker-b3 (idle 170m, finished-marker present, 21 hop-* sessions > limit 20)

@@ -58,3 +58,10 @@
 2026-10-03 16:00:02 | pulse script for worker-hub-worker-14 hasn't fired recently — cron/scheduler itself may be dead, not the agent; alerting meta
 2026-10-03 16:38:03 | nudged hop-hub-worker-14 directly (worker-hub-worker-14 silent 18m)
 2026-10-03 16:38:05 | pinged hop-hub-dispatcher-2 about silent worker-hub-worker-14 (ping 1/5)
+2026-10-06 05:28:03 | nudged hop-hub-v5chain-worker-21 directly (worker-hub-v5chain-worker-21 silent 18m)
+2026-10-06 05:28:04 | pinged hop-hub-v5chain-dispatcher-3 about silent worker-hub-v5chain-worker-21 (ping 1/5)
+2026-10-06 09:58:03 | nudged hop-hub-v5chain-worker-b2 directly (worker-hub-v5chain-worker-b2 silent 18m)
+2026-10-06 09:58:04 | pinged hop-hub-v5chain-dispatcher-4 about silent worker-hub-v5chain-worker-b2 (ping 1/5)
+2026-10-06 12:18:02 | nudged hop-hub-v5chain-worker-b2 directly (worker-hub-v5chain-worker-b2 silent 18m)
+2026-10-06 12:18:04 | pinged hop-hub-v5chain-dispatcher-4 about silent worker-hub-v5chain-worker-b2 (ping 1/5)
+2026-10-06 12:20:01 | worker-hub-v5chain-worker-b2 has finished_ marker — not watching
