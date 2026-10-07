@@ -290,3 +290,4 @@ hub-v5chain-worker-b7 | done | ctx 26% (софт 30%) | п.49 v8 stepper/growN-d
 hub-v5chain-worker-b8 | started | acc2 | sonnet | 21:08:44
 hub-v5chain-worker-b8 | п.48 di4: NFFB .5 NFW4 NFSUB8 → reach 93%, мед 1.072 (база 95%/1.036) — лучше прежнего NF1, базы не бьёт | 21:30:14
 hub-v5chain-worker-b8 | п.48 nD закрыт: manip NF1 reach .60 против .90 NF0; NF выкл. | 22:30:16
+hub-v5chain-worker-b8 | done | слово пользователя: ветка B закрыта | п.48 nD закрыт, NF выкл. | next=нет | 23:06:06
