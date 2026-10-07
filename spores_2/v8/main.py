@@ -91,7 +91,6 @@ floor = ScalableFloor(
     texture_scale=(40, 40)
 )
 zoom_manager.register_object(floor, name='floor')
-floor.visible_self = False    # hide only the floor's model; its children (the collider for LMB clicks, see floor.collider below) stay active. F toggles it back
 
 # ===== SHARED CONTEXT =====
 shared_context = SharedContext()
@@ -171,13 +170,21 @@ def _seed_click():
     else: _last_seed[0] = pt; stepper.seed_at(pt)
     growview.draw(None); _step('N')
 
+def _back():
+    if hasattr(stepper, 'back') and stepper.back(): growview.draw(stepper.snapshot); print('[stepper] back: history %s/%s' % stepper.hist_info if stepper.hist_info else '[stepper] back: live')
+    else: print('[stepper] back: no earlier snapshot')
+
+def _caption():
+    h = getattr(stepper, 'hist_info', None)
+    return growview.caption() + (('   [history %d/%d]' % h) if h else '')
+
 def _restart():
     """X: drop everything built so far (and a hand-placed seed) and start over with the algorithm's own seeds (from the goal)."""
     growview.draw(None); growview.times = type(growview.times)()
     _last_seed[0] = None; stepper.seed_at(None); growview.draw(None); _step('N')
 
 floor.collider = 'box'
-screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.40 + my), getter=lambda: growview.caption()))
+screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.40 + my), getter=_caption))
 screen_manager.add_message(Message(name='timetable', position=(0.30 + mx, 0.48 - my), getter=lambda: growview.times.text(getattr(stepper, 'times', {}))))
 
 # ===== BINDINGS =====
@@ -190,7 +197,10 @@ def _resize(sign):
 
 input_manager.bind('1', _resize, mode='scroll', description='size', value_getter=lambda: spore_manager.size)
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
-input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _step('N'), description='RMB: next step (same as N)')    # input() forwards every key to input_manager; Alt = free cursor
+input_manager.bind('left mouse down', lambda: None if held_keys['alt'] else _step('N'), description='LMB: next step (same as N)')    # input() forwards every key to input_manager; Alt = free cursor (mouse off)
+input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _step('M'), description='RMB: to pause of same level (same as M)')
+input_manager.bind('middle mouse down', lambda: None if held_keys['alt'] else _seed_click(), description='MMB: restart with a seed at the click (in the goal: algorithm seeds)')
+input_manager.bind('z', _back, description='step back (history); N/LMB go forward')
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
 input_manager.bind('c', lambda: _step('C'), description='to the end')
 input_manager.bind('x', _restart, description='restart: algorithm seeds (drop click)')
@@ -226,8 +236,6 @@ def update():
 
 def input(key):
     input_manager.handle_input(key)
-    if key == 'left mouse down' and not held_keys['alt']:
-        _seed_click()
 
 print("Ready. WASD to move, Q/E zoom, Alt cursor, Esc exit.")
 print("=" * 50)

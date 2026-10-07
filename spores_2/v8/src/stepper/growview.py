@@ -107,13 +107,17 @@ class GrowView:
     def draw(s, snap):
         """нарисовать снимок (None — очистить). Время отрисовки уходит в TimeTable по имени паузы."""
         t0 = time.perf_counter(); s.snap = snap
+        if snap is None: s.draw_hist = {}
+        elif id(snap) in getattr(s, 'draw_hist', {}):                  # a past snapshot (Z): draw it again, restore the draw-time table as it was
+            s.times.draw, s.times.n = (dict(x) for x in s.draw_hist[id(snap)]); t0 = None
         g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
         g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
         for name in s.COL:
             arr = g.get(name, np.zeros((0, 3)))
             if s.sm is not None and name.startswith('points'): s._spores(name, arr.reshape(-1, 3)); continue    # точки — обычные Spore из v4 (масштаб/размер как у остальных)
             e = s._layer(name); e.real_v = arr.reshape(-1, 3); e.apply_transform(s.zm.a_transformation, s.zm.b_translation)
-        if snap is not None: s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0)
+        if snap is not None and t0 is not None:
+            s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
 
     def _goal(s):
         """target outline as segments (K, 2, 3): circle/ellipse (GOALSHAPE='ball') or box (default), centre 0, half-widths RHOV along the shown axes."""

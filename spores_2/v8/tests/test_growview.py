@@ -32,3 +32,16 @@ def test_outline_core_halo_and_segments():
         o = cell_outline(G, (0, 1), halo); z = o[..., 2]
         assert o.shape == (6, 2, 3) and abs(z.max() - w) < 1e-9 and abs(z.min() + w) < 1e-9     # 2·rows отрезков, ширина
     assert seg_index(3) == [(0, 1), (2, 3), (4, 5)]
+
+
+def test_history_back_forward():
+    L = LiveStepper(seed=None); steps = []
+    for _ in range(5): L.key('N'); steps.append(L.snapshot['step'])
+    assert L.hist_info is None
+    L.back(); L.back()
+    assert L.snapshot['step'] == steps[2] and L.hist_info == (4, 6), (L.snapshot['step'], steps, L.hist_info)       # 3-й шаг (история: 0-й, N1..N5)
+    L.key('N'); L.key('N')
+    assert L.snapshot['step'] == steps[4] and L.hist_info is None                                                    # снова живой 5-й
+    L.key('N'); assert L.snapshot['step'] > steps[4] and L.hist_info is None                                         # 6-й — живой
+    L.back(); L.key('M'); assert L.hist_info is None and L.snapshot['step'] >= steps[4]                                # M после Z: догнали живой и пошли дальше
+    L.seed_at(None); assert L.history and len(L.history) == 1                                                        # seed_at очищает историю
