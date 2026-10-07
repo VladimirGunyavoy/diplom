@@ -81,8 +81,23 @@ def basis(p, u):
         if nv > 1e-6: out.append(v / nv)
         if len(out) == m_: break
     return np.array(out)
+def shoot_pol(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2):
+    """research-22 fin2.py: сетка shoot_grid (FH .1) + доводка SLSQP только лучшей топологии (2 старта)."""
+    from scipy.optimize import minimize
+    T0, tp = shoot_grid(y, f, US, RHOV, wrapy, tmax, NA)
+    if tp is None: return T0, tp
+    R = .9 * np.asarray(RHOV); best = (T0, tp); n = len(tp)
+    def end(d):
+        z = np.array(y, float)
+        for k, dt in zip(tp, d): z = FG.flow(z, US[k], max(dt, 0.), f)
+        return wrapy(z)
+    cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
+    for d0 in (np.full(n, T0 / n), np.r_[T0 * .6, np.full(n - 1, T0 * .4 / max(n - 1, 1))][:n]):
+        r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
+        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(RHOV)) and r.x.sum() < best[0]: best = (float(r.x.sum()), tp)
+    return best
 def _wcar(z): z = np.asarray(z); return np.stack([z[..., 0] - GC[0], z[..., 1] - GC[1], 0 * z[..., 0], 0 * z[..., 0]], -1) if SYS == 'car' else wrapy(z)   # w24: финиш стрельбой для цели-круга (вписанный квадрат, θ и v свободны); диски у цели далеко (>3)
-FH = float(E('FH', .05))   # w24 (research-22 п.42): быстрый финиш — перебор времён ≤ NA дуг на сетке FH пачкой rk4 вместо SLSQP (в десятки раз быстрее)
+FH = float(E('FH', .1))   # w24 (research-22 п.42): быстрый финиш — перебор времён ≤ NA дуг на сетке FH пачкой rk4 вместо SLSQP (в десятки раз быстрее)
 def shoot_grid(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2):
     t0 = time.time(); K = int(round(tmax / FH)); R = .9 * np.asarray(RHOV); best = (np.inf, None); nu = len(US)
     def traj(Y, u):
@@ -426,7 +441,7 @@ class Atlas:
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
-                    tried[i] = True; Ts, tp = (shoot_grid if int(E('FGRID', 1)) and SYS == 'car' else FG.shoot)(Y[i], f, US, *((np.array([GR / np.sqrt(2)] * 2 + [9., 9.]), _wcar) if SYS == 'car' else (RHOV, wrapy)), FTMAX, NA=int(E('NA', 3)))
+                    tried[i] = True; Ts, tp = ((shoot_pol if int(E('FPOL', 1)) else shoot_grid) if int(E('FGRID', 1)) and SYS == 'car' else FG.shoot)(Y[i], f, US, *((np.array([GR / np.sqrt(2)] * 2 + [9., 9.]), _wcar) if SYS == 'car' else (RHOV, wrapy)), FTMAX, NA=int(E('NA', 3)))
                     if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
