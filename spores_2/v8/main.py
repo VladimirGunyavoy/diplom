@@ -99,6 +99,7 @@ shared_context.bind('look_point', lambda: zoom_manager.real_look_point, default=
 # ===== OBJECT MANAGER =====
 object_manager = ObjectManager(zoom_manager, shared_context)
 spore_manager = SporeManager(zoom_manager, object_manager)
+spore_manager.size = 0.5    # v8: initial point size multiplier (growview discs read it; key '1' changes it)
 line_manager = LineManager(zoom_manager)
 surface_manager = SurfaceManager(zoom_manager)
 
