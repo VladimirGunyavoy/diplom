@@ -61,3 +61,4 @@
 - [research/solve_bucket.md](research/solve_bucket.md) — solve по вёдрам V (коррекция меток в порядке V) вместо Якоби: та же V, рёбра считаются 2–3 раза вместо ~Vmax/DTN; маятник проход ×40, solve ×7 (research-21)
 - [research/manip3d_2link.md](research/manip3d_2link.md) — 3D двузвенный манипулятор (основание+плечо+локоть, 6D, без g): модель точечных масс, сводится к плоскому 2-зв. v6; эталон OCP r21/ref_m3d.py; коридор v6 (research-21)
 - [research/static_car.md](research/static_car.md) — «статик кар» (машинка-велосипед из journal-2026: (x,y,θ,v), a и ω, 3 диска, цель-круг): модель, границы, эталон (research-21)
+- [research/gpu_solve.md](research/gpu_solve.md) — solve атласа на GPU aida: тот же Якоби di4 301 с → 6.0 / 2.4 с (f64/f32), V та же; почему вёдра и итерация по политике в 4D не работают (92% лучших стенсилов непричинны); неединственность V при PESS — гипотеза (research-22)
