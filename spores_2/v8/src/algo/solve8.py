@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -104,7 +104,13 @@ class Graph:
         for r in range(s.K):
             m = rank == r
             if not m.any(): continue
-            p_, v_, w_ = pi[m], verts[m], w[m]; Vv = V[v_]; ok = (Vv < BIG / 2).all(1) & ~done[p_]; out[p_[ok]] = (w_ * Vv).sum(1)[ok]; done[p_[ok]] = True
+            p_, v_, w_ = pi[m], verts[m], w[m]; Vv = V[v_]; fin = Vv < BIG / 2
+            if s.mode == 'flow':                                                                             # интерполяция только вдоль потока: линейно по строкам, ближайший столбец (вершины: порядок (0,0),(0,1),(1,0),(1,1) = (строка, столбец))
+                wr1 = w_[:, 2] + w_[:, 3]; c1 = (w_[:, 1] + w_[:, 3]) > .5; w2 = np.stack([(1 - wr1) * ~c1, (1 - wr1) * c1, wr1 * ~c1, wr1 * c1], 1); ok = (fin | (w2 <= 0)).all(1) & ~done[p_]; val = (w2 * np.where(w2 > 0, Vv, 0)).sum(1)
+            elif s.mode == 'maxv':                                                                           # большой разброс V по вершинам (излом) → оценка сверху: max по вершинам с весом > .05
+                ok = fin.all(1) & ~done[p_]; spread = Vv.max(1) - Vv.min(1); val = np.where(spread > s.thr, np.where(w_ > .05, Vv, -np.inf).max(1), (w_ * Vv).sum(1))
+            else: ok = fin.all(1) & ~done[p_]; val = (w_ * Vv).sum(1)
+            out[p_[ok]] = val[ok]; done[p_[ok]] = True
         return out
 
     def prepare(s):
@@ -124,7 +130,7 @@ class Graph:
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
         for passes in range(1, maxit + 1):
             Vo = V.copy()
-            for pairs in s.e3: Vi = s.evalpairs(V, s.n, pairs); V[:] = np.minimum(V, np.where(np.isfinite(Vi), Vi, BIG))
+            for pairs in s.e3: Vi = s.evalpairs(V, s.n, pairs); V[:] = np.minimum(V, np.where(np.isfinite(Vi), Vi + s.pen, BIG))
             for a, b in zip(cuts[:-1], cuts[1:]):                                                                    # E1 по уровням строк сверху вниз (последняя строка → первая)
                 nodes = e1[a:b]; V[nodes] = np.minimum(V[nodes], e1c[a:b] + V[e1n[a:b]])
             d = float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max())
@@ -144,7 +150,7 @@ class Graph:
     def Vstar(s, X):
         Vl = s.Vlayers(X); return Vl.min(1), Vl.argmin(1)
 
-    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0.):
+    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False):
         """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений"""
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
         Vl = s.Vlayers(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
@@ -153,6 +159,10 @@ class Graph:
             a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a, 0] = x + v * dt + u * dt * dt / 2; X[a, 1] = v + u * dt; t[a] += dt; step += 1
             hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False; a = np.flatnonzero(alive)
             if not len(a): break
+            if look:                                                                                         # Беллман на один шаг: слой с min V*(x после шага под этим слоем); смена слоя при выигрыше > eps
+                sc_ = np.empty((len(a), s.L))
+                for li, u_ in enumerate(uvec): xn = np.stack([X[a, 0] + X[a, 1] * dt + u_ * dt * dt / 2, X[a, 1] + u_ * dt], 1); sc_[:, li] = s.Vlayers(xn).min(1)
+                best = sc_.argmin(1); vc = sc_[np.arange(len(a)), cur[a]]; vb = sc_[np.arange(len(a)), best]; chg = (vb < vc - eps * dt) | (~np.isfinite(vc) & np.isfinite(vb)); sw[a[chg]] += 1; cur[a[chg]] = best[chg]; alive[a[~np.isfinite(vb)]] = False; continue
             Vl = s.Vlayers(X[a]); best = Vl.argmin(1); vc = Vl[np.arange(len(a)), cur[a]]; vb = Vl[np.arange(len(a)), best]; thr = eps + kappa * np.maximum(0., vdz - vb); chg = ((vb < vc - thr) & ~((vb < vhold) & np.isfinite(vc))) | ~np.isfinite(vc) & np.isfinite(vb)
             sw[a[chg]] += 1; cur[a[chg]] = best[chg]; lost = ~np.isfinite(vb); alive[a[lost]] = False
         return T, sw
@@ -171,7 +181,7 @@ def starts(g, n, seed):
     return np.array(out)
 
 
-POLICIES = {'base': dict(), 'dead': dict(kappa=.05, vdz=.5), 'hold': dict(vhold=.3), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'dead2+hold': dict(kappa=.2, vdz=.5, vhold=.4)}
+POLICIES = {'base': dict(), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'look': dict(look=True)}
 
 
 def path_extent(X, rho):
@@ -215,26 +225,33 @@ def trace(G, x0, tmax, spore_cells, dt=.01, eps=1e-3, **pk):
 def scenario(a):
     g = load_growN(); layers = [float(x) for x in a.layers.split(',')]; t0 = time.perf_counter()
     atlas, tg = build_atlas(layers, a.seed, par=not a.serial); t_grow = time.perf_counter() - t0
-    G = make_graph(g, atlas, a.interp); G.solve(); X0 = starts(g, a.nstarts, 1); Tr, src = t_ref(X0); mx = path_extent(X0, G.rho)
-    t1 = time.perf_counter(); Vs, us = G.Vstar(X0); t_q = (time.perf_counter() - t1) / len(X0) * 1e3; q = lambda x, p: float(np.percentile(x, p)) if len(x) else float('nan')
+    G = make_graph(g, atlas, a.interp); X0 = starts(g, a.nstarts, 1); Tr, src = t_ref(X0); mx = path_extent(X0, G.rho); q = lambda x, p: float(np.percentile(x, p)) if len(x) else float('nan'); allres = {}
+    for mname in a.modes.split(','):
+        mode, _, pen = mname.partition('+'); G.mode = mode; G.pen = float(pen) if pen else 0.; G.solve(verbose=False); allres[mname] = one_mode(a, g, G, atlas, X0, Tr, mx, src, tg, t_grow, q)
+    if a.out: json.dump(allres, open(a.out, 'w'), ensure_ascii=False, indent=1)
+    return allres
+
+
+def one_mode(a, g, G, atlas, X0, Tr, mx, src, tg, t_grow, q):
+    layers = [float(x) for x in a.layers.split(',')]
+    t1 = time.perf_counter(); Vs, us = G.Vstar(X0); t_q = (time.perf_counter() - t1) / len(X0) * 1e3
     inside = {'xl': mx <= float(g.XLV[0]), 'xl+gm': mx <= float(g.XLV[0]) + g.GM}; vm = np.isfinite(Vs); vr = Vs[vm] / Tr[vm]
-    pols = {}; pol_names = list(POLICIES) if a.policies else ['base']
+    pols = {}; pol_names = list(POLICIES)
     for pn in pol_names:
         t1 = time.perf_counter(); T, sw = G.run_agent(X0, 3 * Tr + 2, **POLICIES[pn]); ms = (time.perf_counter() - t1) / len(X0) * 1e3; ok = np.isfinite(T); r = T[ok] / Tr[ok]
-        pols[pn] = dict(success=float(ok.mean()), success_path_in_xl=float(ok[inside['xl']].mean()), success_path_in_xlgm=float(ok[inside['xl+gm']].mean()), success_given_V=float(ok[vm].mean()) if vm.any() else None,
+        ri = ok & inside['xl+gm']; r2 = T[ri] / Tr[ri]; pols[pn] = dict(success=float(ok.mean()), in35=dict(success=float(ok[inside['xl+gm']].mean()), n=int(inside['xl+gm'].sum()), T_over_ref_median=q(r2, 50), p90=q(r2, 90), switches_mean=float(sw[inside['xl+gm']].mean())), success_path_in_xl=float(ok[inside['xl']].mean()), success_path_in_xlgm=float(ok[inside['xl+gm']].mean()), success_given_V=float(ok[vm].mean()) if vm.any() else None,
                         T_over_ref=dict(mean=float(r.mean()) if ok.any() else None, median=q(r, 50), p90=q(r, 90), max=float(r.max()) if ok.any() else None), switches_mean=float(sw.mean()), switches_median=float(np.median(sw)), ms_per_run=ms, _T=T, _sw=sw)
     T, sw = pols['base']['_T'], pols['base']['_sw']; ok = np.isfinite(T)
-    res = dict(layers=layers, seed=a.seed, interp=a.interp, M=int(g.M), etol=float(os.environ.get('ETOL', .01)), ref=src, n=len(X0), V_over_ref=dict(median=q(vr, 50), p90=q(vr, 90), max=float(vr.max()) if len(vr) else None, covered=float(vm.mean())),
+    res = dict(mode=G.mode, pen=G.pen, layers=layers, seed=a.seed, interp=a.interp, M=int(g.M), etol=float(os.environ.get('ETOL', .01)), ref=src, n=len(X0), V_over_ref=dict(median=q(vr, 50), p90=q(vr, 90), max=float(vr.max()) if len(vr) else None, covered=float(vm.mean())),
                path_leaves=dict(xl=float((~inside['xl']).mean()), xlgm=float((~inside['xl+gm']).mean()), no_V_and_leaves_xlgm=float((~vm & ~inside['xl+gm']).sum() / max((~vm).sum(), 1))), cells_nodes={str(u): G.layer_counts[u] for u in G.us},
                t_grow={str(u): tg[u] for u in tg}, t_grow_wall=t_grow, t_prep=G.t_prep, t_solve=G.t_solve, passes=G.passes, ms_per_Vstar=t_q, spore_check=spore_check(G, atlas))
     res['policies'] = {k: {kk: vv for kk, vv in v.items() if not kk.startswith('_')} for k, v in pols.items()}
     sc = {u: G.gcell[u][0] for u in (1., -1.) if u in G.us}; worst = np.argsort(-np.where(ok, T / Tr, np.inf))[:5]
     res['worst'] = [dict(x=X0[i].tolist(), Tref=float(Tr[i]), Vstar=float(Vs[i]) if np.isfinite(Vs[i]) else None, path_max_abs_x=float(mx[i]), trace=trace(G, X0[i], 3 * Tr[i] + 2, sc)) for i in worst]
-    print(json.dumps(res, indent=1, ensure_ascii=False))
-    if a.out: json.dump(res, open(a.out, 'w'), ensure_ascii=False, indent=1)
+    print(G.mode, G.pen, 'V/ref p90 %.3f' % res['V_over_ref']['p90'], 'spore under', {u: v['under'] for u, v in res['spore_check'].items()}, {k: (round(v['success'], 3), round(v['in35']['success'], 3), round(v['in35']['T_over_ref_median'], 2), round(v['in35']['p90'], 2), round(v['switches_mean'])) for k, v in res['policies'].items()}, flush=True)
     return res
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('cmd', choices=('run',)); ap.add_argument('--seed', type=int, default=0); ap.add_argument('--layers', default='1,-1'); ap.add_argument('--interp', default='N')
-    ap.add_argument('--nstarts', type=int, default=200); ap.add_argument('--out', default=''); ap.add_argument('--serial', action='store_true'); ap.add_argument('--policies', action='store_true'); a = ap.parse_args(); scenario(a)
+    ap.add_argument('--nstarts', type=int, default=200); ap.add_argument('--out', default=''); ap.add_argument('--serial', action='store_true'); ap.add_argument('--policies', action='store_true'); ap.add_argument('--modes', default='lin'); a = ap.parse_args(); scenario(a)
