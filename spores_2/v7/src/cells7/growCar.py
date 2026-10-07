@@ -11,6 +11,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'car') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS in ('manip', 'car') else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
     N = 3; PERIOD = np.array([0, 0, PI2]); RHO = float(E('RHO', .05)); RHOV = np.full(3, RHO); XL = float(E('XL', 2.5)); XLV = np.array([XL, XL, 0.])
@@ -347,6 +348,32 @@ def _dedup(pi, hid, sc):
     st = np.r_[0, np.flatnonzero(np.diff(pi)) + 1]; rk = np.arange(len(pi)) - np.repeat(st, np.diff(np.r_[st, len(pi)]))
     k = rk < K; return pi[k], hid[k], sc[k]
 def _pq_work(a): return tuple(_dedup(*_PQ.query(a[1])[:3])) + (a[0],)
+def _test_gpu(s, Y, pi, vv, tolc=1e-10):
+    """п.39 доп. (research-22, r22/07_di4_stencil_gpu/sgpu.py): HexIdx._test 1:1 на torch float64 (env STGPU=1; di4 один u 59→4 с)."""
+    import torch
+    dev = 'cuda'; CH = int(E('GCH', 1 << 21)); T = lambda a: torch.as_tensor(a, device=dev)
+    s._prep()
+    if getattr(s, '_gn', -1) != s.n: s._g = [T(a[:s.n] if len(a) >= s.n else a) for a in (s.X, s.LO, s.HI, s.A0, s.JI)]; s._gn = s.n; s._gsh = T(np.asarray(SH, float))
+    if getattr(s, '_gy', None) is not Y: s._gy = Y; s._gY = T(Y)
+    X_, LO, HI, A0, JI = s._g; MG = float(E('MG', .4)); out = []
+    for a in range(0, len(pi), CH):
+        p = T(pi[a:a + CH]); v = T(vv[a:a + CH]); hid = v // KSH; y = s._gY[p] - s._gsh[v % KSH]; ok = ((y >= LO[hid]) & (y <= HI[hid])).all(1); p, hid, y = p[ok], hid[ok], y[ok]
+        sc = .5 + torch.einsum('kij,kj->ki', JI[hid], y - A0[hid]); ok = ((sc >= -MG) & (sc <= 1 + MG)).all(1); p, hid, y, sc = p[ok], hid[ok], y[ok], sc[ok]
+        if not len(p): continue
+        X = X_[hid]; alive = torch.arange(len(p), device=dev)
+        for it in range(8):
+            Xa, ya, sa = X[alive], y[alive], sc[alive]; F = _contract(Xa, sa) - ya; J = torch.stack([_contract(Xa, sa, j) for j in range(N)], 2)
+            d = torch.linalg.solve_ex(J, F[..., None])[0][..., 0]; d = torch.nan_to_num(d, nan=1e9, posinf=1e9, neginf=-1e9)
+            sn = sa - d; sc[alive] = sn; keep = ((sn >= -.2) & (sn <= 1.2)).all(1) if it >= 1 else torch.ones(len(alive), dtype=torch.bool, device=dev)
+            sc[alive[~keep]] = 9.; alive = alive[keep & (d.abs().max(1).values >= tolc)]
+            if not len(alive): break
+        F = _contract(X, sc.clip(-1, 2)) - y; tol = 1e-7; k = (torch.linalg.norm(F, dim=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
+        out.append((p[k].cpu().numpy(), hid[k].cpu().numpy(), sc[k].clip(0, 1).cpu().numpy()))
+    if not out: return np.zeros(0, int), np.zeros(0, int), np.zeros((0, N))
+    return tuple(np.concatenate(o) for o in zip(*out))
+if int(E('STGPU', 0)):
+    try: import torch; HexIdx._test = _test_gpu; print('STGPU: стенсилы на GPU', flush=True)
+    except ImportError: print('STGPU: нет torch — CPU', flush=True)
 def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
@@ -400,11 +427,48 @@ class Atlas:
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
         else:
             I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
-            for u in US:
-                Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True); I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
-            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+            SBC = int(E('SBCAUS', 0)); SBL = int(E('SBLAY', 0))                                                      # п.37 (research-21; r18/solve_bucket.py SBCAUS/SBLAY): свой u — точное ребро по столбцу клетки, переключение на u2 — стенсил только по клеткам слоя u2
+            SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
+            if SBC or SMEAN: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
+            for ui, u in enumerate(US):
+                Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True)
+                if SBC:
+                    nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
+                    keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
+                I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
+                if SMEAN: K_.append(a.astype(np.int64) * 20 + ui * 4 + cl_[np.searchsorted(O_, b[:, 0], 'right') - 1])
+            if SBC:
+                mm = M ** m_; ea = []
+                for c in s.cells: ea.append(c.o + np.arange((c.G.shape[0] - 1) * mm))
+                ea = np.concatenate(ea); ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
+                I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
+            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
+        if int(E('SOLVEGPU', 0)):                                                                   # п.39 (research-22, r22/05_di4_gpu_jacobi/gpu.py): тот же Якоби на GPU (torch float64, чанки, scatter_reduce amin); torch нет — старый путь
+            try: import torch
+            except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
+            if torch is not None:
+                dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device=dev); gW = torch.as_tensor(W, device=dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
+                Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
+                if SMEAN: uq, GI_ = np.unique(K, return_inverse=True); gGI = torch.as_tensor(GI_.astype(np.int64), device=dev); gGN = torch.as_tensor(uq // 20, device=dev); NG = len(uq); del K, uq, GI_; print('SMEAN: групп', NG, 'из', len(I), 'рёбер', flush=True)
+                ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
+                while n < it:
+                    new = Vt.clone()
+                    if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
+                    if SMEAN: sg = torch.zeros(NG, dtype=torch.float64, device=dev); cg = torch.zeros(NG, dtype=torch.float64, device=dev)
+                    for a in range(0, len(gI), ch):
+                        vi = Vt[gX[a:a + ch].long()]; w_ = gW[a:a + ch].double()
+                        if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
+                        else:
+                            ok = vi < BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
+                            v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
+                        if SMEAN: f_ = v < BIG / 2; sg.index_add_(0, gGI[a:a + ch][f_], DTN + v[f_]); cg.index_add_(0, gGI[a:a + ch][f_], torch.ones(int(f_.sum()), dtype=torch.float64, device=dev))
+                        else: new.scatter_reduce_(0, gI[a:a + ch], DTN + v, 'amin')
+                    if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
+                    new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
+                    if d < 1e-9: break
+                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
@@ -430,7 +494,7 @@ class Atlas:
         for n in range(it):
             bar.update(1); val = np.empty(len(I))
             for a in range(0, len(I), 1 << 22): b = a + (1 << 22); val[a:b] = DTN + s.interp(W[a:b], V[IDX[a:b]])           # чанками: V[IDX] = пары × 16 float64 (десятки ГБ)
-            new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
+            new = V.copy(); new[nd] = np.minimum(Vg[nd] if NOLATCH else V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.   # п.40 NOLATCH: V ← TV без защёлки min(V, ·) (research-22 solve_latch.md)
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
@@ -465,7 +529,7 @@ def starts_ref():
         return np.array(S), np.load(os.path.join(REF, 'r21/car_ref20.npy'))
     if SYS == 'dd': rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]; return Q, np.load(os.path.join(REF, 'dd_ref_60.npy'))
     if SYS == 'di4':                                                                                        # research-17: T* = max(T₁*, T₂*) в коробку ±.05 (r17/di4_ref.py)
-        d_ = np.load(os.path.join(REF, 'r17/di4_ref_60.npy')); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]
+        d_ = np.load(os.path.join(REF, E('DI4REF', 'r17/di4_ref_60.npy'))); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]   # п.41: для RHO .35 — DI4REF=r22/di4_ref_60_rho35.npy (эталон в коробку ±RHO; по умолч. ±.05 занижает T/эталон ~17%)
     if SYS == 'manip':
         rng = np.random.default_rng(0)
         for _ in range(32): rng.uniform(-1, 1, 4)
