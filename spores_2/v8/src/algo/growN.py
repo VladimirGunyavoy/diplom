@@ -103,6 +103,19 @@ def nf2_rows(P0, p, u, sg, nmax, hs=None):
         Zo = np.empty((n, N)); to = np.empty(n); Zo[order] = Z[idx]; to[order] = tau[idx]; out.append(Zo); taus.append(to)
         if not inbox_g(Z[ia]): break
     return out, taus
+def nf1_chain(Z, ia, u, h):
+    """один слой NORMFRONT=1: узлы Z (L, N) уже пройдены потоком на шаг h; узел ia неподвижен (центр или уже готовый сосед), остальные сдвигаются по своим траекториям до нормальности отрезка к соседу ближе к ia.
+    Возвращает (X, dsum) — новые позиции и суммарные сдвиги времени. Внутренние узлы не зависят от внешних, поэтому слой можно достраивать блоками."""
+    L = len(Z); X = Z; dsum = np.zeros(L)
+    for _it in range(5):
+        fx = f(X, u); nh = fx[1:] + fx[:-1]; nh = nh / (np.linalg.norm(nh, axis=1, keepdims=True) + 1e-300)
+        r = np.einsum('ij,ij->i', X[1:] - X[:-1], nh); fa = np.einsum('ij,ij->i', fx[1:], nh); fb = np.einsum('ij,ij->i', fx[:-1], nh); dl = np.zeros(L)
+        for j in range(ia + 1, L): dl[j] = (-r[j - 1] + fb[j - 1] * dl[j - 1]) / fa[j - 1] if abs(fa[j - 1]) > 1e-9 else 0.
+        for j in range(ia - 1, -1, -1): dl[j] = (r[j] + fa[j] * dl[j + 1]) / fb[j] if abs(fb[j]) > 1e-9 else 0.
+        dl = np.nan_to_num(dl); dsum = dsum + dl; X = _rkv(X, u, dl, min(4, max(1, int(np.ceil(np.abs(dl).max() / (DTN / 2))))))
+        if np.abs(dl).max() < 1e-11: break
+    if np.abs(dl).max() > 1e-6 or (np.abs(dsum) > 5 * h).any(): STOP['nfbad'] += 1                       # настоящий сбой Ньютона (не сошёлся / сдвиг > 5·DTN); перехлёст фронтов ловит growN по Δτ (fold/tfold), не обрезка
+    return X, dsum
 def nf1_rows(P0, p, u, sg, nmax, hs=None):
     """NORMFRONT=1 (послойный, 2D): в каждой строке центральный клон (траектория зерна p) стоит, соседи сдвигаются по СВОИМ траекториям (точный rk4) от центра наружу, клон за клоном:
     (x_j(δ_j) − x_i)·n̂ = 0, n̂ = (f_i + f_j)/|f_i + f_j|, i — предыдущий клон к центру. Ньютон по цепочке (до 5 итераций); внутренние клоны не зависят от внешних. Формат результата как у nf2_rows."""
@@ -112,14 +125,7 @@ def nf1_rows(P0, p, u, sg, nmax, hs=None):
     L = len(Z); idx = [j for j in range(L) if not (ins and j == ia)]; tau = np.zeros(L); out = []; taus = []
     for _n in range(nmax):
         h = DTN if hs is None else float(hs[min(_n, len(hs) - 1)]); Z = adv(Z, u, sg * h); tau = tau + sg * h; X = Z; dsum = np.zeros(L)
-        for _it in range(5):
-            fx = f(X, u); nh = fx[1:] + fx[:-1]; nh = nh / (np.linalg.norm(nh, axis=1, keepdims=True) + 1e-300)
-            r = np.einsum('ij,ij->i', X[1:] - X[:-1], nh); fa = np.einsum('ij,ij->i', fx[1:], nh); fb = np.einsum('ij,ij->i', fx[:-1], nh); dl = np.zeros(L)
-            for j in range(ia + 1, L): dl[j] = (-r[j - 1] + fb[j - 1] * dl[j - 1]) / fa[j - 1] if abs(fa[j - 1]) > 1e-9 else 0.
-            for j in range(ia - 1, -1, -1): dl[j] = (r[j] + fa[j] * dl[j + 1]) / fb[j] if abs(fb[j]) > 1e-9 else 0.
-            dl = np.nan_to_num(dl); dsum = dsum + dl; X = _rkv(X, u, dl, min(4, max(1, int(np.ceil(np.abs(dl).max() / (DTN / 2))))))
-            if np.abs(dl).max() < 1e-11: break
-        if np.abs(dl).max() > 1e-6 or (np.abs(dsum) > 5 * h).any(): STOP['nfbad'] += 1                       # настоящий сбой Ньютона (не сошёлся / сдвиг > 5·DTN); перехлёст фронтов ловит growN по Δτ (fold/tfold), не обрезка
+        X, dsum = nf1_chain(Z, ia, u, h)
         Z = X; tau = tau + dsum; Zo = np.empty((n, N)); to = np.empty(n); Zo[order] = Z[idx]; to[order] = tau[idx]; out.append(Zo); taus.append(to)
         if not inbox_g(Z[ia]): break
     return out, taus
@@ -128,7 +134,7 @@ def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if 
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
-NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
+LAZYR = int(E('LAZYR', 1)); NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
 ADAPT = int(E('ADAPT', 1 if (SYS == 'di' and NORMFRONT != 2) else 0)); ETOL = float(E('ETOL', .01)); HMIN = float(E('HMIN', DTN)); HMAX = float(E('HMAX', 1.)); DSMAX = float(E('DSMAX', RMAX))      # адаптивный шаг строки: h = sqrt(8·ETOL·RMAX/|a|) (a = J·f — ускорение вдоль траектории), ≤ DSMAX/|f|, в [HMIN, HMAX]
 TAUMIN = float(E('TAUMIN', .3)); ZOVMAX = float(E('ZOVMAX', .3)); ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
 GM = float(E('GM', 1. if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
@@ -308,21 +314,51 @@ def growN(p, u, idx, rm, tm):
     def rowstep(yc):
         if not ADAPT: return DTN
         fa = f(yc, u); a_ = np.linalg.norm(jac(yc, u) @ fa); h = np.sqrt(8 * ETOL * RMAX / max(a_, 1e-9)); h = min(h, DSMAX / max(np.linalg.norm(fa), 1e-9)); return float(np.clip(h, HMIN, HMAX))
+    LAZY = m_ == 1 and NORMFRONT != 2 and LAZYR                                                              # ленивая решётка: клоны и строки достраиваются по мере роста клетки (1D решётка)
     for sg in (1, -1):
         y = base; yc = p.copy(); W = np.zeros((N, N))
         for i in range(1, nmax + 1):
-            h = rowstep(yc); y = adv(y, u, sg * h); yc = adv(yc, u, sg * h); W = wstep(W, jac(yc, u), Bq(yc), h, sg); TT[sg * i] = TT[sg * (i - 1)] + sg * h; HS[sg * i] = h; rows[sg * i] = y; Wt[sg * i] = W * abs(TT[sg * i])
+            h = rowstep(yc); yc = adv(yc, u, sg * h); W = wstep(W, jac(yc, u), Bq(yc), h, sg); TT[sg * i] = TT[sg * (i - 1)] + sg * h; HS[sg * i] = h; Wt[sg * i] = W * abs(TT[sg * i])
+            if not LAZY: y = adv(y, u, sg * h); rows[sg * i] = y
+            else: rows[sg * i] = None
             if not inbox_g(yc): break
-    rows0 = dict(rows)                                                                                       # строки одного времени (до NORMFRONT-сдвигов): по ним мерим изгиб — сдвиги δ гнут строку и при линейном потоке
-    imin, imax = min(rows), max(rows); R0 = np.stack([rows[i] for i in range(imin, imax + 1)]); R = R0.copy(); Tau = np.full(R.shape[:-1], np.nan); Tau[-imin] = 0.; nfw = [k0, k0, 0]       # nfw — окно решётки и число строк, где R уже со сдвигами NORMFRONT
-    def nf_fill(a, b, nr):
-        """NORMFRONT только для узлов a..b решётки (окно клетки + запас) и nr строк (растёт по мере надобности), а не для всей ±2rm × nmax; за окном R = строки одного времени"""
-        a = max(0, a); b = min(len(S) - 1, b); nr = min(nr, nmax); nfw[:] = [a, b, nr]
-        for sg in (1, -1):
-            Pr, Tr = NFR(base[a:b + 1], p, u, float(sg), nr, np.array([HS[sg * i] for i in range(1, nr + 1) if sg * i in HS]))
-            for i, (Pn, Tn) in enumerate(zip(Pr, Tr), 1):
-                if imin <= sg * i <= imax: R[sg * i - imin, a:b + 1] = Pn; Tau[sg * i - imin, a:b + 1] = Tn
-    if NORMFRONT: nf_fill(k0 - NFPAD, k0 + NFPAD, NFROWS)
+    imin, imax = min(rows), max(rows)
+    if not LAZY:
+        R0 = np.stack([rows[i] for i in range(imin, imax + 1)]); R = R0.copy(); Tau = np.full(R.shape[:-1], np.nan); Tau[-imin] = 0.; nfw = [k0, k0, 0]       # R0 — строки одного времени (до NORMFRONT-сдвигов): по ним мерим изгиб — сдвиги δ гнут строку и при линейном потоке
+        def nf_fill(a, b, nr):
+            """NORMFRONT только для узлов a..b решётки (окно клетки + запас) и nr строк, а не для всей ±2rm × nmax; за окном R = строки одного времени"""
+            a = max(0, a); b = min(len(S) - 1, b); nr = min(nr, nmax); nfw[:] = [a, b, nr]
+            for sg in (1, -1):
+                Pr, Tr = NFR(base[a:b + 1], p, u, float(sg), nr, np.array([HS[sg * i] for i in range(1, nr + 1) if sg * i in HS]))
+                for i, (Pn, Tn) in enumerate(zip(Pr, Tr), 1):
+                    if imin <= sg * i <= imax: R[sg * i - imin, a:b + 1] = Pn; Tau[sg * i - imin, a:b + 1] = Tn
+        if NORMFRONT: nf_fill(k0 - NFPAD, k0 + NFPAD, NFROWS)
+        def ext_rows(i):
+            if NORMFRONT and abs(i) > nfw[2]: nf_fill(nfw[0], nfw[1], max(2 * nfw[2], abs(i)))
+        def ext_nodes(nk):
+            if NORMFRONT and not nfw[0] <= nk <= nfw[1]: nf_fill(min(nfw[0], nk - NFPAD), max(nfw[1], nk + NFPAD), nfw[2])
+    else:
+        nL = len(S); R0 = np.full((imax - imin + 1, nL, N), np.nan); R0[-imin] = base; R = R0.copy() if NORMFRONT else R0; Tau = np.full(R.shape[:-1], np.nan); Tau[-imin] = 0.
+        win = [max(0, k0 - NFPAD), min(nL - 1, k0 + NFPAD)]; rr = [0, 0]                                      # win — узлы решётки, у которых строки уже посчитаны; rr — сколько строк вперёд/назад посчитано
+        def lay(r, a, b, pred):
+            """строка r для узлов a..b: поток из соседней строки к зерну; NORMFRONT — сдвиги от готового соседа pred (центр k0 или соседний узел блока)"""
+            sg = 1 if r > 0 else -1; h = HS[r]; q = r - sg
+            R0[r - imin, a:b + 1] = adv(R0[q - imin, a:b + 1], u, sg * h)
+            if not NORMFRONT: return
+            Z = adv(R[q - imin, a:b + 1], u, sg * h)
+            if pred is None: X, ds = nf1_chain(Z, k0 - a, u, h)
+            elif pred < a: X, ds = nf1_chain(np.concatenate([R[r - imin, pred:pred + 1], Z]), 0, u, h); X, ds = X[1:], ds[1:]
+            else: X, ds = nf1_chain(np.concatenate([Z, R[r - imin, pred:pred + 1]]), len(Z), u, h); X, ds = X[:-1], ds[:-1]
+            R[r - imin, a:b + 1] = X; Tau[r - imin, a:b + 1] = Tau[q - imin, a:b + 1] + sg * h + ds
+        def ext_rows(i):
+            while i > rr[0]: rr[0] += 1; lay(rr[0], win[0], win[1], None)
+            while -i > rr[1]: rr[1] += 1; lay(-rr[1], win[0], win[1], None)
+        def ext_nodes(nk):
+            if win[0] <= nk <= win[1]: return
+            if nk > win[1]: a, b, pred = win[1] + 1, min(nL - 1, nk + NFPAD), win[1]; win[1] = b
+            else: a, b, pred = max(0, nk - NFPAD), win[0] - 1, win[0]; win[0] = a
+            for r in range(1, rr[0] + 1): lay(r, a, b, pred)
+            for r in range(1, rr[1] + 1): lay(-r, a, b, pred)
     pause('section', 2, u=u, seed=p, e=e, section=base, rows=(imin, imax), nmax=nmax)
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
@@ -393,7 +429,7 @@ def growN(p, u, idx, rm, tm):
                 if ZACEP:
                     if stat(d) == 2: zh.add(d); halt(d, 'ovh', faceof(d, nk)); continue                               # зацеп состоялся (face — следующая грань наружу, для диагностики)
                     if waits(d): continue
-                if NORMFRONT and not nfw[0] <= nk <= nfw[1]: nf_fill(min(nfw[0], nk - NFPAD), max(nfw[1], nk + NFPAD), nfw[2])
+                ext_nodes(nk)
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
                 fb = not inbox_g(face).all(); sl_ = (not fb) and slowf(face, u).any(); fo = (not fb and not sl_) and m_ == 1 and fold_col(nk); bb = (not fb and not sl_ and not fo) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not sl_ and not bb and not fo) and GOALB and nearb(face).any()
                 if sl_: halt(d, 'slow', face); continue
@@ -411,7 +447,7 @@ def growN(p, u, idx, rm, tm):
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax or (ZACEP and ihi - ilo >= 2 * nmax1): halt(d, 'rows'); continue
                 if ZACEP and waits(d): continue
-                if NORMFRONT and abs(i) > nfw[2]: nf_fill(nfw[0], nfw[1], max(2 * nfw[2], abs(i)))
+                ext_rows(i)
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
                 fb = not inbox_g(face).all(); sl_ = (not fb) and slowf(face, u).any(); fo = (not fb and not sl_) and m_ == 1 and fold_row(i); bb = (not fb and not sl_ and not fo) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not sl_ and not bb and not fo) and GOALB and nearb(face).any()
                 if sl_: halt(d, 'tslow', face); continue
