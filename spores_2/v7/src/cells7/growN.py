@@ -10,7 +10,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
-NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
+NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2)); NFFB = float(E('NFFB', 0))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -77,8 +77,10 @@ def nf_rows(P0, p, u, sg, nmax):
         while len(X) <= ke + Wn: X.append(rk4(X[-1], u, h, 1)); C.append(rk4(C[-1], u, h, 1))
         c = C[ke]; fh = f(c, u); fh = fh / (np.linalg.norm(fh) + 1e-300); k0 = max(0, ke - Wn); Xw = np.stack(X[k0:ke + Wn + 1]); g = sg * ((Xw - c) @ fh)
         cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
-        if not has.all(): break
-        kk = np.where(cr, np.abs(np.arange(k0, k0 + len(cr))[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(g.shape[1]); ga, gb = g[kk, j], g[kk + 1, j]; w = -ga / np.where(gb - ga == 0, 1., gb - ga)
+        if NFFB: ok = has.mean() >= NFFB                                                                       # b8: клон без пересечения не обрывает строку — берёт равновременную точку (w=0 на ke)
+        else: ok = has.all()
+        if not ok: break
+        kk = np.where(cr, np.abs(np.arange(k0, k0 + len(cr))[:, None] + .5 - ke), np.inf).argmin(0); kk = np.where(has, kk, ke - k0); j = np.arange(g.shape[1]); ga, gb = g[kk, j], g[kk + 1, j]; w = -ga / np.where(gb - ga == 0, 1., gb - ga); w = np.where(has, w, 0.)
         out.append((Xw[kk, j] * (1 - w)[:, None] + Xw[kk + 1, j] * w[:, None]).reshape(sh))
         if not inbox_g(c): break
     return out
