@@ -46,7 +46,7 @@ def build_strips(snap, ax=(0, 1)):
     def cell(G, suf, c=None):
         hb, hf = (int((c or {}).get('hb') or 0), int((c or {}).get('hf') or 0))      # гало-строки за торцами (growN: hb сзади, hf спереди): ядро — без них, гало — по всем
         P = proj(G, ax)
-        if P.shape[1] > 1: out['segs_rows_' + suf].append(P.reshape(-1, 3))
+        if P.shape[1] > 1: out['segs_rows_' + suf].extend(list(P))                        # по полосе на строку (L→C→R): диагонали между строками не рисуются
         if P.shape[0] > 1: out['segs_center_' + suf].append(P[:, P.shape[1] // 2])        # траектория зерна: центральные узлы строк
         Gc = G[hb:len(G) - hf] if (hb or hf) and len(G) - hb - hf >= 1 else G
         out['segs_core_' + suf].append(ring(cell_outline(Gc, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))

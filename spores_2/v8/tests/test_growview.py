@@ -67,6 +67,6 @@ def test_strips_zigzag_and_rings():
     st = build_strips(L.snapshot)
     c = (L.snapshot.get('cells') or [L.snapshot['cell']])[0]; rows, M = c['G'].shape[:2]
     done = st['segs_rows_done']
-    if done: assert done[0].shape == (rows * M, 3)                                  # зигзаг: все узлы строк подряд (L₋₁→C₋₁→R₋₁→L₀→…)
+    if done: assert len(done) >= rows and all(d.shape == (M, 3) for d in done[:rows])      # по полосе на строку (L→C→R), без диагоналей между строками
     for k in ('segs_core_done', 'segs_halo_done'):
         for r in st[k]: assert np.allclose(r[0], r[-1]) and len(r) == 2 * c['G'].shape[0] + 1 or len(r) > 2  # замкнутый контур
