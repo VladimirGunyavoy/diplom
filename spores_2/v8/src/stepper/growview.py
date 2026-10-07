@@ -49,8 +49,10 @@ def build_geometry(snap, ax=(0, 1), halo=HALO):
         g['points_cur'] = proj(cur['G'], ax).reshape(-1, 3); g['segs_rows_cur'] = cell_rows(cur['G'], ax)
         g['segs_core_cur'] = cell_outline(cur['G'], ax); g['segs_halo_cur'] = cell_outline(cur['G'], ax, halo)
     else: g['points_cur'], g['segs_rows_cur'], g['segs_core_cur'], g['segs_halo_cur'] = z3, z23, z23, z23
+    sec = snap.get('section')                                          # пауза section: узлы базового сечения (K, n)
+    if sec is not None: g['points_cur'] = np.concatenate([g['points_cur'], proj(sec, ax)], 0); sp = proj(sec, ax); g['segs_rows_cur'] = np.concatenate([g['segs_rows_cur'], np.stack([sp[:-1], sp[1:]], 1)], 0)
     seed = snap.get('seed'); g['points_seed'] = proj(np.asarray(seed, float)[None], ax).reshape(-1, 3) if seed is not None else z3
-    q = snap.get('queue'); g['points_queue'] = proj(np.asarray(q, float).reshape(-1, np.asarray(q).shape[-1]), ax) if q is not None and len(q) else z3
+    q = snap.get('queue'); q = None if q is None else np.asarray(q, float); g['points_queue'] = proj(q.reshape(-1, q.shape[-1]), ax) if q is not None and q.size else z3
     return g
 
 
