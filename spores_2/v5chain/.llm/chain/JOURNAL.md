@@ -281,3 +281,7 @@ hub-v5chain-worker-b7 | п.48 ДИ NF2: без стен разроста нет,
 hub-v5chain-worker-b7 | п.48: крошечные клетки NF2 не у края (13%); NFDEAD/NFEDGE/NFLAG не влияют; RMIN .03 → 96 кл., tiny 0; дальше — качество T (compute.py) | 18:05:42
 hub-v5chain-worker-b7 | п.47: MAXC 500 build завис на передаче слоёв (RSS слоя 3–7 ГБ), остановлена; поправка оценки памяти 6D в results.md | 18:46:49
 hub-v5chain-research-24 | started | acc2 | opus | без пульса (слово польз.), ждёт задачу польз./laptop-v5chain-worker-1; PLAN: линия [laptop] в «Линии и владельцы» (просьба meta-2) | 18:48:11
+hub-v5chain-worker-b7 | п.48: ДИ NF2 RMIN .01 — T/эт мед 1.003–1.011 (база 1.04–1.05), 100/100; RMIN .03 вреден; разрост 247 со стенами открыт | 19:41:55
+hub-v5chain-worker-b7 | п.48: разрост 247 не воспроизведён (compute.py CUT по умолчанию, зерно 1: 1104 кл., без разроста); тред закрыт | 20:08:37
+hub-v5chain-worker-b7 | п.48 nD NF: nf_rows реализован; dd NF1 — нет узлов в цели (reach 0), NF0 воспроизведён; разбор у цели — следующий шаг (results.md) | 20:47:58
+hub-v5chain-worker-b7 | п.48 nD NF: геометрия у цели ок, reach 0 на dd — хрупкость старта; следующий шаг di4/manip NF0 vs NF1 | 20:53:53
