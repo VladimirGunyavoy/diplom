@@ -50,6 +50,43 @@ def one(a):
         e3, _ = ev(rng_s.uniform(hb, top, 60), np.zeros(60))                                   # tim: s = 0 (узел)
         return dict(eu_max=float(e1.max()), eu_mean=float(e1.mean()), gr_max=float(g1.max()), gr_mean=float(g1.mean()), lat_max=float(e2.max()), lat_gr=float(g2.max()), tim_max=float(e3.max()), width=width, nb=int(nb), nf=int(nf))
 
+    def rows_for(L, lo, hi):
+        """строки R для окна узлов lo..hi: при NORMFRONT, если окно клетки вышло за nfw, — копия R с досчитанными сдвигами (как nf_fill, без побочных эффектов на рост)"""
+        R = L['R']; nfw = L.get('nfw')                                # у d3aa9c9 R целиком со сдвигами, окна nfw нет
+        if nfw is None or not g.NORMFRONT or (nfw[0] <= lo and hi <= nfw[1]): return R
+        a_ = max(0, min(nfw[0], lo - g.NFPAD)); b_ = min(len(L['S']) - 1, max(nfw[1], hi + g.NFPAD)); R = R.copy(); imin, imax = L['imin'], L['imax']
+        for sg in (1, -1):
+            for i, Pn in enumerate(g.nf2_rows(L['base'][a_:b_ + 1], L['p'], u, float(sg), L['nmax'])[0], 1):
+                if imin <= sg * i <= imax: R[sg * i - imin, a_:b_ + 1] = Pn
+        return R
+
+    def bend2(L, klo, khi, ilo, ihi, Wt):
+        """bend2: отклонение точек мелкой решётки строк (реальных, при NF=1 сдвинутых) от кусочно-линейного интерполянта по 3 узлам строки (края и середина ящика); (метрика Грамиана, доля ширины ядра)"""
+        n = khi[0] - klo[0] + 1
+        if n < 3: return 0., 0.
+        R = rows_for(L, klo[0], khi[0]); Pb = R[ilo - L['imin']:ihi - L['imin'] + 1, klo[0]:khi[0] + 1]; mid = (n - 1) / 2; i0 = int(np.floor(mid)); fr = mid - i0
+        Pm = (1 - fr) * Pb[:, i0] + fr * Pb[:, min(i0 + 1, n - 1)]; x = np.arange(n, dtype=float)[None, :, None]
+        lin = np.where(x <= mid, Pb[:, :1] + (Pm - Pb[:, 0])[:, None] * x / mid, Pm[:, None] + (Pb[:, -1] - Pm)[:, None] * (x - mid) / (n - 1 - mid)); d = Pb - lin
+        S = L['S']; width = (S[khi[0]] - S[klo[0]]) / (1 + HALO)
+        with np.errstate(all='ignore'): gr = float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, wi_of(Wt, ilo, ihi), d))))
+        return gr, float(np.linalg.norm(d, axis=-1).max() / width)
+
+    def time_err(cd, K=60):
+        """ошибка по времени вдоль центральной траектории (s=0), % ширины ядра: линейная по строкам клетки (как сейчас), линейная при вдвое мельче шаге, квадратичная по 3 соседним строкам"""
+        G, tau = cd['G'][:, g.M // 2], cd['tau'][:, g.M // 2]; hb, nb, nf = cd['hb'], cd['nb'], cd['nf']; c = np.asarray(cd['c'], float); width = 2 * float(cd['r'][0]); nt = len(G)
+        t_ = np.sort(rng_s.uniform(tau[hb], tau[hb + nb + nf], K)) if nb + nf > 0 else np.full(K, tau[hb]); i0 = np.clip(np.searchsorted(tau, t_) - 1, 0, nt - 2)
+        ex = lambda T: exact(np.tile(c, (len(T), 1)), np.asarray(T, float)); X = ex(t_); out = {}
+        a = (t_ - tau[i0]) / (tau[i0 + 1] - tau[i0]); out['lin'] = (1 - a)[:, None] * G[i0] + a[:, None] * G[i0 + 1]
+        tm = (tau[i0] + tau[i0 + 1]) / 2; xm = ex(tm); left = t_ <= tm; ta = np.where(left, tau[i0], tm); tb_ = np.where(left, tm, tau[i0 + 1]); xa = np.where(left[:, None], G[i0], xm); xb = np.where(left[:, None], xm, G[i0 + 1]); b = ((t_ - ta) / (tb_ - ta))[:, None]; out['lin_half'] = (1 - b) * xa + b * xb
+        j0 = np.clip(np.where(t_ - tau[i0] < tau[i0 + 1] - t_, i0 - 1, i0), 0, max(nt - 3, 0)); q = np.zeros_like(X)
+        for o in range(3):
+            w = np.ones(K)
+            for o2 in range(3):
+                if o2 != o: w = w * (t_ - tau[np.minimum(j0 + o2, nt - 1)]) / (tau[np.minimum(j0 + o, nt - 1)] - tau[np.minimum(j0 + o2, nt - 1)])
+            q = q + w[:, None] * G[np.minimum(j0 + o, nt - 1)]
+        out['quad'] = q
+        return {k: float(np.linalg.norm(v - X, axis=1).max() / width) for k, v in out.items()}
+
     state = dict(sp=None, rej=0, cells=[]); t0 = time.time()
     def hook(name, lvl=2, must=False, **st):
         sp = state['sp']
@@ -59,7 +96,7 @@ def one(a):
             f = sys._getframe(1)
             while f.f_code.co_name != 'growN': f = f.f_back
             L = f.f_locals; d = st['dir']; bend = L['bend']; klo, khi, ilo, ihi = list(L['klo']), list(L['khi']), L['ilo'], L['ihi']; S = L['S']
-            rec = dict(dir=list(d), reason=st['reason'], b_cur=bend(klo, khi, ilo, ihi), b_tr=None, tr=None); sp['bcur'] = rec['b_cur']
+            rec = dict(dir=list(d), reason=st['reason'], b_cur=bend(klo, khi, ilo, ihi), b_tr=None, tr=None, b2=bend2(L, klo, khi, ilo, ihi, sp['Wt']), nr=ihi - ilo); sp['bcur'] = rec['b_cur']; sp['b2cur'] = rec['b2']
             if d[0] == 'a':
                 k = d[1]; nk = khi[k] + 1 if d[2] > 0 else klo[k] - 1; ok = 0 <= nk < len(S); tb = (list(klo), list(khi), ilo, ihi)
                 if ok: tb[0][k] = min(klo[k], nk); tb[1][k] = max(khi[k], nk)
@@ -67,13 +104,13 @@ def one(a):
                 i = ihi + 1 if d[0] == 'F' else ilo - 1; ok = L['imin'] <= i <= L['imax']; tb = (klo, khi, min(ilo, i), max(ihi, i))
             if ok:
                 try:
-                    rec['b_tr'] = bend(*tb); p, e = L['p'], L['e']
+                    rec['b_tr'] = bend(*tb); rec['b2_tr'] = bend2(L, *tb, sp['Wt']); rec['nr_tr'] = tb[3] - tb[2]; p, e = L['p'], L['e']
                     c_ = Cell(p + sum(e[k] * (S[tb[0][k]] + S[tb[1][k]]) / 2 for k in range(1)), u, np.array([(S[b] - S[a_]) / 2 for a_, b in zip(tb[0], tb[1])]) / (1 + HALO), e)
                     c_.p = p; c_.nf, c_.nb = tb[3], -tb[2]; c_.build(); cd = g.cell_dict(c_); rec['tr'] = cell_err(cd, wi_of(sp['Wt'], -cd['nb'], cd['nf']))
                 except Exception as ex: rec['err'] = repr(ex)
             sp['stops'].append(rec)
         elif name == 'cell' and sp is not None:
-            cd = st['cell'](); sp['final'] = cell_err(cd, wi_of(sp['Wt'], -cd['nb'], cd['nf'])); sp['final_bend'] = sp['bcur']; sp.pop('Wt'); sp.pop('bcur')
+            cd = st['cell'](); sp['final'] = cell_err(cd, wi_of(sp['Wt'], -cd['nb'], cd['nf'])); sp['final_bend'] = sp['bcur']; sp['final_b2'] = sp['b2cur']; sp['time'] = time_err(cd); sp.pop('Wt'); sp.pop('bcur'); sp.pop('b2cur')
             state['cells'].append(sp); state['sp'] = None
         elif name == 'reject': state['rej'] += 1; state['sp'] = None
     g.pause = hook
@@ -87,7 +124,7 @@ def one(a):
 # ---------- запуск всех ----------
 def run(a):
     from tqdm import tqdm
-    jobs = [(s, nf, d) for s in SYSS for nf in NFS for d in DELTAS]; env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1', PYTHONIOENCODING='utf-8'); procs = []; bar = tqdm(total=len(jobs), desc='bend_check')
+    jobs = [(s, nf, d) for s in a.systems.split(',') for nf in NFS for d in map(float, a.deltas.split(','))]; env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1', PYTHONIOENCODING='utf-8'); procs = []; bar = tqdm(total=len(jobs), desc='bend_check')
     os.makedirs(OUT, exist_ok=True)
     while jobs or procs:
         while jobs and len(procs) < a.par:
@@ -179,13 +216,80 @@ def report(a):
             if i >= 1: q.plot([1e-4, 10], [1e-4, 10], 'k-', lw=.5)
         if j == 0: ax[0, 0].legend(fontsize=8)
     plt.tight_layout(); plt.savefig(os.path.join(HERE, 'bend_scatter.png'), dpi=90)
-    sec = '\n'.join(md) + '\n\nГрафик: `bend_scatter.png` (верх — полная ошибка % ширины, середина — полная в метрике Грамиана, низ — боковая в метрике Грамиана; серые пунктиры — значения DELTA, красные — 1% и 5%).\n'
+    md2 = report_bend2(R, plt); rd = lambda n: open(os.path.join(HERE, n), encoding='utf-8').read() if os.path.exists(os.path.join(HERE, n)) else ''
+    sec = '\n'.join(md) + '\n\nГрафик: `bend_scatter.png` (верх — полная ошибка % ширины, середина — полная в метрике Грамиана, низ — боковая в метрике Грамиана; серые пунктиры — значения DELTA, красные — 1% и 5%).\n' + rd('bend_conclusions.md') + '\n'.join(md2) + '\n\nГрафик: `bend2_scatter.png`.\n' + rd('bend2_conclusions.md')
     fn = os.path.join(HERE, 'results.md'); t = open(fn, encoding='utf-8', newline='').read(); i = t.find('## bend:'); t = (t[:i] if i >= 0 else t.rstrip() + '\n\n') + sec; open(fn, 'w', encoding='utf-8', newline='\n').write(t)
     print('\n'.join(md))
+
+
+def report_bend2(R, plt):
+    from scipy.stats import spearmanr
+    md = ['\n## bend2: изгиб как отклонение от собственного интерполянта клетки (worker-3)\n',
+          'bend2 = отклонение точек мелкой решётки реальных строк клетки (при NF=1 — сдвинутых, R) в ящике [klo..khi] × строки [ilo..ihi] от кусочно-линейного интерполянта по 3 узлам строки (края и середина ящика, как M=3 в Cell); берётся max по точкам. '
+          'Две меры: **b2g** — в метрике Грамиана (формула и W как у bend), **b2w** — евклид / ширина ядра. «Боковая ошибка» — как в разделе bend (точки на целых строках клетки, точное против модельного). '
+          'Точки = итоговые клетки + пробные расширения на каждом стопе (bend2 считается на ящике до расширения и на пробном). pend u=.3, DELTA .03/.1/.3 (рост остановлен старым bend; сравниваем меры на тех же клетках). nr = число строк ядра ihi−ilo.\n']
+    pct = lambda x, q: float(np.percentile(x, q)) if len(x) else float('nan')
+    pts = {}
+    for nf in NFS:
+        for d in (.03, .1, .3):
+            P = []
+            for c in R.get(('pend', nf, d), dict(cells=[]))['cells']:
+                if 'final_b2' not in c: continue
+                P.append((c['final_b2'][0], c['final_b2'][1], c['final']['lat_gr'], c['final']['lat_max'] * 100, c['final']['nb'] + c['final']['nf'], c['final_bend']))
+                for x in c['stops']:
+                    if x.get('tr') is not None and x.get('b2_tr') is not None: P.append((x['b2_tr'][0], x['b2_tr'][1], x['tr']['lat_gr'], x['tr']['lat_max'] * 100, x['nr_tr'], x['b_tr']))
+            pts[(nf, d)] = np.array(P, float).reshape(-1, 6)
+        pts[(nf, 'all')] = np.concatenate([pts[(nf, d)] for d in (.03, .1, .3)])
+    md.append('### (а) Корреляция и отношение к боковой ошибке\n')
+    md.append('Колонки: Spearman(мера, боковая ошибка), медиана / p90 отношения «боковая ошибка / мера» (в тех же единицах; точки с мерой > порога шума). bend — старый (хорда по углам, равновременные строки).\n')
+    md.append('| NF | DELTA | точек | ρ(bend, Грам) | отнош. Грам/bend мед / p90 | ρ(b2g, Грам) | отнош. Грам/b2g мед / p90 | ρ(b2w, % ширины) | отнош. %/b2w% мед / p90 |'); md.append('|---|---|---|---|---|---|---|---|---|')
+    def ratio(num, den, eps): k = den > eps; r = num[k] / den[k]; return (np.median(r), pct(r, 90)) if len(r) else (np.nan, np.nan)
+    for nf in NFS:
+        for d in (.03, .1, .3, 'all'):
+            P = pts[(nf, d)]
+            if len(P) < 5: continue
+            b2g, b2w, lg, lp, nr, ob = P.T; a1 = ratio(lg, ob, 1e-3); a2 = ratio(lg, b2g, 1e-3); a3 = ratio(lp, 100 * b2w, 1e-2)
+            md.append('| %d | %s | %d | %.2f | %.2f / %.2f | %.2f | %.2f / %.2f | %.2f | %.2f / %.2f |' % (nf, d, len(P), spearmanr(ob, lg)[0], *a1, spearmanr(b2g, lg)[0], *a2, spearmanr(b2w, lp)[0], *a3))
+    md.append('\n### (б) Порог: какой bend2 даёт боковую ошибку ≤ 1% / ≤ 5% ширины, если рост останавливать по bend2 ≤ порог\n')
+    md.append('Пул DELTA .03/.1/.3. «строго» — наибольшее значение меры, при котором боковая ошибка ВСЕХ точек с мерой ≤ порога не выше предела (в хвосте шум). '
+              '«p50 / p90» — порог = предел / квантиль отношения «боковая ошибка % ширины / мера» (50% / 90% остановленных клеток имеют ошибку ≤ предела, в предположении пропорциональности). b2w и bend (по формуле, % не пересчитан) — для b2w в % ширины; для Грам-мер единицы Грамиана.\n')
+    md.append('| NF | мера | строго ≤1% | p50 / p90 для 1% | строго ≤5% | p50 / p90 для 5% |'); md.append('|---|---|---|---|---|---|')
+    def thr(key, lat, lim):
+        o = np.argsort(key); k_, l_ = key[o], lat[o]; bad = np.flatnonzero(l_ > lim)
+        return k_[-1] if not len(bad) else (k_[bad[0] - 1] if bad[0] > 0 else 0.)
+    for nf in NFS:
+        P = pts[(nf, 'all')]
+        for nm, key in (('b2w, % ширины', P[:, 1] * 100), ('b2g (Грам)', P[:, 0]), ('bend старый (Грам)', P[:, 5])):
+            k = key > 1e-9; rr = P[k, 3] / key[k]; q50, q90 = np.percentile(rr, [50, 90])
+            md.append('| %d | %s | %.4g | %.3g / %.3g | %.4g | %.3g / %.3g |' % (nf, nm, thr(key, P[:, 3], 1), 1 / q50, 1 / q90, thr(key, P[:, 3], 5), 5 / q50, 5 / q90))
+    md.append('\n### Первая строка: отношение «боковая ошибка / мера» по числу строк ядра nr, b2g против b2w\n')
+    md.append('Квантили p10 / p50 / p90 отношения (чем уже разброс около постоянной, тем устойчивее критерий). Точки с мерой > 0.\n')
+    md.append('| NF | nr | точек | b2g (Грам): p10 / p50 / p90 | b2w (% ширины): p10 / p50 / p90 |'); md.append('|---|---|---|---|---|')
+    for nf in NFS:
+        P = pts[(nf, 'all')]
+        for lo, hi in ((1, 1), (2, 3), (4, 8), (9, 999)):
+            k = (P[:, 4] >= lo) & (P[:, 4] <= hi) & (P[:, 1] > 1e-8) & (P[:, 0] > 0) & np.isfinite(P[:, 0])
+            if k.sum() < 5: continue
+            md.append('| %d | %s | %d | %.3g / %.3g / %.3g | %.3g / %.3g / %.3g |' % (nf, str(lo) if lo == hi else '%d–%s' % (lo, hi if hi < 999 else '…'), k.sum(), *np.percentile(P[k, 2] / P[k, 0], [10, 50, 90]), *np.percentile(P[k, 3] / (100 * P[k, 1]), [10, 50, 90])))
+    md.append('\n### (в) Ошибка по времени: линейно по строкам (сейчас) / при шаге вдвое мельче (DTN .05) / квадратично по 3 соседним строкам\n')
+    md.append('Итоговые клетки, вдоль центральной траектории (s=0), 60 точек по времени ядра, % ширины ядра: медиана / p95 / максимум по клеткам (макс по точкам внутри клетки).\n')
+    md.append('| SYS | NF | клеток | линейно (DTN .1) | линейно DTN .05 | квадратично, 3 строки |'); md.append('|---|---|---|---|---|---|')
+    for s, nfs_, ds in (('pend', NFS, (.03, .1, .3)), ('di', NFS, (.1,))):
+        for nf in nfs_:
+            T = [c['time'] for d in ds for c in R.get((s, nf, d), dict(cells=[]))['cells'] if 'time' in c]
+            if not T: continue
+            f = lambda k: (lambda v: '%.3f / %.3f / %.3f' % (np.median(v), pct(v, 95), v.max()))(np.array([x[k] * 100 for x in T if np.isfinite(x[k])]))
+            md.append('| %s | %d | %d | %s | %s | %s |' % (s, nf, len(T), f('lin'), f('lin_half'), f('quad')))
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4.5))
+    for j, nf in enumerate(NFS):
+        P = pts[(nf, 'all')]; q = ax[j]; q.scatter(100 * P[:, 1], P[:, 3], s=5, alpha=.4, label='bend2 (доля ширины)'); q.scatter(P[:, 5] * 0 + np.nan, P[:, 3]); q.plot([1e-3, 1e2], [1e-3, 1e2], 'k-', lw=.5); q.set_xscale('log'); q.set_yscale('log')
+        q.set_xlabel('bend2, % ширины'); q.set_ylabel('боковая ошибка, % ширины'); q.set_title('pend NORMFRONT=%d' % nf); q.grid(alpha=.3)
+    plt.tight_layout(); plt.savefig(os.path.join(HERE, 'bend2_scatter.png'), dpi=90); plt.close(fig)
+    return md
 
 
 if __name__ == '__main__':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     ap = argparse.ArgumentParser(); ap.add_argument('cmd', choices=('one', 'run', 'report')); ap.add_argument('--sys', default='pend'); ap.add_argument('--nf', type=int, default=0); ap.add_argument('--delta', type=float, default=.03)
-    ap.add_argument('--cells', type=int, default=200); ap.add_argument('--seed', type=int, default=0); ap.add_argument('--algo', default=os.path.join(HERE, '../../../../v8/src/algo')); ap.add_argument('--out', default=''); ap.add_argument('--par', type=int, default=6)
+    ap.add_argument('--cells', type=int, default=200); ap.add_argument('--seed', type=int, default=0); ap.add_argument('--algo', default=os.path.join(HERE, '../../../../v8/src/algo')); ap.add_argument('--out', default=''); ap.add_argument('--par', type=int, default=6); ap.add_argument('--systems', default='pend,di'); ap.add_argument('--deltas', default='.01,.03,.1,.3')
     a = ap.parse_args(); {'one': one, 'run': run, 'report': report}[a.cmd](a)
