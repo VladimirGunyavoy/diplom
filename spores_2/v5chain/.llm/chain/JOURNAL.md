@@ -285,3 +285,14 @@ hub-v5chain-worker-b7 | п.48: ДИ NF2 RMIN .01 — T/эт мед 1.003–1.011
 hub-v5chain-worker-b7 | п.48: разрост 247 не воспроизведён (compute.py CUT по умолчанию, зерно 1: 1104 кл., без разроста); тред закрыт | 20:08:37
 hub-v5chain-worker-b7 | п.48 nD NF: nf_rows реализован; dd NF1 — нет узлов в цели (reach 0), NF0 воспроизведён; разбор у цели — следующий шаг (results.md) | 20:47:58
 hub-v5chain-worker-b7 | п.48 nD NF: геометрия у цели ок, reach 0 на dd — хрупкость старта; следующий шаг di4/manip NF0 vs NF1 | 20:53:53
+hub-v5chain-worker-b7 | п.48 di4: NF1 хуже базы (reach 75% vs 95%, мед 1.19 vs 1.036) — строки короче (has.all()); NF по умолч. выкл | 21:07:27
+hub-v5chain-worker-b7 | done | ctx 26% (софт 30%) | п.49 v8 stepper/growN-di, п.47 проба 6D, п.48 ДИ NF2 лучше, nD NF хуже базы | next=hub-v5chain-worker-b8 | 21:07:56
+hub-v5chain-worker-b8 | started | acc2 | sonnet | 21:08:44
+hub-v5chain-worker-b8 | п.48 di4: NFFB .5 NFW4 NFSUB8 → reach 93%, мед 1.072 (база 95%/1.036) — лучше прежнего NF1, базы не бьёт | 21:30:14
+hub-v5chain-worker-b8 | п.48 nD закрыт: manip NF1 reach .60 против .90 NF0; NF выкл. | 22:30:16
+hub-v5chain-worker-b8 | done | слово пользователя: ветка B закрыта | п.48 nD закрыт, NF выкл. | next=нет | 23:06:06
+hub-v5chain-worker-26 | done | human (режим Б, цепочка тормозится) | dp1 4×3000 SONE 0/20, контроль 4×1500 SONE идёт на aida; HOSTE в growN | next=нет | 23:07:05
+hub-v5chain-meta-1 | done | слово пользователя: цепочка заканчивается (режим Б) | хендофф .llm/roles/meta/HANDOFF.md передан meta-2 06.10; claude-system — см. git status | next=нет | 23:07:16
+hub-v5chain-research-24 | done | human | слово польз. «заканчиваем цепь» (лимиты 7д); режим Б разослан всем ролям; нормальные сечения, линия [laptop], результаты+библиотека на GitHub | next=нет | 23:07:36
+hub-v5chain-meta-2 | done | слово пользователя: цепь закрыта | линии любой роли, launch_bg, результаты сразу; открыто — аккаунты по сроку сброса 7д | next=— | 23:07:42
+hub-v5chain-dispatcher-5 | done | слово пользователя: цепь остановлена (режим Б) | next=нет | 23:08:48

@@ -10,7 +10,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
-NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
+NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2)); NFFB = float(E('NFFB', 0))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -77,8 +77,10 @@ def nf_rows(P0, p, u, sg, nmax):
         while len(X) <= ke + Wn: X.append(rk4(X[-1], u, h, 1)); C.append(rk4(C[-1], u, h, 1))
         c = C[ke]; fh = f(c, u); fh = fh / (np.linalg.norm(fh) + 1e-300); k0 = max(0, ke - Wn); Xw = np.stack(X[k0:ke + Wn + 1]); g = sg * ((Xw - c) @ fh)
         cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
-        if not has.all(): break
-        kk = np.where(cr, np.abs(np.arange(k0, k0 + len(cr))[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(g.shape[1]); ga, gb = g[kk, j], g[kk + 1, j]; w = -ga / np.where(gb - ga == 0, 1., gb - ga)
+        if NFFB: ok = has.mean() >= NFFB                                                                       # b8: клон без пересечения не обрывает строку — берёт равновременную точку (w=0 на ke)
+        else: ok = has.all()
+        if not ok: break
+        kk = np.where(cr, np.abs(np.arange(k0, k0 + len(cr))[:, None] + .5 - ke), np.inf).argmin(0); kk = np.where(has, kk, ke - k0); j = np.arange(g.shape[1]); ga, gb = g[kk, j], g[kk + 1, j]; w = -ga / np.where(gb - ga == 0, 1., gb - ga); w = np.where(has, w, 0.)
         out.append((Xw[kk, j] * (1 - w)[:, None] + Xw[kk + 1, j] * w[:, None]).reshape(sh))
         if not inbox_g(c): break
     return out
@@ -439,12 +441,13 @@ class Atlas:
             I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
+        HOSTE = int(E('HOSTE', 0))   # w26: IDX/W остаются в ОЗУ, на GPU — чанками по проходу (граф 4D dp1 ≥ 16 ГБ не влезает целиком)
         if int(E('SOLVEGPU', 0)):                                                                   # п.39 (research-22, r22/05_di4_gpu_jacobi/gpu.py): тот же Якоби на GPU (torch float64, чанки, scatter_reduce amin); torch нет — старый путь
             try: import torch
             except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
             if torch is not None:
                 if int(E('GPULOCK', 0)): import fcntl; _lk = open('/tmp/gpu.lock', 'a'); print('GPULOCK: жду замок', flush=True); fcntl.flock(_lk, fcntl.LOCK_EX); print('GPULOCK: взял', flush=True)   # w25: замок GPU только на GPU-участок (стенсилы на CPU считаются до него)
-                dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device=dev); gW = torch.as_tensor(W, device=dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
+                dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device='cpu' if HOSTE else dev); gW = torch.as_tensor(W, device='cpu' if HOSTE else dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
                 Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
                 if SMEAN: uq, GI_ = np.unique(K, return_inverse=True); gGI = torch.as_tensor(GI_.astype(np.int64), device=dev); gGN = torch.as_tensor(uq // 20, device=dev); NG = len(uq); del K, uq, GI_; print('SMEAN: групп', NG, 'из', len(I), 'рёбер', flush=True)
                 ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
@@ -453,7 +456,7 @@ class Atlas:
                     if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
                     if SMEAN: sg = torch.zeros(NG, dtype=torch.float64, device=dev); cg = torch.zeros(NG, dtype=torch.float64, device=dev)
                     for a in range(0, len(gI), ch):
-                        vi = Vt[gX[a:a + ch].long()]; w_ = gW[a:a + ch].double()
+                        vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double()
                         if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
                         else:
                             ok = vi < BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
