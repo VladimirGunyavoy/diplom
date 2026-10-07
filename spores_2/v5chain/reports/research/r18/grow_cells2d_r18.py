@@ -247,7 +247,7 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); SEEDGRID = int(os.environ.get('SEEDGRID', 0)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
 def grow2(p, u, idx, rm, tm):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
@@ -398,6 +398,37 @@ def build_all(rng, log=None):
         elif not fromq: fails += 1
         if log and got: log(US[0], sum(L.values(), []))
     bar.close(); return [L[u] for u in US], [IX[u] for u in US]
+_GIX = None
+def _grow_one(a):                                                                             # рабочий пула: рост и сборка одной клетки против покрытия прошлых раундов (_GIX — снимок при fork)
+    p, u, k = a; c = grow2(p, u, _GIX[US.index(u)], RMAX, TMAX)
+    if c is None: return None
+    c.build(); c.seq = k; return c
+def build_grid(log=None):
+    """research-20 (слово пользователя: посев повсеместный, рост параллельный, одна затравка — все слои): решётка затравок, симметричная относительно центра поля,
+    уровни шага SG0, SG0/2, … ≥ SGMIN; на уровне — раунды: все непокрытые затравки × слои растут одновременно (Pool NPROC) против покрытия прошлых раундов,
+    приём по убыванию площади, если доля узлов кандидата, покрытых принятыми в этом раунде, ≤ OVR; непринятые — в следующий раунд."""
+    global _GIX
+    import multiprocessing as mp
+    SG0 = float(os.environ.get('SG0', 1.)); SGMIN = float(os.environ.get('SGMIN', .1)); OVR = float(os.environ.get('OVR', .3)); NP = int(os.environ.get('NPROC', 8))
+    L = [[] for _ in US]; IX = [Index() for _ in US]; h = SG0; rnd = 0; k0 = 0; RS = []
+    while h >= SGMIN - 1e-12:
+        nt = max(2, int(round(2 * XL / h))); nw = max(2, int(round(2 * WL / h)))
+        P = np.stack(np.meshgrid(-XL + (np.arange(nt) + .5) * 2 * XL / nt, -WL + (np.arange(nw) + .5) * 2 * WL / nw, indexing='ij'), -1).reshape(-1, 2); ids = k0 + np.arange(len(P)); k0 += len(P)
+        while True:
+            jobs = [(P[i], u, int(ids[i])) for li, u in enumerate(US) for i in np.flatnonzero(~IX[li].covered(P)) if np.linalg.norm(f(P[i], u)) >= FMIN]
+            if not jobs: break
+            _GIX = IX; t_ = time.time()
+            with mp.get_context('fork').Pool(NP) as pool: out = list(tqdm(pool.imap(_grow_one, jobs, chunksize=1), total=len(jobs), desc='шаг %.3g раунд %d: рост %d кандидатов' % (h, rnd, len(jobs)), mininterval=MI, leave=False))
+            C = [c for c in out if c is not None]; C.sort(key=lambda c: -(c.nf + c.nb) * 2 * c.r); RI = [Index() for _ in US]; acc = 0
+            for c in C:
+                li = US.index(c.u); g = c.G.reshape(-1, 2)
+                if RI[li].nc and RI[li].covered(g).mean() > OVR: continue
+                RI[li].add(c); IX[li].add(c); L[li].append(c); acc += 1
+            RS.append(dict(h=round(h, 3), round=rnd, jobs=len(jobs), grown=len(C), acc=acc, sec=round(time.time() - t_, 1))); print('посев', RS[-1], flush=True); rnd += 1
+            if log: log(US[0], sum(L, []))
+            if acc == 0: break
+        h /= 2
+    build_grid.rounds = RS; return L, IX
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)

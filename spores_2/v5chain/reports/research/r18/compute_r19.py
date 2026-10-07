@@ -63,7 +63,8 @@ NF_FINAL = G.NORMFRONT
 for ps in range(REFINE + 1):
     if int(os.environ.get('NF0', 1)) == 0: G.NORMFRONT = NF_FINAL if ps == REFINE else 0   # research-16 NF0=0: проход 0 (поиск стен CUT) — без NORMFRONT; NF только в итоговом проходе
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
-    if getattr(G, 'SEED1', 0): A.layers, A.idx = G.build_all(rng); done += sum(A.layers, []); cells_dump(done)   # research-20: одна затравка → все слои
+    if getattr(G, 'SEEDGRID', 0): A.layers, A.idx = G.build_grid(); done += sum(A.layers, []); cells_dump(done)   # research-20: решётка затравок, параллельный рост раундами
+    elif getattr(G, 'SEED1', 0): A.layers, A.idx = G.build_all(rng); done += sum(A.layers, []); cells_dump(done)   # research-20: одна затравка → все слои
     else:
         for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
     if ps == REFINE: break
@@ -125,7 +126,7 @@ Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; _t1 = _tm.time
 _qt = []                                                                                      # research-19: время ОДНОГО запроса (старт → траектория до цели) — по одному старту, распределение
 from tqdm import tqdm as _tq
 for _i in _tq(range(min(len(Q), int(os.environ.get('QTIME', 20)))), desc='замер времени запроса (по одному старту)', mininterval=5): _t1 = _tm.time(); A.rollout(Q[_i:_i + 1]); _qt.append(_tm.time() - _t1)
-_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
+_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(seed_rounds=getattr(G.build_grid, 'rounds', None) if getattr(G, 'SEEDGRID', 0) else None, gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
 fz = np.isfinite(T); r = T[fz] / ref[fz]
 if G.SYS == 'pend':                                                                           # пути для картинки: 7 стартов + их зеркала (−φ, −ω) — видно закрутку в обе стороны
