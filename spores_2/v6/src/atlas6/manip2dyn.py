@@ -8,7 +8,7 @@ LAYERS4 = [(-1.0, -1.0), (-1.0, 1.0), (1.0, -1.0), (1.0, 1.0)]
 
 def accel(x, tau):
     c, s = np.cos(x[..., 1]), np.sin(x[..., 1]); w1, w2 = x[..., 2], x[..., 3]; h = -B * s
-    r1 = tau[0] + h * (2 * w1 * w2 + w2 ** 2); r2 = tau[1] - h * w1 ** 2
+    r1 = tau[0] - h * (2 * w1 * w2 + w2 ** 2); r2 = tau[1] + h * w1 ** 2   # b4 (п.35): знак Кориолиса по Лагранжу (был обратный: энергия ×350 при τ=0)
     m11, m12, m22 = A + 2 * B * c, D + B * c, D * np.ones_like(c); det = m11 * m22 - m12 ** 2
     return np.stack([(m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
@@ -21,7 +21,7 @@ def _flow4_scalar(x, s, t, dt_max):
     """Одна точка на чистом Python (math): в SLSQP поток зовётся точкой, numpy-накладные там ×13–22 (research hub-research-3, flow4_scalar.py)."""
     ta, tb = LAYERS4[s]; q1, q2, w1, w2 = (float(v) for v in x); n = max(1, int(math.ceil(abs(t) / dt_max))); h = t / n
     def f(q2, w1, w2):
-        c = math.cos(q2); hh = -B * math.sin(q2); r1 = ta + hh * (2 * w1 * w2 + w2 * w2); r2 = tb - hh * w1 * w1
+        c = math.cos(q2); hh = -B * math.sin(q2); r1 = ta - hh * (2 * w1 * w2 + w2 * w2); r2 = tb + hh * w1 * w1
         m11 = A + 2 * B * c; m12 = D + B * c; det = m11 * D - m12 * m12
         return (D * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det
     for _ in range(n):
