@@ -497,11 +497,13 @@ def starts_ref():
     return Q, np.load(fb if os.path.exists(fb) else os.path.join(HERE, 'pend_ref_T.npy'))
 if __name__ == '__main__':
     t0 = time.time()
-    if E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
+    if E('LOADL'): import pickle; d_ = pickle.load(open(E('LOADL'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); tb = 0.; print('слои загружены', [len(l) for l in A.layers], 'узлов', A.N, flush=True); A.solve(); Q, ref = starts_ref(); pickle.dump(dict(layers=A.layers, V=A.V), open(E('DUMP'), 'wb')) if E('DUMP') else None   # w25: слои с диска (DUMPL) → solve (под flock) → rollout
+    elif E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
     else:
         A = Atlas(); tb = time.time() - t0
         print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True)
-        if E('DUMPL'): import pickle; pickle.dump(dict(layers=A.layers), open(E('DUMPL'), 'wb')); print('слои сохранены', E('DUMPL'), flush=True)   # w22: после потери 2-часового построения — слои на диск до solve
+        if E('DUMPL'): import pickle; pickle.dump(dict(layers=A.layers), open(E('DUMPL'), 'wb')); print('слои сохранены', E('DUMPL'), flush=True)
+        if int(E('BUILDONLY', 0)): sys.exit(0)   # w22: после потери 2-часового построения — слои на диск до solve
         A.solve(); Q, ref = starts_ref()
         if E('DUMP'): import pickle; pickle.dump(dict(layers=A.layers, V=A.V), open(E('DUMP'), 'wb'))
     T, sw, _ = A.rollout(Q); fz = np.isfinite(T) & np.isfinite(ref); r = T[fz] / ref[fz]
