@@ -12,9 +12,10 @@ except ImportError:
     def pause(*a, **k): pass
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
+GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSEED', 1 if SYS == 'di' else 0))   # цель: 'box' | 'ball' (эллипсоид по RHOV); GSEED: первая спора — центр цели
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -76,7 +77,7 @@ def rk4(y, u, h, n):
         k1 = f(y, u); k2 = f(y + h / 2 * k1, u); k3 = f(y + h / 2 * k2, u); k4 = f(y + h * k3, u); y = y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return y
 def step(y, u, sg=1.): return rk4(y, u, sg * DTN / 2, 2)
-def ingoal(y): return (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
+def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
@@ -98,6 +99,7 @@ def basis(p, u):
     return np.array(out)
 def goal_dist(P):
     """расстояние до поверхности коробки цели (>0 снаружи и внутри — модуль), по Евклиду."""
+    if GOALSHAPE == 'ball': return np.abs(np.linalg.norm(wrapy(P) / RHOV, axis=-1) - 1) * RHOV.min()      # приближённо (евклид для круга)
     d = np.abs(wrapy(P)) - RHOV; out = np.linalg.norm(np.maximum(d, 0), axis=-1); ins = -d.max(-1); return np.where(d.max(-1) > 0, out, ins)
 def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEPS
 LAT = (slice(None),) * m_
@@ -282,18 +284,23 @@ LIMITS = glimits if GLIM > 0 else None
 def rand_seed(rng): return np.array([rng.uniform(-PERIOD[k] / 2, PERIOD[k] / 2) if PER[k] else rng.uniform(-XLV[k], XLV[k]) for k in range(N)])
 def goal_seeds(rng):
     """GS точек на поверхности коробки цели (чуть снаружи): очередь FIFO растит клетки от цели назад по потоку (BFS), а не случайно по всему полю (4D: цель ≈ 3e-4 объёма)."""
+    if GOALSHAPE == 'ball':
+        z = rng.standard_normal((GS, N)); return list(1.05 * RHOV * z / np.linalg.norm(z, axis=-1, keepdims=True))
     ar = np.array([np.prod(np.delete(RHOV, k)) for k in range(N)]); ar = ar / ar.sum(); out = []
     for _ in range(GS):
         k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(y)
     return out
 def build_layer(u, rng, log=None, seeds=None, only_queue=False):
-    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
+    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []
+    g0 = None
+    if seeds is None and GSEED: g0 = np.zeros(N); queue.insert(0, g0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
+    bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p): continue
-        p = wrapy(p)
-        if ingoal(p): continue
+        gfirst = p is g0; p = wrapy(p)
+        if ingoal(p) and not gfirst: continue
         if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); c = growN(p, u, idx, rm, tm)
