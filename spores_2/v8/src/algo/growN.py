@@ -100,6 +100,27 @@ def nf2_rows(P0, p, u, sg, nmax):
         Zo = np.empty((n, N)); to = np.empty(n); Zo[order] = Z[idx]; to[order] = tau[idx]; out.append(Zo); taus.append(to)
         if not inbox_g(Z[ia]): break
     return out, taus
+def nf1_rows(P0, p, u, sg, nmax):
+    """NORMFRONT=1 (послойный, 2D): в каждой строке центральный клон (траектория зерна p) стоит, соседи сдвигаются по СВОИМ траекториям (точный rk4) от центра наружу, клон за клоном:
+    (x_j(δ_j) − x_i)·n̂ = 0, n̂ = (f_i + f_j)/|f_i + f_j|, i — предыдущий клон к центру. Ньютон по цепочке (3 итерации); внутренние клоны не зависят от внешних. Формат результата как у nf2_rows."""
+    P0 = np.asarray(P0, float); n = len(P0); e0 = P0[-1] - P0[0]; e0 = e0 / np.linalg.norm(e0); t = (P0 - p) @ e0; order = np.argsort(t); Z = P0[order]; ts = t[order]
+    ia = int(np.argmin(np.abs(ts))); ins = abs(ts[ia]) > 1e-12
+    if ins: ia = int(np.searchsorted(ts, 0.)); Z = np.insert(Z, ia, p, 0)
+    L = len(Z); idx = [j for j in range(L) if not (ins and j == ia)]; tau = np.zeros(L); out = []; taus = []
+    for _ in range(nmax):
+        Z = step(Z, u, float(sg)); tau = tau + sg * DTN; X = Z; dsum = np.zeros(L)
+        for _it in range(3):
+            fx = f(X, u); nh = fx[1:] + fx[:-1]; nh = nh / (np.linalg.norm(nh, axis=1, keepdims=True) + 1e-300)
+            r = np.einsum('ij,ij->i', X[1:] - X[:-1], nh); fa = np.einsum('ij,ij->i', fx[1:], nh); fb = np.einsum('ij,ij->i', fx[:-1], nh); dl = np.zeros(L)
+            for j in range(ia + 1, L): dl[j] = (-r[j - 1] + fb[j - 1] * dl[j - 1]) / fa[j - 1] if abs(fa[j - 1]) > 1e-9 else 0.
+            for j in range(ia - 1, -1, -1): dl[j] = (r[j] + fa[j] * dl[j + 1]) / fb[j] if abs(fb[j]) > 1e-9 else 0.
+            dl = np.nan_to_num(dl); dsum = dsum + dl; X = _rkv(X, u, dl, max(1, int(np.ceil(np.abs(dl).max() / (DTN / 2)))))
+            if np.abs(dl).max() < 1e-11: break
+        if (np.abs(dsum) > DTN).any(): STOP['nfbad'] += 1; dsum = np.clip(dsum, -DTN, DTN); X = _rkv(Z, u, dsum, max(1, int(np.ceil(np.abs(dsum).max() / (DTN / 2)))))         # фронт вырожден: сдвиг обрезаем
+        Z = X; tau = tau + dsum; Zo = np.empty((n, N)); to = np.empty(n); Zo[order] = Z[idx]; to[order] = tau[idx]; out.append(Zo); taus.append(to)
+        if not inbox_g(Z[ia]): break
+    return out, taus
+NFR = nf2_rows if NORMFRONT == 2 else nf1_rows                                                      # NORMFRONT=2 — МНК по всей решётке (старый), 1 — послойный
 def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
@@ -138,7 +159,7 @@ class Cell:
         nfc, nbc = s.nf, s.nb
         fw = [seg]; bw = []; y = seg; tf = [np.zeros(seg.shape[:-1])]; tb = []
         if NORMFRONT and getattr(s, 'p', None) is not None:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
-            rf, tfw = nf2_rows(seg, s.p, s.u, 1., nfc) if nfc > 0 else ([], []); rb, tbw = nf2_rows(seg, s.p, s.u, -1., nbc) if nbc > 0 else ([], []); fw += rf; bw = rb; tf += tfw; tb = tbw
+            rf, tfw = NFR(seg, s.p, s.u, 1., nfc) if nfc > 0 else ([], []); rb, tbw = NFR(seg, s.p, s.u, -1., nbc) if nbc > 0 else ([], []); fw += rf; bw = rb; tf += tfw; tb = tbw
             s.nf, s.nb = min(nfc, len(rf)), min(nbc, len(rb))
         else:
             for k in range(nfc): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
@@ -278,7 +299,7 @@ def growN(p, u, idx, rm, tm):
         """NORMFRONT только для узлов a..b решётки (окно клетки + запас) и nr строк (растёт по мере надобности), а не для всей ±2rm × nmax; за окном R = строки одного времени"""
         a = max(0, a); b = min(len(S) - 1, b); nr = min(nr, nmax); nfw[:] = [a, b, nr]
         for sg in (1, -1):
-            for i, Pn in enumerate(nf2_rows(base[a:b + 1], p, u, float(sg), nr)[0], 1):
+            for i, Pn in enumerate(NFR(base[a:b + 1], p, u, float(sg), nr)[0], 1):
                 if imin <= sg * i <= imax: R[sg * i - imin, a:b + 1] = Pn
     if NORMFRONT: nf_fill(k0 - NFPAD, k0 + NFPAD, NFROWS)
     pause('section', 2, u=u, seed=p, e=e, section=base, rows=(imin, imax), nmax=nmax)
