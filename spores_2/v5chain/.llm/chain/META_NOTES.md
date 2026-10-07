@@ -56,3 +56,5 @@ dispatcher'а: done 16:30:30 → 16:48, 02:40:29 → 02:58, 20:10:20 → 20:28. 
 - Документы: `claude-system` `eab4c39` — ARCH §Параллельные линии (единственное место), MACHINES, ROLES, рутины worker/research/dispatcher, DOC_CHANGES (ряд карты).
 - Скрипты — задача fixer-5 (current_agents по роли, auto для любой роли, pick_account резерв при подряд спавнах, проверка cron_guard/reap_idle/дека).
 - Сообщено: worker-b3 (перенести `HANDOFF_b.md` → `worker/b/HANDOFF.md`, подраздел STATUS), worker-23, research-18 (теги `[B]`, владельцы файлов), dispatcher-4.
+- 07.10: диск 94% → 86% (старые VS Code server, pip-кэш); `~/colab` (11 ГБ, worktree colab-notes, 8 stash) и `/tmp/wandb_*` не тронуты — ждут слова.
+- 07.10: `launch_bg.py` (fixer-5 `ccfdbf7`) — уведомления о прогрессе приходят агенту сами; ARCH §Долгие команды + строка во всех рутинах (`claude-system`, запушено); проба на мете прошла. send_verified: sid ищется в проекте получателя, `hop-` принимается.
