@@ -66,6 +66,8 @@ elif SYS == 'm3d':                                                              
         for j in range(3): e = [0., 0., 0.]; e[j] = 1.; Bm[:, j] = f(y, tuple(e)) - a0
         return Bm @ Bm.T
 else: raise SystemExit('SYS?')
+NORMFRONT = int(E('NORMFRONT', 1 if SYS == 'di' else 0))                                                 # r lr1 V2: фронт ⟂ потоку у каждого клона (МНК-сдвиги времени); только m = n−1 = 1 (2D)
+if NORMFRONT and N != 2: print('NORMFRONT реализован только для 2D (N=2) — выключен для SYS=%s' % SYS); NORMFRONT = 0
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
 def wrapy(y):
@@ -77,6 +79,27 @@ def rk4(y, u, h, n):
         k1 = f(y, u); k2 = f(y + h / 2 * k1, u); k3 = f(y + h / 2 * k2, u); k4 = f(y + h * k3, u); y = y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return y
 def step(y, u, sg=1.): return rk4(y, u, sg * DTN / 2, 2)
+def _rkv(y, u, T, nsub):
+    h = (T / nsub)[:, None]
+    for _ in range(nsub): k1 = f(y, u); k2 = f(y + h / 2 * k1, u); k3 = f(y + h / 2 * k2, u); k4 = f(y + h * k3, u); y = y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+    return y
+def nf2_rows(P0, p, u, sg, nmax):
+    """NORMFRONT (lr1 V2, 2D): строки 1..n для узлов P0 (n, N) плоскости через p; шаг DTN, затем сдвиги времени δ_i (МНК по соседним парам, (x_j+δ_j f_j − x_i − δ_i f_i)·n̂_ij = 0, узел-якорь = траектория p, δ = 0),
+    узлы сдвигаются точно (rk4) и идут дальше со своим временем. Возвращает (список строк (n, N), список времён tau (n,) относительно плоскости P0: sg·i·DTN + Σδ)."""
+    P0 = np.asarray(P0, float); n = len(P0); e0 = P0[-1] - P0[0]; e0 = e0 / np.linalg.norm(e0); t = (P0 - p) @ e0; order = np.argsort(t); Z = P0[order]; ts = t[order]
+    ia = int(np.argmin(np.abs(ts))); ins = abs(ts[ia]) > 1e-12
+    if ins: ia = int(np.searchsorted(ts, 0.)); Z = np.insert(Z, ia, p, 0)
+    L = len(Z); keep = np.array([j != ia for j in range(L)]); idx = [j for j in range(L) if not (ins and j == ia)]; tau = np.zeros(L); out = []; taus = []
+    for _ in range(nmax):
+        Z = step(Z, u, float(sg)); tau = tau + sg * DTN; fx = f(Z, u); nh = fx[1:] + fx[:-1]; nh = nh / (np.linalg.norm(nh, axis=1, keepdims=True) + 1e-300)
+        A = np.zeros((L - 1, L)); rr = np.arange(L - 1); A[rr, rr + 1] = np.einsum('ij,ij->i', fx[1:], nh); A[rr, rr] = -np.einsum('ij,ij->i', fx[:-1], nh); a = np.einsum('ij,ij->i', Z[1:] - Z[:-1], nh)
+        d = np.zeros(L); d[keep] = np.linalg.lstsq(A[:, keep], -a, rcond=None)[0]
+        d = np.nan_to_num(d); big = np.abs(d) > DTN
+        if big.any(): STOP['nfbad'] += 1; d = np.clip(d, -DTN, DTN)                                        # фронт вырожден (f_i + f_j ≈ ⟂ фронту): сдвиг обрезаем
+        if np.abs(d).max() > 0: Z = _rkv(Z, u, d, max(1, int(np.ceil(np.abs(d).max() / (DTN / 2))))); tau = tau + d
+        Zo = np.empty((n, N)); to = np.empty(n); Zo[order] = Z[idx]; to[order] = tau[idx]; out.append(Zo); taus.append(to)
+        if not inbox_g(Z[ia]): break
+    return out, taus
 def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
@@ -109,10 +132,13 @@ class Cell:
         """сетка узлов G (nt, M×m, n): заплатка с гало, пронесённая потоком на nb шагов назад и nf вперёд."""
         ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
         for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
-        fw = [seg]; bw = []; y = seg
-        for _ in range(s.nf): fw.append(step(fw[-1], s.u))
-        for _ in range(s.nb): y = step(y, s.u, -1.); bw.append(y)
-        s.G = np.array(bw[::-1] + fw)
+        fw = [seg]; bw = []; y = seg; tf = [np.zeros(seg.shape[:-1])]; tb = []
+        if NORMFRONT and getattr(s, 'p', None) is not None:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
+            rf, tfw = nf2_rows(seg, s.p, s.u, 1., s.nf); rb, tbw = nf2_rows(seg, s.p, s.u, -1., s.nb); fw += rf; bw = rb; tf += tfw; tb = tbw; s.nf, s.nb = len(rf), len(rb)
+        else:
+            for k in range(s.nf): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
+            for k in range(s.nb): y = step(y, s.u, -1.); bw.append(y); tb.append(np.full(seg.shape[:-1], -(k + 1) * DTN))
+        s.G = np.array(bw[::-1] + fw); s.tau = np.array(tb[::-1] + tf)
 LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))                         # вершины гиперячейки: (строка, боковые…)
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
 def _contract(Xa, sa, j=-1):
@@ -224,7 +250,7 @@ def mlin(Pb, n_):
 REASON = dict(kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
 def cell_dict(c):
     """поля клетки по контракту снимка; G — read-only вид (готовые клетки не копируются)"""
-    G = c.G.view(); G.flags.writeable = False; return dict(G=G, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, u=c.u)
+    G = c.G.view(); G.flags.writeable = False; return dict(G=G, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, u=c.u)
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
@@ -234,6 +260,8 @@ def growN(p, u, idx, rm, tm):
         for i in range(1, nmax + 1):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
             if not inbox_g(yc): break
+        if NORMFRONT:
+            for i, Pn in enumerate(nf2_rows(base, p, u, float(sg), nmax)[0], 1): rows[sg * i] = Pn
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
     pause('section', 2, u=u, seed=p, e=e, section=base, rows=(imin, imax), nmax=nmax)
     def bend(klo, khi, ilo, ihi):
@@ -244,7 +272,7 @@ def growN(p, u, idx, rm, tm):
         return float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, Wi, d))))
     klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0
     def cur():
-        c_ = Cell(p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)), u, np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]) / (1 + HALO), e); c_.nf, c_.nb = ihi, -ilo; c_.build(); return cell_dict(c_)
+        c_ = Cell(p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)), u, np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]) / (1 + HALO), e); c_.p = p; c_.nf, c_.nb = ihi, -ilo; c_.build(); return cell_dict(c_)
     def halt(d, key, face=None): act[d] = False; STOP[key] += 1; pause('stop', 2, u=u, seed=p, reason=REASON[key], dir=d, face=face, cell=cur)
     dirs = [('a', k, sg) for k in range(m_) for sg in (1, -1)] + [('F',), ('B',)]; act = {d: True for d in dirs}; extra = {}
     def faceof(d, nk):
@@ -277,7 +305,7 @@ def growN(p, u, idx, rm, tm):
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
-    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
+    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; return c
 def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
