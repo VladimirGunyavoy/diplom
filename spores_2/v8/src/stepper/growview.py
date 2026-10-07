@@ -58,9 +58,9 @@ def build_geometry(snap, ax=(0, 1), halo=HALO):
 
 def caption(snap):
     """одна строка подписи: фаза, слой, причина стопа."""
-    if snap is None: return 'нет снимка (N — шаг, G — затравка в точке взгляда)'
+    if snap is None: return 'no snapshot (N - step, G - seed at look point)'
     r = snap.get('reason'); cells = snap.get('cells') or []
-    return 'фаза: %s  (ур. %s)   слой u=%s   клеток: %d   очередь: %d%s' % (snap.get('phase'), snap.get('lvl'), snap.get('u'), len(cells), len(snap.get('queue') if snap.get('queue') is not None else []), ('   СТОП: %s' % r) if r else '')
+    return 'phase: %s  (lvl %s)   layer u=%s   cells: %d   queue: %d%s' % (snap.get('phase'), snap.get('lvl'), snap.get('u'), len(cells), len(snap.get('queue') if snap.get('queue') is not None else []), ('   STOP: %s' % r) if r else '')
 
 
 class TimeTable:
@@ -69,7 +69,7 @@ class TimeTable:
     def add_draw(s, phase, dt): s.draw[phase] = s.draw.get(phase, 0.) + dt; s.n[phase] = s.n.get(phase, 0) + 1
     def text(s, compute=None, top=8):
         compute = compute or {}; names = sorted(set(compute) | set(s.draw), key=lambda k: -(compute.get(k, 0.) + s.draw.get(k, 0.)))[:top]
-        rows = ['%-18s %9s %9s %4s' % ('пауза', 'вычисл,мс', 'рисов,мс', 'раз')] + ['%-18s %9.1f %9.1f %4d' % (k, 1e3 * compute.get(k, 0.), 1e3 * s.draw.get(k, 0.), s.n.get(k, 0)) for k in names]
+        rows = ['%-18s %9s %9s %4s' % ('pause', 'compute,ms', 'draw,ms', 'n')] + ['%-18s %9.1f %9.1f %4d' % (k, 1e3 * compute.get(k, 0.), 1e3 * s.draw.get(k, 0.), s.n.get(k, 0)) for k in names]
         return '\n'.join(rows)
 
 

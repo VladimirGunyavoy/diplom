@@ -219,7 +219,7 @@ def mlin(Pb, n_):
     for j in range(m_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
-REASON = dict(kf='RMAX', rows='TMAX', field='поле', tfield='поле', bend='изгиб', tbend='изгиб', goal='цель', tgoal='цель', ovh='сосед', tovh='сосед')
+REASON = dict(kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
 def cell_dict(c):
     """поля клетки по контракту снимка; G — read-only вид (готовые клетки не копируются)"""
     G = c.G.view(); G.flags.writeable = False; return dict(G=G, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, u=c.u)
@@ -274,7 +274,7 @@ def growN(p, u, idx, rm, tm):
                 if d in extra: halt(d, 'tovh')
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
-    if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='мало строк / узкая клетка'); return None
+    if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
 def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))

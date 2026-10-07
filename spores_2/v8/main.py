@@ -144,14 +144,14 @@ try:
     from src.stepper.live import LiveStepper                 # настоящий алгоритм (b6, src/algo/growN.py SYS=di) под Stepper
     stepper = LiveStepper(seed=(0., 0.))
 except ImportError as e_:
-    print('[v8] живой алгоритм недоступен (%s) — DemoStepper' % e_)
+    print('[v8] live algorithm unavailable (%s) - DemoStepper' % e_)
     from src.stepper.demo import DemoStepper
     stepper = DemoStepper(seed=(0., 0.))
 growview = GrowView(zoom_manager, ax=(0, 1))
 
 def _step(k):
     t0 = time.perf_counter(); stepper.key(k); growview.draw(stepper.snapshot)
-    print(f"[stepper] {k}: {stepper.snapshot and stepper.snapshot.get('phase')}  {1e3 * (time.perf_counter() - t0):.1f} мс")
+    print(f"[stepper] {k}: {stepper.snapshot and stepper.snapshot.get('phase')}  {1e3 * (time.perf_counter() - t0):.1f} ms")
 
 def _seed_here():
     x, v = shared_context.look_point; stepper.seed_at((float(x), float(v))); growview.draw(None); _step('N')
@@ -175,10 +175,10 @@ def _resize(sign):
         spore_manager.decrease_size()
 
 input_manager.bind('1', _resize, mode='scroll', description='size', value_getter=lambda: spore_manager.size)
-input_manager.bind('n', lambda: _step('N'), description='шаг до паузы')
-input_manager.bind('m', lambda: _step('M'), description='до паузы того же уровня')
-input_manager.bind('c', lambda: _step('C'), description='до конца')
-input_manager.bind('g', _seed_here, description='затравка в точке взгляда')
+input_manager.bind('n', lambda: _step('N'), description='step to next pause')
+input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
+input_manager.bind('c', lambda: _step('C'), description='to the end')
+input_manager.bind('g', _seed_here, description='seed at look point')
 
 
 # ===== BINDINGS HELP =====

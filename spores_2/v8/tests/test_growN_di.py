@@ -6,7 +6,7 @@ import numpy as np
 from src.algo import growN as g
 from src.stepper import stepper as S
 
-REASONS = {'поле', 'изгиб', 'сосед', 'цель', 'TMAX', 'RMAX'}
+REASONS = {'field', 'bend', 'neighbor', 'goal', 'TMAX', 'RMAX'}
 
 
 def layer(): return g.build_layer(g.US[1], np.random.default_rng(0))[0]

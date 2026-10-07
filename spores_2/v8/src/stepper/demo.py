@@ -22,7 +22,7 @@ def gen(seed, u=1.0, ncells=6):
             time.sleep(.01); yield 'row_fwd', 3, dict(u=u, seed=p.copy(), cell=dict(G=c['G'][:i], r=c['r']), cells=list(cells), reason=None, queue=np.array(queue) if queue else np.zeros((0, 2)))
         yield 'side', 3, dict(u=u, seed=p.copy(), cell=c, cells=list(cells), reason=None, queue=np.array(queue) if queue else np.zeros((0, 2)))
         cells.append(c); new = c['G'][-1, -1] + np.array([.02, 0.]); queue.append(new); queue.append(c['G'][len(c['G']) // 2, 0] - np.array([.3, 0.]))
-        yield 'stop', 2, dict(u=u, seed=p.copy(), cell=c, cells=list(cells), reason=['изгиб', 'сосед', 'TMAX', 'поле', 'цель', 'RMAX'][k % 6], queue=np.array(queue))
+        yield 'stop', 2, dict(u=u, seed=p.copy(), cell=c, cells=list(cells), reason=['bend', 'neighbor', 'TMAX', 'field', 'target', 'RMAX'][k % 6], queue=np.array(queue))
         yield 'cell_done', 1, dict(u=u, seed=p.copy(), cell=None, cells=list(cells), reason=None, queue=np.array(queue))
 
 

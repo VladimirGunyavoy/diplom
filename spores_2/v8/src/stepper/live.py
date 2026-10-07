@@ -38,7 +38,7 @@ class LiveStepper:
     def _final(s):
         """алгоритм закончил (C или конец слоя) — финальный снимок из результата build_layer: все клетки слоя, причина — конец."""
         if s._st.finished and s._st.result is not None and (s.snapshot is None or s.snapshot.get('phase') != 'done'):
-            cells = [g.cell_dict(c) for c in s._st.result]; sn = dict(s.snapshot or {}); sn.update(phase='done', lvl=0, cell=None, cells=cells, queue=sn.get('queue'), reason='слой закончен: %d клеток' % len(cells)); s.snapshot = sn
+            cells = [g.cell_dict(c) for c in s._st.result]; sn = dict(s.snapshot or {}); sn.update(phase='done', lvl=0, cell=None, cells=cells, queue=sn.get('queue'), reason='layer finished: %d cells' % len(cells)); s.snapshot = sn
 
     @property
     def done(s): return s._st.finished

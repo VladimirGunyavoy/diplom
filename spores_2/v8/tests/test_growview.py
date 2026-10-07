@@ -10,7 +10,7 @@ from src.stepper.live import LiveStepper
 def test_geometry_demo():
     d = DemoStepper(); d.key('C'); g = build_geometry(d.snapshot)
     assert g['points_done'].shape[1] == 3 and len(g['segs_rows_done']) > 0 and np.allclose(g['points_done'][:, 1], .01)
-    assert 'СТОП' not in caption(d.snapshot) or d.snapshot['reason']
+    assert 'STOP' not in caption(d.snapshot) or d.snapshot['reason']
 
 
 def test_live_steps_and_final():

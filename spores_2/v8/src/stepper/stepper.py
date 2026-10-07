@@ -56,7 +56,7 @@ class Stepper:
         if threading.current_thread() is not s._th: return          # зовут не из потока алгоритма — не трогаем
         if not (must or s.enabled(name, lvl)): return
         now = time.perf_counter(); dt = now - s._mark; s.times[name] = s.times.get(name, 0.) + dt; s.counts[name] = s.counts.get(name, 0) + 1; s._k += 1
-        if s.log: s.log('%d %s lvl%d %.4f с' % (s._k, name, lvl, dt))
+        if s.log: s.log('%d %s lvl%d %.4f s' % (s._k, name, lvl, dt))
         s.history.append((s._k, name, lvl, dt))
         stop = must or s.mode == 'n' or (s.mode == 'm' and lvl <= s.ref_lvl)
         if stop:
@@ -88,7 +88,7 @@ class Stepper:
     def table(s):
         """строки (имя, вызовов, всего с, среднее мс) по убыванию времени + строка отрисовки"""
         rows = sorted(((n, s.counts[n], t, 1000 * t / s.counts[n]) for n, t in s.times.items()), key=lambda r: -r[2])
-        if s.render_n: rows.append(('render (гл. поток)', s.render_n, s.render_time, 1000 * s.render_time / s.render_n))
+        if s.render_n: rows.append(('render (main thread)', s.render_n, s.render_time, 1000 * s.render_time / s.render_n))
         return rows
 
     def abort(s):
