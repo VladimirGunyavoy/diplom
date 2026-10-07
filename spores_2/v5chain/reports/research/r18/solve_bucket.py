@@ -9,8 +9,16 @@ sys.path.insert(0, os.path.join(os.getcwd(), '../../src/cells7')); import grow_c
 def edges(s):
     """те же рёбра, что в Atlas.solve: (узел, стоимость, вершины K=4, веса) + V0"""
     E = []; Vg = np.full(s.N, np.inf)
-    for u in G.US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(G.step(s.P, u)))
-    I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); C = np.full(len(I), G.DTN)
+    HT = float(os.environ.get('SBTAU', 0)); CC = []                                       # research-21 SBTAU=h: медленный поток — шаг τ = max(DTN, h/|f|) ≤ 1 с (конец уходит из своей ячейки)
+    for u in G.US:
+        Vg = np.minimum(Vg, s.tgoal(s.P, u))
+        if HT > 0:
+            tau = np.clip(HT / np.maximum(np.linalg.norm(G.f(s.P, u), axis=1), 1e-9), G.DTN, 1.); n_ = 8; y = s.P.copy(); h_ = (tau / n_)[:, None]
+            for _ in range(n_):
+                k1 = G.f(y, u); k2 = G.f(y + h_ / 2 * k1, u); k3 = G.f(y + h_ / 2 * k2, u); k4 = G.f(y + h_ * k3, u); y = y + h_ / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+            e = s.stencils(y); E.append(e); CC.append(tau[e[0]])
+        else: e = s.stencils(G.step(s.P, u)); E.append(e); CC.append(np.full(len(e[0]), G.DTN))
+    I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); C = np.concatenate(CC)
     ea, eb, ec = [], [], []
     for c in s.cells:
         if getattr(c, 'TT', None) is None or not G.NFEDGE: continue
@@ -34,8 +42,13 @@ def edges(s):
     V0 = np.minimum(s.V, Vg); dead = getattr(s, 'dead', np.zeros(s.N, bool)); V0[dead] = G.BIG; V0[s.goal] = 0.
     return I, C, IDX, W, V0, dead
 
-def solve_bucket(s, D=None, tol=1e-9):
+def solve_bucket(s, D=None, tol=None):
+    tol = float(os.environ.get('SBTOL', 1e-9)) if tol is None else tol                         # порог рассылки улучшения
     t0 = time.time(); I, C, IDX, W, V, dead = edges(s); te = time.time() - t0; D = D or G.DTN; BIG = G.BIG
+    SELF = int(os.environ.get('SBSELF', 0)); nself = 0
+    if SELF:                                                                                # research-21: петля на себя (вершина = сам узел, вес s) — решить точно: V = (c + Σ_{j≠i} w_j V_j) / (1 − s)
+        sm = (IDX == I[:, None]) & (W > 1e-6); s_ = (W * sm).sum(1); k = (s_ > 0) & (s_ < 1 - 1e-9); nself = int(k.sum())
+        W = np.where(sm, 0., W); W[k] = W[k] / (1 - s_[k])[:, None]; C = C.copy(); C[k] = C[k] / (1 - s_[k]); dead_e = s_ >= 1 - 1e-9; C[dead_e] = BIG
     M = W > 1e-6; ev = np.repeat(np.arange(len(I)), 4)[M.ravel()]; vv = IDX.ravel()[M.ravel()]   # обратные рёбра: вершина → рёбра, где она с весом
     o = np.argsort(vv, kind='stable'); ev = ev[o]; ptr = np.searchsorted(vv[o], np.arange(s.N + 1))
     fixed = s.goal | dead; pend = (V < BIG / 2); nev = 0; nb = 0; th = 0.
@@ -51,7 +64,7 @@ def solve_bucket(s, D=None, tol=1e-9):
             un = nd[st]; mv = np.minimum.reduceat(val, st); imp = (mv < V[un] - tol) & ~fixed[un]
             un, mv = un[imp], mv[imp]; V[un] = mv; pend[un] = True; bt = un[mv < thr]
         th = thr
-    s.V_b = V; return dict(t_edges=round(te, 2), t_total=round(time.time() - t0, 2), buckets=nb, edges=len(I), evals=int(nev), evals_per_edge=round(nev / len(I), 2))
+    s.V_b = V; return dict(nself=nself, t_edges=round(te, 2), t_total=round(time.time() - t0, 2), buckets=nb, edges=len(I), evals=int(nev), evals_per_edge=round(nev / len(I), 2))
 
 if __name__ == '__main__':
     t0 = time.time(); A = G.Atlas(); tb = time.time() - t0
