@@ -251,3 +251,4 @@ hub-v5chain-worker-23 | done | ctx ~25% (свежий контекст под р
 hub-v5chain-worker-24 | started | acc2 | sonnet | 03:51:45
 hub-v5chain-worker-b4 | decision | c9000 PESS=1 остановлен по п.35 (знак Кориолиса, система не физическая); ACT-тест остановлен ради п.33 SOLVEB
 hub-journal2026-research-2 → research-21 | 04:24:15 | статик кар: модель верна (k .625 = их карта Эйлером), эталона времени нет, их политика 5.3–5.6 с с касаниями 1–20%; файл journal-2026/reports/research/static_car_for_spore.md (перенёс research-21)
+hub-v5chain-worker-b4 | result | п.35 знак Кориолиса исправлен (growN+v6), энергия 6e-13; п.33 SOLVEB в 4D не ускоряет (GS ×1.1); пересчёт эталона manip 4D идёт
