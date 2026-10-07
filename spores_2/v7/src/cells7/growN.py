@@ -362,11 +362,21 @@ class Atlas:
         else:
             I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
             SBC = int(E('SBCAUS', 0)); SBL = int(E('SBLAY', 0))                                                      # п.37 (research-21; r18/solve_bucket.py SBCAUS/SBLAY): свой u — точное ребро по столбцу клетки, переключение на u2 — стенсил только по клеткам слоя u2
-            SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
-            if SBC or SMEAN: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
+            SONE = int(E('SONE', 0)); SONE_CH = int(E('CHN', 400000)); SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
+            if SBC or SMEAN or SONE: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
             for ui, u in enumerate(US):
-                Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True)
-                if SBC:
+                Vg = np.minimum(Vg, s.tgoal(s.P, u))
+                if SONE:                                                                                            # п.44 (research-22, r22/18/p18.py): ОДИН (самый центральный = max наибольшего веса) стенсил на группу (узел, слой приземления), потоково по CHN узлов
+                    aa, bb, cc = [], [], []; nc0 = 0
+                    for s0 in range(0, s.N, SONE_CH):
+                        a, b, c_ = s.stencils(step(s.P[s0:s0 + SONE_CH], u)); a = a + s0; nc0 += len(a); nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1; dl = cl_[vc_]
+                        keep = np.where(cl_[nc_] == ui, vc_ != nc_, (dl == ui) if SBL else True); a, b, c_, dl = a[keep], b[keep], c_[keep], dl[keep]
+                        key = a.astype(np.int64) * 4 + dl; o2 = np.lexsort((c_.max(1), key)); key = key[o2]; f = o2[np.r_[True, key[1:] != key[:-1]]] if len(o2) else o2
+                        aa.append(a[f]); bb.append(b[f]); cc.append(c_[f])
+                    a = np.concatenate(aa); b = np.concatenate(bb); c_ = np.concatenate(cc); nst += nc0 - len(a); print('SONE u', u, ': пар', nc0, '→ оставлено', len(a), flush=True)
+                else: a, b, c_ = s.stencils(step(s.P, u))
+                print('stencils built for u =', u, flush=True)
+                if SBC and not SONE:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
                     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
                 I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
