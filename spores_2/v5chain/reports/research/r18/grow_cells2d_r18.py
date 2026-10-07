@@ -411,9 +411,14 @@ def build_grid(log=None):
     import multiprocessing as mp
     SG0 = float(os.environ.get('SG0', 1.)); SGMIN = float(os.environ.get('SGMIN', .1)); OVR = float(os.environ.get('OVR', .3)); NP = int(os.environ.get('NPROC', 8))
     L = [[] for _ in US]; IX = [Index() for _ in US]; h = SG0; rnd = 0; k0 = 0; RS = []
-    while h >= SGMIN - 1e-12:
-        nt = max(2, int(round(2 * XL / h))); nw = max(2, int(round(2 * WL / h)))
-        P = np.stack(np.meshgrid(-XL + (np.arange(nt) + .5) * 2 * XL / nt, -WL + (np.arange(nw) + .5) * 2 * WL / nw, indexing='ij'), -1).reshape(-1, 2); ids = k0 + np.arange(len(P)); k0 += len(P)
+    lev = [None] if int(os.environ.get('SGGOAL', 1)) else []                                  # уровень 0 (research-20: прогон 76 — ни одна клетка решётки не задела цель, V не стартовала): 8 затравок по контуру цели, симметрично
+    while h >= SGMIN - 1e-12: lev.append(h); h /= 2
+    for h in lev:
+        if h is None: r_ = RHO * 1.5; P = np.array([[a_ * r_, b_ * r_] for a_ in (-1, 0, 1) for b_ in (-1, 0, 1) if a_ or b_], float); h = 0.
+        else:
+            nt = max(2, int(round(2 * XL / h))); nw = max(2, int(round(2 * WL / h)))
+            P = np.stack(np.meshgrid(-XL + (np.arange(nt) + .5) * 2 * XL / nt, -WL + (np.arange(nw) + .5) * 2 * WL / nw, indexing='ij'), -1).reshape(-1, 2)
+        ids = k0 + np.arange(len(P)); k0 += len(P)
         while True:
             jobs = [(P[i], u, int(ids[i])) for li, u in enumerate(US) for i in np.flatnonzero(~IX[li].covered(P)) if np.linalg.norm(f(P[i], u)) >= FMIN]
             if not jobs: break
@@ -427,7 +432,6 @@ def build_grid(log=None):
             RS.append(dict(h=round(h, 3), round=rnd, jobs=len(jobs), grown=len(C), acc=acc, sec=round(time.time() - t_, 1))); print('посев', RS[-1], flush=True); rnd += 1
             if log: log(US[0], sum(L, []))
             if acc == 0: break
-        h /= 2
     build_grid.rounds = RS; return L, IX
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
