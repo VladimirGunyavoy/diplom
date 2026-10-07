@@ -1,31 +1,25 @@
-# RESEARCH_HANDOFF — hub-v5chain-research-23 (2026-10-07 09:24 → ~17:15; acc1, Opus)
-[разложен hub-v5chain-research-24, 2026-10-07: recent.md, PLAN п.49а]
-Звено: hub-v5chain-research-23. Причина смены: слово пользователя ~17:15 — поднять research-24 БЕЗ ПУЛЬСА: ждать задачу от пользователя или laptop-v5chain-worker-1 (ноут, Remote Control; почта msg_yoga, на хабе запущен диспетчер tmux `msg-from-yoga`). Концепция меняется («мы закончили, меняем концепцию» ~16:20) — новых экспериментов не запускать. Пользователь не на связи с ~06:25. Диспетчер ввёл протокол GPU: стенсилы на CPU (`STGPU=0`), GPU-solve только под `flock /tmp/gpu.lock <команда>` на aida, чужие GPU-процессы не трогать.
+# RESEARCH_HANDOFF — hub-v5chain-research-24 (2026-10-07 18:47 → 23:07; acc2, Opus, без пульса)
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-research-24. Причина смены: слово пользователя ~22:45 «заканчиваем твою цепь, все пусть заканчивают» (недельные лимиты почти кончились; 7д 77%). Режим Б (хендоффы по ролям) — команда разослана всем ролям хаба (w26, b8, dispatcher-5 последним, searcher-2, explainer-1/2, meta-1/2; все подтвердили получение). Преемника НЕ поднимать.
 
-## Сделано (manip 4D — главное; всё в `knowledge/research/manip4d_cover.md`, скрипты `reports/research/r23/NN_*`, на aida `~/spore_v5/r23/`)
-1. **Эталон manip 4D был неверен**: перебор (≤ 3 дуги bang-bang) завышен до 20% (q1 2.641 → OCP 2.121), q5 нарушал |w| ≤ 3. Новый OCP CasADi (|τ| ≤ 1, |w| ≤ 3, ветви 2π) на 20 стартах: `r23/manip_ref_ocp_20.npy`; устойчив к 15 затравкам на ветвь. CasADi на aida: `PYTHONPATH=~/spore_v5/r23/pylib` (на хабе — wheel в scratchpad).
-2. **Почему c3000 доходил 1/8**: покрытие слоя 5% — посев от цели (GS 300 + GLIM .25: мелкие клетки у цели) и DELTA .03. DELTA .3 + GLIM 0 — покрытие ×7. **GS=0 нельзя** (в цели 58 узлов — у V нет источника). **PESS=1 обязателен** (без него V конечна в 1% узлов).
-3. **Итог manip клетками** (слои 4×3000, GS 50, GLIM 0, PESS 1, SBCAUS, финиш shoot_pol VF 1): DELTA .3 — 20/20, T/эт мед. 1.089 / ср. 1.150 / max 1.50, запрос 171 мс; **DELTA .1 — 20/20, 1.076 / 1.109 / 1.51, 221 мс** (`reports/all_systems.md` строки 6, 6а).
-4. **Открыто — V графа НИЖЕ T\*** на стартах 3 / 5 / 19 (V*/эт .48 / .67 / .74) при обоих DELTA; стенсилы старта согласны, неизвестных вершин нет (ISSUES research-23 11:50). Проверяю `SMEAN=1` на слоях DELTA .1 (`r23/05/run_sm.sh`, лог aida `~/spore_v5/r23/05_manip_pess/g50d1sm.log`, итог по стартам `vstart_sm.out`) — стоял в очереди замка GPU > 1 ч.
-5. **STGPU=1 тормозит построение слоёв ×6.5** (covered() при посеве уходит на GPU) — `gpu_solve.md`; b6 уведомлён.
-6. **QMIX** (случайные затравки вперемешку с очередью, прототип `r23/04_qmix/`): покрытие .566 → .64 при 3000 клетках, меньше наложений — посев меньше зависит от порядка (концепция «повсеместно, параллельно»). В growN не внесено.
-7. di4 greedy .99 с финишем 1.035 / 1.050 — все атласы di4 с финишем дают 1.035 ± .001 (`solve_bucket.md`).
-8. **Двойной маятник g 1**: эталон OCP на 20 стартах `r23/dp1_ref_ocp_20.npy` (старт 0 «висит → вверх» 5.099 = OCP 5.098); п.25 отдан w25 (линия A) с уроками manip.
+## Сделано
+1. Старт без пульса (слово пользователя); Bash первые ~6 вызовов падал на классификаторе — старт добит позже (0b67087).
+2. PLAN «Линии и владельцы файлов»: линия **[laptop]** (laptop-v5chain-worker-N владеет визуальным слоем v8: `v8/main.py`, `growview.py`, движок v4 в v8; stepper/growN v8 — B) — просьба meta-2.
+3. Слово пользователя «основные выводы и результаты должны шериться» → `concepts.md`; малые результаты research (< 1 МБ: эталоны, json/out) на GitHub (a91b083); **библиотека перенесена в claude-system**: `~/claude-work/library` → симлинк на `system/library` (MAP/reviews/sources в git, `fulltext/` в .gitignore; 810b43b). meta-2 внёс правило в ARCH §Результаты.
+4. Задача пользователя (через laptop-v5chain-research-1) «нормальные гиперплоскости к потоку»: поиск — hub-v5chain-searcher-2 (`lit_flow_normal_sections.md`), вывод — `knowledge/research/flow_normal_sections.md` (14d2519): пошагового «честного» сечения ⟂ f нет (Фробениус; дд при v ≠ 0 — контакт, порядок шагов даёт сдвиг ≈ r² по времени, r .2 → .04); правильно — плоское ⟂ f(зерно) + перенос потоком (как в growN/v8); пересчёт базиса — только между клетками (RMF). Проверка `reports/research/r24/normal_sections_dd.py`.
+5. Линия B закрыта по слову пользователя «твою ветку тормозим» (55dd2b3), п.47 (посев 6D) не открывать.
 
-## ПРОДОЛЖЕНИЕ (research-24) — СНАЧАЛА: пульс НЕ ставить, ждать задачу (пользователь / laptop-v5chain-worker-1)
-0. **Пользователь вернулся ~15:30, сменил направление:** (а) концепция меняется — п.46/47/48 на паузе; его слова дня в `concepts.md` (MAXC поднять; GPU-OOM и 1.5 ч недопустимы — обыграть нейронки, 4D быстро; один алгоритм на все среды; нормальные срезы со своим временем клона; граммиан/8-угольник — «поресерчить при мне»); (б) **v8 — пошаговый просмотр алгоритма в Ursina (PLAN п.49)**: v8 = копия v4_ort; b7 сделал stepper (pause/N/M/C/время) + growN SYS=di с паузами + безголовые кадры (`v8/reports/frames/`); w25 — growview/main.py (9ba95b6), GUI не проверен (на хабе нет дисплея) — проверка на ноуте; смоук main.py — b7; (в) **GitHub: пушить можно** — `git push git@github-paper:VladimirGunyavoy/diplom.git master` из ~/claude-work/projects/spore (TASK); ноут работает через GitHub.
-1. Досчитываются на aida (забрать, записать в `manip4d_cover.md` §Ресурсы): `r23/09_manip_m2/` M 2 + RMAX .3 — ГОТОВО (research-23 записал: 18/20, ср. 1.171 — M 2 хуже); `r23/08_manip_rmax3/` — M 3 + RMAX .3 на CPU (5.27M; `r3c6_cpu.log`, `vstart_r3.out`). Уже: M 2 + RMAX .6 — узлов ×3.2 меньше, но T/эт ср. 1.375 (хуже), занижение V сильнее.
-2. **manip 4D итог** (`manip4d_cover.md`): 20/20, DELTA .1 — T/эт мед. 1.076 / ср. 1.109 (b6 — мед. 1.056); V ниже T* на 3 стартах — гиперячейки поперёк излома V (`kink.py`); SMEAN, GOALX, M 5 (b6) не лечат.
-3. Линии: A — hub-v5chain-worker-26 (dp1 4×2000 на aida, досчёт); B — hub-v5chain-worker-b7 (п.49). explainer-2 остановил объяснение на шаге 1б (концепция меняется).
+## ПРОДОЛЖЕНИЕ (когда пользователь вернётся)
+- Концепция меняется (слово ~16:20) — работа идёт с ноута (laptop-v5chain-worker-1 / research-1) через GitHub; на хабе цепочка остановлена.
+- На aida лежат недозабранные итоги research-23 (PLAN 49а): `r23/09_manip_m2/vstart_m2r3.out`, `r23/08_manip_rmax3/vstart_r3.out`, `r23/05/vstart_sm.out` → в `manip4d_cover.md` §Ресурсы.
+- Ноут (laptop-v5chain-worker-1 и research-1) не подтвердил два сообщения (библиотека: `ln -s ~/claude-work/system/library ~/claude-work/library` после git pull; итог по сечениям) — лежат в почте msg_to_yoga.log.
+- Предложения worker'у по сечениям (по желанию, не начаты): страж трансверсальности cos(f, n₀) < .5; оси дочерней клетки переносом базиса родителя.
 
 ## Грабли
-- `task_log.py` пишет в `sessions_task_log/` ТЕКУЩЕЙ папки — запускать из корня проекта (у меня 2 лишних папки: `r23/01_manip_ref_ocp/` и `.llm/chain/` — удалить мне не дали).
-- tqdm-строка склеивается с первой печатью: grep не по началу строки, а `grep -ao "\[TAG\].*"`.
-- `ssh … 'cd … && setsid nohup … &'` вешает ssh — ставить `& disown` и отдельной командой.
-- git: identity через `GIT_AUTHOR_NAME/EMAIL=gun.vladimir26@gmail.com`; добавлять пути поимённо; не пушить.
-- Очередь замка GPU бывает > 1 ч (w25, b6, research) — CPU-стенсилы manip ~20 мин на 2.2M узлов.
+- git на хабе: нужны и `GIT_AUTHOR_*`, и `GIT_COMMITTER_*` (=VladimirGunyavoy / gun.vladimir26@gmail.com), иначе «Committer identity unknown». Пуш: из `~/claude-work/projects/spore` `git push git@github-paper:VladimirGunyavoy/diplom.git master`.
+- `journals/*/*.log` и `journals/_sentinel/` в .gitignore — не добавлять.
+- `send_verified.py --yoga` на ноут: квитанции нет за 30 с — сообщение всё равно в почте.
 
-Коммиты: 18bc7e9 (старт) … 5946068 + финиш; запушены на GitHub (master).
-Идущее на aida: SMEAN-проверка `r23/05/run_sm.sh` (pid в очереди flock; сам допишет `vstart_sm.out`) — забирает research-24.
-Токены: T_START 5ч 6% / ctx 4% / 7д 53% / $0.17; T_BEFORE_END ctx ~39% / 7д ~68% / ~$27.
-NEXT_LINK: hub-v5chain-research-24   NEXT_MODEL: opus
+Коммиты: 0b67087, a91b083, 603e51e, 14d2519, 55dd2b3 (+ claude-system 810b43b); все запушены.
+Токены: T_START 5ч 11% / ctx 10% / 7д 75% / $1.63; T_END 5ч 8% / ctx 17% / 7д 77% / $5.26.
+NEXT_LINK: нет (цепочка остановлена словом пользователя)   NEXT_MODEL: opus
