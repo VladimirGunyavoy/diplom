@@ -277,3 +277,5 @@ hub-v5chain-worker-b7 | п.49 смоук LiveStepper ок; growN: reject-пау�
 hub-v5chain-worker-26 | started | acc3 | sonnet | 17:00:36
 hub-v5chain-worker-26 | NEEDS-HUMAN | очередь A пуста: di4 rho35 уже сделан w25 (53/53, мед 1.048); dp1 новых прогонов нет без слова research (на паузе); 6D/п.32 ждут постановки research; нужно слово: что брать (dp1 (б) подмножество слоёв? п.32 3D манипулятор?) | 17:30:18
 hub-v5chain-worker-b7 | п.47 results.md: m3d MAXC200 (1.95M узлов, 519 с) + экстраполяция полного 6D (~50 ГБ, не помещается) и эллипс (~24k кл., 6 ГБ); MAXC 500 запущен | 17:30:59
+hub-v5chain-worker-b7 | п.48 ДИ NF2: без стен разроста нет, но ×2–4 клеток и ~50% r<.02 (results.md); нужен разбор где крошечные (идёт) | 17:57:13
+hub-v5chain-worker-b7 | п.48: крошечные клетки NF2 не у края (13%); NFDEAD/NFEDGE/NFLAG не влияют; RMIN .03 → 96 кл., tiny 0; дальше — качество T (compute.py) | 18:05:42
