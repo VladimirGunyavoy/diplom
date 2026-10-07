@@ -19,6 +19,16 @@ def edges(s):
             e = s.stencils(y); E.append(e); CC.append(tau[e[0]])
         else: e = s.stencils(G.step(s.P, u)); E.append(e); CC.append(np.full(len(e[0]), G.DTN))
     I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); C = np.concatenate(CC)
+    if int(os.environ.get('SBCAUS', 0)):                                                   # research-21: стенсил СВОЕГО u в СВОЮ клетку (не последняя строка) — лишний: столбец клетки = траектория u,
+        own = np.empty(s.N, np.int64); last = np.zeros(s.N, bool); lay = np.empty(s.N, np.int64)   # точный переход (i,j)→(i+1,j) уже есть ребром NFEDGE; этот стенсил даёт петли с весом ~1
+        for ci, c in enumerate(s.cells):
+            nt, m = c.G.shape[:2]; own[c.o:c.o + nt * m] = ci; last[c.o + (nt - 1) * m:c.o + nt * m] = True; lay[c.o:c.o + nt * m] = list(G.US).index(c.u)
+        ul = np.concatenate([np.full(len(e[0]), k) for k, e in enumerate(E)]); hasc = np.array([getattr(c, 'TT', None) is not None for c in s.cells])
+        drop = (ul == lay[I]) & (own[IDX[:, 0]] == own[I]) & ~last[I] & hasc[own[I]] & bool(G.NFEDGE); print('SBCAUS: убрано стенсилов своего u в свою клетку', int(drop.sum()), 'из', len(I), flush=True)
+        I, IDX, W, C = I[~drop], IDX[~drop], W[~drop], C[~drop]
+        sl = (IDX == I[:, None]).any(1) & (W.max(1) > 1e-6); n_ = I[sl]; hm = np.array([getattr(c, 'nxt', None) is not None for c in s.cells])
+        print('петли на себя после SBCAUS:', int(sl.sum()), '| последняя строка', int(last[n_].sum()), '| клетка без TT', int((~hasc[own[n_]]).sum()), '| клетка с MROW-продолжением', int(hm[own[n_]].sum()),
+              '| свой слой', int((ul[~drop][sl] == lay[n_]).sum()), '| вес петли мед. %.2f' % float(np.median((W[sl] * (IDX[sl] == n_[:, None])).sum(1))), flush=True)
     ea, eb, ec = [], [], []
     for c in s.cells:
         if getattr(c, 'TT', None) is None or not G.NFEDGE: continue
