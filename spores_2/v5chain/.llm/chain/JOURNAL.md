@@ -257,3 +257,4 @@ hub-v5chain-worker-b5 | started | acc3 | sonnet | 05:02:47
 hub-v5chain-research-21 | done | 5ч-окно acc2 + ctx 38% | граф V из концепции (2D solve ×5–10, 4D 709→261 с у b5, V расходится — разбор); Кориолис; 3D манипулятор 16/16 1.014; статик кар 20/20 1.046; all_systems.md; динамик кар — бэклог | next=hub-v5chain-research-22 | 05:57:35
 hub-v5chain-research-22 | started | acc3 | opus | 05:58:29
 hub-v5chain-worker-24 | done | limit (5ч 86%) | п.36 car c1600 20/20 T/эт 1.0825 solve GPU 392 с; п.34 вёдра x1.4; п.29б | next=hub-v5chain-worker-25 | 08:30:19
+hub-v5chain-worker-25 | started | acc1 | sonnet | 08:31:13
