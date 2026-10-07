@@ -292,18 +292,20 @@ def goal_seeds(rng):
     return out
 def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []
-    g0 = None
-    if seeds is None and GSEED: g0 = np.zeros(N); queue.insert(0, g0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
+    gseed0 = None
+    if seeds is None and GSEED: gseed0 = np.zeros(N); queue.insert(0, gseed0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
     bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p): pause('reject', 2, u=u, seed=p, reason='seed outside field', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
-        gfirst = p is g0; p = wrapy(p)
+        gfirst = p is gseed0; p = wrapy(p)
         if ingoal(p) and not gfirst: pause('reject', 2, u=u, seed=p, reason='seed in goal', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         if idx.covered(p[None])[0]: pause('reject', 2, u=u, seed=p, reason='seed already covered', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); fails += 0 if queue else 1; continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
-        rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); c = growN(p, u, idx, rm, tm)
+        rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX)
+        if gfirst: e_ = basis(p, u)[0]; rm = 1. / np.linalg.norm(e_ / RHOV) if GOALSHAPE == 'ball' else float(np.min(RHOV[np.abs(e_) > 1e-12] / np.abs(e_)[np.abs(e_) > 1e-12]))      # спора на цели: вширь только до границы цели
+        c = growN(p, u, idx, rm, tm)
         if c is None: fails += 0 if queue else 1; continue
         if E('STOPS') and len(cells) % 50 == 0: print('stops', len(cells), dict(STOP), flush=True)
         fails = 0; c.build()
