@@ -1,0 +1,4 @@
+D=~/spore_v5/r22/18_di4_one_stencil_per_group; S=~/spore_v5/r22/12_di4_full_layers_gpu; cd $D; cp $S/{growN.py,finish_gen.py,sgpu.py,di4_ref_60_rho35.npy} . ; cp ~/spore_v5/r22/13_di4_fast_finish/fin.py .
+n=0; k=0; while [ $n -lt 240 ]; do u=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits); if [ "$u" -lt 1500 ]; then k=$((k+1)); else k=0; fi; [ $k -ge 2 ] && break; n=$((n+1)); sleep 15; done
+export SYS=di4 M=3 SIDE=0 GM=.25 GLIM=0 FRAC=1 RHO=.35 PESS=1 PYTHONUNBUFFERED=1 FH=.1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+for v in "L1600 $HOME/spore_v5/wb5/p38/L1600.pkl" "Lfull $HOME/spore_v5/wb5/p38/Lfull.pkl"; do set -- $v; TAG=$1 LAYERS=$2 ~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python p18.py 2>&1 | stdbuf -oL tr '\r' '\n' | grep --line-buffered -a "^\[\|стенсилы u\|Error\|Trace\|line " | stdbuf -oL cut -c1-430; done
