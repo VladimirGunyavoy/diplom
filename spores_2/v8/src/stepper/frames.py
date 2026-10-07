@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 def draw(snap, g, ax):
     """снимок → оси: готовые клетки серым (контур + строки), текущая клетка (контур с гало пунктиром, ядро сплошным, строки), сечение, затравка, очередь, грань, причина"""
     XL = float(g.XLV[0]); ax.set_xlim(-XL, XL); ax.set_ylim(-g.XLV[1], g.XLV[1]); ax.set_aspect('auto'); ax.grid(alpha=.2)
-    ax.add_patch(plt.Rectangle(-g.RHOV, *(2 * g.RHOV), fc='g', alpha=.3, lw=0))
+    ax.add_patch(plt.Ellipse((0, 0), *(2 * g.RHOV), fc='g', alpha=.3, lw=0) if getattr(g, 'GOALSHAPE', 'box') == 'ball' else plt.Rectangle(-g.RHOV, *(2 * g.RHOV), fc='g', alpha=.3, lw=0))
     def outline(c, col, ls, lw, rows=False, ker=False):
         G = c['G'].reshape(c['G'].shape[0], -1, 2)                                                  # (nt, M·m, n); для ДИ m=1 → (nt, M, 2)
         if ker: mid = G[:, G.shape[1] // 2:G.shape[1] // 2 + 1]; G = mid + (G - mid) / (1 + g.HALO)

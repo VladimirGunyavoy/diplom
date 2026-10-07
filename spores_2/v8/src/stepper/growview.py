@@ -77,7 +77,7 @@ class GrowView:
     """Ursina-часть: создаёт по Scalable на слой геометрии и перерисовывает при смене снимка. Импорт Ursina — лениво."""
     COL = {'points_done': (0.55, 0.75, 1.0, .8), 'segs_rows_done': (0.4, 0.55, 0.9, .5), 'segs_core_done': (1.0, 1.0, 1.0, .9), 'segs_halo_done': (0.6, 0.6, 0.6, .4),
            'points_cur': (1.0, .8, .2, 1), 'segs_rows_cur': (1.0, .6, .1, .9), 'segs_core_cur': (1.0, .3, .1, 1), 'segs_halo_cur': (1.0, .5, .3, .5),
-           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8)}
+           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.2, 1.0, .3, .9)}
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
         s.sm = spore_manager; s.pools = {}; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
@@ -102,11 +102,25 @@ class GrowView:
         """нарисовать снимок (None — очистить). Время отрисовки уходит в TimeTable по имени паузы."""
         t0 = time.perf_counter(); s.snap = snap
         g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
+        g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
         for name in s.COL:
             arr = g.get(name, np.zeros((0, 3)))
             if s.sm is not None and name.startswith('points'): s._spores(name, arr.reshape(-1, 3)); continue    # точки — обычные Spore из v4 (масштаб/размер как у остальных)
             e = s._layer(name); e.real_v = arr.reshape(-1, 3); e.apply_transform(s.zm.a_transformation, s.zm.b_translation)
         if snap is not None: s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0)
+
+    def _goal(s):
+        """target outline as segments (K, 2, 3): circle/ellipse (GOALSHAPE='ball') or box (default), centre 0, half-widths RHOV along the shown axes."""
+        if getattr(s, '_goal_segs', None) is None:
+            from ..algo import growN as G
+            n = len(G.RHOV); P = np.zeros((65, n)); ax = s.ax
+            if getattr(G, 'GOALSHAPE', 'box') == 'ball':
+                t = np.linspace(0, 2 * np.pi, 65); P[:, ax[0]] = G.RHOV[ax[0]] * np.cos(t); P[:, ax[1]] = G.RHOV[ax[1]] * np.sin(t)
+            else:
+                r0, r1 = G.RHOV[ax[0]], G.RHOV[ax[1]]; C = [(-r0, -r1), (r0, -r1), (r0, r1), (-r0, r1), (-r0, -r1)]; P = np.zeros((5, n))
+                for i, (a_, b_) in enumerate(C): P[i, ax[0]] = a_; P[i, ax[1]] = b_
+            Q = proj(P, ax); s._goal_segs = np.stack([Q[:-1], Q[1:]], 1)
+        return s._goal_segs
 
     def _spores(s, name, arr):
         from ursina import color
