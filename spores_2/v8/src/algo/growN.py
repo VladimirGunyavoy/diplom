@@ -287,12 +287,14 @@ class HexIdx:
     def inside(s, Y):
         """точка внутри какой-либо клетки — ядра ИЛИ гало (covered смотрит только ядро)"""
         Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi = s.query(Y)[0]; m[pi] = True; return m
-    def covered(s, Y):
-        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y)
+    def covered(s, Y): return s.both(Y)[0]
+    def both(s, Y):
+        """один запрос на двоих: (покрыто ядром, внутри ядра ∪ гало)"""
+        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); ins = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y); ins[pi] = True
         if len(pi):
             R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
             sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); TH = np.array(s.TH); tp = s.I[hid, 1] + sc[:, 0]; core &= (tp >= TH[cid, 0] - 1e-9) & (tp <= TH[cid, 0] + TH[cid, 1] + 1e-9); m[pi[core]] = True
-        return m
+        return m, ins
 def mlin(Pb, n_):
     """полилинейная заплатка по 2^m углам ящика Pb (строки, n_1..n_m, n)."""
     C = Pb
@@ -391,7 +393,7 @@ def growN(p, u, idx, rm, tm):
         r_ = (S[khi[k]] - S[klo[k]]) / 2 / (1 + HALO)
         face = faceof(d, khi[k] if sg > 0 else klo[k])
         if m_ == 1 and len(face) >= 3: face = face[(1 if tst.get(('B',), 0) > 0 else 0):len(face) - (1 if tst.get(('F',), 0) > 0 else 0)]     # строки торцевого соседа (зацеп по времени) не считаем
-        fc = ((idx.covered(face) | ~inbox_g(face)).mean() >= ZFRAC); fi = fc or ((idx.inside(face) | ~inbox_g(face)).mean() >= ZFRAC)
+        cv_, in_ = idx.both(face); ob_ = ~inbox_g(face); fc = ((cv_ | ob_).mean() >= ZFRAC); fi = fc or ((in_ | ob_).mean() >= ZFRAC)
         st = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
         if st == 1 and r_ < RMINZ: st = 0
         if st == 2 and r_ < RMINZ:                                                                         # узкая клетка добирает ширину за счёт соседа, но не глубже ZOVMAX своей ширины
@@ -458,7 +460,7 @@ def growN(p, u, idx, rm, tm):
                 pause('row', 3, u=u, seed=p, dir=d, face=face, cell=cur)
                 if ZACEP:                                                                                  # зацеп по времени: 2 — торец ядра дошёл до ядра соседа, 1 — только до его гало
                     fm = face[cols()] if m_ == 1 else face                                                  # торцевая грань без боковых гало-узлов
-                    fc = (idx.covered(fm) | ~inbox_g(fm)).mean() > FRAC; fi = fc or (idx.inside(fm) | ~inbox_g(fm)).mean() > FRAC
+                    cv_, in_ = idx.both(fm); ob_ = ~inbox_g(fm); fc = (cv_ | ob_).mean() > FRAC; fi = fc or (in_ | ob_).mean() > FRAC
                     tst[d] = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
                     if tst[d] == 2 and ihi - ilo < ROWSMIN:                                                  # слишком короткая — добирает длину за счёт торцевого соседа, но не глубже ZOVMAX своей длины
                         t0 = ttouch.setdefault(d, ihi - ilo)
@@ -476,6 +478,9 @@ def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
 def rand_seed(rng): return np.array([rng.uniform(-PERIOD[k] / 2, PERIOD[k] / 2) if PER[k] else rng.uniform(-XLV[k], XLV[k]) for k in range(N)])
+def rand_seeds(rng, n):
+    """n случайных точек разом (тот же поток чисел, что n вызовов rand_seed)"""
+    hi = np.array([PERIOD[k] / 2 if PER[k] else XLV[k] for k in range(N)]); return rng.uniform(-hi, hi, size=(n, N))
 def goal_seeds(rng):
     """GS точек на поверхности коробки цели (чуть снаружи): очередь FIFO растит клетки от цели назад по потоку (BFS), а не случайно по всему полю (4D: цель ≈ 3e-4 объёма)."""
     if GOALSHAPE == 'ball':
@@ -492,7 +497,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     dead = []; streak = [0]; passes = [0]                                                                # ZACEP: dead — затравки, не давшие клетку (reject по размеру): окрестность RMINZ считаем закрытой гало соседей
     def covcheck():
         """посев в непокрытое: COVP проб по полю; вне ядро∪гало (и не в окрестности dead) кладём в начало очереди; слой кончается, когда непокрытых ≤ COVTOL два раза подряд"""
-        passes[0] += 1; pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q) and not slowf(q, u)])
+        passes[0] += 1; pr = rand_seeds(rng, COVP); pr = pr[inbox(pr) & ~ingoal(pr) & ~slowf(pr, u)]
         if not len(pr): return True
         cand = pr[~idx.inside(pr)] if idx.n else pr
         if len(cand) and dead: cand = cand[np.linalg.norm(cand[:, None] - np.array(dead)[None], axis=2).min(1) >= RMINZ]
@@ -505,7 +510,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         streak[0] = 0; queue[:0] = [q for q in cand]; return passes[0] > 200
     def covdone():
         """w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL"""
-        pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q) and not slowf(q, u)])
+        pr = rand_seeds(rng, COVP); pr = pr[inbox(pr) & ~ingoal(pr) & ~slowf(pr, u)]
         if not len(pr): return False
         unc = 1. - (idx.inside(pr) if ZACEP else idx.covered(wrapy(pr))).mean()                                 # ZACEP: посев считает покрытым и гало
         if E('COVDBG'): print('cov', len(cells), 'непокрыто', round(unc, 4), 'проб', len(pr), flush=True)
@@ -520,8 +525,8 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         if FMIN > 0 and slowf(p, u):
             pause('reject', 2, u=u, seed=p, reason='slow flow', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         if ingoal(p) and not gfirst: pause('reject', 2, u=u, seed=p, reason='seed in goal', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
-        cv_ = idx.covered(p[None])[0]
-        if cv_ or (ZACEP and idx.inside(p[None])[0]):
+        cv1, in1 = idx.both(p[None]); cv_ = cv1[0]
+        if cv_ or (ZACEP and in1[0]):
             pause('reject', 2, u=u, seed=p, reason='seed already covered' if cv_ else 'seed inside existing cell (halo)', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); ncov += 1      # covered — не фейл; зато каждые COVN таких затравок проверяем покрытие
             if COVTOL > 0 and not ZACEP and ncov % COVN == 0 and covdone(): break
             continue
