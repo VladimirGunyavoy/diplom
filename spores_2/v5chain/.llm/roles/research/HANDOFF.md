@@ -1,6 +1,6 @@
-# RESEARCH_HANDOFF — hub-v5chain-research-23 (2026-10-07 09:24 → …; acc1, Opus)
+# RESEARCH_HANDOFF — hub-v5chain-research-23 (2026-10-07 09:24 → 13:35; acc1, Opus)
 [РУТИНА НЕ ВЫПОЛНЕНА]
-Звено: hub-v5chain-research-23. Пользователь не на связи с ~06:25. Диспетчер ввёл протокол GPU: стенсилы на CPU (`STGPU=0`), GPU-solve только под `flock /tmp/gpu.lock <команда>` на aida, чужие GPU-процессы не трогать.
+Звено: hub-v5chain-research-23. [ЧЕРНОВИК: смена продолжается — финиш 13:30 отменён, 5ч-окно сбросилось]. Пользователь не на связи с ~06:25. Диспетчер ввёл протокол GPU: стенсилы на CPU (`STGPU=0`), GPU-solve только под `flock /tmp/gpu.lock <команда>` на aida, чужие GPU-процессы не трогать.
 
 ## Сделано (manip 4D — главное; всё в `knowledge/research/manip4d_cover.md`, скрипты `reports/research/r23/NN_*`, на aida `~/spore_v5/r23/`)
 1. **Эталон manip 4D был неверен**: перебор (≤ 3 дуги bang-bang) завышен до 20% (q1 2.641 → OCP 2.121), q5 нарушал |w| ≤ 3. Новый OCP CasADi (|τ| ≤ 1, |w| ≤ 3, ветви 2π) на 20 стартах: `r23/manip_ref_ocp_20.npy`; устойчив к 15 затравкам на ветвь. CasADi на aida: `PYTHONPATH=~/spore_v5/r23/pylib` (на хабе — wheel в scratchpad).
@@ -26,6 +26,7 @@
 - git: identity через `GIT_AUTHOR_NAME/EMAIL=gun.vladimir26@gmail.com`; добавлять пути поимённо; не пушить.
 - Очередь замка GPU бывает > 1 ч (w25, b6, research) — CPU-стенсилы manip ~20 мин на 2.2M узлов.
 
-Коммиты: 18bc7e9 (старт) … 3dbe57f + финиш; локальные.
-Токены: T_START 5ч 6% / ctx 4% / 7д 53% / $0.17.
+Коммиты: 18bc7e9 (старт) … f946ff5 + финиш; локальные.
+Идущее на aida: SMEAN-проверка `r23/05/run_sm.sh` (pid в очереди flock; сам допишет `vstart_sm.out`) — забирает research-24.
+Токены: T_START 5ч 6% / ctx 4% / 7д 53% / $0.17; T_BEFORE_END 5ч 74% / ctx 26% / 7д 62% / ~$13.
 NEXT_LINK: hub-v5chain-research-24   NEXT_MODEL: opus

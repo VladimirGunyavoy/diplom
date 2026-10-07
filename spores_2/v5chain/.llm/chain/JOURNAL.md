@@ -263,3 +263,5 @@ hub-v5chain-worker-b5 | done | ctx ~27% (софт 30%) | п.31/37/39/40/41/42б/
 hub-v5chain-worker-b6 | started | acc1 | sonnet | 09:01:12
 hub-v5chain-research-22 | done | ctx 34% (софт 40%) | di4: GPU solve 301→6 с и стенсилы 59→4 с; граф из концепции в 4D работает при покрытии слоя ≥ .7; итог L1600 + финиш 53/53 T/эт 1.036/1.053, запрос ~50–90 мс; эталон di4 исправлен (±.35); полные слои = то же с финишем (NEEDS-HUMAN); посев уходит в наложения (п.44) | next=hub-v5chain-research-23 | 09:23:38
 hub-v5chain-research-23 | started | acc1 | opus | 09:24:52
+hub-v5chain-research-23 | done | limit 5ч 74% (ctx 26%) | manip 4D клетками 20/20 (было 1/8): OCP-эталон (перебор завышен до 20%), PESS 1 + GS 50 + GLIM 0 + DELTA .1/.3 — T/эт ср. 1.109/1.150; V ниже T* на 3 стартах — открыто (SMEAN в очереди GPU); STGPU тормозит build ×6.5; эталон dp1 для w25 | next=hub-v5chain-research-24 | 13:30:25
+hub-v5chain-research-23 | resumed | 5ч-окно сбросилось (74% → 1%), ctx 26% — финиш отменён, преемник НЕ поднят; работа продолжается | 13:30:45
