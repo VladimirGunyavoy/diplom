@@ -47,6 +47,14 @@ elif SYS == 'dp1':                                                              
     def f(y, u): return np.concatenate([y[..., 2:], accel(y, u)], -1)
     def Bq(y):
         a0 = accel(y, (0., 0.)); Bm = np.zeros((4, 2)); Bm[2:, 0] = accel(y, (1., 0.)) - a0; Bm[2:, 1] = accel(y, (0., 1.)) - a0; return Bm @ Bm.T
+elif SYS == 'm3d':                                                                                          # b6 (PLAN п.47): 3D двузвенный манипулятор 6D (research-21 r21/manip3d.py), 8 слоёв = вершины коробки моментов; цель |q|<.3, |w|<.6
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../v5chain/reports/research/r21')); import manip3d as _M3
+    N = 6; PERIOD = np.array([PI2, PI2, PI2, 0, 0, 0]); RHOV = np.array([.3, .3, .3, .6, .6, .6]); WM = float(E('WM', 3.)); XLV = np.array([0., 0., 0., WM, WM, WM]); US = tuple(map(tuple, _M3.US))
+    def f(y, u): return _M3.f(y, np.asarray(u, float))
+    def Bq(y):
+        a0 = f(y, (0., 0., 0.)); Bm = np.zeros((6, 3))
+        for j in range(3): e = [0., 0., 0.]; e[j] = 1.; Bm[:, j] = f(y, tuple(e)) - a0
+        return Bm @ Bm.T
 else: raise SystemExit('SYS?')
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
@@ -413,6 +421,7 @@ class Atlas:
             try: import torch
             except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
             if torch is not None:
+                if int(E('GPULOCK', 0)): import fcntl; _lk = open('/tmp/gpu.lock', 'a'); print('GPULOCK: жду замок', flush=True); fcntl.flock(_lk, fcntl.LOCK_EX); print('GPULOCK: взял', flush=True)   # w25: замок GPU только на GPU-участок (стенсилы на CPU считаются до него)
                 dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device=dev); gW = torch.as_tensor(W, device=dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
                 Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
                 if SMEAN: uq, GI_ = np.unique(K, return_inverse=True); gGI = torch.as_tensor(GI_.astype(np.int64), device=dev); gGN = torch.as_tensor(uq // 20, device=dev); NG = len(uq); del K, uq, GI_; print('SMEAN: групп', NG, 'из', len(I), 'рёбер', flush=True)
@@ -432,7 +441,7 @@ class Atlas:
                     if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
                     new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
                     if d < 1e-9: break
-                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); return s
+                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); (_lk.close() if int(E('GPULOCK', 0)) else None); torch.cuda.empty_cache(); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
