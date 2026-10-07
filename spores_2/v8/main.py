@@ -16,6 +16,9 @@ Controls:
 """
 
 import sys
+for _s in (sys.stdout, sys.stderr):
+    try: _s.reconfigure(encoding='utf-8', errors='replace')
+    except Exception: pass
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -49,6 +52,15 @@ print("PLAYER ZOOM - Sandbox")
 print("=" * 50)
 
 app = Ursina()
+
+# Шрифт с кириллицей (дефолтный OpenSans/VeraMono её не содержит)
+from ursina import Text
+for _f in ('C:/Windows/Fonts/consola.ttf', 'C:/Windows/Fonts/arial.ttf',
+           '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'):
+    if os.path.exists(_f):
+        from panda3d.core import Filename
+        Text.default_font = Filename.from_os_specific(_f).get_fullpath()
+        break
 
 # ===== MANAGERS =====
 color_manager = ColorManager()

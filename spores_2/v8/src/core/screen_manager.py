@@ -35,7 +35,7 @@ class Message:
 
         self._text_entity = Text(
             text=getter(),
-            font='VeraMono.ttf',
+            font=Text.default_font,
             position=(x, y),
             origin=(-0.5, 0.5),
             scale=0.7,

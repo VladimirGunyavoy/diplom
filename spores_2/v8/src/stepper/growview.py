@@ -91,7 +91,7 @@ class GrowView:
 
             class _Multi(Scalable):
                 def __init__(self):
-                    self.real_v = np.zeros((0, 3)); super().__init__(model=Mesh(vertices=[], mode=mode, thickness=(8 if name in ('points_seed', 'points_cur') else 4) if pts else 2))
+                    self.real_v = np.zeros((0, 3)); super().__init__(model=Mesh(vertices=[], mode=mode, thickness=(.1 if name in ('points_seed', 'points_cur') else .05) if pts else 2))
                 def apply_transform(self, a, b, **kw):
                     v = self.real_v * a + b; self.model.vertices = [Vec3(*p) for p in v]; self.model.generate()
             e = _Multi(); from ursina import color; e.color = color.rgba(*col); e.alpha = col[3]
