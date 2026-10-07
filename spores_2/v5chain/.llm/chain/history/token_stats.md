@@ -185,3 +185,5 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | hub-v5chain-worker-26 | T_BEFORE_END/T_END | 5ч 14% / ctx 19% | $5.86 | 2026-10-07 23:07:05 |
 | hub-v5chain-explainer-1 | T_END | 5ч % / ctx 20% | $10.3901918 | 2026-10-07 23:07:11 |
 | hub-v5chain-research-24 | T_END | 5ч 8% / ctx 17% / 7д 77% | $5.26 | 2026-10-07 23:07:36 |
+| hub-v5chain-explainer-2 | T_END | 5ч 26% / ctx 10% / 7д 81% | $1.89 | 2026-10-07 23:07:40 |
+| hub-v5chain-dispatcher-5 | end | 5ч 3% / ctx 7% | $0.2 | 2026-10-07 23:08:48 |
