@@ -10,6 +10,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -67,6 +68,20 @@ def rk4(y, u, h, n):
         k1 = f(y, u); k2 = f(y + h / 2 * k1, u); k3 = f(y + h / 2 * k2, u); k4 = f(y + h * k3, u); y = y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return y
 def step(y, u, sg=1.): return rk4(y, u, sg * DTN / 2, 2)
+def nf_rows(P0, p, u, sg, nmax):
+    """п.48: строки i = 1..n для точек P0 (…, N) плоскости через p; строка i — пересечение траектории каждой точки с гиперплоскостью ⟂ f(c_i) через c_i = центр. траектория p на i·DTN
+    (линейно между мелкими шагами DTN/NFSUB, окно ±NFW·DTN вокруг i·DTN, ближайшее к i·DTN пересечение). Нет пересечения у какой-то точки, или центр вышел из поля — строки кончились. → список строк (форма P0)."""
+    sh = P0.shape; X = [P0.reshape(-1, N)]; C = [np.asarray(p, float)]; h = sg * DTN / NFSUB; Wn = NFW * NFSUB; out = []
+    for i in range(1, nmax + 1):
+        ke = i * NFSUB
+        while len(X) <= ke + Wn: X.append(rk4(X[-1], u, h, 1)); C.append(rk4(C[-1], u, h, 1))
+        c = C[ke]; fh = f(c, u); fh = fh / (np.linalg.norm(fh) + 1e-300); k0 = max(0, ke - Wn); Xw = np.stack(X[k0:ke + Wn + 1]); g = sg * ((Xw - c) @ fh)
+        cr = (g[:-1] <= 0) & (g[1:] > 0); has = cr.any(0)
+        if not has.all(): break
+        kk = np.where(cr, np.abs(np.arange(k0, k0 + len(cr))[:, None] + .5 - ke), np.inf).argmin(0); j = np.arange(g.shape[1]); ga, gb = g[kk, j], g[kk + 1, j]; w = -ga / np.where(gb - ga == 0, 1., gb - ga)
+        out.append((Xw[kk, j] * (1 - w)[:, None] + Xw[kk + 1, j] * w[:, None]).reshape(sh))
+        if not inbox_g(c): break
+    return out
 def ingoal(y): return (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
@@ -99,8 +114,11 @@ class Cell:
         ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
         for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
         fw = [seg]; bw = []; y = seg
-        for _ in range(s.nf): fw.append(step(fw[-1], s.u))
-        for _ in range(s.nb): y = step(y, s.u, -1.); bw.append(y)
+        if NORMFRONT and getattr(s, 'p', None) is not None:                                                   # п.48: строки по пересечениям; гало может не дотянуться — укорачиваем nf/nb
+            fw += nf_rows(seg, s.p, s.u, 1., s.nf); bw = nf_rows(seg, s.p, s.u, -1., s.nb); s.nf, s.nb = len(fw) - 1, len(bw)
+        else:
+            for _ in range(s.nf): fw.append(step(fw[-1], s.u))
+            for _ in range(s.nb): y = step(y, s.u, -1.); bw.append(y)
         s.G = np.array(bw[::-1] + fw)
 LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))                         # вершины гиперячейки: (строка, боковые…)
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
@@ -217,8 +235,12 @@ def growN(p, u, idx, rm, tm):
     for sg in (1, -1):
         y = base; yc = p.copy(); W = np.zeros((N, N))
         for i in range(1, nmax + 1):
-            y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
+            y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); Wt[sg * i] = W * (i * DTN)
+            if not NORMFRONT: rows[sg * i] = y
             if not inbox_g(yc): break
+        if NORMFRONT:
+            for i, Pn in enumerate(nf_rows(base, p, u, float(sg), nmax), 1): rows[sg * i] = Pn
+            for i in [k for k in Wt if k != 0 and np.sign(k) == sg and k not in rows]: del Wt[i]
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
@@ -256,7 +278,7 @@ def growN(p, u, idx, rm, tm):
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
-    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
+    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p.copy(); c.nf, c.nb = ihi, -ilo; return c
 def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
