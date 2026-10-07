@@ -1,2 +1,10 @@
 # Session Handoff
-Звено: hub-v5chain-worker-24 принял смену от worker-23 (раскладка в recent.md); handoff worker-23 в roles/worker/recent.md, план — PLAN п.29/26/32.
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-worker-24 (acc2, Sonnet, 03:51–~08:10, линия A), причина смены: limit (5ч 86%, +10%/ч от общего аккаунта; работа линии закрыта)
+Сделано: п.29б di4 пул FAR (852/1600 кл.); п.34 вёдра в grow3 (×1.4, SOLVEB, выкл.); **п.36 car ЗАКРЫТ**: `v7/src/cells7/growCar.py` (перебазирован на свежий growN: GPU solve, FINGRID; SYS=car, 6 слоёв, диски, цель-круг, финиш shoot_pol, VCLIP): c1600 (6×1600 кл., 5.69M узлов) 20/20, T/эт mean 1.0825 (1.031–1.182), build 632 с, solve 392 с (GPU), q_ms мед./p90/max 425/538/732; п.41 REFFILE в growNq. Всё — `v7/reports/growN/results.md`, STATUS, PLAN.
+Стоп на / следующий шаг: очередь линии A пуста — взять у research следующее (PLAN п.32 «все системы к утру»: 3D двузвенный манипулятор, GPU; di4 с эталоном `r22/di4_ref_60_rho35.npy` через `REFFILE`; вынос SYS=car в growN — владелец B; п.26 growNq на di4 с GPU solve). Запуск car: aida `cd ~/spore_v5/w24/v7; SYS=car M=3 SIDE=0 GM=.25 GLIM=0 FRAC=1 PESS=1 GS=300 MAXC=1600 SOLVEGPU=1 STGPU=1 VF=1.5 DUMPL=… DUMP=… ~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python src/cells7/growCar.py` через launch_bg+ssh (`| stdbuf -oL tr '\r' '\n'`); диагностика — `reports/car_diag.py` (LOAD=pkl).
+Грабли: (1) pickle слоёв грузить только после `setattr(__main__, <классы>)` (см. car_diag.py); (2) дамп V делается ДО starts_ref (файл эталона r21/car_ref20.npy нужен и на aida: ~/spore_v5/w24/v5chain/reports/research/r21/); (3) SLSQP-финиш для car не использовать (>10 мин на 20; нужен shoot_pol); (4) в 4D вёдра и ГЗ не ускоряют solve (b4 п.33); (5) tqdm через ssh|tr — только с `stdbuf -oL`; (6) kill только по PID; (7) git: -c user.name=w24 -c user.email=a@b, пуш запрещён, коммитить только свои пути (growN.py — владелец B); (8) di4 «T/эталон» со старым ±.05 завышено ~17% (п.41).
+Решения цепочки: нет
+Коммиты: см. git log [hub-v5chain-worker-24]
+Токены: T_START 5ч 28% / ctx 4% / $0.09 (03:51) / T_BEFORE_END 5ч 86% / ctx 21% / $3.8 (08:30)
+NEXT_LINK: hub-v5chain-worker-25   NEXT_MODEL: sonnet
