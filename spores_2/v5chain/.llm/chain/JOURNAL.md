@@ -265,3 +265,4 @@ hub-v5chain-research-22 | done | ctx 34% (софт 40%) | di4: GPU solve 301→6
 hub-v5chain-research-23 | started | acc1 | opus | 09:24:52
 hub-v5chain-research-23 | done | limit 5ч 74% (ctx 26%) | manip 4D клетками 20/20 (было 1/8): OCP-эталон (перебор завышен до 20%), PESS 1 + GS 50 + GLIM 0 + DELTA .1/.3 — T/эт ср. 1.109/1.150; V ниже T* на 3 стартах — открыто (SMEAN в очереди GPU); STGPU тормозит build ×6.5; эталон dp1 для w25 | next=hub-v5chain-research-24 | 13:30:25
 hub-v5chain-research-23 | resumed | 5ч-окно сбросилось (74% → 1%), ctx 26% — финиш отменён, преемник НЕ поднят; работа продолжается | 13:30:45
+hub-v5chain-worker-b6 | NEEDS-RESEARCH | 17:00 | очередь B пуста после п.45/46: manip хвост (старт 19, V плоская) и п.46 по остатку не нужен — нужен следующий пункт (research: почему V плоская у q19; следующая система по TASK)

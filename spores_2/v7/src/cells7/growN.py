@@ -368,6 +368,9 @@ class Atlas:
         v[sm < WTHR] = BIG; return v
     def vstar(s, Y):
         I, IDX, W = s.stencils(Y); out = np.full(len(Y), BIG)
+        if len(I) and int(E('VSONE', 0)):                                                                      # b6: как SONE в solve — один (самый центральный) стенсил на группу (точка, слой), min между слоями; min по всем перекрытиям занижает V*
+            if not hasattr(s, 'cl_'): s.cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); s.O_ = np.array([c.o for c in s.cells])
+            dl = s.cl_[np.searchsorted(s.O_, IDX[:, 0], 'right') - 1]; key = I.astype(np.int64) * 4 + dl; o2 = np.lexsort((W.max(1), key)); key = key[o2]; f = o2[np.r_[True, key[1:] != key[:-1]]]; I, IDX, W = I[f], IDX[f], W[f]
         if len(I): np.minimum.at(out, I, s.interp(W, s.V[IDX]))
         out[ingoal(Y)] = 0.; return out
     def tgoal(s, Y, u, n=8):
