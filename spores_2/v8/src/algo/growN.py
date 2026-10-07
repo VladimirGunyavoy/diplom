@@ -127,17 +127,20 @@ def goal_dist(P):
 def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEPS
 LAT = (slice(None),) * m_
 class Cell:
-    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0
+    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0; s.hb = 0; s.hf = 0       # nb, nf — строки ядра; hb, hf — гало-строки за торцами (входят в G и tau, не в покрытие)
     def build(s):
         """сетка узлов G (nt, M×m, n): заплатка с гало, пронесённая потоком на nb шагов назад и nf вперёд."""
         ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
         for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
+        nfc, nbc = s.nf, s.nb; HT = max(1, int(np.ceil(HALO * (nbc + nfc) / 2)))               # торцевое гало: HT строк за каждым торцем ядра
         fw = [seg]; bw = []; y = seg; tf = [np.zeros(seg.shape[:-1])]; tb = []
         if NORMFRONT and getattr(s, 'p', None) is not None:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
-            rf, tfw = nf2_rows(seg, s.p, s.u, 1., s.nf); rb, tbw = nf2_rows(seg, s.p, s.u, -1., s.nb); fw += rf; bw = rb; tf += tfw; tb = tbw; s.nf, s.nb = len(rf), len(rb)
+            rf, tfw = nf2_rows(seg, s.p, s.u, 1., nfc + HT); rb, tbw = nf2_rows(seg, s.p, s.u, -1., nbc + HT); fw += rf; bw = rb; tf += tfw; tb = tbw
+            s.nf, s.nb = min(nfc, len(rf)), min(nbc, len(rb)); s.hf, s.hb = len(rf) - s.nf, len(rb) - s.nb
         else:
-            for k in range(s.nf): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
-            for k in range(s.nb): y = step(y, s.u, -1.); bw.append(y); tb.append(np.full(seg.shape[:-1], -(k + 1) * DTN))
+            for k in range(nfc + HT): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
+            for k in range(nbc + HT): y = step(y, s.u, -1.); bw.append(y); tb.append(np.full(seg.shape[:-1], -(k + 1) * DTN))
+            s.hf = s.hb = HT
         s.G = np.array(bw[::-1] + fw); s.tau = np.array(tb[::-1] + tf)
 LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))                         # вершины гиперячейки: (строка, боковые…)
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
@@ -148,14 +151,14 @@ def _contract(Xa, sa, j=-1):
     return T
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
-    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
+    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.TH = []; s.nc = 0
     def add(s, c):
         g = c.G; nt = g.shape[0]; ns = (nt - 1,) + (M - 1,) * m_
         X = np.stack([g[tuple(slice(d, n_ + d) for d, n_ in zip(o, ns))] for o in VOFF], -2).reshape(-1, 2 ** N, N); n = len(X)
         ii = [a.ravel() for a in np.indices(ns)]
         if s.n + n > s.cap:
             cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 2 ** N, N)); I2 = np.zeros((cap, N + 1), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; L2 = np.zeros((cap, N)); H2 = np.zeros((cap, N)); L2[:s.n] = s.LO[:s.n]; H2[:s.n] = s.HI[:s.n]; s.X, s.I, s.LO, s.HI, s.cap = X2, I2, L2, H2, cap
-        s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[(np.full(n, s.nc),) + tuple(ii)]; hid = np.arange(s.n, s.n + n); s.n += n; s.R.append(c.r); s.nc += 1
+        s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[(np.full(n, s.nc),) + tuple(ii)]; hid = np.arange(s.n, s.n + n); s.n += n; s.R.append(c.r); s.TH.append((c.hb, c.nb + c.nf)); s.nc += 1
         lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; s.LO[s.n - n:s.n] = lo; s.HI[s.n - n:s.n] = hi; Ks, Vs = [], []
         for si, sh in enumerate(SH):
             l, h = lo + sh, hi + sh; v = np.ones(n, bool)
@@ -237,7 +240,7 @@ class HexIdx:
         Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y)
         if len(pi):
             R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
-            sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); m[pi[core]] = True
+            sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); TH = np.array(s.TH); tp = s.I[hid, 1] + sc[:, 0]; core &= (tp >= TH[cid, 0] - 1e-9) & (tp <= TH[cid, 0] + TH[cid, 1] + 1e-9); m[pi[core]] = True
         return m
 def mlin(Pb, n_):
     """полилинейная заплатка по 2^m углам ящика Pb (строки, n_1..n_m, n)."""
@@ -250,7 +253,7 @@ def mlin(Pb, n_):
 REASON = dict(kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
 def cell_dict(c):
     """поля клетки по контракту снимка; G — read-only вид (готовые клетки не копируются)"""
-    G = c.G.view(); G.flags.writeable = False; return dict(G=G, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, u=c.u)
+    G = c.G.view(); G.flags.writeable = False; return dict(G=G, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, hb=c.hb, hf=c.hf, u=c.u)
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
@@ -342,7 +345,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
             if len(cells) % SEEDW == SEEDW - 1:
                 w = ovl[-SEEDW:]; print('seed u=%s cells %d overlap(last %d) %.3f' % (u, len(cells) + 1, SEEDW, np.mean(w)), flush=True)
                 if SEEDSTOP > 0 and np.mean(w) > SEEDSTOP and not queue: print('layer', u, 'стоп по наложению:', len(cells), 'клеток', flush=True); cells.append(c); idx.add(c); break
-        cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[ctr]; yb = g1[ctr]
+        cells.append(c); idx.add(c); g0, g1 = c.G[-1 - c.hf], c.G[c.hb]; yf = g0[ctr]; yb = g1[ctr]
         for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
         queue += [yf, yb]
         if SIDE:
