@@ -165,7 +165,14 @@ def full_atlas():
         for t in trees: t.round('b')
     A = atlas_of(trees); quiet(A.solve); return A
 if __name__ == '__main__':
-    t0 = time.time(); Af = full_atlas(); print('полный атлас: клеток', len(Af.cells), 'узлов', Af.N, round(time.time() - t0), 'с', flush=True)
+    t0 = time.time()
+    if E('LOADFULL'):                                                         # di4: «полный» атлас — сохранённые слои + V (рост от цели до MAXC), а не полное покрытие
+        import pickle, __main__
+        for n_ in dir(G):
+            if n_[0].isupper() and isinstance(getattr(G, n_), type): setattr(__main__, n_, getattr(G, n_))
+        d_ = pickle.load(open(E('LOADFULL'), 'rb')); Af = G.Atlas.__new__(G.Atlas); Af.layers = d_['layers']; Af.finish(); Af.V = d_['V']
+    else: Af = full_atlas()
+    print('полный атлас: клеток', len(Af.cells), 'узлов', Af.N, round(time.time() - t0), 'с', flush=True)
     Q, ref = G.starts_ref(); Cs = Af.vstar(G.wrapy(Q)); ok = np.flatnonzero(Cs < G.BIG / 2); print('стартов с конечной V', len(ok), 'из', len(Q), flush=True)
 
     if int(E('POOL', 0)):

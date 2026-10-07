@@ -32,6 +32,11 @@
 
 - **hub-worker-13 (2026-10-02, spore_v + точное переключение + бабочки):** `Cell.locate` (допуск гало, экстраполяция Эрмита, предфильтр по t): 57→99.9% узлов находят свою клетку; `dt_edge`=шаг агента + густота узлов: DI spore_v T/T* 1.044 (было 1.15), маятник hs=.008 T/Ta 1.019 (было 1.32); LQR-клетка цели `rollout(hold,hc=.1)`; спектр u в агенте ≤1%; точное переключение (P3:.5, `EPS=.06` при ошибке модели) sw 18→2–3; бабочки: ДИ ×100 (`cells7/butterfly_di.py`), маятник 100%/1.036/4 перекл. при 35k узлов (`cells7/butterfly_pend.py`, окно .3). Всё в `v7/reports/spore_v_di.md`, PLAN.
 
+### Линия A (hub-v5chain-worker-23, обновлено 2026-10-07 03:55)
+- grow3: GS в solve (`GSN` умолч. 64: −23% solve, V та же). П.26 на маятнике — `v7/src/cells7/growNq.py` (BIDIR, solve_fwd, PRUNE, тёплый старт `WARM=1` −36%, общий пул 26в): PRUNE ε .2 → .31–.58 клеток полного, T = полному (`v7/reports/growNq/results.md`).
+- П.24/29 di4 (growN владелец B): без PESS V не растекается (0/60 при RHO .05/.3, GLIM .25 тоже); PESS1 RHO.35 MAXC400: reach 46/60, T/эт med 1.012, петли (max 14); build 152 с, solve 709 с, запрос 99/224/724 мс. А2: solve ≤60 с НЕ достигнут (стенсилы ≥170 с + 175 ит; `solve_wl` с порогом — итерации 131–315 с) — `v7/reports/growN/results.md`.
+- Идёт/не закончено: п.29б (п.26 на di4, growNq POOL=1 GS=300; aida `w23/v7/reports/di4/q_pool3_gs300.log`); старты выбирал по конечной V (близко к цели) — нужны дальние.
+
 ### Линия B (hub-v5chain-worker-b3, обновлено 2026-10-07 01:30)
 - PLAN 22 growN: (а) dd ✓, (б) маятник n=2 ✓, (в) manip 4D: c3000g reach .25 T/эт 1.24 (VF1 1.18); c3000 PESS=1: big_nodes .04, reach .25, T/эт 1.14; c6000g (4×6000, без PESS): reach .625, med T/эт 1.24, mean 1.68 (выбросы до 2.7). Охват растёт с числом клеток; идёт c9000 PESS=1 (aida, growN_manip_c9000_pess1.log, DUMP manip_c9000_pess1.pkl).
 - Готово в growN.py (v7, владелец B): SPAR (параллельные стенсилы), стенсилы/solve чанками (память), 23а ×2.2, 23б PESS/WTHR (по умолч. выкл.), DEDUP — не использовать. FRAC=1 на 3000 клетках не помещается в память aida.
@@ -51,4 +56,4 @@
 - **hub-v5chain-worker-b1 (2026-10-06, линия B):** перенос в v7 (`grow_cells2d.py`/`compute.py` = r16 f5196de): OWN, CUTR, LOOK, NORMFRONT(NF0), SEEDEPS — маятник u .3 1.012–1.013 / ~920–1090 спор, u .15 .997–.999 к eshoot / 1460–1620, ДИ 1.0215 (`cut_walls.md` §Перенос); эталон маятника `reports/research/pend_ref_best.py` (u .3 ✓ .9973; u .15 считается на aida). Дальше PLAN 22–23 (growN).
 - **hub-v5chain-worker-21 (2026-10-06):** `v7/src/cells7/grow3.py` — дд-ромб 3D (x,y,θ) растущими клетками: свободный 60/60 T/refbox 1.0153 (1528 клеток, 260k узлов, 147 с, RS3 GM1), +2 диска 59/60 (0 столкновений, 1.0122; старт 51 — дыра у диска), финиш стрельбой VF 1.5. Отчёт `v7/reports/grow3/results.md`; атласы на aida `~/spore_v5/w21/v7/reports/grow3/*.pkl`. Следующее: PLAN 22 (growN), 23.
 - **hub-v5chain-worker-22 (2026-10-06, линия A):** grow3: старт 51 (диски) — предельный цикл → NOPR+LRTA*; профиль: `HexIdx` XL/XH (×2: 367→184 с); финиш VF5/NA4/VFR1 → свободный T/refbox **1.004** max 1.010; диски RMAX .3 → 60/60, ≈1.005 к refbox, max 1.027 (`v7/reports/grow3/results.md`). Цель §17 (T→1.00) достигнута; открыто: CUT/REFINE, Гаусс–Зейдель solve, growN (линия B).
-  п.24 di4 (growN): расчёты M3 SIDE0 MAXC400/700 на aida (growN_di4w22.py), T/T* ещё не получен — PLAN п.24.
+  п.24 di4: итог — в «Линия A» выше.

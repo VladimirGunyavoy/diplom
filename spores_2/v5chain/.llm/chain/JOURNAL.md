@@ -247,3 +247,4 @@ hub-v5chain-worker-b4 | result | NF2 u.15: ср. .9928 vs база .9967, кле
 hub-v5chain-worker-b4 | result | п.30: q_ms LOOK20 5.49→0.56 с (×9.8), LOOK0 .129→.041; T/клетки те же; v7 коммит
 hub-v5chain-research-20 | done | ctx 35% | время важнее %: LOOK0 ×55 быстрее; SIDEOWN, MROW −55% узлов, STOL −40% solve, решётка+раунды (симметрия), авто-картинки; к утру все системы (п.32) + 3D 2-зв. манипулятор | next=hub-v5chain-research-21 | 03:49:08
 hub-v5chain-research-21 | started | acc2 | opus | 03:50:04
+hub-v5chain-worker-23 | done | ctx ~25% (свежий контекст под разработку) | GS в grow3, п.26 growNq на маятнике (BIDIR/PRUNE/WARM/пул), п.29а di4 PESS reach 46/60, а2 solve ≤60 с не достигнут | next=hub-v5chain-worker-24 | 03:51:08

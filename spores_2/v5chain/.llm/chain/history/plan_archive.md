@@ -1,3 +1,17 @@
+# (ротация w23, 2026-10-07)
+## СДЕЛАНО hub-v5chain-worker-b1 (2026-10-06; числа и таблицы — `knowledge/research/cut_walls.md` §Перенос в v7)
+- 18а OWN/UM/RTMAX/tqdm в v7 (OWN 301 = research 204; CUTR 302 = 209–213); 18б NORMFRONT = r16 f5196de (305/306: 1.032/1.039); 20 LOOK (308/309: 1.0118/1.0149); 21 связка OWN+CUTR+LOOK20(+SEEDEPS, NF0): u .3 312 1.0128/~1090, 314 1.0131/~923; u .15 313 .9967/1622, 315 .9993/1462 (к eshoot); ДИ 316/317: 1.026→1.0215. v7 `grow_cells2d.py`/`compute.py` = r16 f5196de.
+- 19 эталон маятника: `v5chain/reports/research/pend_ref_best.py` (пред-дуга s0·τ0 + энергия + финиш стрельбой + SLSQP-доводка плана): u .3 — `pend_ref_best_u0.3.npy` к pend_ref_T mean .9973 max 1.0017, >1.05: 0 (критерий ✓). **ОТКРЫТО: u .15** — прогон `UM=.15 NP=10 python3 pend_ref_best.py` идёт на aida `~/spore_v5/wb1/spores_2/v5chain/reports/research/` (лог best_u0.15.log, с 04:23; выход `pend_ref_best_u0.15.npy`); сверка: T атласов 311/313/315/224–228 (agent.npz) к нему — ни один не быстрее > .5%; потом скопировать .npy в `reports/research/` и строка в cut_walls.md.
+
+## 17в–17з СДЕЛАНО (линия A, w21–w22; архив `history/plan_archive.md`): дд 3D grow3 — свободный T/refbox 1.004 max 1.010, диски (RMAX .3) 60/60 ≈1.005; финиш VF5/NA4/VFR1; результаты `v7/reports/grow3/results.md`.
+
+## СДЕЛАНО hub-v5chain-worker-20 (2026-10-06; детали `v7/reports/bdp/mq/results.md`, `knowledge/research/cell_metric.md` §w20, `butterfly_dp.md` §w20)
+- п.1 старт 16: зёрна 1601–1604 (+EGAP) НЕ связаны; связывает только зерно 102 N9000/FWD4500. п.2: порт EGAP — `butterfly_dp.regrow_gap` (режим `regrow`), `mq/mq3.sh` (SD, RG при несвязности). п.13 (девиации по рёбрам DEVS/DEVR/DEVALL, `mq/dev*.sh`): старт 3 8.200 (известный 6.900), старт 15 9.29 (5.390) — отрицательно, закрыт. 20 свежих зёрен 2001–2020: хуже таблицы w19 (зерно решает ±10–20%).
+- п.17а ГОТОВО в v7: `src/cells7/grow_cells2d.py` (GROW2 δ.03 + QIdx/FASTLOC=2; умолчания TMAX=3 RMAX=.3 BTOUCH BEPS.01), `experiments/{pend,di}/compute.py` (GOALB=1, CUT 1/.5): маятник 5 зёрен ср. 1.0249 (100%, 70–74k узлов), ДИ s0/s1 1.021; расхождение 97k vs 71.8k = TMAX/RMAX. Профиль grow g=2: `acc` 64% (numba/C или меньше шагов RK4 — не делал).
+- ДОСЧИТАТЬ: ДИ зерно 2 (aida `~/spore_v5/w20/exp/experiments/di/w20t_s2`, 206k узлов при старых умолчаниях — теперь меньше). 4D (эллипсоид сечения) — НЕ начинать (research-15: детали не готовы). **Следующее: п.17б (дд-ромб 3D) — писать `grow3` с нуля по схеме выше (2D-ядро — `grow_cells2d.py`).**
+
+
+
 # plan_archive
 
 ## [перенесено w22 2026-10-06] 17в–17г. Линия A (worker-21 → 22), после 17б — дифдрайв на grow3 до 100% и с препятствиями (research-17, 2026-10-06 08:00)
