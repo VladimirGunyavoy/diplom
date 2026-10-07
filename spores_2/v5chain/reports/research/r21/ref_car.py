@@ -61,7 +61,8 @@ def vias(x0, rng, nr=6):
 if __name__ == '__main__':
     N, M = int(sys.argv[1]), int(sys.argv[2]); qi = [int(v) for v in sys.argv[3].split(',')]; Q = starts(); out = os.environ.get('OUT', 'ref'); os.makedirs(out, exist_ok=True)
     opti, Xv, Uv, Tv, P = make_solver(N, M)
-    for i in qi:
+    from tqdm import tqdm
+    for i in tqdm(qi, desc='эталон OCP по стартам', mininterval=float(os.environ.get('TQDM_MI', 10))):
         t0 = time.time(); x0 = Q[i]; rng = np.random.default_rng(100 + i); res = []
         for via in vias(x0, rng):
             Xg, Tg = guess(x0, via, N); opti.set_value(P, x0); opti.set_initial(Xv, Xg); opti.set_initial(Tv, Tg); opti.set_initial(Uv, np.zeros((2, N)))

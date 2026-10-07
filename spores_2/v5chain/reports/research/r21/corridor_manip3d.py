@@ -19,7 +19,8 @@ S = SysN(fl, 8, (np.pi, np.pi, np.pi, WM, WM, WM), ing, seeds, per=(2 * np.pi, 2
 Q = [np.array([*rng.uniform(-np.pi, np.pi, 3), *rng.uniform(-1, 1, 3)]) for _ in range(NQ)]
 t0 = time.time(); back = build_back(S, tau, NB, rho); tb = time.time() - t0; print('обратное дерево NB %d: %.0f с' % (NB, tb), flush=True)
 res = []
-for i, x in enumerate(Q):
+from tqdm import tqdm
+for i, x in tqdm(list(enumerate(Q)), desc='запросы коридора', mininterval=float(os.environ.get('TQDM_MI', 10))):
     t0 = time.time(); V = replay_value_fast(S, tau, x, NB, NF, rho, rho, back=back)[0]; b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K, tries=TR, kn=8)
     xe = None if b is None else np.array(x, float); wmax = 0.
     if b is not None:

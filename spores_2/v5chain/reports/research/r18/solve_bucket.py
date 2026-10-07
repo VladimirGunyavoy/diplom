@@ -4,6 +4,7 @@
 Точность: коррекция меток (изменённый узел снова в очереди) — та же неподвижная точка, что у Якоби (оператор монотонный).
 Запуск (aida, из experiments/pend): env <конфиг> python3 ~/spore_v5/r18/solve_bucket.py"""
 import numpy as np, os, sys, time, json
+from tqdm import tqdm
 sys.path.insert(0, os.path.join(os.getcwd(), '../../src/cells7')); import grow_cells2d as G
 
 def edges(s):
@@ -64,8 +65,9 @@ def solve_bucket(s, D=None, tol=None):
     M = W > 1e-6; ev = np.repeat(np.arange(len(I)), 4)[M.ravel()]; vv = IDX.ravel()[M.ravel()]   # обратные рёбра: вершина → рёбра, где она с весом
     o = np.argsort(vv, kind='stable'); ev = ev[o]; ptr = np.searchsorted(vv[o], np.arange(s.N + 1))
     fixed = s.goal | dead; pend = (V < BIG / 2); nev = 0; nb = 0; th = 0.
+    vmax = float(V[V < BIG / 2].max()) if (V < BIG / 2).any() else 1.; bar = tqdm(total=round(vmax + 30, 1), desc='solve вёдра (V)', unit='с V', mininterval=float(os.environ.get('TQDM_MI', 10)), leave=False)
     while pend.any():
-        th = max(th, V[pend].min()); thr = th + D; nb += 1
+        th = max(th, V[pend].min()); thr = th + D; nb += 1; bar.n = round(min(th, bar.total), 1); bar.set_postfix(вёдер=nb, на_ребро='%.1f' % (nev / max(len(I), 1))); bar.refresh()
         bt = np.flatnonzero(pend & (V < thr))
         while len(bt):
             pend[bt] = False; lo, hi = ptr[bt], ptr[bt + 1]; n_ = hi - lo; tot = n_.sum()
@@ -76,7 +78,7 @@ def solve_bucket(s, D=None, tol=None):
             un = nd[st]; mv = np.minimum.reduceat(val, st); imp = (mv < V[un] - tol) & ~fixed[un]
             un, mv = un[imp], mv[imp]; V[un] = mv; pend[un] = True; bt = un[mv < thr]
         th = thr
-    s.V_b = V; return dict(nself=nself, t_edges=round(te, 2), t_total=round(time.time() - t0, 2), buckets=nb, edges=len(I), evals=int(nev), evals_per_edge=round(nev / len(I), 2))
+    bar.close(); s.V_b = V; return dict(nself=nself, t_edges=round(te, 2), t_total=round(time.time() - t0, 2), buckets=nb, edges=len(I), evals=int(nev), evals_per_edge=round(nev / len(I), 2))
 
 if __name__ == '__main__':
     t0 = time.time(); A = G.Atlas(); tb = time.time() - t0

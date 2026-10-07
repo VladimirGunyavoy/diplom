@@ -18,7 +18,8 @@ Q = starts(); ref = {}
 for f_ in glob.glob(os.path.expanduser('~/spore_v5/r21/car_N*.jsonl')):
     for l in open(f_): d = json.loads(l); ref[d['q']] = min(ref.get(d['q'], 1e9), d['T_ref'] or 1e9)
 t0 = time.time(); back = build_back(S, tau, NB, rho); tb = time.time() - t0; print('обратное дерево NB %d: %.1f с' % (NB, tb), flush=True); res = []
-for i, x in enumerate(Q):
+from tqdm import tqdm
+for i, x in tqdm(list(enumerate(Q)), desc='запросы коридора', mininterval=float(os.environ.get('TQDM_MI', 10))):
     t0 = time.time(); b = corridor_query(S, fl, x, back, tau, NF, rho, g, miss, K=K, clear=clear, tries=3, kn=8)
     ok = False; dmin = None
     if b is not None:
