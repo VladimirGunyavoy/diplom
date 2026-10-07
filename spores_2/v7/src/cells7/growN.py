@@ -281,6 +281,32 @@ def _dedup(pi, hid, sc):
     st = np.r_[0, np.flatnonzero(np.diff(pi)) + 1]; rk = np.arange(len(pi)) - np.repeat(st, np.diff(np.r_[st, len(pi)]))
     k = rk < K; return pi[k], hid[k], sc[k]
 def _pq_work(a): return tuple(_dedup(*_PQ.query(a[1])[:3])) + (a[0],)
+def _test_gpu(s, Y, pi, vv, tolc=1e-10):
+    """п.39 доп. (research-22, r22/07_di4_stencil_gpu/sgpu.py): HexIdx._test 1:1 на torch float64 (env STGPU=1; di4 один u 59→4 с)."""
+    import torch
+    dev = 'cuda'; CH = int(E('GCH', 1 << 21)); T = lambda a: torch.as_tensor(a, device=dev)
+    s._prep()
+    if getattr(s, '_gn', -1) != s.n: s._g = [T(a[:s.n] if len(a) >= s.n else a) for a in (s.X, s.LO, s.HI, s.A0, s.JI)]; s._gn = s.n; s._gsh = T(np.asarray(SH, float))
+    if getattr(s, '_gy', None) is not Y: s._gy = Y; s._gY = T(Y)
+    X_, LO, HI, A0, JI = s._g; MG = float(E('MG', .4)); out = []
+    for a in range(0, len(pi), CH):
+        p = T(pi[a:a + CH]); v = T(vv[a:a + CH]); hid = v // KSH; y = s._gY[p] - s._gsh[v % KSH]; ok = ((y >= LO[hid]) & (y <= HI[hid])).all(1); p, hid, y = p[ok], hid[ok], y[ok]
+        sc = .5 + torch.einsum('kij,kj->ki', JI[hid], y - A0[hid]); ok = ((sc >= -MG) & (sc <= 1 + MG)).all(1); p, hid, y, sc = p[ok], hid[ok], y[ok], sc[ok]
+        if not len(p): continue
+        X = X_[hid]; alive = torch.arange(len(p), device=dev)
+        for it in range(8):
+            Xa, ya, sa = X[alive], y[alive], sc[alive]; F = _contract(Xa, sa) - ya; J = torch.stack([_contract(Xa, sa, j) for j in range(N)], 2)
+            d = torch.linalg.solve_ex(J, F[..., None])[0][..., 0]; d = torch.nan_to_num(d, nan=1e9, posinf=1e9, neginf=-1e9)
+            sn = sa - d; sc[alive] = sn; keep = ((sn >= -.2) & (sn <= 1.2)).all(1) if it >= 1 else torch.ones(len(alive), dtype=torch.bool, device=dev)
+            sc[alive[~keep]] = 9.; alive = alive[keep & (d.abs().max(1).values >= tolc)]
+            if not len(alive): break
+        F = _contract(X, sc.clip(-1, 2)) - y; tol = 1e-7; k = (torch.linalg.norm(F, dim=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
+        out.append((p[k].cpu().numpy(), hid[k].cpu().numpy(), sc[k].clip(0, 1).cpu().numpy()))
+    if not out: return np.zeros(0, int), np.zeros(0, int), np.zeros((0, N))
+    return tuple(np.concatenate(o) for o in zip(*out))
+if int(E('STGPU', 0)):
+    try: import torch; HexIdx._test = _test_gpu; print('STGPU: стенсилы на GPU', flush=True)
+    except ImportError: print('STGPU: нет torch — CPU', flush=True)
 def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
@@ -350,6 +376,24 @@ class Atlas:
             I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
+        if int(E('SOLVEGPU', 0)):                                                                   # п.39 (research-22, r22/05_di4_gpu_jacobi/gpu.py): тот же Якоби на GPU (torch float64, чанки, scatter_reduce amin); torch нет — старый путь
+            try: import torch
+            except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
+            if torch is not None:
+                dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX.astype(np.int64), device=dev); gW = torch.as_tensor(W, device=dev).double(); goal = torch.as_tensor(s.goal, device=dev)
+                Vt = torch.as_tensor(V, device=dev).double(); ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
+                while n < it:
+                    new = Vt.clone()
+                    for a in range(0, len(gI), ch):
+                        vi = Vt[gX[a:a + ch]]; w_ = gW[a:a + ch]
+                        if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
+                        else:
+                            ok = vi < BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
+                            v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
+                        new.scatter_reduce_(0, gI[a:a + ch], DTN + v, 'amin')
+                    new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
+                    if d < 1e-9: break
+                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
