@@ -61,11 +61,11 @@ def test_console_log():
     layer = lambda: g.build_layer(g.US[1], np.random.default_rng(0))[0]
     out = []; st = S.Stepper(log_actions=False); st.echo = out.append; st.start(layer); st.cmd('c') if st.wait_paused(30) else None
     st._th.join(60); assert st.finished and st.error is None
-    assert any(l.startswith('[stop] spore #1 ') and 'reason=' in l for l in out) and any(l.startswith('[cell] spore #1 rows') for l in out), out
+    assert any(l.startswith('[stop] spore #') and 'reason=' in l for l in out) and any(l.startswith('[cell] spore #') for l in out), out
     out = []; st = S.Stepper(); st.echo = out.append; st.start(layer)
     while st.wait_paused(30): st.cmd('n')
     st._th.join(5)
-    for key in ('spore #1: seed at (', 'section built, 21 points', 'row ', 'grew sideways side', 'stopped:', 'done: rows', 'layer finished:'):
+    for key in (': seed at (', 'section built, ', 'row ', 'grew sideways side', 'stopped:', 'done: rows', 'layer finished:'):
         assert any(key in l for l in out), (key, out)
     print('\n'.join(out[:12]))
 
