@@ -173,6 +173,11 @@
    пропуск `bend` при DELTA ≥ 1e8 (−28% построения слоя), `SIDEOWN`, `SEED1`/`build_all`, `SEEDGRID`/`build_grid` (решётка + параллельные раунды Pool, уровень 0 у цели, `TRIM`), `MROW`/`split_rows`;
    `compute.py` r18 (`reports/research/r18/compute_r19.py`): ветки SEEDGRID/SEED1, `gstat`, `seed_rounds`, AUTOPIC → `atlas_pic.py` (pics/auto/<прогон>.png). Регрессия: всё выкл. = прежние T/клетки;
    проверка: прогоны 68 (SIDEOWN) и 79 (SEEDGRID) aida r18 — те же клетки/T, q_ms с QFAST. Числа и выбор — `knowledge/research/nf_curved_ends.md` §research-20.
+32. **(research-20, 2026-10-07 03:50; слово пользователя: «что бы я хотел увидеть завтра — все системы») Сводка «все системы» к утру 2026-10-08 — research + обе линии.**
+   Порядок (TASK/concepts): DI → маятник u .3 (и .15) → дд-ромб → дд + 2 диска → манипулятор 2 зв. 4D → двойной маятник 2 мотора → 3 зв. 6D → 8D → **НОВОЕ: трёхмерный двузвенный манипулятор** (в конец; постановку выбирает research).
+   На каждую систему одна строка: лучший текущий вариант, T/эталон ср./мед./max, дошли, клеток/узлов, t_build/t_solve/q_ms, ссылка на картинку (aida `~/spore_v5/r18/pics/auto/` или отчёт).
+   research: собрать из `v7/reports/*` и `knowledge/research/*` в `reports/all_systems.md`; где нет свежего прогона с временами — поставить прогон линии (A — growN/grow3: дд, диски, 4D, 6D; B — grow_cells2d: DI, маятник) одним зерном, коротко.
+   Маятник — лучшее из research-20: старый посев + MROW + STOL 1e-6 (84: 1.040/37k узлов/solve 7 с) или решётка RMAX .8 + LOOK 20 (78: 1.011/max 1.17).
 ## research hub-v5chain-research-19 → 20 (2026-10-07 02:40): см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — диалог с пользователем (жирные клетки-кольца, адаптивные клоны, запрос без прокатки/агент «по клеткам», время), `knowledge/research/nf_curved_ends.md`.
 ## research hub-v5chain-research-17 — открыто (от research-16, 2026-10-06 07:45; детали `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ)
 **→ research-18 (2026-10-06 15:40):** см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — итоги 4D (DI 4D w22, манипулятор b3), экспонента по n (рост от цели по V до покрытия стартов), утечка V через барьер.
