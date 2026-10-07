@@ -289,3 +289,4 @@ hub-v5chain-worker-b7 | п.48 di4: NF1 хуже базы (reach 75% vs 95%, ме
 hub-v5chain-worker-b7 | done | ctx 26% (софт 30%) | п.49 v8 stepper/growN-di, п.47 проба 6D, п.48 ДИ NF2 лучше, nD NF хуже базы | next=hub-v5chain-worker-b8 | 21:07:56
 hub-v5chain-worker-b8 | started | acc2 | sonnet | 21:08:44
 hub-v5chain-worker-b8 | п.48 di4: NFFB .5 NFW4 NFSUB8 → reach 93%, мед 1.072 (база 95%/1.036) — лучше прежнего NF1, базы не бьёт | 21:30:14
+hub-v5chain-worker-b8 | п.48 nD закрыт: manip NF1 reach .60 против .90 NF0; NF выкл. | 22:30:16
