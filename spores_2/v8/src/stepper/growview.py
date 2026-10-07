@@ -39,21 +39,22 @@ def cell_outline(G, ax, halo=False):
     return np.stack([ring[:-1], ring[1:]], 1)
 
 
-def build_strips(snap, ax=(0, 1)):
+def build_strips(snap, ax=(0, 1), skel='normal', cells=None, with_cur=True):
     """линии слоёв как ломаные (по одной на клетку): строки — зигзаг по узлам подряд (L₋₁→C₋₁→R₋₁→L₀→…), контур ядра и гало — замкнутая ломаная; dict имя слоя -> список (n, 3)"""
     out = {k: [] for k in ('segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')}
     def ring(o): return np.concatenate([o[:, 0], o[-1:, 1]], 0)
     def cell(G, suf, c=None):
         hb, hf = (int((c or {}).get('hb') or 0), int((c or {}).get('hf') or 0))      # гало-строки за торцами (growN: hb сзади, hf спереди): ядро — без них, гало — по всем
-        P = proj(G, ax)
+        Gs = c['Gt'] if skel == 'time' and (c or {}).get('Gt') is not None else G                  # скелет: 'time' — строки/центр по временным узлам Gt, контуры ядра/гало — по нормальному G
+        P = proj(Gs, ax)
         if P.shape[1] > 1: out['segs_rows_' + suf].extend(list(P))                        # по полосе на строку (L→C→R): диагонали между строками не рисуются
         if P.shape[0] > 1: out['segs_center_' + suf].append(P[:, P.shape[1] // 2])        # траектория зерна: центральные узлы строк
         Gc = G[hb:len(G) - hf] if (hb or hf) and len(G) - hb - hf >= 1 else G
         out['segs_core_' + suf].append(ring(cell_outline(Gc, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))
-    for c in snap.get('cells') or []: cell(c['G'], 'done', c)
-    cur = snap.get('cell')
+    for c in (snap.get('cells') or []) if cells is None else cells: cell(c['G'], 'done', c)
+    cur = snap.get('cell') if with_cur else None
     if cur is not None: cell(cur['G'], 'cur', cur)
-    sec = snap.get('section')
+    sec = snap.get('section') if with_cur else None
     if sec is not None: out['segs_rows_cur'].append(proj(sec, ax))
     return out
 
@@ -63,16 +64,17 @@ def seg_index(K):
     return [(2 * i, 2 * i + 1) for i in range(K)]
 
 
-def build_geometry(snap, ax=(0, 1), halo=HALO):
+def build_geometry(snap, ax=(0, 1), halo=HALO, skel='normal'):
     """dict имя слоя -> массив: 'points_*' (K, 3), 'segs_*' (K, 2, 3). Пустые слои — нулевой размер."""
     g = {}; cells = snap.get('cells') or []; cur = snap.get('cell')
     z3, z23 = np.zeros((0, 3)), np.zeros((0, 2, 3))
-    g['points_done'] = np.concatenate([proj(c['G'], ax).reshape(-1, 3) for c in cells], 0) if cells else z3
+    def GK(c): return c['Gt'] if skel == 'time' and c.get('Gt') is not None else c['G']
+    g['points_done'] = np.concatenate([proj(GK(c), ax).reshape(-1, 3) for c in cells], 0) if cells else z3
     g['segs_rows_done'] = np.concatenate([cell_rows(c['G'], ax) for c in cells], 0) if cells else z23
     g['segs_core_done'] = np.concatenate([cell_outline(c['G'], ax) for c in cells], 0) if cells else z23
     g['segs_halo_done'] = np.concatenate([cell_outline(c['G'], ax, True) for c in cells], 0) if cells else z23
     if cur is not None:
-        g['points_cur'] = proj(cur['G'], ax).reshape(-1, 3); g['segs_rows_cur'] = cell_rows(cur['G'], ax)
+        g['points_cur'] = proj(GK(cur), ax).reshape(-1, 3); g['segs_rows_cur'] = cell_rows(cur['G'], ax)
         g['segs_core_cur'] = cell_outline(cur['G'], ax); g['segs_halo_cur'] = cell_outline(cur['G'], ax, True)
     else: g['points_cur'], g['segs_rows_cur'], g['segs_core_cur'], g['segs_halo_cur'] = z3, z23, z23, z23
     sec = snap.get('section')                                          # пауза section: узлы базового сечения (K, n)
@@ -163,24 +165,46 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
 
-    def _layer(s, name):
+    TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
+
+    @staticmethod
+    def tinted(col, k, past=False):
+        """оттенок слоя k: 0 — как есть; 1 — холодный (R↔B); 2 — жёлто-зелёный (R→G→R); прошлые слои приглушены"""
+        r, g_, b, a = col
+        r, g_, b = ((r, g_, b), (b, g_, r), (g_, r, b))[k % 3]
+        return (r * .85, g_ * .85, b * .85, a * .7) if past else (r, g_, b, a)
+
+    def toggle_layer(s, k):
+        s.vis[k] = not s.vis[k]
+        if s.snap is not None: s.draw(s.snap)
+
+    def toggle_skeleton(s):
+        s.skel = 'time' if s.skel == 'normal' else 'normal'
+        if s.snap is not None: s.draw(s.snap)
+
+    def skeleton_label(s):
+        has = any(c.get('Gt') is not None for c in ((s.snap or {}).get('cells') or [])) or ((s.snap or {}).get('cell') or {}).get('Gt') is not None
+        return 'skeleton: %s%s' % (s.skel, ' (no Gt yet)' if s.skel == 'time' and not has else '')
+
+    def _layer(s, name, col=None):
         """один объект Ursina на слой (один GeomNode, один примитив); зум/сдвиг — трансформ узла, вершины в реальных координатах"""
         if name not in s.layers:
-            e = _Batch(); e.col = tuple(float(x) for x in s.COL[name])
+            e = _Batch(); e.col = tuple(float(x) for x in (col or s.COL[name.split('@')[0]]))
             s.zm.register_object(e, name='growview_' + name); s.layers[name] = e
+        elif col is not None: s.layers[name].col = tuple(float(x) for x in col)
         return s.layers[name]
 
-    def _set_layer(s, name, arr):
-        e = s._layer(name); arr = np.asarray(arr, float).reshape(-1, 3)
+    def _set_layer(s, name, arr, col=None):
+        e = s._layer(name, col); arr = np.asarray(arr, float).reshape(-1, 3)
         if name.startswith('points'):
             s._pts[name] = arr; R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.); s._built_size = None if s.sm is None else s.sm.size    # диски как у Spore (Circle r = .5·size), в мире
             e.set_geometry(*_discs(arr, R), kind='tris')
         else: e.set_geometry(arr, kind='lines', thick=2)
 
-    def _set_strips(s, name, strips):
-        e = s._layer(name); strips = [np.asarray(x, float).reshape(-1, 3) for x in strips if len(x) > 1]
+    def _set_strips(s, name, strips, col=None):
+        e = s._layer(name, col); strips = [np.asarray(x, float).reshape(-1, 3) for x in strips if len(x) > 1]
         if not strips: e.set_geometry(np.zeros((0, 3))); return
         starts = np.cumsum([0] + [len(x) for x in strips[:-1]]); e.set_geometry(np.concatenate(strips, 0), [(int(a), len(x)) for a, x in zip(starts, strips)], kind='strips', thick=2)
 
@@ -195,14 +219,23 @@ class GrowView:
         if snap is None: s.draw_hist = {}
         elif id(snap) in getattr(s, 'draw_hist', {}):                  # a past snapshot (Z): draw it again, restore the draw-time table as it was
             s.times.draw, s.times.n = (dict(x) for x in s.draw_hist[id(snap)]); t0 = None
-        g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
-        g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
-        st = build_strips(snap, s.ax) if snap is not None else {}
-        gs = s._goal(); st['segs_goal'] = [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)]                      # цель — замкнутая ломаная
-        st['segs_field'] = [s._box(0.)]; st['segs_growlim'] = [s._box(getattr(__import__('src.algo.growN', fromlist=['GM']), 'GM', 0.))]
-        for name in s.COL:
-            if name.startswith('points'): s._set_layer(name, g.get(name, np.zeros((0, 3))))
-            else: s._set_strips(name, st.get(name, []))
+        z3 = np.zeros((0, 3)); snap_ = snap or {}
+        cur_k = snap_.get('layer_k', 0); nl = snap_.get('layers_n', 1); cbl = snap_.get('cells_by_layer') or {}; layers = snap_.get('layers') or ()
+        s._nk = max(getattr(s, '_nk', 0), nl)
+        for k in range(s._nk):                                         # по слою k: текущий — всё; прошлые — готовые клетки приглушённо; будущие/скрытые — пусто
+            if snap is None or k > cur_k or not s.vis[k]: g, st, past = {}, {}, False
+            elif k == cur_k: g = build_geometry(snap, s.ax, s.halo, s.skel); st = build_strips(snap, s.ax, s.skel); past = False
+            else:
+                cl = cbl.get(layers[k]) if k < len(layers) else None; past = True
+                g = build_geometry({'cells': cl or []}, s.ax, s.halo, s.skel); st = build_strips({}, s.ax, s.skel, cells=cl or [], with_cur=False)
+            for grp in s.TINT:
+                col = s.tinted(s.COL[grp], k, past); name = '%s@%d' % (grp, k)
+                if grp.startswith('points'): s._set_layer(name, g.get(grp, z3), col)
+                else: s._set_strips(name, st.get(grp, []), col)
+        gp = build_geometry(snap, s.ax, s.halo, s.skel) if snap is not None else {}
+        for name in ('points_seed', 'points_queue'): s._set_layer(name, gp.get(name, z3))
+        gs = s._goal(); fixed = {'segs_goal': [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)], 'segs_field': [s._box(0.)], 'segs_growlim': [s._box(getattr(__import__('src.algo.growN', fromlist=['GM']), 'GM', 0.))]}   # цель, граница поля и роста
+        for name, strips in fixed.items(): s._set_strips(name, strips)
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
 

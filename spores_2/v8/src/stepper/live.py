@@ -10,10 +10,12 @@ for k, v in dict(SYS='di', M='3', KF='21', MAXC='60', NFAIL='400', DELTA='.03', 
 from ..algo import growN as g
 from . import stepper as S
 
+LAYERS = tuple(getattr(g, 'ULAYERS', g.US))             # порядок слоёв: для di (1, -1, 0) — берётся из growN
+
 
 class LiveStepper:
-    def __init__(s, seed=None, u=None, max_lvl=3):
-        s.u = g.US[1] if u is None else u; s.max_lvl = max_lvl; s._st = None; s.snapshot = None; s._ver = -1; s._carry = {}; s.history = []; s._tm = []; s.pos = -1; s.depth = 3; s.seed_at(seed)
+    def __init__(s, seed=None, u=None, max_lvl=3, layers=None):
+        s.layers = tuple(layers) if layers is not None else LAYERS if u is None else (u,); s.u = s.layers[0]; s.max_lvl = max_lvl; s.cells_by_layer = {}; s._st = None; s.snapshot = None; s._ver = -1; s._carry = {}; s.history = []; s._tm = []; s.pos = -1; s.depth = 3; s.seed_at(seed)
 
     @property
     def times(s):
@@ -39,11 +41,19 @@ class LiveStepper:
     def _live(s): s.pos = len(s.history) - 1; s.snapshot = s.history[s.pos] if s.history else None
 
     def _layer(s, seed):
-        return g.build_layer(s.u, np.random.default_rng(0), seeds=None if seed is None else [np.asarray(seed, float)], only_queue=seed is not None)[0]    # seed=None — затравки выбирает сам алгоритм
+        """фоновая функция: слои по порядку; у каждого свой idx (build_layer) и свой rng; ручная затравка — только у первого слоя, дальше затравки выбирает алгоритм;
+        между слоями пауза 'layer' (lvl 0): все клетки слоя; результат — dict u -> [cell_dict]"""
+        out = {}
+        for k, u in enumerate(s.layers):
+            sd = seed if k == 0 else None
+            res = g.build_layer(u, np.random.default_rng(k), seeds=None if sd is None else [np.asarray(sd, float)], only_queue=sd is not None)[0]
+            cells = [g.cell_dict(c) for c in res]; out[u] = cells
+            S.pause('layer', 0, u=u, layer_k=k, cells=cells, queue=[], reason='layer u=%s finished: %d cells (%d/%d)' % (u, len(cells), k + 1, len(s.layers)))
+        return out    # seed=None — затравки выбирает сам алгоритм
 
     def seed_at(s, xv):
         if s._st is not None: s._st.abort()
-        s.snapshot = None; s._ver = -1; s._carry = {}; s.history = []; s._tm = []; s.pos = -1; seed = None if xv is None else tuple(float(x) for x in xv)
+        s.snapshot = None; s._ver = -1; s._carry = {}; s.cells_by_layer = {}; s.history = []; s._tm = []; s.pos = -1; seed = None if xv is None else tuple(float(x) for x in xv)
         s._st = S.Stepper(max_lvl=s.max_lvl).start(lambda: s._layer(seed)); s._st.wait_paused(10.); s._pull()    # первая пауза (посев) сразу
 
     def _pull(s):
@@ -53,6 +63,9 @@ class LiveStepper:
         for k in ('cells', 'queue'):                                  # приходят только в паузах seed/cell — переносим дальше
             if k in sn: s._carry[k] = sn[k]
             else: sn[k] = s._carry.get(k)
+        u = sn.get('u'); kk = s.layers.index(u) if u in s.layers else 0
+        if sn.get('phase') == 'layer': s.cells_by_layer[u] = sn['cells']
+        sn['layers'] = s.layers; sn['layer_k'] = kk; sn['layers_n'] = len(s.layers); sn['cells_by_layer'] = {uu: c for uu, c in s.cells_by_layer.items() if s.layers.index(uu) < kk}      # прошлые слои (текущий — в 'cells')
         s._push(sn)
 
     def key(s, k):
@@ -62,14 +75,16 @@ class LiveStepper:
             s._live()
         ref = None
         if k == 'n':                                                   # N / LMB: next pause with lvl <= depth (3 rows, 2 stages, 1 spores, 0 to the end of the layer)
-            if s.depth <= 0: k = 'c'
+            if s.depth <= 0: k, ref = 'm', 0
             elif s.depth < 3: k, ref = 'm', s.depth
         if s._st.cmd(k, ref): s._st.wait_paused(30.); s._pull(); s._final()
 
     def _final(s):
-        """алгоритм закончил (C или конец слоя) — финальный снимок из результата build_layer: все клетки слоя, причина — конец."""
-        if s._st.finished and s._st.result is not None and (s.snapshot is None or s.snapshot.get('phase') != 'done'):
-            cells = [g.cell_dict(c) for c in s._st.result]; sn = dict(s.snapshot or {}); sn.update(phase='done', lvl=0, cell=None, cells=cells, queue=sn.get('queue'), reason='layer finished: %d cells' % len(cells)); s._push(sn)
+        """алгоритм закончил все слои (C или конец последнего) — финальный снимок: клетки последнего слоя в 'cells', остальные в cells_by_layer."""
+        if s._st.finished and isinstance(s._st.result, dict) and (s.snapshot is None or s.snapshot.get('phase') != 'done'):
+            res = s._st.result; s.cells_by_layer = dict(res); kk = len(s.layers) - 1; ul = s.layers[-1]; sn = dict(s.snapshot or {})
+            sn.update(phase='done', lvl=0, cell=None, cells=res.get(ul, []), queue=[], u=ul, layers=s.layers, layer_k=kk, layers_n=len(s.layers), cells_by_layer={uu: c for uu, c in res.items() if uu != ul},
+                      reason='all layers finished: ' + ', '.join('u=%s: %d' % (uu, len(c)) for uu, c in res.items())); s._push(sn)
 
     @property
     def done(s): return s._st.finished
@@ -84,7 +99,7 @@ class LiveStepper:
         if s.viewing_history: s._live()
         lvl = (s.snapshot or {}).get('lvl')
         if lvl is not None and lvl >= 2: s.depth = 1; s._go('m', 1)
-        else: s.depth = 0; s._go('c')
+        else: s.depth = 0; s._go('m', 0)
 
     def finer(s):
         """Shift+LMB: depth + 1 and a step"""

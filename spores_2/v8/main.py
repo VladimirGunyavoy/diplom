@@ -185,7 +185,9 @@ def _back():
 
 def _caption():
     h = getattr(stepper, 'hist_info', None)
-    return growview.caption() + (('   step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '') + (('   [history %d/%d]' % h) if h else '')
+    sn = stepper.snapshot or {}
+    lay = ('   layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
+    return growview.caption() + lay + (('   step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '') + '   ' + growview.skeleton_label() + (('   [history %d/%d]' % h) if h else '')
 
 def _restart():
     """X: drop everything built so far (and a hand-placed seed) and start over with the algorithm's own seeds (from the goal)."""
@@ -216,6 +218,8 @@ input_manager.bind('c', lambda: _step('C'), description='to the end')
 input_manager.bind('z', _back, description='step back (history); N/LMB go forward')
 input_manager.bind('x', _restart, description='restart: algorithm seeds (drop click)')
 input_manager.bind('g', _seed_here, description='seed at look point')
+for _i, _key in enumerate('789'): input_manager.bind(_key, lambda i=_i: growview.toggle_layer(i), description='show/hide layer %d' % (_i + 1))
+input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal / time')
 def _toggle_floor(): floor.visible_self = not floor.visible_self
 input_manager.bind('f', _toggle_floor, description='toggle floor')
 
