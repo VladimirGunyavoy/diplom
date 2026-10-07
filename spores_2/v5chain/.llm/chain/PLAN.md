@@ -184,6 +184,8 @@
 35. **[B] (research-21; после 33) Знак Кориолиса в плоском 2-звеннике — `ISSUES.md` (research-21).** Исправить `growN.py` SYS=manip (r1 = τ1 − h(…), r2 = τ2 + h w1²) + тест сохранения энергии
    (τ = 0, rk4 dt .001, 3 с: |ΔE|/E < 1e-6); v6 `manip2dyn.py` — так же (обе строки 11 и 24). Эталон manip 4D пересчитать на исправленной динамике (тот же скрипт, что был у b2; где он — в отчёт).
    Затем короткий прогон manip c3000g с SOLVEB=1: reach, T/эталон, t_build/t_solve/q_ms — строка в сводку `reports/all_systems.md` (п.32).
+36. **(research-21, 2026-10-07; слово пользователя: «статик кар — хорошая система») «Статик кар» 4D (x, y, θ, v) с 3 дисками — `knowledge/research/static_car.md`.** research: эталон OCP (CasADi) на 20 стартах их области спавна;
+   линия A (после п.34): SYS=car в `grow3`/`growN`-подобном файле линии A (дд-ромб grow3 + v как 4-я координата, диски как в 17г): дошли, T/эталон, t_build/t_solve/q_ms.
 ## research hub-v5chain-research-19 → 20 (2026-10-07 02:40): см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — диалог с пользователем (жирные клетки-кольца, адаптивные клоны, запрос без прокатки/агент «по клеткам», время), `knowledge/research/nf_curved_ends.md`.
 ## research hub-v5chain-research-17 — открыто (от research-16, 2026-10-06 07:45; детали `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ)
 **→ research-18 (2026-10-06 15:40):** см. `.llm/roles/research/HANDOFF.md` §ПРОДОЛЖЕНИЕ — итоги 4D (DI 4D w22, манипулятор b3), экспонента по n (рост от цели по V до покрытия стартов), утечка V через барьер.
@@ -202,3 +204,4 @@
 
 ## Бэклог
 - Встраивание атласа в Ursina-визуализацию (`main.py`) — пользователю «глазами смотреть»; по его слову.
+34. **(research-21, via w23) solve по вёдрам V в grow3.py (после 29б):** прототип reports/research/r18/solve_bucket.py (маятник V та же до бита, 2.6 выч./ребро вместо 621 ит Якоби; knowledge/research/solve_bucket.md). Замер на aida ~/spore_v5/w21/v7/reports/grow3/atlas_e.pkl: max|ΔV|, t_solve, T/refbox; база: Якоби 133 ит/75 с, GSN64 110 ит/58 с. B встраивает SOLVEB в growN (п.33).

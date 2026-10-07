@@ -59,3 +59,5 @@
 - [research/lit_separatrix_detection.md](research/lit_separatrix_detection.md) — литобзор: автопоиск разрывов V/сепаратрис (ПМП-экстремали, эпиграф, полиномиальная аннигиляция; nD-метода с гарантиями нет; PDF не прочитаны) (searcher-1)
 - [research/nf_curved_ends.md](research/nf_curved_ends.md) — кривые торцы клеток (NORMFRONT=2: ломаная по нормалям клонов) + изгиб DELTA: 1.0085 без стен; мёртвые узлы NF, кольца (SELFOV), адаптивные клоны
 - [research/solve_bucket.md](research/solve_bucket.md) — solve по вёдрам V (коррекция меток в порядке V) вместо Якоби: та же V, рёбра считаются 2–3 раза вместо ~Vmax/DTN; маятник проход ×40, solve ×7 (research-21)
+- [research/manip3d_2link.md](research/manip3d_2link.md) — 3D двузвенный манипулятор (основание+плечо+локоть, 6D, без g): модель точечных масс, сводится к плоскому 2-зв. v6; эталон OCP r21/ref_m3d.py; коридор v6 (research-21)
+- [research/static_car.md](research/static_car.md) — «статик кар» (машинка-велосипед из journal-2026: (x,y,θ,v), a и ω, 3 диска, цель-круг): модель, границы, эталон (research-21)
