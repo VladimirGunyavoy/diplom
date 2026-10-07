@@ -163,13 +163,16 @@ def _seed_click():
     wp = mouse.world_point
     if wp is None: return
     a, b = zoom_manager.a_transformation, zoom_manager.b_translation
-    _last_seed[0] = ((wp.x - b[0]) / a, (wp.z - b[2]) / a)
-    stepper.seed_at(_last_seed[0]); growview.draw(None); _step('N')
+    pt = ((wp.x - b[0]) / a, (wp.z - b[2]) / a)
+    from src.algo import growN as _g
+    if bool(_g.ingoal(np.array(pt, float))): print('[v8] click in goal -> goal seeds'); _last_seed[0] = None; stepper.seed_at(None)
+    else: _last_seed[0] = pt; stepper.seed_at(pt)
+    growview.draw(None); _step('N')
 
 def _restart():
-    """X: drop everything built so far and start over from the last seed (or the algorithm's own seeds if none was set by hand)."""
+    """X: drop everything built so far (and a hand-placed seed) and start over with the algorithm's own seeds (from the goal)."""
     growview.draw(None); growview.times = type(growview.times)()
-    stepper.seed_at(_last_seed[0]); growview.draw(None); _step('N')
+    _last_seed[0] = None; stepper.seed_at(None); growview.draw(None); _step('N')
 
 floor.collider = 'box'
 screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.40 + my), getter=lambda: growview.caption()))
@@ -187,7 +190,7 @@ input_manager.bind('1', _resize, mode='scroll', description='size', value_getter
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')
 input_manager.bind('c', lambda: _step('C'), description='to the end')
-input_manager.bind('x', _restart, description='restart from the last seed')
+input_manager.bind('x', _restart, description='restart: algorithm seeds (drop click)')
 input_manager.bind('g', _seed_here, description='seed at look point')
 
 
