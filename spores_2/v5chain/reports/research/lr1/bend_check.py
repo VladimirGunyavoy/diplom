@@ -180,7 +180,7 @@ def report(a):
         if j == 0: ax[0, 0].legend(fontsize=8)
     plt.tight_layout(); plt.savefig(os.path.join(HERE, 'bend_scatter.png'), dpi=90)
     sec = '\n'.join(md) + '\n\nГрафик: `bend_scatter.png` (верх — полная ошибка % ширины, середина — полная в метрике Грамиана, низ — боковая в метрике Грамиана; серые пунктиры — значения DELTA, красные — 1% и 5%).\n'
-    fn = os.path.join(HERE, 'results.md'); t = open(fn, encoding='utf-8').read(); i = t.find('## bend:'); t = (t[:i] if i >= 0 else t.rstrip() + '\n\n') + sec; open(fn, 'w', encoding='utf-8').write(t)
+    fn = os.path.join(HERE, 'results.md'); t = open(fn, encoding='utf-8', newline='').read(); i = t.find('## bend:'); t = (t[:i] if i >= 0 else t.rstrip() + '\n\n') + sec; open(fn, 'w', encoding='utf-8', newline='\n').write(t)
     print('\n'.join(md))
 
 
