@@ -7,7 +7,7 @@ from tqdm import tqdm
 import finish_gen as FG
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4') else 41))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
@@ -36,6 +36,17 @@ elif SYS == 'di4':                                                              
     N = 4; PERIOD = np.zeros(4); RHO = float(E('RHO', .05)); RHOV = np.full(4, RHO); XL = float(E('XL', 2.5)); XLV = np.full(4, XL); US = ((1., 1.), (1., -1.), (-1., 1.), (-1., -1.))
     def f(y, u): return np.concatenate([y[..., 2:], np.broadcast_to(np.asarray(u, float), y[..., :2].shape)], -1)
     def Bq(y): return np.diag([0., 0., 1., 1.])
+elif SYS == 'dp1':                                                                                          # w25 (PLAN п.25): двойной маятник g=1, 2 мотора |τᵢ| ≤ 1 (динамика butterfly_dp.acc); y = (q1 − π/2, q2, w1, w2) ⇒ цель (q1,q2)=(π/2,0) — в нуле
+    N = 4; PERIOD = np.array([PI2, PI2, 0, 0]); RHOV = np.array([.3, .3, .5, .5]); WM = float(E('WM', 3.)); XLV = np.array([0., 0., WM, WM]); US = ((-1., -1.), (-1., 1.), (1., -1.), (1., 1.))
+    _G1 = float(E('G', 1.)); _MS = np.array([2.5, 1.]); _S11, _S12, _S22 = 2.5, 1., 1.
+    def accel(y, u):
+        q1, q2, w1, w2 = y[..., 0] + np.pi / 2, y[..., 1], y[..., 2], y[..., 3]; th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); s = np.sin(th1 - th2)
+        Q1 = u[0] - u[1] - _G1 * _MS[0] * np.cos(th1) - _S12 * s * d2 ** 2; Q2 = u[1] - _G1 * _MS[1] * np.cos(th2) + _S12 * s * d1 ** 2
+        det = _S11 * _S22 - (_S12 * c) ** 2; a1 = (_S22 * Q1 - _S12 * c * Q2) / det; a2 = (_S11 * Q2 - _S12 * c * Q1) / det
+        return np.stack([a1, a2 - a1], -1)
+    def f(y, u): return np.concatenate([y[..., 2:], accel(y, u)], -1)
+    def Bq(y):
+        a0 = accel(y, (0., 0.)); Bm = np.zeros((4, 2)); Bm[2:, 0] = accel(y, (1., 0.)) - a0; Bm[2:, 1] = accel(y, (0., 1.)) - a0; return Bm @ Bm.T
 else: raise SystemExit('SYS?')
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
@@ -472,6 +483,9 @@ def starts_ref():
     if SYS == 'dd': rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]; return Q, np.load(os.path.join(REF, 'dd_ref_60.npy'))
     if SYS == 'di4':                                                                                        # research-17: T* = max(T₁*, T₂*) в коробку ±.05 (r17/di4_ref.py)
         d_ = np.load(os.path.join(REF, E('DI4REF', 'r17/di4_ref_60.npy'))); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]   # п.41: для RHO .35 — DI4REF=r22/di4_ref_60_rho35.npy (эталон в коробку ±RHO; по умолч. ±.05 занижает T/эталон ~17%)
+    if SYS == 'dp1':                                                                                       # п.25: эталон OCP 20 стартов r23/dp1_ref_ocp_20.npy (x(4) в обычных координатах, T), rng(0) как manip; без файла — один старт «висит → вверх» (OCP 5.098)
+        if E('DP1REF'): a_ = np.load(os.path.join(REF, E('DP1REF'))); return a_[:, :4] - np.array([np.pi / 2, 0, 0, 0]), a_[:, 4]
+        return np.array([[-np.pi / 2 - np.pi / 2, 0., 0., 0.]]), np.array([5.098])
     if SYS == 'manip':
         rng = np.random.default_rng(0)
         for _ in range(32): rng.uniform(-1, 1, 4)
