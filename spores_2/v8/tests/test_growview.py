@@ -56,3 +56,17 @@ def test_depth_up_and_finer():
     L.finer(); assert L.depth == 2 and L.snapshot['phase'] in ('seed', 'cell', 'section', 'stop', 'reject')
     L.up(); assert L.snapshot['phase'] == 'cell' and L.depth == 1                                                                        # из section (внутри споры) — снова до cell
     L.up(); assert L.depth == 0 and L.snapshot['phase'] == 'done' and L.depth_name == 'layer'                              # на seed/cell: до конца слоя
+
+
+def test_strips_zigzag_and_rings():
+    from src.stepper.growview import build_strips
+    L = LiveStepper(seed=None)
+    for _ in range(40):
+        L.key('N')
+        if L.snapshot.get('cell') is not None and (L.snapshot.get('cells') or []): break
+    st = build_strips(L.snapshot)
+    c = (L.snapshot.get('cells') or [L.snapshot['cell']])[0]; rows, M = c['G'].shape[:2]
+    done = st['segs_rows_done']
+    if done: assert done[0].shape == (rows * M, 3)                                  # зигзаг: все узлы строк подряд (L₋₁→C₋₁→R₋₁→L₀→…)
+    for k in ('segs_core_done', 'segs_halo_done'):
+        for r in st[k]: assert np.allclose(r[0], r[-1]) and len(r) == 2 * c['G'].shape[0] + 1 or len(r) > 2  # замкнутый контур

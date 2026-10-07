@@ -14,6 +14,7 @@ import time
 import numpy as np
 
 HALO = .1
+SPORE_SCALE = .02                                  # Spore.scale по умолчанию; SporeManager.size в v8 — множитель (1.0), т.к. спор в сцене нет
 Y0 = .01
 
 
@@ -36,6 +37,22 @@ def cell_outline(G, ax, halo=False):
         c = (a + b) / 2; a, b = c + (a - c) / (1 + HALO), c + (b - c) / (1 + HALO)
     ring = np.concatenate([a, b[::-1]], 0); ring = np.concatenate([ring, ring[:1]], 0)
     return np.stack([ring[:-1], ring[1:]], 1)
+
+
+def build_strips(snap, ax=(0, 1)):
+    """линии слоёв как ломаные (по одной на клетку): строки — зигзаг по узлам подряд (L₋₁→C₋₁→R₋₁→L₀→…), контур ядра и гало — замкнутая ломаная; dict имя слоя -> список (n, 3)"""
+    out = {k: [] for k in ('segs_rows_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_core_cur', 'segs_halo_cur')}
+    def ring(o): return np.concatenate([o[:, 0], o[-1:, 1]], 0)
+    def cell(G, suf):
+        P = proj(G, ax)
+        if P.shape[1] > 1: out['segs_rows_' + suf].append(P.reshape(-1, 3))
+        out['segs_core_' + suf].append(ring(cell_outline(G, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))
+    for c in snap.get('cells') or []: cell(c['G'], 'done')
+    cur = snap.get('cell')
+    if cur is not None: cell(cur['G'], 'cur')
+    sec = snap.get('section')
+    if sec is not None: out['segs_rows_cur'].append(proj(sec, ax))
+    return out
 
 
 def seg_index(K):
@@ -95,10 +112,15 @@ def _geom_node(V, kind, idx=None):
     from panda3d.core import GeomVertexData, GeomVertexFormat, Geom, GeomLines, GeomTriangles, GeomNode, GeomEnums
     V = np.ascontiguousarray(V, np.float32).reshape(-1, 3); n = len(V)
     vd = GeomVertexData('gv', GeomVertexFormat.get_v3(), Geom.UH_dynamic); vd.unclean_set_num_rows(n); memoryview(vd.modify_array(0)).cast('B').cast('f')[:] = memoryview(V.ravel()).cast('B').cast('f')
-    if kind == 'lines': prim = GeomLines(Geom.UH_dynamic); prim.add_consecutive_vertices(0, n)
+    if kind == 'strips':
+        from panda3d.core import GeomLinestrips
+        prim = GeomLinestrips(Geom.UH_dynamic)
+        for st, ln in idx: prim.add_consecutive_vertices(st, ln); prim.close_primitive()
+    elif kind == 'lines': prim = GeomLines(Geom.UH_dynamic); prim.add_consecutive_vertices(0, n)
     else:
         prim = GeomTriangles(Geom.UH_dynamic); prim.set_index_type(GeomEnums.NT_uint32); ia = prim.modify_vertices(); ia.unclean_set_num_rows(len(idx)); memoryview(ia).cast('B').cast('I')[:] = memoryview(np.ascontiguousarray(idx, np.uint32)).cast('B').cast('I')
-    prim.close_primitive(); g = Geom(vd); g.add_primitive(prim); node = GeomNode('gv'); node.add_geom(g); return node
+    if kind != 'strips': prim.close_primitive()
+    g = Geom(vd); g.add_primitive(prim); node = GeomNode('gv'); node.add_geom(g); return node
 
 
 def _make_batch():
@@ -112,8 +134,9 @@ def _make_batch():
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
             self._gn = self.attach_new_node(_geom_node(V, kind, idx))
-            if kind == 'lines': self._gn.set_render_mode_thickness(thick or 2)
+            if kind != 'tris': self._gn.set_render_mode_thickness(thick or 2)
             else: self._gn.set_two_sided(True)
+            self._gn.set_depth_offset(1)                                   # поверх пола (y = 0), без z-fighting
         def apply_transform(self, a, b, **kw): self.position = b; self.scale = a
     return _Batch
 
@@ -143,9 +166,14 @@ class GrowView:
     def _set_layer(s, name, arr):
         e = s._layer(name); arr = np.asarray(arr, float).reshape(-1, 3)
         if name.startswith('points'):
-            s._pts[name] = arr; R = .5 * (s.sm.size if s.sm is not None else .02); s._built_size = None if s.sm is None else s.sm.size    # диски как у Spore (Circle r = .5·size), в мире
+            s._pts[name] = arr; R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.); s._built_size = None if s.sm is None else s.sm.size    # диски как у Spore (Circle r = .5·size), в мире
             e.set_geometry(*_discs(arr, R), kind='tris')
         else: e.set_geometry(arr, kind='lines', thick=2)
+
+    def _set_strips(s, name, strips):
+        e = s._layer(name); strips = [np.asarray(x, float).reshape(-1, 3) for x in strips if len(x) > 1]
+        if not strips: e.set_geometry(np.zeros((0, 3))); return
+        starts = np.cumsum([0] + [len(x) for x in strips[:-1]]); e.set_geometry(np.concatenate(strips, 0), [(int(a), len(x)) for a, x in zip(starts, strips)], kind='strips', thick=2)
 
     def refresh(s):
         """размер спор ('1') поменялся — пересобрать диски (зум этого не требует)"""
@@ -160,7 +188,11 @@ class GrowView:
             s.times.draw, s.times.n = (dict(x) for x in s.draw_hist[id(snap)]); t0 = None
         g = build_geometry(snap, s.ax, s.halo) if snap is not None else {k: np.zeros((0, 3)) for k in s.COL}
         g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
-        for name in s.COL: s._set_layer(name, g.get(name, np.zeros((0, 3))))
+        st = build_strips(snap, s.ax) if snap is not None else {}
+        gs = s._goal(); st['segs_goal'] = [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)]                      # цель — замкнутая ломаная
+        for name in s.COL:
+            if name.startswith('points'): s._set_layer(name, g.get(name, np.zeros((0, 3))))
+            else: s._set_strips(name, st.get(name, []))
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
 
