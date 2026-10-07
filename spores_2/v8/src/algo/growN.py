@@ -103,7 +103,7 @@ def nf2_rows(P0, p, u, sg, nmax):
 def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
-GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
+GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
@@ -263,15 +263,17 @@ def growN(p, u, idx, rm, tm):
         for i in range(1, nmax + 1):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
             if not inbox_g(yc): break
+    rows0 = dict(rows)                                                                                       # строки одного времени (до NORMFRONT-сдвигов): по ним мерим изгиб — сдвиги δ гнут строку и при линейном потоке
+    for sg in (1, -1):
         if NORMFRONT:
             for i, Pn in enumerate(nf2_rows(base, p, u, float(sg), nmax)[0], 1): rows[sg * i] = Pn
-    imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
+    imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)]); R0 = np.stack([rows0[i] for i in range(imin, imax + 1)])
     pause('section', 2, u=u, seed=p, e=e, section=base, rows=(imin, imax), nmax=nmax)
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Q = np.linalg.eigh(Wc); Wi = (Q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30))) @ Q.T
-        Pb = R[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d = Pb - mlin(Pb, n_)
+        Pb = R0[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d = Pb - mlin(Pb, n_)
         return float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, Wi, d))))
     klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0
     def cur():
@@ -325,14 +327,25 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []
     gseed0 = None
     if seeds is None and GSEED: gseed0 = np.zeros(N); queue.insert(0, gseed0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
-    bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
+    bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; ncov = 0
+    def covdone():
+        """w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL"""
+        pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
+        if not len(pr): return False
+        unc = 1. - idx.covered(wrapy(pr)).mean()
+        if E('COVDBG'): print('cov', len(cells), 'непокрыто', round(unc, 4), 'проб', len(pr), flush=True)
+        if unc < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(unc, 4), flush=True); return True
+        return False
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p): pause('reject', 2, u=u, seed=p, reason='seed outside field', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         gfirst = p is gseed0; p = wrapy(p)
         if ingoal(p) and not gfirst: pause('reject', 2, u=u, seed=p, reason='seed in goal', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
-        if idx.covered(p[None])[0]: pause('reject', 2, u=u, seed=p, reason='seed already covered', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); fails += 0 if queue else 1; continue
+        if idx.covered(p[None])[0]:
+            pause('reject', 2, u=u, seed=p, reason='seed already covered', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); ncov += 1      # covered — не фейл; зато каждые COVN таких затравок проверяем покрытие
+            if COVTOL > 0 and ncov % COVN == 0 and covdone(): break
+            continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX)
         if gfirst: e_ = basis(p, u)[0]; rm = 1. / np.linalg.norm(e_ / RHOV) if GOALSHAPE == 'ball' else float(np.min(RHOV[np.abs(e_) > 1e-12] / np.abs(e_)[np.abs(e_) > 1e-12]))      # спора на цели: вширь только до границы цели
@@ -352,10 +365,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
             for e0 in (c.c, g0[ctr], g1[ctr]):
                 for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
         pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
-        if COVTOL > 0 and len(cells) % COVN == 0:                                                               # w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL
-            pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
-            if E('COVDBG') and len(pr): print('cov', len(cells), 'непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), 'проб', len(pr), flush=True)
-            if len(pr) and 1. - idx.covered(wrapy(pr)).mean() < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), flush=True); break
+        if COVTOL > 0 and len(cells) % COVN == 0 and covdone(): break
         if log: log(u, cells)
     bar.close(); return cells, idx
 def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
