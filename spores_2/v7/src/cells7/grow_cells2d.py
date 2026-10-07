@@ -7,7 +7,7 @@
 import numpy as np, sys, os, json, time
 from tqdm import tqdm
 MI = float(os.environ.get('TQDM_MI', 10))   # tqdm mininterval for log files (user rule 2026-10-06)
-SYS = os.environ.get('SYS', 'pend'); M = 5; BIG = 1e3; HALO = .1
+SYS = os.environ.get('SYS', 'pend'); M = int(os.environ.get('M', 5)); BIG = 1e3; HALO = .1
 DTN = float(os.environ.get('DTN', .06)); RMAX = float(os.environ.get('RMAX', .3)); TMAX = float(os.environ.get('TMAX', 3.)); OVL = float(os.environ.get('OVL', .05)); RHO = float(os.environ.get('RHO', .1))
 ADAPT = int(os.environ.get('ADAPT', 0)); TURN = np.deg2rad(float(os.environ.get('TURN', 40))); STR = float(os.environ.get('STR', 2.)); BEND = float(os.environ.get('BEND', .05)); TRV = float(os.environ.get('TRV', .5)); LMAX = float(os.environ.get('LMAX', 1.2))
 CORE = int(os.environ.get('CORE', 0)); FASTLOC = int(os.environ.get('FASTLOC', 2)); JUMP = float(os.environ.get('JUMP', 0)); JMODE = os.environ.get('JMODE', 'max'); JAG = int(os.environ.get('JAG', 0)); JDIR = int(os.environ.get('JDIR', 0));   # JDIR=1: разрыв — только скачок поперёк столбцов в ОБЕИХ строках (барьер вдоль потока); JMODE drop — четырёхугольник не используется
@@ -202,6 +202,21 @@ def nf_rows(p0, u, offs, nmax, sg, strict=True, stop=None, brk=True):
         if kout is None and (not inbox(X[k][nc]) or np.linalg.norm(f(X[k][nc], u)) < FMIN / 4): kout = k                  # центр ушёл — ещё одна строка (как в базе: строка за краем коробки сохраняется, иначе полоса у края не покрыта и очередь сеет в неё без конца)
         if kout is not None and k >= (kout // NFSUB + 1) * NFSUB + NFSUB: X = X[:k + 1]; break
     K = len(X); rows = {}; C = {}; OK = {}; TT = {}; nf_rows.TT = TT; dead = np.zeros(nc, bool); tprev = np.zeros(nc); rprev = X0[:nc]
+    if NORMFRONT == 3:                                                                         # research-19 (идея пользователя): клоны заново на КАЖДОМ шаге центральной линии — строка i = ортогональная кривая потока через c_i (dy/ds = n(y)), узлы на дуговых смещениях offs; столбцы НЕ траектории, мёртвых узлов нет
+        nI = min(nmax, (K - 1) // NFSUB)
+        if nI < 1: return (rows, C, OK) if strict == 'mask' else (rows, C)
+        Cc = X[np.arange(1, nI + 1) * NFSUB, nc]; oo = np.asarray(offs, float); od = np.argsort(oo); Pm = np.empty((nI, nc, 2))
+        def nrm_(Y): v = f(Y, u); return np.stack([-v[:, 1], v[:, 0]], 1) / (np.linalg.norm(v, axis=1, keepdims=True) + 1e-12)
+        for side in ([j_ for j_ in od if oo[j_] >= 0], [j_ for j_ in od[::-1] if oo[j_] < 0]):
+            Y = Cc.copy(); s0 = 0.
+            for j_ in side:
+                ds = (oo[j_] - s0) / 2
+                for _ in range(2): k1 = nrm_(Y); k2 = nrm_(Y + ds / 2 * k1); k3 = nrm_(Y + ds / 2 * k2); k4 = nrm_(Y + ds * k3); Y = Y + ds / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+                Pm[:, j_] = Y; s0 = oo[j_]
+        for i in range(1, nI + 1):
+            c = Cc[i - 1]; rows[sg * i] = Pm[i - 1]; C[sg * i] = c; OK[sg * i] = np.ones(nc, bool); TT[sg * i] = np.full(nc, sg * i * DTN)
+            if stop is not None and stop(i, c): break
+        return (rows, C, OK) if strict == 'mask' else (rows, C)
     for i in range(1, nmax + 1):
         ke = i * NFSUB
         if ke >= K: break
@@ -245,9 +260,8 @@ def quad_convex_each(ra, rb):
     A0, A1, B1, B0 = ra[:-1], ra[1:], rb[1:], rb[:-1]; cs = []
     for p, q, r in ((A0, A1, B1), (A1, B1, B0), (B1, B0, A0), (B0, A0, A1)): cs.append((q[:, 0] - p[:, 0]) * (r[:, 1] - q[:, 1]) - (q[:, 1] - p[:, 1]) * (r[:, 0] - q[:, 0]))
     cs = np.array(cs); return (cs >= -1e-12).all(0) | (cs <= 1e-12).all(0)
-MADAPT = float(os.environ.get('MADAPT', 0)); BFINE = int(os.environ.get('BFINE', 1)); QFAST = int(os.environ.get('QFAST', 1))   # п.30 (research-20): пакетный запрос агента — 3 управления и ветки look одним стеком точек (те же числа, меньше мелких вызовов); 0 — старый путь
-SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
-def grow2(p, u, idx, rm, tm):
+QFAST = int(os.environ.get('QFAST', 1)); MADAPT = float(os.environ.get('MADAPT', 0)); MGRAM = float(os.environ.get('MGRAM', 0)); SIDEOWN = int(os.environ.get('SIDEOWN', 0)); ENDSHRINK = int(os.environ.get('ENDSHRINK', 0)); ESHR = float(os.environ.get('ESHR', .5)); SEED1 = int(os.environ.get('SEED1', 0)); SEEDGRID = int(os.environ.get('SEEDGRID', 0)); MROW = int(os.environ.get('MROW', 0)); TRIM = int(os.environ.get('TRIM', 0)); SGRAND = int(os.environ.get('SGRAND', 0)); STOL = float(os.environ.get('STOL', 1e-9)); NBR = int(os.environ.get('NBR', 0)); MROWL = int(os.environ.get('MROWL', 4)); MGD = []; BFINE = int(os.environ.get('BFINE', 1)); SELFOV = int(os.environ.get('SELFOV', 0)); from matplotlib.path import Path as MPath; SMAX = float(os.environ.get('SMAX', 0)); SLAM = float(os.environ.get('SLAM', 0)); SSIGN = float(os.environ.get('SSIGN', 0))   # research-19 (идея пользователя): SSIGN = eps > 0 — стоп торца при смене знака d ln w/dt (клетка не проходит минимум ширины у седла)
+def _grow2_gen(p, u, idx, rm, tm, state=None):
     """клетка = прямоугольник индексов [klo,khi]×[ilo,ihi] на мелкой сетке: KF столбцов поперёк (±rm), строки через DTN вперёд/назад ≤ tm.
     Направление (бок ±, торец ±) растёт, пока: в области, изгиб среза (от хорды) в эллипсе достижимости a²·|t|·W ≤ DELTA; упёрлось в соседа
     (край покрыт > FRAC) — добираем наложение OVH·h (h = ширина/(M−1)) или 1 строку и стоп."""
@@ -277,6 +291,7 @@ def grow2(p, u, idx, rm, tm):
         nn = np.array([-ch[1], ch[0]]) / L; d = (P[1:-1] - P[0]) @ nn; v = d[np.argmax(np.abs(d))] * nn
         lam, Q = np.linalg.eigh(Wc); q = Q.T @ v; return float(np.sqrt(np.sum(q * q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)))))
     def ok_rect(klo, khi, ilo, ihi):                                                         # один эллипс на всю клетку: за её полную длительность (столько агент в ней едет)
+        if DELTA >= 1e8: return True                                                          # research-20 (профиль): изгиб выключен — не считать bend (22% построения слоя)
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9))
         return all(bend(klo, khi, i, Wc) <= DELTA for i in range(ilo, ihi + 1))
     cov0 = idx.covered(rows[0]) | ~inbox(rows[0]) if OWN else None
@@ -286,8 +301,9 @@ def grow2(p, u, idx, rm, tm):
             o_ = ~cov0[a:b + 1]
             if o_.any(): return cr[o_].mean()
         return cr.mean()
-    klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}
+    klo, khi, ilo, ihi = k0 - 1, k0 + 1, 0, 0; act = {'L': True, 'R': True, 'F': True, 'B': True}; extra = {}; why = {}
     while any(act.values()):
+        if state is not None: state['box'] = (klo, khi, ilo, ihi); state['rows'] = rows; yield None   # research-20 NBR: шаг роста; соседи по раунду видят текущий прямоугольник
         for d in 'RLFB':
             if not act[d]: continue
             if d in 'RL':
@@ -311,20 +327,34 @@ def grow2(p, u, idx, rm, tm):
                 if d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: act[d] = False
+                elif SIDEOWN:                                                                         # research-20 (стык у цели — стопка коротких клеток, замечание пользователя): покрытие нового столбца — только в строках, свободных у прежнего края клетки (щель уже, чем длина клетки)
+                    ke_ = klo + 1 if d == 'L' else khi - 1; edge_ = np.array([rows[i][ke_] for i in range(ilo, ihi + 1)]); fr_ = ~(idx.covered(edge_) | ~inbox(edge_)); cn_ = idx.covered(col) | ~inbox(col)
+                    if (cn_[fr_].mean() if fr_.any() else 1.) > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
                 elif (idx.covered(col) | ~inbox(col)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi - klo) / (M - 1)))
             else:
                 i = ihi + 1 if d == 'F' else ilo - 1
-                if i not in rows: GSTAT['end_norow'] += 1; act[d] = False; continue
+                if i not in rows: GSTAT['end_norow'] += 1; why[d] = 'norow'; act[d] = False; continue
                 row = rows[i][klo:khi + 1]
                 if not okr(i)[klo:khi + 1].all(): GSTAT['end_mask'] += 1
                 elif not ok_rect(klo, khi, min(ilo, i), max(ihi, i)): GSTAT['end_bend'] += 1
+                if ENDSHRINK and not okr(i)[klo:khi + 1].all():                                       # research-20 (слово пользователя: при недоезде клона торец не обрывать, а сужать): самый длинный непрерывный кусок живых столбцов строки i, если он ≥ ESHR ширины — клетка сужается до него и растёт дальше
+                    ok_ = okr(i)[klo:khi + 1]; best_, cur_, st_ = (0, 0), 0, 0
+                    for q_, v_ in enumerate(ok_):
+                        if v_: cur_ += 1; st_ = q_ - cur_ + 1
+                        else: cur_ = 0
+                        if cur_ > best_[1] - best_[0]: best_ = (st_, st_ + cur_)
+                    if best_[1] - best_[0] - 1 >= max(2, ESHR * (khi - klo)): klo, khi = klo + best_[0], klo + best_[1] - 1; GSTAT['end_shrink'] += 1; row = rows[i][klo:khi + 1]
                 if not okr(i)[klo:khi + 1].all() or not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) or (BARRIER is not None and nearb(row[1:-1]).any()):
-                    act[d] = False; continue
-                if SELFOV == 2 and self_hit(rows, i, klo, khi, ilo, ihi, rows[0][k0, 0]): GSTAT['end_self'] += 1; act[d] = False; continue   # b4 (п.27): строгий стоп, 0 строк наложения
-                if SELFOV == 1 and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
+                    why[d] = 'mask' if not okr(i)[klo:khi + 1].all() else 'bend' if not ok_rect(klo, khi, min(ilo, i), max(ihi, i)) else 'bar'; act[d] = False; continue
+                if SELFOV and ihi - ilo >= 4:                                                         # research-19 (слово пользователя): клетка не заезжает на саму себя — новая строка торца не должна попадать в уже выросшую часть ЭТОЙ клетки (без 2 строк у растущего торца; копии через период)
                     lo_, hi_ = (ilo, ihi - 2) if d == 'F' else (ilo + 2, ihi)
                     pg_ = np.array([rows[q][klo] for q in range(lo_, hi_ + 1)] + [rows[q][khi] for q in range(hi_, lo_ - 1, -1)]); pth_ = MPath(pg_)
-                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
+                    if d not in extra and any(pth_.contains_points(row + np.array([sh_, 0.])).any() for sh_ in SH): GSTAT['end_self'] += 1; extra[d] = 1; why[d] = 'self'   # слово пользователя: наезжать на себя можно, но на гало — эта строка добавляется (наложение в 1 строку) и торец останавливается
+                if SSIGN > 0 and ihi > ilo:                                                           # research-19: знак d ln w/dt на новом торце против знака по уже выросшей клетке
+                    wl2 = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
+                    gc_ = np.log(wl2(rows[ihi][klo:khi + 1]) / wl2(rows[ilo][klo:khi + 1])) / ((ihi - ilo) * DTN)
+                    gn_ = np.log(wl2(row) / wl2(rows[ihi if d == 'F' else ilo][klo:khi + 1])) / DTN * (1 if d == 'F' else -1)
+                    if gn_ * gc_ < 0 and abs(gn_) > SSIGN and abs(gc_) > SSIGN: GSTAT['end_sign'] += 1; act[d] = False; continue
                 if SMAX > 0 or SLAM > 0:                                                              # research-18 (идея пользователя): ширина фронта w(t) — стоп при растяжении/сжатии > SMAX или |d ln w/dt| > SLAM
                     wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
                     w0_ = wl(rows[0][klo:khi + 1]); wi_ = wl(row); wp_ = wl(rows[ihi if d == 'F' else ilo][klo:khi + 1])
@@ -338,10 +368,10 @@ def grow2(p, u, idx, rm, tm):
                     continue
                 if d == 'F': ihi = i
                 else: ilo = i
-                if d in extra: act[d] = False
+                if d in extra: act[d] = False; why.setdefault(d, 'cov')
                 elif endcov(row, klo, khi) > FRAC: extra[d] = 1
     if ihi - ilo == 0 or (S[khi] - S[klo]) / 2 < RMIN: return None
-    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2
+    c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; c.why = why; c.nmax = (imin, imax, ilo, ihi)
     if MADAPT > 0:                                                                            # research-19 (идея пользователя): число клонов-узлов клетки адаптивно — удваивать (5 → 9 → 17 → 33), пока ломаная торца по m узлам отходит от строки мелкой сетки больше MADAPT (в любой строке клетки)
         Sx = S[klo:khi + 1]
         for m_ in (5, 9, 17, 33):
@@ -350,22 +380,164 @@ def grow2(p, u, idx, rm, tm):
                 R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
             if dev <= MADAPT: break
         c.m = m_; GSTAT['m_%d' % m_] += 1
+        if MROW and m_ > 5:                                                                   # research-20 (идея пользователя: узлы только где нужны): своё число клонов в каждой строке — первое m из 5/9/17/33, при котором строка отходит ≤ MADAPT
+            mr_ = np.full(ihi - ilo + 1, 33)
+            for m2 in (17, 9, 5):
+                sn_ = np.linspace(Sx[0], Sx[-1], m2)
+                for q_, i in enumerate(range(ilo, ihi + 1)):
+                    R_ = rows[i][klo:khi + 1]
+                    if float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()) <= MADAPT: mr_[q_] = m2
+            c.mrow = np.minimum(mr_, m_)
+    if MGRAM > 0:                                                                             # research-20 (выбор пользователя 02:42): число клонов — удваивать (5 → 9 → 17 → 33), пока расстояние между соседними клонами в метрике грамиана клетки Wc (как в ok_rect: вся длительность) ≤ MGRAM в любой строке
+        Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; Wc = Wc * ((ihi - ilo) * DTN / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Qw = np.linalg.eigh(Wc); lam = np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)); Sx = S[klo:khi + 1]
+        for m_ in (5, 9, 17, 33):
+            sn_ = np.linspace(Sx[0], Sx[-1], m_); dg = 0.
+            for i in range(ilo, ihi + 1):
+                R_ = rows[i][klo:khi + 1]; P_ = np.c_[np.interp(sn_, Sx, R_[:, 0]), np.interp(sn_, Sx, R_[:, 1])]; q_ = np.diff(P_, axis=0) @ Qw; dg = max(dg, float(np.sqrt((q_ * q_ / lam).sum(1).max())))
+            if m_ == 5: MGD.append(dg)
+            if dg <= MGRAM: break
+        c.m = m_; GSTAT['m_%d' % m_] += 1
     return c
-def in_tri(P, A, B, C):
-    cr = lambda a, b, p: (b[None, :, 0] - a[None, :, 0]) * (p[:, None, 1] - a[None, :, 1]) - (b[None, :, 1] - a[None, :, 1]) * (p[:, None, 0] - a[None, :, 0])
-    d1, d2, d3 = cr(A, B, P), cr(B, C, P), cr(C, A, P)
-    return ~(((d1 < 0) | (d2 < 0) | (d3 < 0)) & ((d1 > 0) | (d2 > 0) | (d3 > 0)))
-def self_hit(rows, i, klo, khi, ilo, ihi, th0):
-    """SELFOV: попадают ли узлы новой строки i (столбцы klo..khi) внутрь четырёхугольников строк q, q+1 этой же клетки, не соседних с i."""
-    qs = [q for q in range(ilo, ihi) if (q + 1 <= i - 2 if i > ihi else q >= i + 2)]
-    if not qs: return False
-    uw = lambda Y: np.stack([th0 + (Y[:, 0] - th0 + PER / 2) % PER - PER / 2, Y[:, 1]], 1) if PER else Y
-    R = {j: uw(rows[j][klo:khi + 1]) for j in qs + [qs[-1] + 1]}; P = uw(rows[i][klo:khi + 1])
-    A = np.concatenate([R[q][:-1] for q in qs]); B = np.concatenate([R[q][1:] for q in qs]); C = np.concatenate([R[q + 1][1:] for q in qs]); D = np.concatenate([R[q + 1][:-1] for q in qs])
-    for k in ((-1, 0, 1) if PER else (0,)):
-        Pk = P + np.array([k * (PER or 0.), 0.])
-        if (in_tri(Pk, A, B, C) | in_tri(Pk, A, C, D)).any(): return True
-    return False
+def build_all(rng, log=None):
+    """research-20 (слово пользователя: «одна спора рождает сразу все слои»): общая очередь затравок; затравка p растит клетку в КАЖДОМ слое u, где p не покрыта; c.seq — номер затравки."""
+    L = {u: [] for u in US}; IX = {u: Index() for u in US}; queue = []; seeds = []; fails = 0; ns = 0; bar = tqdm(desc='все слои: клетки', unit='cell', mininterval=MI)
+    while fails < NFAIL:
+        bar.n = sum(len(v) for v in L.values()); bar.set_postfix(fails=fails, queue=len(queue), seeds=ns, refresh=False); bar.update(0)
+        fromq = bool(queue); p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])
+        if not inbox(p): continue
+        p = np.array([wrap(p[0]), p[1]])
+        if SEEDEPS > 0 and len(seeds) and np.min(np.abs(np.array(seeds) - p).max(1)) < SEEDEPS: continue
+        got = 0
+        for u in US:
+            if np.linalg.norm(f(p, u)) < FMIN or IX[u].covered(p[None])[0]: continue
+            c = grow2(p, u, IX[u], RMAX, TMAX)
+            if c is None: continue
+            c.build(); c.seq = ns; [L[u].append(d) or IX[u].add(d) for d in split_rows(c)]; got += 1; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+            queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
+            for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
+        if got: seeds.append(p.copy()); ns += 1; fails = 0
+        elif not fromq: fails += 1
+        if log and got: log(US[0], sum(L.values(), []))
+    bar.close(); return [L[u] for u in US], [IX[u] for u in US]
+def split_rows(c):
+    """research-20 MROW: клетка с разным числом клонов по строкам → блоки строк (≥ MROWL строк) со своим m; соседние блоки делят граничную строку; клоны вложены (5 ⊂ 9 ⊂ 17 ⊂ 33) — блок = прореживание столбцов."""
+    mr = getattr(c, 'mrow', None)
+    if not MROW or mr is None or len(set(mr.tolist())) == 1 or len(mr) != c.G.shape[0]: return [c]
+    mr = mr.copy()
+    while True:                                                                                # короткие блоки — к соседу с бо́льшим m
+        R = []; a_ = 0
+        for i in range(1, len(mr) + 1):
+            if i == len(mr) or mr[i] != mr[a_]: R.append([a_, i - 1, int(mr[a_])]); a_ = i
+        sh = [k for k, (a_, b_, m_) in enumerate(R) if b_ - a_ + 1 < MROWL]
+        if not sh or len(R) == 1: break
+        k = sh[0]; a_, b_, m_ = R[k]; nb = [R[j][2] for j in (k - 1, k + 1) if 0 <= j < len(R)]
+        if max(nb) > m_: mr[a_:b_ + 1] = max(nb)                                               # короткий блок с меньшим m — поднять до соседа
+        else:                                                                                  # короткий блок с наибольшим m — удлинить за счёт соседей (иначе бесконечный цикл: research-20, прогоны 80/81)
+            need = MROWL - (b_ - a_ + 1); hi_ = min(len(mr) - 1, b_ + need); mr[a_:hi_ + 1] = m_; lo_ = max(0, a_ - (need - (hi_ - b_))); mr[lo_:a_] = m_
+    if len(R) == 1: c.m_full = c.m; return [c]
+    import copy; out = []
+    for k, (a_, b_, m_) in enumerate(R):
+        b2 = b_ + 1 if k < len(R) - 1 else b_; st = (c.m - 1) // (m_ - 1); d = copy.copy(c); d.G = c.G[a_:b2 + 1, ::st]; d.m = m_; d.sn = c.sn[::st]
+        if getattr(c, 'TT', None) is not None: d.TT = c.TT[a_:b2 + 1, ::st]
+        if getattr(c, 'DEAD', None) is not None: d.DEAD = c.DEAD[a_:b2 + 1, ::st]
+        d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
+        d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; d.mrow = None; d.sub = (a_, b2); out.append(d)
+        d.stc = st; d.nxt = None
+        if len(out) > 1: out[-2].nxt = d                                                     # research-20: связь «последняя строка блока = первая строка следующего» (рёбра нулевого времени в solve)
+    GSTAT['mrow_split'] += 1; GSTAT['mrow_blocks'] += len(out); return out
+def trim_rows(c, a_, b_):
+    """research-20 TRIM: клетка, обрезанная по строкам a_..b_ (те же клоны; mrow — тоже)."""
+    import copy; d = copy.copy(c); d.G = c.G[a_:b_ + 1]
+    for k_ in ('TT', 'DEAD'):
+        if getattr(c, k_, None) is not None: setattr(d, k_, getattr(c, k_)[a_:b_ + 1])
+    if getattr(c, 'mrow', None) is not None and len(c.mrow) == c.G.shape[0]: d.mrow = c.mrow[a_:b_ + 1]
+    d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
+    d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; return d
+SOLVED = []
+_GIX = None
+def _grow_one(a):                                                                             # рабочий пула: рост и сборка одной клетки против покрытия прошлых раундов (_GIX — снимок при fork)
+    p, u, k = a; c = grow2(p, u, _GIX[US.index(u)], RMAX, TMAX)
+    if c is None: return None
+    c.build(); c.seq = k; return c
+def build_grid(log=None):
+    """research-20 (слово пользователя: посев повсеместный, рост параллельный, одна затравка — все слои): решётка затравок, симметричная относительно центра поля,
+    уровни шага SG0, SG0/2, … ≥ SGMIN; на уровне — раунды: все непокрытые затравки × слои растут одновременно (Pool NPROC) против покрытия прошлых раундов,
+    приём по убыванию площади, если доля узлов кандидата, покрытых принятыми в этом раунде, ≤ OVR; непринятые — в следующий раунд."""
+    global _GIX
+    import multiprocessing as mp
+    SG0 = float(os.environ.get('SG0', 1.)); SGMIN = float(os.environ.get('SGMIN', .1)); OVR = float(os.environ.get('OVR', .3)); NP = int(os.environ.get('NPROC', 8))
+    L = [[] for _ in US]; IX = [Index() for _ in US]; h = SG0; rnd = 0; k0 = 0; RS = []
+    _SR = np.random.default_rng(int(os.environ.get('SEED', 0))); lev = [None] if int(os.environ.get('SGGOAL', 1)) else []                                  # уровень 0 (research-20: прогон 76 — ни одна клетка решётки не задела цель, V не стартовала): 8 затравок по контуру цели, симметрично
+    while h >= SGMIN - 1e-12: lev.append(h); h /= 2
+    for h in lev:
+        if h is None: r_ = RHO * 1.5; P = np.array([[a_ * r_, b_ * r_] for a_ in (-1, 0, 1) for b_ in (-1, 0, 1) if a_ or b_], float); h = 0.
+        else:
+            nt = max(2, int(round(2 * XL / h))); nw = max(2, int(round(2 * WL / h)))
+            P = np.stack(np.meshgrid(-XL + (np.arange(nt) + .5) * 2 * XL / nt, -WL + (np.arange(nw) + .5) * 2 * WL / nw, indexing='ij'), -1).reshape(-1, 2)
+            if SGRAND: P = np.c_[_SR.uniform(-XL, XL, len(P)), _SR.uniform(-WL, WL, len(P))]          # research-20 (идея пользователя «сеять вообще рандомно»): столько же затравок, сколько в решётке, но случайно
+        ids = k0 + np.arange(len(P)); k0 += len(P)
+        while True:
+            jobs = [(P[i], u, int(ids[i])) for li, u in enumerate(US) for i in np.flatnonzero(~IX[li].covered(P)) if np.linalg.norm(f(P[i], u)) >= FMIN]
+            if not jobs: break
+            _GIX = IX; t_ = time.time()
+            if NBR: out = grow_lockstep(jobs, IX)
+            else:
+                with mp.get_context('fork').Pool(NP) as pool: out = list(tqdm(pool.imap(_grow_one, jobs, chunksize=1), total=len(jobs), desc='шаг %.3g раунд %d: рост %d кандидатов' % (h, rnd, len(jobs)), mininterval=MI, leave=False))
+            C = [c for c in out if c is not None]; C.sort(key=lambda c: -(c.nf + c.nb) * 2 * c.r); RI = [Index() for _ in US]; acc = 0
+            for c in C:
+                li = US.index(c.u)
+                if TRIM and RI[li].nc:                                                        # research-20 (идея пользователя «клетки поджимаются, потому что большая может расти»): с концов по времени снять строки, покрытые принятыми в этом раунде (> FRAC), оставив 1 строку гало
+                    rc_ = np.array([RI[li].covered(row).mean() for row in c.G]); a_, b_ = 0, len(rc_) - 1
+                    while a_ < b_ and rc_[a_] > FRAC and rc_[a_ + 1] > FRAC: a_ += 1
+                    while b_ > a_ and rc_[b_] > FRAC and rc_[b_ - 1] > FRAC: b_ -= 1
+                    if b_ - a_ < 2: continue
+                    if (a_, b_) != (0, len(rc_) - 1): c = trim_rows(c, a_, b_); GSTAT['trim'] += 1
+                g = c.G.reshape(-1, 2)
+                if RI[li].nc and RI[li].covered(g).mean() > OVR: continue
+                RI[li].add(c); acc += 1
+                for d in split_rows(c): IX[li].add(d); L[li].append(d)
+            RS.append(dict(h=round(h, 3), round=rnd, jobs=len(jobs), grown=len(C), acc=acc, sec=round(time.time() - t_, 1))); print('посев', RS[-1], flush=True); rnd += 1
+            if log: log(US[0], sum(L, []))
+            if acc == 0: break
+    build_grid.rounds = RS; return L, IX
+def grow2(p, u, idx, rm, tm):
+    g = _grow2_gen(p, u, idx, rm, tm)
+    try:
+        while True: next(g)
+    except StopIteration as e: return e.value
+class _NbrIdx:
+    """research-20 NBR: покрытие = готовые клетки (idx) ∪ текущие прямоугольники ДРУГИХ клеток раунда (снимок на начало шага)."""
+    def __init__(s, idx): s.idx = idx; s.polys = []
+    def covered(s, Y):
+        Y = np.atleast_2d(Y); out = s.idx.covered(Y)
+        for bb, P_ in s.polys:
+            for sh in SH:
+                Z = Y - [sh, 0.]; m = ~out & (Z[:, 0] >= bb[0]) & (Z[:, 0] <= bb[1]) & (Z[:, 1] >= bb[2]) & (Z[:, 1] <= bb[3])
+                if m.any(): out[np.flatnonzero(m)[P_.contains_points(Z[m])]] = True
+        return out
+def _box_poly(st):
+    from matplotlib.path import Path
+    klo, khi, ilo, ihi = st['box']; R = st['rows']
+    if ihi <= ilo or khi <= klo: return None
+    G = np.array([R[i][klo:khi + 1] for i in range(ilo, ihi + 1)]); pg = np.r_[G[:, 0], G[-1, 1:-1], G[::-1, -1], G[0, -2:0:-1]]
+    return ((pg[:, 0].min(), pg[:, 0].max(), pg[:, 1].min(), pg[:, 1].max()), Path(pg))
+def grow_lockstep(jobs, IX):
+    """research-20 NBR (слово пользователя: «при росте клетки должны смотреть на своих соседей»): все кандидаты раунда растут по шагу одновременно; на шаге каждый видит снимок прямоугольников остальных (своего слоя)."""
+    G_ = []; res = [None] * len(jobs)
+    for q, (p, u, k) in enumerate(jobs): st = {}; ni = _NbrIdx(IX[US.index(u)]); G_.append([_grow2_gen(p, u, ni, RMAX, TMAX, st), st, ni, u, k])
+    act = list(range(len(jobs))); nst = 0
+    while act:
+        snap = {q: _box_poly(G_[q][1]) for q in act if G_[q][1].get('box')}; nxt = []
+        for q in act:
+            G_[q][2].polys = [v for r_, v in snap.items() if r_ != q and v is not None and G_[r_][3] == G_[q][3]]
+            try: next(G_[q][0]); nxt.append(q)
+            except StopIteration as e:
+                c = e.value
+                if c is not None: c.build(); c.seq = G_[q][4]
+                res[q] = c
+        act = nxt; nst += 1
+    GSTAT['nbr_steps'] += nst; return res
 LIMITS = None                                                                                   # REFINE (research-14): функция p → (rmax, tmax) — измельчение по невязке Беллмана
 def build_layer(u, rng, log=None):
     cells = []; fails = 0; idx = Index(); queue = []; seeds = []; sc0 = np.linspace(-1, 1, M); bar = tqdm(desc='layer u=%+g cells' % u, unit='cell', mininterval=MI)
@@ -381,7 +553,7 @@ def build_layer(u, rng, log=None):
         if GROW == 2:
             c = grow2(p, u, idx, rm, tm)
             if c is None: fails += 0 if queue else 1; continue
-            fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
+            fails = 0; c.build(); [cells.append(d) or idx.add(d) for d in split_rows(c)]; g0, g1 = c.G[-1], c.G[0]; yf = g0[len(g0) // 2]; yb = g1[len(g1) // 2]
             for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
             queue += [yf, yb, c.c + 1.9 * c.r * c.n, c.c - 1.9 * c.r * c.n]
             for e in (g0, g1): e = e[len(e) // 2]; queue += [e + 1.9 * c.r * normal(e, u), e - 1.9 * c.r * normal(e, u)]
@@ -508,6 +680,9 @@ class Atlas:
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
+        if int(os.environ.get('SOLVEB', 0)):                                                  # research-21: solve по вёдрам V (та же V, рёбра 2–3 раза) — `solve_bucket.md`
+            sys.path.insert(0, os.path.expanduser('~/spore_v5/r18')); import solve_bucket as SB
+            _t0 = time.time(); r = SB.solve_bucket(s, float(os.environ.get('SOLVEBD', 2 * DTN))); print('SOLVEB', r, 'вызов %.1f с' % (time.time() - _t0), flush=True); s.V = s.V_b; s.n_it = r['buckets']; s.edges = r['edges']; SOLVED.append(0.); return s
         E = []; Vg = np.full(s.N, np.inf)
         for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u)))
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
@@ -517,12 +692,26 @@ class Atlas:
             if getattr(c, 'TT', None) is None or not NFEDGE: continue
             nt, m = c.G.shape[:2]; a = c.o + np.arange((nt - 1) * m); ea.append(a); eb.append(a + m); ec.append(np.maximum(np.diff(c.TT, axis=0).ravel(), 1e-6))
         ea, eb, ec = (np.concatenate(ea), np.concatenate(eb), np.concatenate(ec)) if ea else (np.zeros(0, int), np.zeros(0, int), np.zeros(0))
+        e2 = [(c.o + c.E2[0], c.o + c.E2[1], c.E2[2], c.E2[3]) for c in s.cells if getattr(c, 'E2', None) is not None]
+        za, zb, z2 = [], [], []                                                                # research-20 MROW: узел последней строки блока = тот же узел первой строки следующего (без этой связи V отравляется BIG-углами: big 1.9% → 4.0%, итераций ×1.6)
+        for c in s.cells:
+            nx = getattr(c, 'nxt', None)
+            if nx is None: continue
+            ntA, mA = c.G.shape[:2]
+            for j in range(mA):
+                jf = j * c.stc; q_ = jf // nx.stc; w_ = (jf - q_ * nx.stc) / nx.stc
+                if w_ == 0: za.append(c.o + (ntA - 1) * mA + j); zb.append(nx.o + q_)
+                else: z2.append((c.o + (ntA - 1) * mA + j, nx.o + q_, w_))
+        if za: ea, eb, ec = np.r_[ea, za], np.r_[eb, zb], np.r_[ec, np.zeros(len(za))]
+        if z2: z2 = np.array(z2); e2.append((z2[:, 0].astype(int), z2[:, 1].astype(int), z2[:, 2], np.zeros(len(z2))))   # research-19 NORMFRONT=3: ребро в точку следующей строки (между узлами b и b+1, вес w)
+        e2a, e2b, e2w, e2t = [np.concatenate(x) for x in zip(*e2)] if e2 else (np.zeros(0, int), np.zeros(0, int), np.zeros(0), np.zeros(0))
         for n in tqdm(range(it), desc='value iteration', mininterval=MI, leave=False):
             val = DTN + s.interp(W, V[IDX], not JAG); new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st))
             if len(ea): np.minimum.at(new, ea, np.where(V[eb] < BIG / 2, ec + V[eb], BIG))
+            if len(e2a): np.minimum.at(new, e2a, np.where((V[e2b] < BIG / 2) & (V[e2b + 1] < BIG / 2), e2t + (1 - e2w) * V[e2b] + e2w * V[e2b + 1], BIG))
             new[s.goal] = 0.; new[dead] = BIG
-            d = np.max(np.abs(new - V)); V = new
-            if d < 1e-9: break
+            d = np.max(np.abs(new - V)); V = new; SOLVED.append(float(d))                      # research-20: ход сходимости solve
+            if d < STOL: break                                                                  # research-20: STOL (по умолчанию 1e-9); хвост 1e-6 → 1e-9 — до 30% итераций
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def tgoal3(s, Y, n=8):
         """tgoal по всем 3 управлениям одним стеком → (len(Y), 3). Шаг DTN уходит не дальше DTN·(WL+2): точки дальше RHO + этого от цели в цель не попадут — их не считаем."""

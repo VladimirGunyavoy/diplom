@@ -9,7 +9,7 @@ def dump(name, obj, js=True):
     tmp = os.path.join(D, name + '.tmp'); (json.dump(obj, open(tmp, 'w')) if js else pickle.dump(obj, open(tmp, 'wb'))); os.replace(tmp, os.path.join(D, name))
 PAR = dict(SYS=G.SYS, US=list(G.US), TMAX=G.TMAX, RMAX=G.RMAX, OVL=G.OVL, RHO=G.RHO, ADAPT=G.ADAPT, NORM=G.NORM, DELTA=G.DELTA, SEL=G.SEL, CORE=G.CORE, JUMP=G.JUMP, JMODE=G.JMODE, JAG=G.JAG, JDIR=G.JDIR, GROW=G.GROW, OVH=G.OVH, FRAC=G.FRAC, GOALB=int(os.environ.get('GOALB', 1)), DEPTH=getattr(G, 'DEPTH', 0), M=G.M, DTN=G.DTN, XL=G.XL, WL=G.WL, PER=G.PER)
 def status(stage, **kw): dump('status.json', dict(stage=stage, sec=round(time.time() - t0, 1), params=PAR, **kw))
-def cells_dump(cells): dump('cells.pkl', [dict(u=float(c.u), c=c.c, r=float(c.r), n=c.n, G=c.G.astype(np.float32)) for c in cells], js=False)
+def cells_dump(cells): dump('cells.pkl', [dict(u=float(c.u), c=c.c, r=float(c.r), n=c.n, G=c.G.astype(np.float32), p0=getattr(c, 'p0', None), seq=getattr(c, 'seq', -1)) for c in cells], js=False)
 done = []
 def log(u, cells):
     if len(cells) % 5 == 0: cells_dump(done + cells); status('строю атлас u = %+g' % u, cells=len(done) + len(cells))
@@ -63,7 +63,10 @@ NF_FINAL = G.NORMFRONT
 for ps in range(REFINE + 1):
     if int(os.environ.get('NF0', 1)) == 0: G.NORMFRONT = NF_FINAL if ps == REFINE else 0   # research-16 NF0=0: проход 0 (поиск стен CUT) — без NORMFRONT; NF только в итоговом проходе
     status('старт' if not ps else 'проход %d' % ps, refine=hist); rng = np.random.default_rng(int(os.environ.get('SEED', 0))); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; done = []
-    for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
+    if getattr(G, 'SEEDGRID', 0): A.layers, A.idx = G.build_grid(); done += sum(A.layers, []); cells_dump(done)   # research-20: решётка затравок, параллельный рост раундами
+    elif getattr(G, 'SEED1', 0): A.layers, A.idx = G.build_all(rng); done += sum(A.layers, []); cells_dump(done)   # research-20: одна затравка → все слои
+    else:
+        for u in G.US: l, ix = G.build_layer(u, rng, log); A.layers.append(l); A.idx.append(ix); done += l; cells_dump(done)
     if ps == REFINE: break
     A.finish(); A.solve(); Y, Vo = [], []
     if CUT > 0:                                                                                # CUT: середины пар соседних узлов (поперёк и вдоль) с перепадом V > CUT — барьер для прохода 1
@@ -123,7 +126,7 @@ Q, ref = G.starts_ref(); ok = ref > .05; Q, ref = Q[ok], ref[ok]; _t1 = _tm.time
 _qt = []                                                                                      # research-19: время ОДНОГО запроса (старт → траектория до цели) — по одному старту, распределение
 from tqdm import tqdm as _tq
 for _i in _tq(range(min(len(Q), int(os.environ.get('QTIME', 20)))), desc='замер времени запроса (по одному старту)', mininterval=5): _t1 = _tm.time(); A.rollout(Q[_i:_i + 1]); _qt.append(_tm.time() - _t1)
-_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
+_qt = np.array(_qt); np.save(os.path.join(D, 'qtime.npy'), _qt); base.update(seed_rounds=getattr(G.build_grid, 'rounds', None) if getattr(G, 'SEEDGRID', 0) else None, gstat={k_: int(v_) for k_, v_ in G.GSTAT.items()}, mg5=[round(float(q_), 3) for q_ in np.quantile(G.MGD, [.1, .5, .9, 1.])] if getattr(G, 'MGD', None) else None, t_build=round(_tb, 1), t_solve=round(_ts, 1), t_agent_batch=round(_ta, 1), q_ms=dict(n=len(_qt), med=round(float(np.median(_qt)) * 1e3, 1), p90=round(float(np.quantile(_qt, .9)) * 1e3, 1), max=round(float(_qt.max()) * 1e3, 1), mean=round(float(_qt.mean()) * 1e3, 1)) if len(_qt) else None)
 np.savez(os.path.join(D, 'agent.tmp.npz'), Q=Q, T=T, ref=ref, sw=sw); os.replace(os.path.join(D, 'agent.tmp.npz'), os.path.join(D, 'agent.npz'))
 fz = np.isfinite(T); r = T[fz] / ref[fz]
 if G.SYS == 'pend':                                                                           # пути для картинки: 7 стартов + их зеркала (−φ, −ω) — видно закрутку в обе стороны
@@ -139,3 +142,11 @@ for i in range(len(S)):
 dump('paths.pkl', paths, js=False)
 status('готово', reach=round(float(fz.mean()), 3), T_mean=round(float(r.mean()), 4), T_med=round(float(np.median(r)), 4), T_max=round(float(r.max()), 3), T_min=round(float(r.min()), 3), sw_med=float(np.median(sw[fz])), **base)
 print(open(os.path.join(D, 'status.json')).read())
+if G.SYS in ('pend', 'di') and int(os.environ.get('AUTOPIC', 1)):   # research-21: и ДИ (сводка «все системы»)                                     # research-20 (слово пользователя: «готовые прогоны сразу в папку картинок»): 3 слоя + V* фоном + пути 100 стартов (цвет = управление) → ~/spore_v5/r18/pics/auto/<прогон>.png
+    try:
+        sys.path.insert(0, os.path.expanduser('~/spore_v5/r18')); import atlas_pic as AP; _st = json.load(open(os.path.join(D, 'status.json'))); _q = _st.get('q_ms') or {}
+        _gx = np.linspace(-G.XL, G.XL, 361); _gw = np.linspace(-G.WL, G.WL, 281); _GX, _GW = np.meshgrid(_gx, _gw, indexing='ij'); _VG = A.vstar(np.c_[_GX.ravel(), _GW.ravel()]).reshape(_GX.shape)
+        _cells = [dict(u=c.u, G=c.G, p0=getattr(c, 'p0', None), seq=getattr(c, 'seq', -1)) for c in A.cells]; _U = AP.controls(path, G.US, G.step, G.wrap)
+        _t = '%s — %d клеток, %d узлов; T/эталон ср. %.4f, max %.2f; атлас %.0f с, solve %.0f с, запрос мед. %.2f с (LOOK %d)' % (sys.argv[1], len(_cells), _st.get('nodes', 0), _st['T_mean'], _st['T_max'], _st.get('t_build', 0), _st.get('t_solve', 0), _q.get('med', 0) / 1e3, G.LOOK)
+        print('картинка', AP.draw(_cells, _gx, _gw, _VG, path, _U, T, _t, os.path.expanduser('~/spore_v5/r18/pics/auto/%s.png' % sys.argv[1]), st=_st, ratio=T / ref, **({} if G.SYS == 'pend' else dict(XR=G.XL, WL=G.WL))), flush=True)
+    except Exception as _e: print('картинка не нарисована:', repr(_e), flush=True)
