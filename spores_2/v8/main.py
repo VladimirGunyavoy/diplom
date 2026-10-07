@@ -91,6 +91,7 @@ floor = ScalableFloor(
     texture_scale=(40, 40)
 )
 zoom_manager.register_object(floor, name='floor')
+floor.visible_self = False    # hide only the floor's model; its children (the collider for LMB clicks, see floor.collider below) stay active. F toggles it back
 
 # ===== SHARED CONTEXT =====
 shared_context = SharedContext()
@@ -193,6 +194,8 @@ input_manager.bind('m', lambda: _step('M'), description='to pause of same level'
 input_manager.bind('c', lambda: _step('C'), description='to the end')
 input_manager.bind('x', _restart, description='restart: algorithm seeds (drop click)')
 input_manager.bind('g', _seed_here, description='seed at look point')
+def _toggle_floor(): floor.visible_self = not floor.visible_self
+input_manager.bind('f', _toggle_floor, description='toggle floor')
 
 
 # ===== BINDINGS HELP =====
