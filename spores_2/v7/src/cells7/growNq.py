@@ -174,7 +174,9 @@ if __name__ == '__main__':
         d_ = pickle.load(open(E('LOADFULL'), 'rb')); Af = G.Atlas.__new__(G.Atlas); Af.layers = d_['layers']; Af.finish(); Af.V = d_['V']
     else: Af = full_atlas()
     print('полный атлас: клеток', len(Af.cells), 'узлов', Af.N, round(time.time() - t0), 'с', flush=True)
-    Q, ref = G.starts_ref(); Cs = Af.vstar(G.wrapy(Q)); ok = np.flatnonzero(Cs < G.BIG / 2); print('стартов с конечной V', len(ok), 'из', len(Q), flush=True)
+    Q, ref = G.starts_ref()
+    if E('REFFILE'): ref = np.load(E('REFFILE'))[:, 6]   # п.41 (research-22): эталон di4 для RHO .35 — r22/di4_ref_60_rho35.npy (старый ±.05 занижал T/эталон ~17%)
+    Cs = Af.vstar(G.wrapy(Q)); ok = np.flatnonzero(Cs < G.BIG / 2); print('стартов с конечной V', len(ok), 'из', len(Q), flush=True)
 
     if int(E('POOL', 0)):
         Q0 = int(E('Q0', 0)); idq = (ok[np.argsort(-Cs[ok])][Q0:Q0 + NQ] if int(E('FAR', 0)) else ok[Q0:Q0 + NQ]); Qs = [Q[i] for i in idq]; trees, inc, out = pool_run(Qs, log=lambda m: print('  ', m, flush=True)); Ap = atlas_of(trees); quiet(Ap.solve); allc = {id(c) for t in trees for c in t.cells}
