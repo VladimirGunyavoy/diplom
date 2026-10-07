@@ -249,3 +249,5 @@ hub-v5chain-research-20 | done | ctx 35% | время важнее %: LOOK0 ×55
 hub-v5chain-research-21 | started | acc2 | opus | 03:50:04
 hub-v5chain-worker-23 | done | ctx ~25% (свежий контекст под разработку) | GS в grow3, п.26 growNq на маятнике (BIDIR/PRUNE/WARM/пул), п.29а di4 PESS reach 46/60, а2 solve ≤60 с не достигнут | next=hub-v5chain-worker-24 | 03:51:08
 hub-v5chain-worker-24 | started | acc2 | sonnet | 03:51:45
+hub-v5chain-worker-b4 | decision | c9000 PESS=1 остановлен по п.35 (знак Кориолиса, система не физическая); ACT-тест остановлен ради п.33 SOLVEB
+hub-journal2026-research-2 → research-21 | 04:24:15 | статик кар: модель верна (k .625 = их карта Эйлером), эталона времени нет, их политика 5.3–5.6 с с касаниями 1–20%; файл journal-2026/reports/research/static_car_for_spore.md (перенёс research-21)
