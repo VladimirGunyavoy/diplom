@@ -1,3 +1,13 @@
+# Session Handoff — линия B
+Звено: hub-v5chain-worker-b4 (acc2, sonnet, 01:21–~05:10), причина смены: ctx ~28% (софт 30%)
+Сделано: п.27 SELFOV; п.28 перенос NF2/MADAPT/BFINE/SELFOV в v7 (цели воспроизведены); NF2 на u .15 и ДИ; п.30 QFAST (q_ms LOOK20 ×9.8, T те же); п.33 solve 4D — негатив (GS ×1.1, SOLVEB вёдра каскадируют, выкл.); п.35 знак Кориолиса (growN+v6) и эталон manip пересчитан. Детали — STATUS «### Линия B», v7/reports/growN/neighbors.md, nf_curved_ends.md, journals/worker/hub-v5chain-worker-b4.log.
+Стоп на / следующий шаг: (1) aida: идёт manip c3000 на ИСПРАВЛЕННОЙ динамике (`~/spore_v5/wb4/growN_manip_c3000_cor.log`, DUMP `/home/random/spore_v5/wb4/manip_c3000_cor.pkl`, запуск `~/spore_v5/wb4/run370.sh`; ref — новые manip_bruteforce_{0,1,3,5}.json, скопированы и в wb1/spores_2/v5chain). Ждать JSON (reach, T/эталон по 4 стартам; build+стенсилы ~30 мин, solve ~20 мин) → STATUS, `knowledge/research/growN_4d.md`, строка research-21. Прежние manip-числа недействительны. (2) п.31 (перенос правок прототипа research-20 в grow_cells2d поверх QFAST) — не начат, см. PLAN. (3) Если manip c3000 с новой динамикой даёт reach мало — вывод по охвату 4D заново (старые выводы про 25% относились к неверной системе). (4) п.23 профиль solve 4D: Якоби 268 ит — искать сокращение числа проходов (STOL как в 2D, шаг стенсила ≥ расстояния до следующей строки) или стенсил по 2–4 вершинам, не вёдра.
+Грабли: ssh с фоном — только через скрипт (`scp run.sh; ssh 'setsid nohup bash run.sh >/dev/null 2>&1 </dev/null & echo ok'` с timeout), иначе висит; `GS` в growN = число затравок от цели (по умолчанию 300 для manip), НЕ мой удалённый GS-режим; pickle DUMP из __main__ грузить, подставив классы в __main__ (solve_gs_test.py); aida ОЗУ делится, c3000 стенсилы ~15–20 ГБ; git без identity — экспортировать GIT_AUTHOR_NAME/EMAIL (gun.vladimir26@gmail.com), push не проходит (нет логина, по правилам не пушим); окружение 312 (u .3 база) не сохранено — базу сравнения ставить своим прогоном; v7 коммиты: 50e4132 (п.30), de86963 (п.33), 18d25a4 (п.35), e98d5cd (п.28), c22aebd (п.27).
+Решения цепочки: c9000 PESS=1 остановлен (Кориолис), ACT/GS-режимы удалены; SOLVEB оставлен выкл.
+Коммиты: v7 50e4132, de86963, 18d25a4; v6 00b321c; v5chain 04c3490
+Токены: T_START 5ч 11% / ctx 5% $0.10 (01:21) / T_BEFORE_END 5ч 27% / ctx 27% $8.63
+NEXT_LINK: hub-v5chain-worker-b5   NEXT_MODEL: sonnet
+
 ## hub-v5chain-worker-b3 (acc1, 12:18–01:30, ctx 28%)
 manip 4D c3000g/c6000g/PESS; growN SPAR+чанки+23а×2.2+23б; п.27(а) замер самоналожения. Идёт c9000 PESS=1 на aida. Детали — STATUS «Линия B».
 

@@ -253,3 +253,4 @@ hub-v5chain-worker-b4 | decision | c9000 PESS=1 остановлен по п.35 
 hub-journal2026-research-2 → research-21 | 04:24:15 | статик кар: модель верна (k .625 = их карта Эйлером), эталона времени нет, их политика 5.3–5.6 с с касаниями 1–20%; файл journal-2026/reports/research/static_car_for_spore.md (перенёс research-21)
 hub-v5chain-worker-b4 | result | п.35 знак Кориолиса исправлен (growN+v6), энергия 6e-13; п.33 SOLVEB в 4D не ускоряет (GS ×1.1); пересчёт эталона manip 4D идёт
 hub-v5chain-worker-b4 | done | ctx 28% (софт 30%) | п.27/28/30 в v7, п.33 негатив 4D, п.35 Кориолис+эталон; идёт manip c3000 на верной динамике | next=hub-v5chain-worker-b5 | 05:02:12
+hub-v5chain-worker-b5 | started | acc3 | sonnet | 05:02:47
