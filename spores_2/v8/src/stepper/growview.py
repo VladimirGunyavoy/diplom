@@ -28,13 +28,19 @@ def cell_rows(G, ax):
     return np.stack([P[:, :-1], P[:, 1:]], 2).reshape(-1, 2, 3) if P.shape[1] > 1 else np.zeros((0, 2, 3))
 
 
-def cell_outline(G, ax, halo=0.):
-    """контур ядра (halo=0) или гало: ломаная по концам строк, концы строк сдвинуты наружу на halo вдоль строки; (K, 2, 3)."""
+def cell_outline(G, ax, halo=False):
+    """контур клетки: ломаная по концам строк, (K, 2, 3). Крайние узлы G стоят на ±(1+HALO)·r (Cell.build) — это край гало (halo=True);
+    ядро (halo=False) — те же концы, стянутые к центру строки в 1/(1+HALO) раза."""
     P = proj(G, ax); a, b = P[:, 0].copy(), P[:, -1].copy()
-    if halo:
-        d = b - a; nrm = np.linalg.norm(d, axis=-1, keepdims=True); d = d / np.maximum(nrm, 1e-12); a, b = a - halo * d, b + halo * d
+    if not halo:
+        c = (a + b) / 2; a, b = c + (a - c) / (1 + HALO), c + (b - c) / (1 + HALO)
     ring = np.concatenate([a, b[::-1]], 0); ring = np.concatenate([ring, ring[:1]], 0)
     return np.stack([ring[:-1], ring[1:]], 1)
+
+
+def seg_index(K):
+    """индексы отрезков для Mesh(mode='line'): без triangles ursina рисует ОДНУ ломаную через все вершины, а у нас вершины — пары [a0, b0, a1, b1, ...]."""
+    return [(2 * i, 2 * i + 1) for i in range(K)]
 
 
 def build_geometry(snap, ax=(0, 1), halo=HALO):
@@ -44,10 +50,10 @@ def build_geometry(snap, ax=(0, 1), halo=HALO):
     g['points_done'] = np.concatenate([proj(c['G'], ax).reshape(-1, 3) for c in cells], 0) if cells else z3
     g['segs_rows_done'] = np.concatenate([cell_rows(c['G'], ax) for c in cells], 0) if cells else z23
     g['segs_core_done'] = np.concatenate([cell_outline(c['G'], ax) for c in cells], 0) if cells else z23
-    g['segs_halo_done'] = np.concatenate([cell_outline(c['G'], ax, halo) for c in cells], 0) if cells else z23
+    g['segs_halo_done'] = np.concatenate([cell_outline(c['G'], ax, True) for c in cells], 0) if cells else z23
     if cur is not None:
         g['points_cur'] = proj(cur['G'], ax).reshape(-1, 3); g['segs_rows_cur'] = cell_rows(cur['G'], ax)
-        g['segs_core_cur'] = cell_outline(cur['G'], ax); g['segs_halo_cur'] = cell_outline(cur['G'], ax, halo)
+        g['segs_core_cur'] = cell_outline(cur['G'], ax); g['segs_halo_cur'] = cell_outline(cur['G'], ax, True)
     else: g['points_cur'], g['segs_rows_cur'], g['segs_core_cur'], g['segs_halo_cur'] = z3, z23, z23, z23
     sec = snap.get('section')                                          # пауза section: узлы базового сечения (K, n)
     if sec is not None: g['points_cur'] = np.concatenate([g['points_cur'], proj(sec, ax)], 0); sp = proj(sec, ax); g['segs_rows_cur'] = np.concatenate([g['segs_rows_cur'], np.stack([sp[:-1], sp[1:]], 1)], 0)
@@ -93,7 +99,7 @@ class GrowView:
                 def __init__(self):
                     self.real_v = np.zeros((0, 3)); super().__init__(model=Mesh(vertices=[], mode=mode, thickness=(.04 if name in ('points_seed', 'points_cur') else .02) if pts else 2))
                 def apply_transform(self, a, b, **kw):
-                    v = self.real_v * a + b; self.model.vertices = [Vec3(*p) for p in v]; self.model.generate()
+                    v = self.real_v * a + b; self.model.vertices = [Vec3(*p) for p in v]; self.model.triangles = seg_index(len(v) // 2) if mode == 'line' else None; self.model.generate()
             e = _Multi(); from ursina import color; e.color = color.rgba(*col); e.alpha = col[3]
             s.zm.register_object(e, name='growview_' + name); s.layers[name] = e
         return s.layers[name]

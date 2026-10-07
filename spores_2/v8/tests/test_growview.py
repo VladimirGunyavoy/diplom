@@ -22,3 +22,13 @@ def test_live_steps_and_final():
 
 def test_timetable():
     t = TimeTable(); t.add_draw('row', .002); assert 'row' in t.text({'row': .1})
+
+
+def test_outline_core_halo_and_segments():
+    from src.stepper.growview import cell_outline, seg_index, HALO
+    rr = .02; j = (np.arange(5) - 2) / 2                      # узлы поперёк: ±(1+HALO)·r, как Cell.build
+    G = np.zeros((3, 5, 2)); G[:, :, 0] = (np.arange(3) * .05)[:, None]; G[:, :, 1] = j[None] * (1 + HALO) * rr
+    for halo, w in ((True, (1 + HALO) * rr), (False, rr)):
+        o = cell_outline(G, (0, 1), halo); z = o[..., 2]
+        assert o.shape == (6, 2, 3) and abs(z.max() - w) < 1e-9 and abs(z.min() + w) < 1e-9     # 2·rows отрезков, ширина
+    assert seg_index(3) == [(0, 1), (2, 3), (4, 5)]
