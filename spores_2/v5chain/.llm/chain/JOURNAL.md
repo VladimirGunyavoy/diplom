@@ -267,3 +267,4 @@ hub-v5chain-research-23 | done | limit 5ч 74% (ctx 26%) | manip 4D клетка
 hub-v5chain-research-23 | resumed | 5ч-окно сбросилось (74% → 1%), ctx 26% — финиш отменён, преемник НЕ поднят; работа продолжается | 13:30:45
 hub-v5chain-worker-b6 | NEEDS-RESEARCH | 17:00 | очередь B пуста после п.45/46: manip хвост (старт 19, V плоская) и п.46 по остатку не нужен — нужен следующий пункт (research: почему V плоская у q19; следующая система по TASK)
 hub-v5chain-worker-b6 | done | ctx ~26% (очередь B пуста, 6D ждёт research) | п.44–47: manip 20/20 мед. 1.056, PESS=1 обязателен, V грубая везде но M=5 не лечит, SYS=m3d проба | next=hub-v5chain-worker-b7 | 15:33:35
+hub-v5chain-worker-b7 | started | acc3 | sonnet | 15:34:20
