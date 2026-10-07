@@ -357,6 +357,7 @@ def growN(p, u, idx, rm, tm):
         if m_ == 1 and len(face) >= 3: face = face[(1 if tst.get(('B',), 0) > 0 else 0):len(face) - (1 if tst.get(('F',), 0) > 0 else 0)]     # строки торцевого соседа (зацеп по времени) не считаем
         fc = ((idx.covered(face) | ~inbox_g(face)).mean() >= ZFRAC); fi = fc or ((idx.inside(face) | ~inbox_g(face)).mean() >= ZFRAC)
         st = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
+        if st == 1 and r_ < RMINZ: st = 0
         if st == 2 and r_ < RMINZ:                                                                         # узкая клетка добирает ширину за счёт соседа, но не глубже ZOVMAX своей ширины
             pos = S[khi[k]] if sg > 0 else -S[klo[k]]; t0 = touch.setdefault((k, sg), pos)
             if pos - t0 < ZOVMAX * 2 * r_: st = 0
