@@ -159,7 +159,8 @@ class GrowView:
     # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — светло-серые (контраст к зелёному и оранжевому на тёмно-синем); текущая клетка ярче, готовые приглушены
     COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .45),
            'points_cur': (.92, .92, .96, 1), 'segs_rows_cur': (.95, .95, 1.0, 1), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
-           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9)}
+           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9),
+           'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
         s.sm = spore_manager; s._pts = {}; s._built_size = None; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
@@ -198,11 +199,20 @@ class GrowView:
         g['segs_goal'] = s._goal()                                      # target set: static, stays when the scene is cleared
         st = build_strips(snap, s.ax) if snap is not None else {}
         gs = s._goal(); st['segs_goal'] = [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)]                      # цель — замкнутая ломаная
+        st['segs_field'] = [s._box(0.)]; st['segs_growlim'] = [s._box(getattr(__import__('src.algo.growN', fromlist=['GM']), 'GM', 0.))]
         for name in s.COL:
             if name.startswith('points'): s._set_layer(name, g.get(name, np.zeros((0, 3))))
             else: s._set_strips(name, st.get(name, []))
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
+
+    def _box(s, extra):
+        """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
+        from ..algo import growN as G
+        a, b = G.XLV[s.ax[0]] + extra, G.XLV[s.ax[1]] + extra
+        if G.XLV[s.ax[0]] == 0: a = np.pi                                # периодическая ось: рамка по периоду
+        if G.XLV[s.ax[1]] == 0: b = np.pi
+        C = np.array([(-a, -b), (a, -b), (a, b), (-a, b), (-a, -b)]); P = np.zeros((5, 3)); P[:, 0] = C[:, 0]; P[:, 1] = Y0; P[:, 2] = C[:, 1]; return P
 
     def _goal(s):
         """target outline as segments (K, 2, 3): circle/ellipse (GOALSHAPE='ball') or box (default), centre 0, half-widths RHOV along the shown axes."""
