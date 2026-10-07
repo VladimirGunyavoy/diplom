@@ -81,6 +81,34 @@ def basis(p, u):
         if nv > 1e-6: out.append(v / nv)
         if len(out) == m_: break
     return np.array(out)
+def _wcar(z): z = np.asarray(z); return np.stack([z[..., 0] - GC[0], z[..., 1] - GC[1], 0 * z[..., 0], 0 * z[..., 0]], -1) if SYS == 'car' else wrapy(z)   # w24: финиш стрельбой для цели-круга (вписанный квадрат, θ и v свободны); диски у цели далеко (>3)
+FH = float(E('FH', .05))   # w24 (research-22 п.42): быстрый финиш — перебор времён ≤ NA дуг на сетке FH пачкой rk4 вместо SLSQP (в десятки раз быстрее)
+def shoot_grid(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2):
+    t0 = time.time(); K = int(round(tmax / FH)); R = .9 * np.asarray(RHOV); best = (np.inf, None); nu = len(US)
+    def traj(Y, u):
+        out = [Y]
+        for _ in range(K): Y = rk4(Y, u, FH, 1); out.append(Y)
+        return np.stack(out, 1)                                                                # (B, K + 1, N), время j·H
+    def upd(S, T, tp):
+        nonlocal best
+        ok = (np.abs(wrapy(S)) <= R).all(-1)
+        if ok.any():
+            t = np.where(ok, T, np.inf).min()
+            if t < best[0]: best = (float(t), tp)
+    tj = np.arange(K + 1) * FH; L1 = {a: traj(np.asarray(y, float)[None], US[a]) for a in range(nu)}
+    for a in range(nu): upd(L1[a], tj[None], (a,))
+    if NA >= 2:
+        for a in range(nu):
+            S1 = L1[a][0, 1:]; T1 = tj[1:]
+            for b in range(nu):
+                if b == a: continue
+                S2 = traj(S1, US[b]); T2 = T1[:, None] + tj[None]; upd(S2, T2, (a, b))
+                if NA >= 3:
+                    m = T2[:, 1:] < min(best[0], tmax); S2f = S2[:, 1:][m]; T2f = T2[:, 1:][m]
+                    for c in range(nu):
+                        if c == b or not len(S2f): continue
+                        S3 = traj(S2f, US[c]); upd(S3, T2f[:, None] + tj[None], (a, b, c))
+    return best
 def goal_dist(P):
     """расстояние до поверхности коробки цели (>0 снаружи и внутри — модуль), по Евклиду."""
     if SYS == 'car': return np.abs(np.hypot(P[..., 0] - GC[0], P[..., 1] - GC[1]) - GR)
@@ -398,7 +426,7 @@ class Atlas:
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
-                    tried[i] = True; Ts, tp = FG.shoot(Y[i], f, US, RHOV, wrapy, FTMAX, NA=int(E('NA', 3)))
+                    tried[i] = True; Ts, tp = (shoot_grid if int(E('FGRID', 1)) and SYS == 'car' else FG.shoot)(Y[i], f, US, *((np.array([GR / np.sqrt(2)] * 2 + [9., 9.]), _wcar) if SYS == 'car' else (RHOV, wrapy)), FTMAX, NA=int(E('NA', 3)))
                     if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
