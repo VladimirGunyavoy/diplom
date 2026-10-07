@@ -54,6 +54,22 @@ def test_noop_without_stepper():
     S.pause('x', 1, a=1); assert S.ACTIVE is None
 
 
+def test_console_log():
+    sys.modules.pop('src.algo.growN', None)
+    os.environ.update(SYS='di', M='3', KF='21', MAXC='3', NFAIL='20', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000')
+    from src.algo import growN as g
+    layer = lambda: g.build_layer(g.US[1], np.random.default_rng(0))[0]
+    out = []; st = S.Stepper(log_actions=False); st.echo = out.append; st.start(layer); st.cmd('c') if st.wait_paused(30) else None
+    st._th.join(60); assert st.finished and st.error is None
+    assert any(l.startswith('[stop] spore #1 ') and 'reason=' in l for l in out) and any(l.startswith('[cell] spore #1 rows') for l in out), out
+    out = []; st = S.Stepper(); st.echo = out.append; st.start(layer)
+    while st.wait_paused(30): st.cmd('n')
+    st._th.join(5)
+    for key in ('spore #1: seed at (', 'section built, 21 points', 'row ', 'grew sideways side', 'stopped:', 'done: rows', 'layer finished:'):
+        assert any(key in l for l in out), (key, out)
+    print('\n'.join(out[:12]))
+
+
 if __name__ == '__main__':
     for k, f in list(globals().items()):
         if k.startswith('test_'): f(); print('ok', k)
