@@ -10,6 +10,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
     N = 3; PERIOD = np.array([0, 0, PI2]); RHO = float(E('RHO', .05)); RHOV = np.full(3, RHO); XL = float(E('XL', 2.5)); XLV = np.array([XL, XL, 0.])
@@ -381,9 +382,10 @@ class Atlas:
             except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
             if torch is not None:
                 dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX.astype(np.int64), device=dev); gW = torch.as_tensor(W, device=dev).double(); goal = torch.as_tensor(s.goal, device=dev)
-                Vt = torch.as_tensor(V, device=dev).double(); ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
+                Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
                 while n < it:
                     new = Vt.clone()
+                    if NOLATCH: new[hasE] = Vgt[hasE]
                     for a in range(0, len(gI), ch):
                         vi = Vt[gX[a:a + ch]]; w_ = gW[a:a + ch]
                         if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
@@ -419,7 +421,7 @@ class Atlas:
         for n in range(it):
             bar.update(1); val = np.empty(len(I))
             for a in range(0, len(I), 1 << 22): b = a + (1 << 22); val[a:b] = DTN + s.interp(W[a:b], V[IDX[a:b]])           # чанками: V[IDX] = пары × 16 float64 (десятки ГБ)
-            new = V.copy(); new[nd] = np.minimum(V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.
+            new = V.copy(); new[nd] = np.minimum(Vg[nd] if NOLATCH else V[nd], np.minimum.reduceat(val, st)); new[s.goal] = 0.   # п.40 NOLATCH: V ← TV без защёлки min(V, ·) (research-22 solve_latch.md)
             d = np.max(np.abs(new - V)); V = new
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s

@@ -54,3 +54,6 @@ c400 (6 слоёв (±1.5,±1.8)+(±1.5,0) × 400 клеток, M3 SIDE0 GM.25 G
 ## п.39 (b5): GPU — `STGPU=1` (стенсилы) + `SOLVEGPU=1` (Якоби), aida RTX 5070 Ti, torch в `~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3` (research-22, `r22/05,07`)
 di4 L400 rho35 PESS1, SBCAUS=1 SBLAY=0 (6.59M рёбер): полный `solve` (стенсилы + 176 проходов) **34 с** при том же графе (CPU: 332 с с SBCAUS; 709 с без); V к Якоби CPU max 1.7e-6, mean 2e-7, конечных 621810 = 621810. Env по умолчанию выкл., без torch — CPU. Тест: `reports/growN/solve_caus_test.py` (aida `wb5/rung2.sh`).
 manip c3000 (SBCAUS SBLAY=0, CPU, для сведения): 59M рёбер, solve 2248 с вместе со стенсилами, V не до бита (mean .0097, max 4.6; конечных 1.830M vs 1.815M) — на manip SBCAUS выигрыша нет; на GPU 59M×16 вершин в 16 ГБ не помещается (чанки по рёбрам из памяти хоста).
+
+## п.40 (b5): `NOLATCH=1` — solve без защёлки min(V, ·) (CPU и GPU цикл; research-22 `solve_latch.md`)
+di4 L400, SBCAUS=1 SBLAY=0, STGPU+SOLVEGPU: 183 прохода (176 с защёлкой), solve 35 с, V отличается от V с защёлкой max 1.27 / mean .0049, конечных 621810 = 621810 — совпало с замером research (одно решение, не зависит от порядка). По умолчанию выкл. (V прежних прогонов — с защёлкой).
