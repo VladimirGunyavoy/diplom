@@ -103,7 +103,9 @@ def nf2_rows(P0, p, u, sg, nmax):
 def ingoal(y): return (np.linalg.norm(wrapy(y) / RHOV, axis=-1) <= 1 + 1e-9) if GOALSHAPE == 'ball' else (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
-ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); ZSEED = float(E('ZSEED', 1.02))        # зацеп: сторона с соседом растёт до стыка ядер; затравки соседям ZSEED·r от края (1.0 + запас, иначе край = уже покрыто)
+ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
+NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
+ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
@@ -128,20 +130,22 @@ def goal_dist(P):
 def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEPS
 LAT = (slice(None),) * m_
 class Cell:
-    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0; s.hb = 0; s.hf = 0       # nb, nf — строки ядра; hb, hf — гало-строки за торцами (входят в G и tau, не в покрытие)
+    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0; s.hb = 0; s.hf = 0; s.hfrac = 1.       # nb, nf — строки ядра; hb, hf — гало-строки за торцами (входят в G и tau, не в покрытие)
     def build(s):
         """сетка узлов G (nt, M×m, n): заплатка с гало, пронесённая потоком на nb шагов назад и nf вперёд."""
         ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
         for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
-        nfc, nbc = s.nf, s.nb; HT = max(1, int(np.ceil(HALO * (nbc + nfc) / 2)))               # торцевое гало: HT строк за каждым торцем ядра
+        nfc, nbc = s.nf, s.nb
         fw = [seg]; bw = []; y = seg; tf = [np.zeros(seg.shape[:-1])]; tb = []
         if NORMFRONT and getattr(s, 'p', None) is not None:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
-            rf, tfw = nf2_rows(seg, s.p, s.u, 1., nfc + HT); rb, tbw = nf2_rows(seg, s.p, s.u, -1., nbc + HT); fw += rf; bw = rb; tf += tfw; tb = tbw
-            s.nf, s.nb = min(nfc, len(rf)), min(nbc, len(rb)); s.hf, s.hb = len(rf) - s.nf, len(rb) - s.nb
+            rf, tfw = nf2_rows(seg, s.p, s.u, 1., nfc) if nfc > 0 else ([], []); rb, tbw = nf2_rows(seg, s.p, s.u, -1., nbc) if nbc > 0 else ([], []); fw += rf; bw = rb; tf += tfw; tb = tbw
+            s.nf, s.nb = min(nfc, len(rf)), min(nbc, len(rb))
         else:
-            for k in range(nfc + HT): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
-            for k in range(nbc + HT): y = step(y, s.u, -1.); bw.append(y); tb.append(np.full(seg.shape[:-1], -(k + 1) * DTN))
-            s.hf = s.hb = HT
+            for k in range(nfc): fw.append(step(fw[-1], s.u)); tf.append(np.full(seg.shape[:-1], (k + 1) * DTN))
+            for k in range(nbc): y = step(y, s.u, -1.); bw.append(y); tb.append(np.full(seg.shape[:-1], -(k + 1) * DTN))
+        hdt = HALOT * DTN                                                                                    # торцевое гало: по одной строке за каждым торцем ядра, на HALOT·DTN потока дальше (hfrac — доля шага)
+        fw.append(rk4(fw[-1], s.u, hdt / 2, 2)); tf.append(tf[-1] + hdt); bw.append(rk4(bw[-1] if bw else seg, s.u, -hdt / 2, 2)); tb.append((tb[-1] if tb else np.zeros(seg.shape[:-1])) - hdt)
+        s.hf = s.hb = 1; s.hfrac = HALOT
         s.G = np.array(bw[::-1] + fw); s.tau = np.array(tb[::-1] + tf)
 LET = 'abcdefgh'[:N]; VOFF = np.array(list(itertools.product((0, 1), repeat=N)))                         # вершины гиперячейки: (строка, боковые…)
 EIN = 'k' + LET + 'z,' + ','.join('k' + c for c in LET) + '->kz'
@@ -237,6 +241,9 @@ class HexIdx:
         F = _contract(X, sc.clip(-1, 2)) - y; tol = 1e-7
         k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
         return pi[k], hid[k], np.clip(sc[k], 0, 1)
+    def inside(s, Y):
+        """точка внутри какой-либо клетки — ядра ИЛИ гало (covered смотрит только ядро)"""
+        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi = s.query(Y)[0]; m[pi] = True; return m
     def covered(s, Y):
         Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y)
         if len(pi):
@@ -254,7 +261,7 @@ def mlin(Pb, n_):
 REASON = dict(kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
 def cell_dict(c):
     """поля клетки по контракту снимка; G — read-only вид (готовые клетки не копируются)"""
-    G = c.G.view(); G.flags.writeable = False; return dict(G=G, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, hb=c.hb, hf=c.hf, u=c.u)
+    G = c.G.view(); G.flags.writeable = False; return dict(G=G, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, hb=c.hb, hf=c.hf, hfrac=c.hfrac, u=c.u)
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
@@ -266,35 +273,44 @@ def growN(p, u, idx, rm, tm):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)
             if not inbox_g(yc): break
     rows0 = dict(rows)                                                                                       # строки одного времени (до NORMFRONT-сдвигов): по ним мерим изгиб — сдвиги δ гнут строку и при линейном потоке
-    for sg in (1, -1):
-        if NORMFRONT:
-            for i, Pn in enumerate(nf2_rows(base, p, u, float(sg), nmax)[0], 1): rows[sg * i] = Pn
-    imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)]); R0 = np.stack([rows0[i] for i in range(imin, imax + 1)])
+    imin, imax = min(rows), max(rows); R0 = np.stack([rows[i] for i in range(imin, imax + 1)]); R = R0.copy(); nfw = [k0, k0, 0]       # nfw — окно решётки и число строк, где R уже со сдвигами NORMFRONT
+    def nf_fill(a, b, nr):
+        """NORMFRONT только для узлов a..b решётки (окно клетки + запас) и nr строк (растёт по мере надобности), а не для всей ±2rm × nmax; за окном R = строки одного времени"""
+        a = max(0, a); b = min(len(S) - 1, b); nr = min(nr, nmax); nfw[:] = [a, b, nr]
+        for sg in (1, -1):
+            for i, Pn in enumerate(nf2_rows(base[a:b + 1], p, u, float(sg), nr)[0], 1):
+                if imin <= sg * i <= imax: R[sg * i - imin, a:b + 1] = Pn
+    if NORMFRONT: nf_fill(k0 - NFPAD, k0 + NFPAD, NFROWS)
     pause('section', 2, u=u, seed=p, e=e, section=base, rows=(imin, imax), nmax=nmax)
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
-        if max(n_) < 3: return 0.
+        if max(n_) < 3 or ihi == ilo: return 0.                                                            # одна строка — решётка прямая, меры изгиба нет
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Q = np.linalg.eigh(Wc); Wi = (Q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30))) @ Q.T
         Pb = R0[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d = Pb - mlin(Pb, n_)
         return float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, Wi, d))))
-    klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dn = {}; chain = []
+    klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dn = {}; dh = {}; chain = []; tst = {}
     if ZACEP:                                                                                              # разведка: сосед на луче от зерна вдоль ±e_k в пределах 2·rm → расстояние до ядра соседа (бисекция по idx.covered)
         h_ = S[1] - S[0]; ts = np.arange(1, int(2 * rm / h_ + 1e-9) + 1) * h_
         for k in range(m_):
             for sg in (1, -1):
-                cv = idx.covered(p + sg * ts[:, None] * e[k])
-                if cv.any():
-                    j = int(np.argmax(cv)); lo, hi = (ts[j - 1] if j else 0.), ts[j]
-                    for _ in range(6):
-                        mid = (lo + hi) / 2
-                        if idx.covered((p + sg * mid * e[k])[None])[0]: hi = mid
-                        else: lo = mid
-                    dn[(k, sg)] = hi
-    def sat(d):
-        """зацеп: ядро (центр ± r) дошло до ядра соседа, гало (центр ± w > r) заходит на него"""
-        if d[0] != 'a' or (d[1], d[2]) not in dn: return False
-        k = d[1]; cc = (S[klo[k]] + S[khi[k]]) / 2; w = (S[khi[k]] - S[klo[k]]) / 2; r_ = w / (1 + HALO)
-        return cc + r_ >= dn[(k, 1)] if d[2] > 0 else cc - r_ <= -dn[(k, -1)]
+                for fn, dd_ in ((idx.covered, dn), (idx.inside, dh)):                                      # ядро соседа → dn, гало (ядро ∪ гало) → dh
+                    cv = fn(p + sg * ts[:, None] * e[k])
+                    if cv.any():
+                        j = int(np.argmax(cv)); lo, hi = (ts[j - 1] if j else 0.), ts[j]
+                        for _ in range(6):
+                            mid = (lo + hi) / 2
+                            if fn((p + sg * mid * e[k])[None])[0]: hi = mid
+                            else: lo = mid
+                        dd_[(k, sg)] = hi
+    def stat(d):
+        """зацеп стороны: 0 — нет, 1 — гало на гало (ядра не стыкуются), 2 — достаточно (ядро-ядро при ZDEPTH 1, при 0<ZDEPTH<1 — край гало на доле пути между ними)"""
+        if d[0] != 'a': return tst.get(d, 0)
+        k, sg = d[1], d[2]
+        if (k, sg) not in dn or (k, sg) not in dh: return 0
+        cc = (S[klo[k]] + S[khi[k]]) / 2; w = (S[khi[k]] - S[klo[k]]) / 2; r_ = w / (1 + HALO); core, halo = sg * cc + r_, sg * cc + w
+        if ZDEPTH < 0: return 2 if core >= dn[(k, sg)] else 1 if halo >= dh[(k, sg)] else 0
+        return 2 if halo >= dh[(k, sg)] + ZDEPTH * (dn[(k, sg)] + HALO * r_ - dh[(k, sg)]) else 0
+    def waits(d): return ZDEPTH < 0 and stat(d) == 1 and any(act[x] and x != d and stat(x) == 0 for x in dirs)       # мягкий зацеп: гало-гало достаточно, пока кто-то ещё растёт свободно — не берём ширину/длину
     def cur():
         c_ = Cell(p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)), u, np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]) / (1 + HALO), e); c_.p = p; c_.nf, c_.nb = ihi, -ilo; c_.build(); return cell_dict(c_)
     def halt(d, key, face=None): act[d] = False; STOP[key] += 1; pause('stop', 2, u=u, seed=p, reason=REASON[key], dir=d, face=face, cell=cur)
@@ -305,12 +321,12 @@ def growN(p, u, idx, rm, tm):
         for d in dirs:
             if not act[d]: continue
             if d[0] == 'a':
-                if ihi - ilo < 3 and (act[('F',)] or act[('B',)]): continue
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
                 if nk < 0 or nk >= len(S) or (ZACEP and khi[k] - klo[k] >= KF - 1): halt(d, 'kf'); continue
-                if ZACEP and sat(d):                                                                      # зацеп состоялся: ждём, пока кончат остальные (свободная сторона может сдвинуть центр), потом закрываем
-                    if any(act[x] and not sat(x) for x in dirs): continue
-                    halt(d, 'ovh'); continue
+                if ZACEP:
+                    if stat(d) == 2: halt(d, 'ovh'); continue                                              # зацеп состоялся
+                    if waits(d): continue
+                if NORMFRONT and not nfw[0] <= nk <= nfw[1]: nf_fill(min(nfw[0], nk - NFPAD), max(nfw[1], nk + NFPAD), nfw[2])
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
                 fb = not inbox_g(face).all(); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb:
@@ -325,13 +341,19 @@ def growN(p, u, idx, rm, tm):
             else:
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax or (ZACEP and ihi - ilo >= 2 * nmax1): halt(d, 'rows'); continue
+                if ZACEP and waits(d): continue
+                if NORMFRONT and abs(i) > nfw[2]: nf_fill(nfw[0], nfw[1], max(2 * nfw[2], abs(i)))
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
                 fb = not inbox_g(face).all(); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: halt(d, 'tfield' if fb else 'tbend' if bb else 'tgoal', face); continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i
                 pause('row', 3, u=u, seed=p, dir=d, face=face, cell=cur)
-                if d in extra: halt(d, 'tovh')
+                if ZACEP:                                                                                  # зацеп по времени: 2 — торец ядра дошёл до ядра соседа, 1 — только до его гало
+                    fc = (idx.covered(face) | ~inbox_g(face)).mean() > FRAC; fi = fc or (idx.inside(face) | ~inbox_g(face)).mean() > FRAC
+                    tst[d] = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
+                    if tst[d] == 2: halt(d, 'tovh')
+                elif d in extra: halt(d, 'tovh')
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
@@ -360,7 +382,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         """w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL"""
         pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
         if not len(pr): return False
-        unc = 1. - idx.covered(wrapy(pr)).mean()
+        unc = 1. - (idx.inside(pr) if ZACEP else idx.covered(wrapy(pr))).mean()                                 # ZACEP: посев считает покрытым и гало
         if E('COVDBG'): print('cov', len(cells), 'непокрыто', round(unc, 4), 'проб', len(pr), flush=True)
         if unc < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(unc, 4), flush=True); return True
         return False
@@ -370,8 +392,9 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         if not inbox(p): pause('reject', 2, u=u, seed=p, reason='seed outside field', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         gfirst = p is gseed0; p = wrapy(p)
         if ingoal(p) and not gfirst: pause('reject', 2, u=u, seed=p, reason='seed in goal', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
-        if idx.covered(p[None])[0]:
-            pause('reject', 2, u=u, seed=p, reason='seed already covered', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); ncov += 1      # covered — не фейл; зато каждые COVN таких затравок проверяем покрытие
+        cv_ = idx.covered(p[None])[0]
+        if cv_ or (ZACEP and idx.inside(p[None])[0]):
+            pause('reject', 2, u=u, seed=p, reason='seed already covered' if cv_ else 'seed inside existing cell (halo)', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); ncov += 1      # covered — не фейл; зато каждые COVN таких затравок проверяем покрытие
             if COVTOL > 0 and ncov % COVN == 0 and covdone(): break
             continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
@@ -387,7 +410,9 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
                 w = ovl[-SEEDW:]; print('seed u=%s cells %d overlap(last %d) %.3f' % (u, len(cells) + 1, SEEDW, np.mean(w)), flush=True)
                 if SEEDSTOP > 0 and np.mean(w) > SEEDSTOP and not queue: print('layer', u, 'стоп по наложению:', len(cells), 'клеток', flush=True); cells.append(c); idx.add(c); break
         cells.append(c); idx.add(c); g0, g1 = c.G[-1 - c.hf], c.G[c.hb]; yf = g0[ctr]; yb = g1[ctr]
-        for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+        if ZACEP: yf = rk4(yf, u, (HALOT + .25) * DTN / 2, 2); yb = rk4(yb, u, -(HALOT + .25) * DTN / 2, 2)    # сразу за гало-строкой
+        else:
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
         queue += [yf, yb]
         if SIDE:
             for e0 in (c.c, g0[ctr], g1[ctr]):
