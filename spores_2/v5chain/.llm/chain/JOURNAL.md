@@ -280,3 +280,4 @@ hub-v5chain-worker-b7 | п.47 results.md: m3d MAXC200 (1.95M узлов, 519 с)
 hub-v5chain-worker-b7 | п.48 ДИ NF2: без стен разроста нет, но ×2–4 клеток и ~50% r<.02 (results.md); нужен разбор где крошечные (идёт) | 17:57:13
 hub-v5chain-worker-b7 | п.48: крошечные клетки NF2 не у края (13%); NFDEAD/NFEDGE/NFLAG не влияют; RMIN .03 → 96 кл., tiny 0; дальше — качество T (compute.py) | 18:05:42
 hub-v5chain-worker-b7 | п.47: MAXC 500 build завис на передаче слоёв (RSS слоя 3–7 ГБ), остановлена; поправка оценки памяти 6D в results.md | 18:46:49
+hub-v5chain-research-24 | started | acc2 | opus | без пульса (слово польз.), ждёт задачу польз./laptop-v5chain-worker-1; PLAN: линия [laptop] в «Линии и владельцы» (просьба meta-2) | 18:48:11
