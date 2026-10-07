@@ -43,14 +43,16 @@ def build_strips(snap, ax=(0, 1)):
     """линии слоёв как ломаные (по одной на клетку): строки — зигзаг по узлам подряд (L₋₁→C₋₁→R₋₁→L₀→…), контур ядра и гало — замкнутая ломаная; dict имя слоя -> список (n, 3)"""
     out = {k: [] for k in ('segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')}
     def ring(o): return np.concatenate([o[:, 0], o[-1:, 1]], 0)
-    def cell(G, suf):
+    def cell(G, suf, c=None):
+        hb, hf = (int((c or {}).get('hb') or 0), int((c or {}).get('hf') or 0))      # гало-строки за торцами (growN: hb сзади, hf спереди): ядро — без них, гало — по всем
         P = proj(G, ax)
         if P.shape[1] > 1: out['segs_rows_' + suf].append(P.reshape(-1, 3))
         if P.shape[0] > 1: out['segs_center_' + suf].append(P[:, P.shape[1] // 2])        # траектория зерна: центральные узлы строк
-        out['segs_core_' + suf].append(ring(cell_outline(G, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))
-    for c in snap.get('cells') or []: cell(c['G'], 'done')
+        Gc = G[hb:len(G) - hf] if (hb or hf) and len(G) - hb - hf >= 1 else G
+        out['segs_core_' + suf].append(ring(cell_outline(Gc, ax))); out['segs_halo_' + suf].append(ring(cell_outline(G, ax, True)))
+    for c in snap.get('cells') or []: cell(c['G'], 'done', c)
     cur = snap.get('cell')
-    if cur is not None: cell(cur['G'], 'cur')
+    if cur is not None: cell(cur['G'], 'cur', cur)
     sec = snap.get('section')
     if sec is not None: out['segs_rows_cur'].append(proj(sec, ax))
     return out
@@ -154,9 +156,9 @@ def _Batch():
 
 class GrowView:
     """Ursina-часть: создаёт по Scalable на слой геометрии и перерисовывает при смене снимка. Импорт Ursina — лениво."""
-    # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — голубые; текущая клетка ярче, готовые приглушены
-    COL = {'points_done': (.50, .70, .90, .9), 'segs_rows_done': (.40, .62, .82, .6), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .45),
-           'points_cur': (.30, .85, 1.0, 1), 'segs_rows_cur': (.30, .80, 1.0, .9), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
+    # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — светло-серые (контраст к зелёному и оранжевому на тёмно-синем); текущая клетка ярче, готовые приглушены
+    COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .45),
+           'points_cur': (.92, .92, .96, 1), 'segs_rows_cur': (.95, .95, 1.0, 1), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
            'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9)}
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
