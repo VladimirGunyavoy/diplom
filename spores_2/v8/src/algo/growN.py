@@ -130,7 +130,7 @@ def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
 NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
 ADAPT = int(E('ADAPT', 1 if (SYS == 'di' and NORMFRONT != 2) else 0)); ETOL = float(E('ETOL', .01)); HMIN = float(E('HMIN', DTN)); HMAX = float(E('HMAX', 1.)); DSMAX = float(E('DSMAX', RMAX))      # адаптивный шаг строки: h = sqrt(8·ETOL·RMAX/|a|) (a = J·f — ускорение вдоль траектории), ≤ DSMAX/|f|, в [HMIN, HMAX]
-TAUMIN = float(E('TAUMIN', .3)); ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
+TAUMIN = float(E('TAUMIN', .3)); ZOVMAX = float(E('ZOVMAX', .3)); ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
 GM = float(E('GM', 1. if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
@@ -344,7 +344,7 @@ def growN(p, u, idx, rm, tm):
                             if fn((p + sg * mid * e[k])[None])[0]: hi = mid
                             else: lo = mid
                         dd_[(k, sg)] = hi
-    sc_ = {}
+    sc_ = {}; touch = {}; ttouch = {}
     def cols(): return np.array([abs(S[j] - (S[klo[0]] + S[khi[0]]) / 2) <= (S[khi[0]] - S[klo[0]]) / 2 / (1 + HALO) + 1e-9 for j in range(klo[0], khi[0] + 1)]) if m_ == 1 else None       # узлы столбцов внутри ядра (без боковых гало-узлов)
     def stat(d):
         """зацеп стороны по ГРАНИ (не по лучу): доля точек крайней грани (строки ядра, без строк, занятых торцевым соседом) в ядрах соседей / в их ядрах∪гало ≥ ZFRAC.
@@ -352,12 +352,14 @@ def growN(p, u, idx, rm, tm):
         if d[0] != 'a': return tst.get(d, 0)
         k, sg = d[1], d[2]; key = (d, tuple(klo), tuple(khi), ilo, ihi, tst.get(('F',), 0) > 0, tst.get(('B',), 0) > 0)
         if key in sc_: return sc_[key]
-        r_ = (S[khi[k]] - S[klo[k]]) / 2 / (1 + HALO); st = 0
-        if r_ >= RMINZ:
-            face = faceof(d, khi[k] if sg > 0 else klo[k])
-            if m_ == 1 and len(face) >= 3: face = face[(1 if tst.get(('B',), 0) > 0 else 0):len(face) - (1 if tst.get(('F',), 0) > 0 else 0)]     # строки торцевого соседа (зацеп по времени) не считаем
-            fc = ((idx.covered(face) | ~inbox_g(face)).mean() >= ZFRAC); fi = fc or ((idx.inside(face) | ~inbox_g(face)).mean() >= ZFRAC)
-            st = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
+        r_ = (S[khi[k]] - S[klo[k]]) / 2 / (1 + HALO)
+        face = faceof(d, khi[k] if sg > 0 else klo[k])
+        if m_ == 1 and len(face) >= 3: face = face[(1 if tst.get(('B',), 0) > 0 else 0):len(face) - (1 if tst.get(('F',), 0) > 0 else 0)]     # строки торцевого соседа (зацеп по времени) не считаем
+        fc = ((idx.covered(face) | ~inbox_g(face)).mean() >= ZFRAC); fi = fc or ((idx.inside(face) | ~inbox_g(face)).mean() >= ZFRAC)
+        st = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
+        if st == 2 and r_ < RMINZ:                                                                         # узкая клетка добирает ширину за счёт соседа, но не глубже ZOVMAX своей ширины
+            pos = S[khi[k]] if sg > 0 else -S[klo[k]]; t0 = touch.setdefault((k, sg), pos)
+            if pos - t0 < ZOVMAX * 2 * r_: st = 0
         sc_[key] = st; return st
     def dtau(i, cs):
         """шаг собственного времени клонов строки i относительно соседней строки к центру, в долях DTN (NaN — не посчитано)"""
@@ -421,12 +423,14 @@ def growN(p, u, idx, rm, tm):
                     fm = face[cols()] if m_ == 1 else face                                                  # торцевая грань без боковых гало-узлов
                     fc = (idx.covered(fm) | ~inbox_g(fm)).mean() > FRAC; fi = fc or (idx.inside(fm) | ~inbox_g(fm)).mean() > FRAC
                     tst[d] = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
-                    if ihi - ilo < ROWSMIN: tst[d] = 0                                                      # слишком короткая — тоже не останавливает
+                    if tst[d] == 2 and ihi - ilo < ROWSMIN:                                                  # слишком короткая — добирает длину за счёт торцевого соседа, но не глубже ZOVMAX своей длины
+                        t0 = ttouch.setdefault(d, ihi - ilo)
+                        if (ihi - ilo) - t0 < max(1, ZOVMAX * (ihi - ilo)): tst[d] = 0
                     if tst[d] == 2: halt(d, 'tovh')
                 elif d in extra: halt(d, 'tovh')
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
-    if ihi - ilo < (1 if near else ROWSMIN if ZACEP else MINROWS) or r.min() < (.02 if near else RMINZ if ZACEP else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
+    if (ihi - ilo < 2 or (ihi - ilo < ROWSMIN and r.min() < RMINZ) if ZACEP and not near else ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN)): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; c.Tf = np.array([TT[k] for k in range(0, imax + 1)]); c.Tb = np.array([-TT[-k] for k in range(0, -imin + 1)]); c.chain = []
     for d in chain:                                                                                       # затравка на краю в ту же сторону: центр строки 0 + ZSEED·r_ядра·e_k
         k = d[1]; c.chain.append(p + sum(e[j] * (S[klo[j]] + S[khi[j]]) / 2 for j in range(m_)) + d[2] * ZSEED * c.r[k] * e[k]); pause('chain', 2, u=u, seed=p, dir=d, reason='bend before neighbor: chain seed', cell=cur)
