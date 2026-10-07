@@ -127,7 +127,7 @@ def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
 NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
 ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
-GM = float(E('GM', .5 if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
+GM = float(E('GM', .5 if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
@@ -414,6 +414,20 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     gseed0 = None
     if seeds is None and GSEED: gseed0 = np.zeros(N); queue.insert(0, gseed0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
     bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; ncov = 0
+    dead = []; streak = [0]; passes = [0]                                                                # ZACEP: dead — затравки, не давшие клетку (reject по размеру): окрестность RMINZ считаем закрытой гало соседей
+    def covcheck():
+        """посев в непокрытое: COVP проб по полю; вне ядро∪гало (и не в окрестности dead) кладём в начало очереди; слой кончается, когда непокрытых ≤ COVTOL два раза подряд"""
+        passes[0] += 1; pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
+        if not len(pr): return True
+        cand = pr[~idx.inside(pr)] if idx.n else pr
+        if len(cand) and dead: cand = cand[np.linalg.norm(cand[:, None] - np.array(dead)[None], axis=2).min(1) >= RMINZ]
+        unc = len(cand) / len(pr)
+        if E('COVDBG'): print('cov', len(cells), 'непокрыто(ядро∪гало)', round(unc, 4), 'проб', len(pr), 'dead', len(dead), flush=True)
+        if unc <= COVTOL:
+            streak[0] += 1
+            if streak[0] >= 2 or passes[0] > 200: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(unc, 4), flush=True); return True
+            return False
+        streak[0] = 0; queue[:0] = [q for q in cand]; return passes[0] > 200
     def covdone():
         """w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL"""
         pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
@@ -423,6 +437,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         if unc < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(unc, 4), flush=True); return True
         return False
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
+        if ZACEP and COVTOL > 0 and not only_queue and not queue and covcheck(): break
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p): pause('reject', 2, u=u, seed=p, reason='seed outside field', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
@@ -431,13 +446,15 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         cv_ = idx.covered(p[None])[0]
         if cv_ or (ZACEP and idx.inside(p[None])[0]):
             pause('reject', 2, u=u, seed=p, reason='seed already covered' if cv_ else 'seed inside existing cell (halo)', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); ncov += 1      # covered — не фейл; зато каждые COVN таких затравок проверяем покрытие
-            if COVTOL > 0 and ncov % COVN == 0 and covdone(): break
+            if COVTOL > 0 and not ZACEP and ncov % COVN == 0 and covdone(): break
             continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX)
         if gfirst: e_ = basis(p, u)[0]; rm = 1. / np.linalg.norm(e_ / RHOV) if GOALSHAPE == 'ball' else float(np.min(RHOV[np.abs(e_) > 1e-12] / np.abs(e_)[np.abs(e_) > 1e-12]))      # спора на цели: вширь только до границы цели
         c = growN(p, u, idx, rm, tm)
-        if c is None: fails += 0 if queue else 1; continue
+        if c is None:
+            if ZACEP: dead.append(p)
+            fails += 0 if queue else 1; continue
         if E('STOPS') and len(cells) % 50 == 0: print('stops', len(cells), dict(STOP), flush=True)
         fails = 0; c.build()
         if SEEDW:                                                                                              # п.44а (b6): доля узлов новой клетки, уже покрытых своим слоем (наложение); стоп, когда среднее по окну > SEEDSTOP
@@ -455,7 +472,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
                 for k in range(m_): queue += [e0 + (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k], e0 - (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k]]
         for q_ in c.chain[::-1]: queue.insert(0, q_)                                                          # цепочка зацепа — первой
         pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
-        if COVTOL > 0 and len(cells) % COVN == 0 and covdone(): break
+        if COVTOL > 0 and not ZACEP and len(cells) % COVN == 0 and covdone(): break
         if log: log(u, cells)
     bar.close(); return cells, idx
 def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
