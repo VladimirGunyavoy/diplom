@@ -123,14 +123,15 @@ def pool_run(Qs, log=print):
     for qi, s in enumerate(Qs):
         s = G.wrapy(s); inc.s0 = s; inc.Ts[:] = G.BIG
         for t in trees: t.seed_fwd(s)
-        stall = 0; n_before = len(inc.A.cells); t0 = time.time()
+        stall = 0; idle = 0; n_before = len(inc.A.cells); t0 = time.time()
         for r in range(MAXR):
             addb = [c for t in trees for c in t.round('b')]; addf = [c for t in trees for c in t.round('f')]; inc.add(addb + addf); C, nv, nt = inc.solve()
             if np.isfinite(C):
                 vm, tm = inc.cell_min(inc.A.V), inc.cell_min(inc.Ts); idm = {id(c): i for i, c in enumerate(inc.A.cells)}
                 hit = any(vm[idm[id(c)]] <= ST * C for c in addb) or any(tm[idm[id(c)]] <= ST * C for c in addf); stall = 0 if hit else stall + 1
             log('s%d r%d +b %d +f %d пул %d C %.3f stall %d' % (qi, r + 1, len(addb), len(addf), len(inc.A.cells), C, stall))
-            if stall >= 2 or (not addb and not addf and np.isfinite(C)): break
+            idle = 0 if (addb or addf) else idle + 1
+            if stall >= 2 or (not addb and not addf and np.isfinite(C)) or idle >= 3: break
         cm = inc.cell_min(inc.Ts + inc.A.V); keep = {id(c): cm[i] <= (1 + EPS) * C for i, c in enumerate(inc.A.cells)}
         out.append(dict(s=s, C=C, pool=len(inc.A.cells), new=len(inc.A.cells) - n_before, keep_ids={k for k, v in keep.items() if v}, sec=round(time.time() - t0, 1)))
     return trees, inc, out
@@ -176,7 +177,7 @@ if __name__ == '__main__':
     Q, ref = G.starts_ref(); Cs = Af.vstar(G.wrapy(Q)); ok = np.flatnonzero(Cs < G.BIG / 2); print('стартов с конечной V', len(ok), 'из', len(Q), flush=True)
 
     if int(E('POOL', 0)):
-        Q0 = int(E('Q0', 0)); idq = ok[Q0:Q0 + NQ]; Qs = [Q[i] for i in idq]; trees, inc, out = pool_run(Qs, log=lambda m: print('  ', m, flush=True)); Ap = atlas_of(trees); quiet(Ap.solve); allc = {id(c) for t in trees for c in t.cells}
+        Q0 = int(E('Q0', 0)); idq = (ok[np.argsort(-Cs[ok])][Q0:Q0 + NQ] if int(E('FAR', 0)) else ok[Q0:Q0 + NQ]); Qs = [Q[i] for i in idq]; trees, inc, out = pool_run(Qs, log=lambda m: print('  ', m, flush=True)); Ap = atlas_of(trees); quiet(Ap.solve); allc = {id(c) for t in trees for c in t.cells}
         for i, o in zip(idq, out):
             s = o['s']; A2 = G.Atlas.__new__(G.Atlas); A2.layers = [[c for c in t.cells if id(c) in o['keep_ids']] for t in trees]; A2.finish(); quiet(A2.solve); Tfull = float(Af.rollout(s[None])[0][0]); Tpool = float(Ap.rollout(s[None])[0][0]); Tp = float(A2.rollout(s[None])[0][0])
             print(json.dumps(dict(q=int(i), ref=round(float(ref[i]), 3), T_full=round(Tfull, 3), T_pool_all=round(Tpool, 3), cells_full=len(Af.cells), pool_after=o['pool'], new_cells=o['new'], C=round(o['C'], 3), pruned_cells=len(o['keep_ids']), T_pruned=round(Tp, 3), sec=o['sec'])), flush=True)

@@ -205,3 +205,4 @@
 ## Бэклог
 - Встраивание атласа в Ursina-визуализацию (`main.py`) — пользователю «глазами смотреть»; по его слову.
 34. **(research-21, via w23) solve по вёдрам V в grow3.py (после 29б):** прототип reports/research/r18/solve_bucket.py (маятник V та же до бита, 2.6 выч./ребро вместо 621 ит Якоби; knowledge/research/solve_bucket.md). Замер на aida ~/spore_v5/w21/v7/reports/grow3/atlas_e.pkl: max|ΔV|, t_solve, T/refbox; база: Якоби 133 ит/75 с, GSN64 110 ит/58 с. B встраивает SOLVEB в growN (п.33).
+   [п.34 доп. research-21] в solve по вёдрам обязательны SBSELF (точная петля на себя) и SBTOL=1e-4 (порог рассылки), иначе медленнее Якоби (конец knowledge/research/solve_bucket.md). 36. (research-21) статик кар, эталон готов: knowledge/research/static_car.md — после п.34.
