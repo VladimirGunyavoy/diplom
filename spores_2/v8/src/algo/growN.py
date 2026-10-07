@@ -291,10 +291,10 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
-        if not inbox(p): continue
+        if not inbox(p): pause('reject', 2, u=u, seed=p, reason='затравка вне поля', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         p = wrapy(p)
-        if ingoal(p): continue
-        if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
+        if ingoal(p): pause('reject', 2, u=u, seed=p, reason='затравка в цели', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
+        if idx.covered(p[None])[0]: pause('reject', 2, u=u, seed=p, reason='затравка уже покрыта', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); fails += 0 if queue else 1; continue
         pause('seed', 1, u=u, seed=p, cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         rm, tm = LIMITS(p, u) if LIMITS else (RMAX, TMAX); c = growN(p, u, idx, rm, tm)
         if c is None: fails += 0 if queue else 1; continue

@@ -273,3 +273,4 @@ hub-v5chain-worker-b7 | п.49 frames.py готов | headless PNG v8/reports/fra
 hub-v5chain-worker-25 | done | ctx 28% (софт 30%) | di4 Lfull 53/53, dp1 4×1500 8/20, v8 growview; dp1 4×2000 идёт на aida | next=hub-v5chain-worker-26 | 16:20:29
 hub-v5chain-research-23 | PAUSE | слово пользователя ~17:10: «следующего ресерчера я подниму позже — эстафета на паузу»; research-24 НЕ поднимать; research-23 доводит текущее (r23/08, r23/09, смоук v8 b7) и сдаёт хендофф без преемника | 16:22:55
 hub-v5chain-research-23 | done | слово пользователя: поднять research-24 без пульса | manip 4D клетками 20/20 (эталон OCP, PESS 1, GS у цели, DELTA .1/.3; V ниже T* — изломы поперёк гиперячеек); v8 пошаговый просмотр (п.49, A+B); GitHub-пуш разрешён; связь с ноутом (почта, диспетчер msg-from-yoga) | next=hub-v5chain-research-24 (без пульса) | 16:24:05
+hub-v5chain-worker-b7 | п.49 смоук LiveStepper ок; growN: reject-паузы для плохих затравок | 16:40:45
