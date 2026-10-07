@@ -306,12 +306,12 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
                 w = ovl[-SEEDW:]; print('seed u=%s cells %d overlap(last %d) %.3f' % (u, len(cells) + 1, SEEDW, np.mean(w)), flush=True)
                 if SEEDSTOP > 0 and np.mean(w) > SEEDSTOP and not queue: print('layer', u, 'стоп по наложению:', len(cells), 'клеток', flush=True); cells.append(c); idx.add(c); break
         cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[ctr]; yb = g1[ctr]
-        pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
         queue += [yf, yb]
         if SIDE:
             for e0 in (c.c, g0[ctr], g1[ctr]):
                 for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
+        pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         if COVTOL > 0 and len(cells) % COVN == 0:                                                               # w22 (r17): стоп по покрытию — доля непокрытых из COVP случайных проб < COVTOL
             pr = np.array([q for q in (rand_seed(rng) for _ in range(COVP)) if inbox(q) and not ingoal(q)])
             if E('COVDBG') and len(pr): print('cov', len(cells), 'непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), 'проб', len(pr), flush=True)

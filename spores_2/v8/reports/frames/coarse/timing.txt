@@ -1,0 +1,48 @@
+шагов 40, max_lvl 2, MAXC 8
+пауза                     раз   всего,с среднее,мс
+stop                       23     0.285     12.37
+section                     6     0.160     26.61
+cell                        5     0.057     11.32
+seed                        6     0.034      5.69
+render (гл. поток)         40    13.205    330.12
+
+  1 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+  2 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+  3 stop     lvl2 цель ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+  4 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+  5 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+  6 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+  7 cell     lvl1  ['cell', 'cells', 'queue', 'seed', 'u']
+  8 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+  9 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+ 10 stop     lvl2 цель ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 11 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 12 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 13 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 14 cell     lvl1  ['cell', 'cells', 'queue', 'seed', 'u']
+ 15 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+ 16 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+ 17 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 18 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 19 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 20 stop     lvl2 TMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 21 cell     lvl1  ['cell', 'cells', 'queue', 'seed', 'u']
+ 22 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+ 23 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+ 24 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 25 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 26 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 27 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 28 cell     lvl1  ['cell', 'cells', 'queue', 'seed', 'u']
+ 29 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+ 30 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+ 31 stop     lvl2 сосед ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 32 stop     lvl2 TMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 33 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 34 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 35 cell     lvl1  ['cell', 'cells', 'queue', 'seed', 'u']
+ 36 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+ 37 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+ 38 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 39 stop     lvl2 поле ['cell', 'dir', 'face', 'reason', 'seed', 'u']
+ 40 stop     lvl2 RMAX ['cell', 'dir', 'face', 'reason', 'seed', 'u']

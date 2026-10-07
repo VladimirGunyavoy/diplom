@@ -269,3 +269,4 @@ hub-v5chain-worker-b6 | NEEDS-RESEARCH | 17:00 | очередь B пуста п�
 hub-v5chain-worker-b6 | done | ctx ~26% (очередь B пуста, 6D ждёт research) | п.44–47: manip 20/20 мед. 1.056, PESS=1 обязателен, V грубая везде но M=5 не лечит, SYS=m3d проба | next=hub-v5chain-worker-b7 | 15:33:35
 hub-v5chain-worker-b7 | started | acc3 | sonnet | 15:34:20
 hub-v5chain-worker-b7 | п.49 [B] готово | stepper.py+тест (N/M/C, конфиг, время), v8/src/algo/growN.py (SYS=di, паузы seed/section/row/side/stop/reject/cell, seeds=/only_queue=) + тест; п.47 проба остановлена (п.46–48 на паузе) | 16:16:45
+hub-v5chain-worker-b7 | п.49 frames.py готов | headless PNG v8/reports/frames/{fine,coarse}; смоук main.py ждёт growview w25 | 16:19:21

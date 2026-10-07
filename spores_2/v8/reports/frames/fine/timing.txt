@@ -1,0 +1,38 @@
+шагов 30, max_lvl 3, MAXC 3
+пауза                     раз   всего,с среднее,мс
+section                     1     0.028     27.64
+row                        16     0.018      1.11
+seed                        1     0.014     14.28
+side                       12     0.013      1.12
+render (гл. поток)         30     8.207    273.56
+
+  1 seed     lvl1  ['cells', 'queue', 'seed', 'u']
+  2 section  lvl2  ['e', 'nmax', 'rows', 'section', 'seed', 'u']
+  3 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  4 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  5 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  6 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  7 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  8 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+  9 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 10 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 11 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 12 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 13 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 14 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 15 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 16 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 17 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 18 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 19 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 20 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 21 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 22 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 23 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 24 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 25 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 26 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 27 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 28 side     lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 29 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
+ 30 row      lvl3  ['cell', 'dir', 'face', 'seed', 'u']
