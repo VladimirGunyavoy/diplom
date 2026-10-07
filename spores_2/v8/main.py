@@ -170,13 +170,21 @@ def _seed_click():
     else: _last_seed[0] = pt; stepper.seed_at(pt)
     growview.draw(None); _step('N')
 
+def _finer():
+    if hasattr(stepper, 'finer'): t0 = time.perf_counter(); stepper.finer(); growview.draw(stepper.snapshot); print('[stepper] finer: step=%s  %.1f ms' % (stepper.depth_name, 1e3 * (time.perf_counter() - t0)))
+    else: _step('N')
+
+def _up():
+    if hasattr(stepper, 'up'): t0 = time.perf_counter(); stepper.up(); growview.draw(stepper.snapshot); print('[stepper] up: step=%s  %s  %.1f ms' % (stepper.depth_name, stepper.snapshot and stepper.snapshot.get('phase'), 1e3 * (time.perf_counter() - t0)))
+    else: _step('C')
+
 def _back():
     if hasattr(stepper, 'back') and stepper.back(): growview.draw(stepper.snapshot); print('[stepper] back: history %s/%s' % stepper.hist_info if stepper.hist_info else '[stepper] back: live')
     else: print('[stepper] back: no earlier snapshot')
 
 def _caption():
     h = getattr(stepper, 'hist_info', None)
-    return growview.caption() + (('   [history %d/%d]' % h) if h else '')
+    return growview.caption() + (('   step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '') + (('   [history %d/%d]' % h) if h else '')
 
 def _restart():
     """X: drop everything built so far (and a hand-placed seed) and start over with the algorithm's own seeds (from the goal)."""
@@ -197,8 +205,8 @@ def _resize(sign):
 
 input_manager.bind('1', _resize, mode='scroll', description='size', value_getter=lambda: spore_manager.size)
 input_manager.bind('n', lambda: _step('N'), description='step to next pause')
-input_manager.bind('left mouse down', lambda: None if held_keys['alt'] else _step('N'), description='LMB: next step (same as N)')    # input() forwards every key to input_manager; Alt = free cursor (mouse off)
-input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _step('M'), description='RMB: to pause of same level (same as M)')
+input_manager.bind('left mouse down', lambda: None if held_keys['alt'] else (_finer() if held_keys['shift'] else _step('N')), description='LMB: next step (as N); Shift+LMB: finer + step')    # input() forwards every key to input_manager; Alt = free cursor (mouse off)
+input_manager.bind('right mouse down', lambda: None if held_keys['alt'] else _up(), description='RMB: one level up (finish the spore, then the layer)')
 input_manager.bind('middle mouse down', lambda: None if held_keys['alt'] else _seed_click(), description='MMB: restart with a seed at the click (in the goal: algorithm seeds)')
 input_manager.bind('z', _back, description='step back (history); N/LMB go forward')
 input_manager.bind('m', lambda: _step('M'), description='to pause of same level')

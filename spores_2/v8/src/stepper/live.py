@@ -9,7 +9,7 @@ from . import stepper as S
 
 class LiveStepper:
     def __init__(s, seed=None, u=None, max_lvl=3):
-        s.u = g.US[1] if u is None else u; s.max_lvl = max_lvl; s._st = None; s.snapshot = None; s._ver = -1; s._carry = {}; s.history = []; s._tm = []; s.pos = -1; s.seed_at(seed)
+        s.u = g.US[1] if u is None else u; s.max_lvl = max_lvl; s._st = None; s.snapshot = None; s._ver = -1; s._carry = {}; s.history = []; s._tm = []; s.pos = -1; s.depth = 3; s.seed_at(seed)
 
     @property
     def times(s):
@@ -56,7 +56,11 @@ class LiveStepper:
         if s.viewing_history:                                          # after Z: N goes forward through the history, M/C first catch up to the live snapshot
             if k == 'n': s.pos += 1; s.snapshot = s.history[s.pos]; return
             s._live()
-        if s._st.cmd(k): s._st.wait_paused(30.); s._pull(); s._final()
+        ref = None
+        if k == 'n':                                                   # N / LMB: next pause with lvl <= depth (3 rows, 2 stages, 1 spores, 0 to the end of the layer)
+            if s.depth <= 0: k = 'c'
+            elif s.depth < 3: k, ref = 'm', s.depth
+        if s._st.cmd(k, ref): s._st.wait_paused(30.); s._pull(); s._final()
 
     def _final(s):
         """алгоритм закончил (C или конец слоя) — финальный снимок из результата build_layer: все клетки слоя, причина — конец."""
@@ -65,3 +69,22 @@ class LiveStepper:
 
     @property
     def done(s): return s._st.finished
+
+    DEPTH_NAMES = {3: 'rows', 2: 'stages', 1: 'spores', 0: 'layer'}
+
+    @property
+    def depth_name(s): return s.DEPTH_NAMES.get(s.depth, str(s.depth))
+
+    def up(s):
+        """RMB: one level up. Inside a spore (lvl >= 2) -> to the nearest lvl-1 pause (cell/seed), depth = 1; on seed/cell -> to the end of the layer, depth = 0."""
+        if s.viewing_history: s._live()
+        lvl = (s.snapshot or {}).get('lvl')
+        if lvl is not None and lvl >= 2: s.depth = 1; s._go('m', 1)
+        else: s.depth = 0; s._go('c')
+
+    def finer(s):
+        """Shift+LMB: depth + 1 and a step"""
+        s.depth = min(3, s.depth + 1); s.key('n')
+
+    def _go(s, k, ref=None):
+        if s._st.cmd(k, ref): s._st.wait_paused(30.); s._pull(); s._final()

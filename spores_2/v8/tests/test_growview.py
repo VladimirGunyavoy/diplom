@@ -45,3 +45,14 @@ def test_history_back_forward():
     L.key('N'); assert L.snapshot['step'] > steps[4] and L.hist_info is None                                         # 6-й — живой
     L.back(); L.key('M'); assert L.hist_info is None and L.snapshot['step'] >= steps[4]                                # M после Z: догнали живой и пошли дальше
     L.seed_at(None); assert L.history and len(L.history) == 1                                                        # seed_at очищает историю
+
+
+def test_depth_up_and_finer():
+    L = LiveStepper(seed=None); g = 0
+    while L.snapshot.get('phase') != 'row' and g < 400: L.key('N'); g += 1
+    assert L.snapshot['phase'] == 'row' and L.depth == 3, L.snapshot['phase']
+    L.up(); assert L.snapshot['phase'] == 'cell' and L.depth == 1 and L.depth_name == 'spores', (L.snapshot['phase'], L.depth)        # внутри споры: до cell
+    s0 = L.snapshot['step']; L.key('N'); assert L.snapshot['phase'] in ('seed', 'cell') and L.snapshot['step'] > s0                    # N после ПКМ — сразу целая спора
+    L.finer(); assert L.depth == 2 and L.snapshot['phase'] in ('seed', 'cell', 'section', 'stop', 'reject')
+    L.up(); assert L.snapshot['phase'] == 'cell' and L.depth == 1                                                                        # из section (внутри споры) — снова до cell
+    L.up(); assert L.depth == 0 and L.snapshot['phase'] == 'done' and L.depth_name == 'layer'                              # на seed/cell: до конца слоя

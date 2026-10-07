@@ -67,11 +67,12 @@ class Stepper:
         s._mark = time.perf_counter()
 
     # --- главный поток ---
-    def cmd(s, key):
+    def cmd(s, key, ref=None):
         """'n' | 'm' | 'c'. Возвращает False, если алгоритм не стоит на паузе (команда проигнорирована)."""
         if s.finished or not s._stopped.is_set(): return False
         s.mode = key
-        if key == 'm' and s.snap: s.ref_lvl = s.snap['lvl']
+        if key == 'm' and ref is not None: s.ref_lvl = ref                    # явный уровень (глубина шага)
+        elif key == 'm' and s.snap: s.ref_lvl = s.snap['lvl']
         s._stopped.clear(); s._go.set(); return True
 
     def poll(s, since=-1):
