@@ -148,5 +148,5 @@ if G.SYS == 'pend' and int(os.environ.get('AUTOPIC', 1)):                       
         _gx = np.linspace(-np.pi, np.pi, 361); _gw = np.linspace(-G.WL, G.WL, 281); _GX, _GW = np.meshgrid(_gx, _gw, indexing='ij'); _VG = A.vstar(np.c_[_GX.ravel(), _GW.ravel()]).reshape(_GX.shape)
         _cells = [dict(u=c.u, G=c.G, p0=getattr(c, 'p0', None), seq=getattr(c, 'seq', -1)) for c in A.cells]; _U = AP.controls(path, G.US, G.step, G.wrap)
         _t = '%s — %d клеток, %d узлов; T/эталон ср. %.4f, max %.2f; атлас %.0f с, solve %.0f с, запрос мед. %.2f с (LOOK %d)' % (sys.argv[1], len(_cells), _st.get('nodes', 0), _st['T_mean'], _st['T_max'], _st.get('t_build', 0), _st.get('t_solve', 0), _q.get('med', 0) / 1e3, G.LOOK)
-        print('картинка', AP.draw(_cells, _gx, _gw, _VG, path, _U, T, _t, os.path.expanduser('~/spore_v5/r18/pics/auto/%s.png' % sys.argv[1])), flush=True)
+        print('картинка', AP.draw(_cells, _gx, _gw, _VG, path, _U, T, _t, os.path.expanduser('~/spore_v5/r18/pics/auto/%s.png' % sys.argv[1]), st=_st, ratio=T / ref), flush=True)
     except Exception as _e: print('картинка не нарисована:', repr(_e), flush=True)

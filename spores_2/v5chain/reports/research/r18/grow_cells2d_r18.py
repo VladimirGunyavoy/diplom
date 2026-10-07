@@ -438,6 +438,7 @@ def trim_rows(c, a_, b_):
     if getattr(c, 'mrow', None) is not None and len(c.mrow) == c.G.shape[0]: d.mrow = c.mrow[a_:b_ + 1]
     d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
     d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; return d
+SOLVED = []
 _GIX = None
 def _grow_one(a):                                                                             # рабочий пула: рост и сборка одной клетки против покрытия прошлых раундов (_GIX — снимок при fork)
     p, u, k = a; c = grow2(p, u, _GIX[US.index(u)], RMAX, TMAX)
@@ -639,7 +640,7 @@ class Atlas:
             if len(ea): np.minimum.at(new, ea, np.where(V[eb] < BIG / 2, ec + V[eb], BIG))
             if len(e2a): np.minimum.at(new, e2a, np.where((V[e2b] < BIG / 2) & (V[e2b + 1] < BIG / 2), e2t + (1 - e2w) * V[e2b] + e2w * V[e2b + 1], BIG))
             new[s.goal] = 0.; new[dead] = BIG
-            d = np.max(np.abs(new - V)); V = new
+            d = np.max(np.abs(new - V)); V = new; SOLVED.append(float(d))                      # research-20: ход сходимости solve
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def look(s, Y, L):

@@ -13,12 +13,47 @@ def controls(P, US, step, wrap):
         if not mv.any(): continue
         d = np.stack([np.hypot(wrap(step(P[k][mv], u)[:, 0] - P[k + 1][mv, 0]), step(P[k][mv], u)[:, 1] - P[k + 1][mv, 1]) for u in US], 1); U[k, mv] = UA[d.argmin(1)]
     return U
-def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
+def overlap(cells, n=12000):
+    """доля площади слоя, покрытой ≥ 2 клетками этого слоя (по случайным точкам; контур клетки — боковины + торцы)."""
+    from matplotlib.path import Path
+    X = np.c_[np.random.default_rng(0).uniform(-np.pi, np.pi, n), np.random.default_rng(1).uniform(-3.5, 3.5, n)]; res = {}
+    for u in sorted(set(round(float(c['u']), 3) for c in cells)):
+        cnt = np.zeros(n, int)
+        for c in cells:
+            if round(float(c['u']), 3) != u: continue
+            G = np.array(c['G'], float); G[..., 0] = np.unwrap(G[..., 0], axis=0); Pp = Path(contour(G)); ins = np.zeros(n, bool)
+            for sh in (-2 * np.pi, 0., 2 * np.pi): ins |= Pp.contains_points(X + [sh, 0])
+            cnt += ins
+        res[u] = float((cnt >= 2)[cnt > 0].mean()) if (cnt > 0).any() else 0.
+    return res
+def stats_panel(ax, cells, st, ratio, T):
+    ax.axis('off'); US = sorted(set(round(float(c['u']), 3) for c in cells)); ov = overlap(cells); q = st.get('q_ms') or {}
+    nl = {u: sum(round(float(c['u']), 3) == u for c in cells) for u in US}; nn = {u: sum(int(np.prod(np.shape(c['G'])[:2])) for c in cells if round(float(c['u']), 3) == u) for u in US}
+    cl = {k: sum(np.shape(c['G'])[1] == k for c in cells) for k in (5, 9, 17, 33)}
+    r = np.asarray(ratio, float) if ratio is not None else None; rf = r[np.isfinite(r)] if r is not None else np.zeros(0)
+    rows = [('клеток (слои ' + ' / '.join('%+.1f' % u for u in US) + ')', '%d  (%s)' % (len(cells), ' / '.join(str(nl[u]) for u in US))),
+            ('узлов', '%d  (%s)' % (sum(nn.values()), ' / '.join('%dk' % round(nn[u] / 1e3) for u in US))),
+            ('клонов 5/9/17/33 (клеток)', ' / '.join(str(cl[k]) for k in cl)),
+            ('наложение: площадь под ≥2 кл.', ' / '.join('%d%%' % round(100 * ov[u]) for u in US)),
+            ('дошли', '%d / %d' % (int(np.isfinite(T).sum()), len(T))),
+            ('T/эталон ср. / мед.', '%.4f / %.4f' % (rf.mean(), np.median(rf)) if len(rf) else '—'),
+            ('T/эталон p90 / max', '%.3f / %.3f' % (np.quantile(rf, .9), rf.max()) if len(rf) else '—'),
+            ('переключений (мед.)', '%g' % st.get('sw_med', np.nan)),
+            ('атлас / solve', '%.0f с / %.0f с' % (st.get('t_build', np.nan), st.get('t_solve', np.nan))),
+            ('запрос мед. / p90 / max', '%.2f / %.2f / %.2f с' % (q.get('med', np.nan) / 1e3, q.get('p90', np.nan) / 1e3, q.get('max', np.nan) / 1e3) if q else '—'),
+            ('итераций solve, узлов V=BIG', '%s, %s%%' % (st.get('iters', '—'), round(100 * st.get('big_nodes', np.nan), 1)))]
+    tb = ax.table(cellText=[[a, b] for a, b in rows], colWidths=[.55, .45], loc='upper center', cellLoc='left', bbox=[0, .42, 1, .58]); tb.auto_set_font_size(False); tb.set_fontsize(13)
+    for (i, j), cell in tb.get_celld().items(): cell.set_edgecolor('0.8'); cell.set_facecolor('#f4f4f4' if i % 2 else 'white')
+    if len(rf):
+        ah = ax.inset_axes([.08, .03, .88, .32]); ah.hist(rf, bins=np.linspace(min(.98, rf.min()), max(1.2, min(rf.max(), 1.6)), 40), color='#3182bd', alpha=.8)
+        ah.axvline(1, color='k', lw=1); ah.axvline(rf.mean(), color='#de2d26', lw=1.5, label='среднее'); ah.set_xlabel('T/эталон по стартам'); ah.set_ylabel('стартов'); ah.legend(frameon=False)
+    ax.set_title('статистика прогона')
+def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5, st=None, ratio=None):
     """cells: список dict(u, G) ; VG: V* на сетке gx × gw ; P: (шаги+1, n, 2) ; U: (шаги+1, n)"""
     plt.rcParams.update({'font.size': 12}); VG = np.where(VG > 500, np.nan, VG)
     US = sorted(set(round(float(c['u']), 3) for c in cells))
     fig = plt.figure(figsize=(30, 14)); gs = fig.add_gridspec(2, 3); a0 = fig.add_subplot(gs[0, 0])
-    axs = [a0, fig.add_subplot(gs[0, 1], sharex=a0, sharey=a0), fig.add_subplot(gs[0, 2], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 1:], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 0], sharex=a0, sharey=a0)]
+    axs = [a0, fig.add_subplot(gs[0, 1], sharex=a0, sharey=a0), fig.add_subplot(gs[0, 2], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 1], sharex=a0, sharey=a0), fig.add_subplot(gs[1, 0], sharex=a0, sharey=a0)]; axS = fig.add_subplot(gs[1, 2])   # research-20 (слово пользователя): пути — в одну колонку, справа статистика
     ax = axs[4]; sd = {}                                                                          # research-20 (слово пользователя): посев спор — только затравки: цвет = порядок посева, размер = во скольких слоях затравка дала клетку
     for i, c in enumerate(cells):
         if c.get('p0') is None: continue
@@ -27,7 +62,7 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
         ks = sorted(sd); Pq = np.array([sd[k][0] for k in ks]); nl = np.array([sd[k][1] for k in ks]); oc = np.arange(len(ks))
         for sh in SH: sc = ax.scatter(Pq[:, 0] + sh, Pq[:, 1], c=oc, cmap='viridis', s=12 + 22 * nl, alpha=.85, edgecolors='k', linewidths=.4)
         fig.colorbar(sc, ax=ax, pad=.01, shrink=.9, label='порядок посева')
-    ax.set_title('посев спор: %d затравок → %d клеток (размер точки — сколько слоёв дала затравка)' % (len(sd), sum(v[1] for v in sd.values())))
+    ax.set_title('посев: %d затравок → %d клеток (размер — число слоёв)' % (len(sd), sum(v[1] for v in sd.values())))
     for ax, u in zip(axs, US):
         cs = [c for c in cells if round(float(c['u']), 3) == u]
         for c in cs:
@@ -50,8 +85,9 @@ def draw(cells, gx, gw, VG, P, U, T, title, out, XR=6., WL=3.5):
             for sh in SH: segs.setdefault(round(float(U[j, i]), 1), []).append(p[j:j + 2] + [sh, 0])
     for u, sg in segs.items(): ax.add_collection(LineCollection(sg, colors=UC.get(u, 'k'), linewidths=1.3, alpha=.25))
     for sh in SH: ax.plot(P[0, :, 0] + sh, P[0, :, 1], 'o', ms=3, color='k', alpha=.6)
-    ax.set_title('V* (фон, белые линии через 1 с) + пути агента из %d стартов, дошли %d — цвет = управление на шаге' % (P.shape[1], int(np.isfinite(T).sum())))
+    ax.set_title('V* (фон) + пути агента из %d стартов; цвет = управление' % P.shape[1])
     fig.colorbar(im, ax=axs[3], pad=.01, shrink=.9, label='V*, с')
+    stats_panel(axS, cells, st or {}, ratio, T)
     for ax in axs:
         for sh in SH: ax.add_patch(plt.Rectangle((-RHO + sh, -RHO), 2 * RHO, 2 * RHO, fill=False, ec='k', lw=2))
         ax.set_xlim(-XR, XR); ax.set_ylim(-WL, WL); ax.grid(alpha=.25)
@@ -67,4 +103,5 @@ if __name__ == '__main__':
     import sys, pickle, json
     Z = np.load(sys.argv[1]); D = sys.argv[3]; C = pickle.load(open(os.path.join(D, 'cells.pkl'), 'rb')); S = json.load(open(os.path.join(D, 'status.json'))); q = S.get('q_ms') or {}
     t = '%s — %d клеток, %d узлов; T/эталон ср. %.4f, max %.2f; атлас %.0f с, solve %.0f с, запрос мед. %.2f с' % (os.path.basename(os.path.dirname(os.path.abspath(D))), len(C), S.get('nodes', 0), S['T_mean'], S['T_max'], S.get('t_build', 0), S.get('t_solve', 0), q.get('med', 0) / 1e3)
-    print(draw(C, Z['gx'], Z['gw'], Z['VG'], Z['P'], Z['U'], Z['T'], t, sys.argv[2]))
+    A_ = np.load(os.path.join(D, 'agent.npz')); ra = A_['T'] / A_['ref'] if 'ref' in A_ else None
+    print(draw(C, Z['gx'], Z['gw'], Z['VG'], Z['P'], Z['U'], Z['T'], t, sys.argv[2], st=S, ratio=ra))

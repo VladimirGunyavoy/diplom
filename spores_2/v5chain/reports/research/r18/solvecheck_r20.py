@@ -1,0 +1,11 @@
+# research-20: сходимость solve с подклетками (MROW) и без — итераций до max|ΔV| < 1e-3 / 1e-6 / 1e-9; узлы-дубли на границах блоков
+import os, sys, numpy as np, time, json
+sys.path.insert(0, os.environ['CELLS7']); import grow_cells2d as G
+from scipy.spatial import cKDTree
+e_ = np.linspace(-G.RHO, G.RHO, 41); G.BARRIER = cKDTree(np.r_[np.c_[e_, e_ * 0 - G.RHO], np.c_[e_, e_ * 0 + G.RHO], np.c_[e_ * 0 - G.RHO, e_], np.c_[e_ * 0 + G.RHO, e_]])
+rng = np.random.default_rng(0); A = G.Atlas.__new__(G.Atlas); A.layers = []; A.idx = []; t = time.time()
+for u in G.US: l, ix = G.build_layer(u, rng); A.layers.append(l); A.idx.append(ix)
+A.finish(); tb = time.time() - t; t = time.time(); A.solve(); ts = time.time() - t; d = np.array(G.SOLVED)
+first = lambda e: int(np.argmax(d < e)) if (d < e).any() else -1
+print(json.dumps(dict(mrow=G.MROW, cells=len(A.cells), nodes=int(A.N), iters=len(d), it_1e3=first(1e-3), it_1e6=first(1e-6), it_1e9=first(1e-9), t_build=round(tb, 1), t_solve=round(ts, 1), big=round(float((A.V >= G.BIG / 2).mean()), 4))), flush=True)
+np.save(sys.argv[1], d)
