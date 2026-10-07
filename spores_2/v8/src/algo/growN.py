@@ -127,7 +127,7 @@ def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
 NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
 ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
-GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
+GM = float(E('GM', .5 if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .02 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
@@ -329,6 +329,7 @@ def growN(p, u, idx, rm, tm):
         k, sg = d[1], d[2]
         if (k, sg) not in dn or (k, sg) not in dh: return 0
         cc = (S[klo[k]] + S[khi[k]]) / 2; w = (S[khi[k]] - S[klo[k]]) / 2; r_ = w / (1 + HALO); core, halo = sg * cc + r_, sg * cc + w
+        if r_ < RMINZ: return 0                                                                           # слишком узкая клетка — зацеп не останавливает, растёт в соседа глубже
         if ZDEPTH < 0: return 2 if core >= dn[(k, sg)] else 1 if halo >= dh[(k, sg)] else 0
         return 2 if halo >= dh[(k, sg)] + ZDEPTH * (dn[(k, sg)] + HALO * r_ - dh[(k, sg)]) else 0
     def waits(d): return ZDEPTH < 0 and stat(d) == 1 and any(act[x] and x != d and stat(x) == 0 for x in dirs)       # мягкий зацеп: гало-гало достаточно, пока кто-то ещё растёт свободно — не берём ширину/длину
@@ -373,11 +374,12 @@ def growN(p, u, idx, rm, tm):
                 if ZACEP:                                                                                  # зацеп по времени: 2 — торец ядра дошёл до ядра соседа, 1 — только до его гало
                     fc = (idx.covered(face) | ~inbox_g(face)).mean() > FRAC; fi = fc or (idx.inside(face) | ~inbox_g(face)).mean() > FRAC
                     tst[d] = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
+                    if ihi - ilo < ROWSMIN: tst[d] = 0                                                      # слишком короткая — тоже не останавливает
                     if tst[d] == 2: halt(d, 'tovh')
                 elif d in extra: halt(d, 'tovh')
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
-    if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
+    if ihi - ilo < (1 if near else ROWSMIN if ZACEP else MINROWS) or r.min() < (.02 if near else RMINZ if ZACEP else RMIN): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; c.chain = []
     for d in chain:                                                                                       # затравка на краю в ту же сторону: центр строки 0 + ZSEED·r_ядра·e_k
         k = d[1]; c.chain.append(p + sum(e[j] * (S[klo[j]] + S[khi[j]]) / 2 for j in range(m_)) + d[2] * ZSEED * c.r[k] * e[k]); pause('chain', 2, u=u, seed=p, dir=d, reason='bend before neighbor: chain seed', cell=cur)
