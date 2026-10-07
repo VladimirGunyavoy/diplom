@@ -451,6 +451,7 @@ class Atlas:
                 for i in range(1, 9): y_i = rk4(y8, ui, DTN / 8, 1); y8 = np.where((hh >= DTN * i / 8 - 1e-12)[:, None], y_i, y8)
                 Yn[m] = y8
             sw += act & (pk >= 0) & (k != pk); pk = np.where(act, k, pk); Y = wrapy(np.where(act[:, None], Yn, Y)); T += np.where(act, np.where(np.isfinite(tg), tg, DTN), 0.); T[~done & stuck] = np.inf; done |= ingoal(Y) | stuck; path.append(Y.copy())
+            if SYS == 'car' and int(E('VCLIP', 1)): Y[:, 3] = np.clip(Y[:, 3], VLO, VHI)   # w24: как в среде SafeCarGoal — v ∈ [−1, 2] (агент уходил в v ≈ 2.08 за пределы клеток)
         T[~ingoal(Y) & ~fin] = np.inf; return T, sw, np.array(path)
 HERE = os.path.dirname(os.path.abspath(__file__)); REF = os.path.join(HERE, '../../../v5chain/reports/research')
 def starts_ref():
