@@ -16,7 +16,7 @@ GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSE
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 SEEDNEAR = int(E('SEEDNEAR', 1 if SYS == 'di' else 0)); GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
-SMAX = float(E('SMAX', 0.)); SELFOV = int(E('SELFOV', 0))
+SMAX = float(E('SMAX', 0.)); SELFOV = int(E('SELFOV', 0)); MADAPT = float(E('MADAPT', 0.)); MMAX = int(E('MMAX', 33))     # MADAPT (v7 r19, №18): число клонов клетки адаптивно 5→9→17→33 — первое m, при котором ломаная торца по m клонам отходит от строки мелкой сетки ≤ MADAPT
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -165,11 +165,11 @@ def goal_dist(P):
 def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEPS
 LAT = (slice(None),) * m_
 class Cell:
-    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0; s.hb = 0; s.hf = 0; s.hfrac = 1.; s.Tf = None; s.Tb = None       # nb, nf — строки ядра; hb, hf — гало-строки за торцами (входят в G и tau, не в покрытие)
+    def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.m = M; s.nb = 0; s.nf = 0; s.hb = 0; s.hf = 0; s.hfrac = 1.; s.Tf = None; s.Tb = None       # nb, nf — строки ядра; hb, hf — гало-строки за торцами (входят в G и tau, не в покрытие)
     def build(s):
         """сетка узлов G (nt, M×m, n): заплатка с гало, пронесённая потоком на nb шагов назад и nf вперёд."""
-        ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
-        for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
+        ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, s.m) for r in s.r]; seg = np.broadcast_to(s.c, (s.m,) * m_ + (N,)).copy()
+        for k in range(m_): sh = [1] * m_ + [1]; sh[k] = s.m; seg = seg + ax[k].reshape(sh) * s.e[k]
         gf_ = bool(getattr(s, 'goalfront', False))
         if gf_:                                                                                              # GOALFRONT: у споры цели row 0 — дуга входа в круг (для каждого столбца свой сдвиг назад по потоку), строки назад — равное время до входа ⇒ V = τ точно; вперёд (внутрь круга) строк нет
             yy = seg.reshape(-1, N)
@@ -217,14 +217,14 @@ def _contract(Xa, sa, j=-1):
     return T
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
-    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.TH = []; s.nc = 0
+    def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.TH = []; s.Mc = []; s.nc = 0
     def add(s, c):
-        g = c.G; nt = g.shape[0]; ns = (nt - 1,) + (M - 1,) * m_
+        g = c.G; nt = g.shape[0]; ns = (nt - 1,) + (c.m - 1,) * m_
         X = np.stack([g[tuple(slice(d, n_ + d) for d, n_ in zip(o, ns))] for o in VOFF], -2).reshape(-1, 2 ** N, N); n = len(X)
         ii = [a.ravel() for a in np.indices(ns)]
         if s.n + n > s.cap:
             cap = max(2 * s.cap, s.n + n, 1 << 16); X2 = np.zeros((cap, 2 ** N, N)); I2 = np.zeros((cap, N + 1), np.int32); X2[:s.n] = s.X[:s.n]; I2[:s.n] = s.I[:s.n]; L2 = np.zeros((cap, N)); H2 = np.zeros((cap, N)); L2[:s.n] = s.LO[:s.n]; H2[:s.n] = s.HI[:s.n]; s.X, s.I, s.LO, s.HI, s.cap = X2, I2, L2, H2, cap
-        s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[(np.full(n, s.nc),) + tuple(ii)]; hid = np.arange(s.n, s.n + n); s.n += n; s.R.append(c.r); s.TH.append((c.hb, c.nb + c.nf)); s.nc += 1
+        s.X[s.n:s.n + n] = X; s.I[s.n:s.n + n] = np.c_[(np.full(n, s.nc),) + tuple(ii)]; hid = np.arange(s.n, s.n + n); s.n += n; s.R.append(c.r); s.TH.append((c.hb, c.nb + c.nf)); s.Mc.append(c.m); s.nc += 1
         lo = X.min(1) - 1e-9; hi = X.max(1) + 1e-9; s.LO[s.n - n:s.n] = lo; s.HI[s.n - n:s.n] = hi; Ks, Vs = [], []
         for si, sh in enumerate(SH):
             l, h = lo + sh, hi + sh; v = np.ones(n, bool)
@@ -311,7 +311,7 @@ class HexIdx:
         """один запрос на троих: (покрыто ядром, внутри ядра ∪ гало, наименьший r среди ядер, накрывших точку; inf — нет)"""
         Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); ins = np.zeros(len(Y), bool); rmin = np.full(len(Y), np.inf); pi, hid, sc = s.query(Y); ins[pi] = True
         if len(pi):
-            R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
+            R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = (2 * (1 + HALO) / (np.array(s.Mc)[cid] - 1))[:, None]
             sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); TH = np.array(s.TH); tp = s.I[hid, 1] + sc[:, 0]; core &= (tp >= TH[cid, 0] - 1e-9) & (tp <= TH[cid, 0] + TH[cid, 1] + 1e-9); m[pi[core]] = True; np.minimum.at(rmin, pi[core], R[cid[core], 0])
         return m, ins, rmin
 def mlin(Pb, n_):
@@ -504,10 +504,21 @@ def growN(p, u, idx, rm, tm):
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if (ihi - ilo < 2 or (ihi - ilo < ROWSMIN and r.min() < RMINZ) if ZACEP and not near else ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN)): pause('reject', 2, u=u, seed=p, reason='too few rows / narrow cell'); return None
-    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.nf, c.nb = ihi, -ilo; c.Tf = np.array([TT[k] for k in range(0, imax + 1)]); c.Tb = np.array([-TT[-k] for k in range(0, -imin + 1)]); c.chain = []
+    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p; c.m = madapt_m(R, S, klo, khi, ilo, ihi, imin) if (MADAPT > 0 and m_ == 1) else M; c.nf, c.nb = ihi, -ilo; c.Tf = np.array([TT[k] for k in range(0, imax + 1)]); c.Tb = np.array([-TT[-k] for k in range(0, -imin + 1)]); c.chain = []
     for d in chain:                                                                                       # затравка на краю в ту же сторону: центр строки 0 + ZSEED·r_ядра·e_k
         k = d[1]; c.chain.append(p + sum(e[j] * (S[klo[j]] + S[khi[j]]) / 2 for j in range(m_)) + d[2] * ZSEED * c.r[k] * e[k]); pause('chain', 2, u=u, seed=p, dir=d, reason='bend before neighbor: chain seed', cell=cur)
     return c
+def madapt_m(R, S, klo, khi, ilo, ihi, imin):
+    """MADAPT: первое m ∈ {M, 2M−1, 4M−3, … ≤ MMAX}, при котором ломаная по m клонам (равные шаги по s на [S[klo], S[khi]]) отходит от строки мелкой сетки ≤ MADAPT (max по всем строкам и мелким узлам); не больше числа мелких узлов"""
+    a, b = klo[0], khi[0]; nf_ = b - a + 1; sf = S[a:b + 1]; F = R[ilo - imin:ihi - imin + 1, a:b + 1]; m = M
+    while m < min(MMAX, nf_):
+        sc = np.linspace(sf[0], sf[-1], m); dev = 0.
+        for row in F:
+            Pm = np.stack([np.interp(sc, sf, row[:, k]) for k in range(N)], 1); L = np.stack([np.interp(sf, sc, Pm[:, k]) for k in range(N)], 1); dev = max(dev, float(np.linalg.norm(L - row, axis=1).max()))
+            if dev > MADAPT: break
+        if dev <= MADAPT: return m
+        m = 2 * m - 1
+    return min(m, MMAX) if m <= MMAX else MMAX
 def glimits(p, u):
     d = float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
@@ -614,7 +625,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
             if len(cells) % SEEDW == SEEDW - 1:
                 w = ovl[-SEEDW:]; print('seed u=%s cells %d overlap(last %d) %.3f' % (u, len(cells) + 1, SEEDW, np.mean(w)), flush=True)
                 if SEEDSTOP > 0 and np.mean(w) > SEEDSTOP and not queue: print('layer', u, 'стоп по наложению:', len(cells), 'клеток', flush=True); cells.append(c); idx.add(c); break
-        cells.append(c); idx.add(c); g0, g1 = c.G[-1 - c.hf], c.G[c.hb]; yf = g0[ctr]; yb = g1[ctr]
+        cells.append(c); idx.add(c); ctr = (c.m // 2,) * m_; g0, g1 = c.G[-1 - c.hf], c.G[c.hb]; yf = g0[ctr]; yb = g1[ctr]
         if ZACEP: yf = adv(yf, u, (HALOT + .25) * c.hlf); yb = adv(yb, u, -(HALOT + .25) * c.hlb)    # сразу за гало-строкой
         else:
             for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)

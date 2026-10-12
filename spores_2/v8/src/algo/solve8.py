@@ -118,22 +118,22 @@ class _Active:
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
         s.mode, s.thr, s.pen = os.environ.get('MODE', 'lin'), float(os.environ.get('THR', .2)), 0.; s.xentry = float(os.environ.get('XENTRY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.ingoal = lambda Y: goal_mask(s.g, Y, s.rho); s.tab = None; s.di_fast = os.environ.get('SYS', 'di') == 'di' and not int(os.environ.get('FLOW_G', 0)); s.table_h = float(os.environ.get('TABLE_H', .02 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
-        s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
+        s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid, mnode, cMl = [], [], [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
         for li, u, c in order:
-            if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], M, 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
+            if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], G.shape[1], 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
             else: G, tau, hb, nb, nf = c.G, c.tau, c.hb, c.nb, c.nf
-            prio.append(float(getattr(c, 'prio', 0))); lc = Light(G, tau, c.r, hb, nb, nf); hid[u].add(lc); hidA.add(lc); cb.append(n0); cl.append(li); nt = len(G); bs[u].append(n0); gl[u].append(gc); ids = n0 + np.arange(nt * M).reshape(nt, M)
-            P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * M, gc)); layer.append(np.full(nt * M, li)); rowid.append(np.repeat(np.arange(nt), M))
-            nx = np.full((nt, M), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, M)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * M; gc += 1
+            prio.append(float(getattr(c, 'prio', 0))); lc = Light(G, tau, c.r, hb, nb, nf); hid[u].add(lc); hidA.add(lc); cb.append(n0); cl.append(li); nt = len(G); mc = G.shape[1]; cMl.append(mc); bs[u].append(n0); gl[u].append(gc); ids = n0 + np.arange(nt * mc).reshape(nt, mc)
+            P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * mc, gc)); layer.append(np.full(nt * mc, li)); rowid.append(np.repeat(np.arange(nt), mc)); mnode.append(np.full(nt * mc, mc))
+            nx = np.full((nt, mc), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, mc)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * mc; gc += 1
         for u in s.us: s.idx[u] = hid[u]; s.base[u] = np.array(bs[u])
         s.idxA = hidA; s.cbase = np.array(cb); s.clayer = np.array(cl)
         if int(os.environ.get('CSR', 1)):
             for ix in list(hid.values()) + [hidA]: freeze_idx(g, ix)
-        s.prio = np.array(prio); s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
+        s.prio = np.array(prio); s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.mnode = np.concatenate(mnode); s.cM = np.array(cMl); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
         s.gcell = {u: np.array(gl[u]) for u in s.us}; s._atlas, s._interp = atlas, interp
-        s.layer_counts = {u: (len(atlas[u]), int(sum(len(c.G) * M for c in atlas[u]))) for u in s.us}
+        s.layer_counts = {u: (len(atlas[u]), int(sum(len(c.G) * c.G.shape[1] for c in atlas[u]))) for u in s.us}
 
     # --- интерполяция слоя u2 в точках Y: V-вершины и веса (лучшая по центральности ячейка) ---
     def locate(s, u2, Y, excl=None):
@@ -147,7 +147,7 @@ class Graph:
             if not len(pi): return np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int)
         cen = np.minimum(sc, 1 - sc).min(1) + s.prio[s.gcell[u2][cid]]; o = np.lexsort((-cen, pi)); pi, hid, sc, cid = pi[o], hid[o], sc[o], cid[o]; st = np.r_[True, pi[1:] != pi[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0))
         k = rank < s.K; pi, hid, sc, cid, rank = pi[k], hid[k], sc[k], cid[k], rank[k]
-        row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]; vo = s.g.VOFF; M = s.M
+        row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]; vo = s.g.VOFF; M = s.cM[s.gcell[u2][cid]]
         verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in vo], 1)
         w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in vo], 1); return pi, verts, w, rank
 
@@ -157,7 +157,7 @@ class Graph:
         if not len(pi): return [z] * L
         cid = idx.I[hid, 0]; lay = s.clayer[cid]; cen = np.minimum(sc, 1 - sc).min(1) + s.prio[cid]; grp = pi * L + lay; o = np.lexsort((-cen, grp)); pi, hid, sc, cid, lay, grp = pi[o], hid[o], sc[o], cid[o], lay[o], grp[o]
         st = np.r_[True, grp[1:] != grp[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0)); k = rank < s.K; pi, hid, sc, cid, lay, rank = pi[k], hid[k], sc[k], cid[k], lay[k], rank[k]
-        row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.cbase[cid]; M = s.M; verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in s.g.VOFF], 1); w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in s.g.VOFF], 1); res = []
+        row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.cbase[cid]; M = s.cM[cid]; verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in s.g.VOFF], 1); w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in s.g.VOFF], 1); res = []
         for li in range(L): m = lay == li; res.append((pi[m], verts[m], w[m], rank[m]))
         return res
 
@@ -214,7 +214,7 @@ class Graph:
     def set_calc(s, calc):
         """расчёт V: 'v' (по умолчанию, как было) | 'q' — переходы по Q (цена «продолжать своё u», минимум ПОСЛЕ интерполяции) | 'qquad' — то же + квадратичная интерполяция поперёк потока (только M=3). Обоснование: knowledge/research/v_kink_q.md (v5chain)"""
         assert calc in ('v', 'q', 'qquad'), calc
-        if calc == 'qquad': assert s.M == 3, 'qquad только для M=3'
+        if calc == 'qquad': assert (s.cM == 3).all(), 'qquad только для M=3'
         s.calc = calc
         if (calc == 'qquad') != s.quad: s.quad = calc == 'qquad'; s.prepare()                                    # геометрия переходов (e3) другая
 
@@ -313,7 +313,7 @@ class Graph:
     def _solve_qb(s, tol, pen, verbose=True):
         """b3: Q по вёдрам (метки по возрастанию Q, Гаусс–Зейдель на месте, коррекция меток): узлы ведра [θ, θ+D) рассылаются зависимым (E по ячейкам через _Active, E1 — вверх по столбцу к предшественнику); улучшение < tol не рассылается. Та же неподвижная точка, что у Якоби, до tol"""
         t0 = time.perf_counter(); n = s.n; Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); Q = Q0.copy(); V = np.minimum(V0, Q0); pen = s.pen if pen is None else pen
-        acts = [_Active(s, pr) for pr in s.e3]; sub = s._sub() if s.subk else None; actS = [_Active(s, pr, sub[3]) for pr in sub[2]] if sub else None; pred = np.where(s.rowid > 0, np.arange(n) - s.M, -1); cost = s.cost; lay = s.layer; D = float(os.environ.get('BD', .06)); TOL = float(os.environ.get('SBSEND', max(tol, 1e-9)))
+        acts = [_Active(s, pr) for pr in s.e3]; sub = s._sub() if s.subk else None; actS = [_Active(s, pr, sub[3]) for pr in sub[2]] if sub else None; pred = np.where(s.rowid > 0, np.arange(n) - s.mnode, -1); cost = s.cost; lay = s.layer; D = float(os.environ.get('BD', .06)); TOL = float(os.environ.get('SBSEND', max(tol, 1e-9)))
         def e1(u):                                                                                  # V улучшился в узлах u → Q предшественников (вверх по столбцу, пока V[p] улучшается); возвращает узлы с улучшенным Q
             out = []
             while len(u):
@@ -509,7 +509,7 @@ def refine_atlas(g, atlas, thr=.15, maxdepth=2, calc='q', verbose=True):
         for u in cur:
             for ci, c in enumerate(cur[u]):
                 if getattr(c, 'depth', 0) != d: continue
-                nt = len(c.G); b = G.base[u][ci]; V = G.V[b:b + nt * M].reshape(nt, M); Gc = np.asarray(c.G); tau = np.asarray(c.tau); k0 = int(min(max(c.nb, 0), nt - 1))
+                M = np.asarray(c.G).shape[1]; nt = len(c.G); b = G.base[u][ci]; V = G.V[b:b + nt * M].reshape(nt, M); Gc = np.asarray(c.G); tau = np.asarray(c.tau); k0 = int(min(max(c.nb, 0), nt - 1))
                 for j in range(M - 1):
                     fin = (V[:, j] < BIG / 2) & (V[:, j + 1] < BIG / 2)
                     if not (fin & (np.abs(V[:, j] - V[:, j + 1]) > thr)).any(): continue
