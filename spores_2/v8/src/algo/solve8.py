@@ -192,15 +192,15 @@ class Graph:
         Vl = s.Vlayers(X); return Vl.min(1), Vl.argmin(1)
 
     def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False, path=None, rec=5):
-        """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
+        """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения, номер слоя = управление, действовавшее на последнем шаге) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
         Vl = s.Vlayers(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
         step = 0
-        if path is not None: path.append((np.arange(n), X.copy()))
+        if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         while alive.any():
             a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a, 0] = x + v * dt + u * dt * dt / 2; X[a, 1] = v + u * dt; t[a] += dt; step += 1
             hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
-            if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy()))
+            if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
             a = np.flatnonzero(alive)
             if not len(a): break
             if look:                                                                                         # Беллман на один шаг: слой с min V*(x после шага под этим слоем); смена слоя при выигрыше > eps

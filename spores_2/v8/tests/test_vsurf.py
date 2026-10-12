@@ -104,4 +104,8 @@ def test_agent_paths():
     ok = np.isfinite(res['T']); assert all(np.linalg.norm(P[-1]) <= G.rho + .02 for P, o in zip(res['paths'], ok) if o), 'reached ends in goal'
     Vf = [V[np.isfinite(V)] for V in res['V']]; assert np.mean([v[0] >= v[-1] - 1e-6 for v in Vf if len(v)]) > .95
     Tr, _ = solve8.t_ref(res['X0']); T2, sw2 = G.run_agent(res['X0'], 3 * Tr + 2, **solve8.POLICIES['look']); assert np.array_equal(np.nan_to_num(T2, nan=-1), np.nan_to_num(res['T'], nan=-1)) and (sw2 == res['sw']).all()
-    fl, sf = VS.traj_geom(res); assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01); print('agent_paths %.1f s, reached %.2f, floor %d, surf %d' % (dt, ok.mean(), len(fl), len(sf)))
+    m = VS.traj_geom(res); fl, sf = m['floor'], m['surf']; assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01) and len(m['fcol']) == len(fl) and len(m['scol']) == len(sf) and len(m['pf']) == len(m['pfc']) and len(m['ps']) == len(m['psc'])
+    assert all(len(U) == len(P) for P, U in zip(res['paths'], res['U'])) and set(np.unique(np.concatenate(res['U']))) <= {-1., 0., 1.}
+    c = VS.ctrl_color(np.array([1., -1., 0.])); assert np.allclose(c[0, :3], VS.CTRL_COL[1]) and np.allclose(c[1, :3], VS.CTRL_COL[-1]) and np.allclose(c[2, :3], VS.CTRL_COL[0]) and (c[:, 3] == 1).all()
+    uu = np.concatenate(res['U'][:20]); assert (uu > 0).any() and (uu < 0).any()      # оба управления встречаются
+    print('agent_paths %.1f s, reached %.2f, floor %d, surf %d' % (dt, ok.mean(), len(fl), len(sf)))

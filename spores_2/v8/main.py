@@ -223,7 +223,7 @@ for _i, _key in enumerate('789'): input_manager.bind(_key, lambda i=_i: growview
 input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal / time')
 input_manager.bind('v', growview.toggle_vsurf, description='V surface (solve8 on the current atlas): height and colour = V; 7/8/9 layers')
 input_manager.bind('y', growview.cycle_vcalc, description='V calculation for V/B surfaces and trajectories: old V / by Q (lin) / by Q (quad)')
-input_manager.bind('t', growview.toggle_traj, description='final trajectories: 100 random starts, solve8 agent (look); path on the floor and on the V* surface')
+input_manager.bind('t', growview.toggle_traj, description='final trajectories (100 random starts, solve8 agent look; colour = control: u>0 purple, u<0 red): off / floor+surface / floor only / surface only')
 input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers; skeleton in the winner layer colour)')
 def _toggle_floor(): floor.visible_self = not floor.visible_self
 input_manager.bind('f', _toggle_floor, description='toggle floor')
@@ -252,7 +252,7 @@ update_manager.register(
 
 # ===== LOOP =====
 def update():
-    update_manager.update_all()
+    update_manager.update_all(); growview.poll()
     growview.refresh()    # spore size ('1') changed -> rebuild the point discs
 
 def input(key):

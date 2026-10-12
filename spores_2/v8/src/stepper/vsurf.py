@@ -53,27 +53,40 @@ def solve_layers(cells_by_u, g=None, calc='v'):
     return out, dict(G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
 
 
-TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 100)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 5))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
-TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', .85)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 2)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 2))
+TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 100)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
+TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 3)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 3))
+
+
+CTRL_COL = {1: (.72, .25, 1.), -1: (1., .12, .12), 0: (.82, .82, .86)}             # цвет управления (слово пользователя 2026-10-12): u>0 фиолетовый, u<0 красный, u=0 серо-белый; эти два цвета зарезервированы под управление
+TRAJ_PT = float(os.environ.get('VSURF_TRAJ_PT', .5))                               # радиус точек траектории — доля радиуса точки споры
+
+
+def ctrl_color(U, alpha=1.):
+    """управления (...,) → RGBA (..., 4): u>0 фиолетовый, u<0 красный, u=0 серо-белый"""
+    U = np.asarray(U, float); out = np.empty(U.shape + (4,)); out[..., :3] = np.array(CTRL_COL[0]); out[..., :3][U > 1e-9] = CTRL_COL[1]; out[..., :3][U < -1e-9] = CTRL_COL[-1]; out[..., 3] = alpha; return out
 
 
 def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC):
-    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → агент solve8 по политике look (POLICIES['look']) на графе G → dict: paths [(K, N) положения], V [(K,) V*(x) = min по слоям], T (n,) время до цели (nan — провал), sw (n,) переключения"""
+    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → агент solve8 по политике look (POLICIES['look']) на графе G → dict: paths [(K, N) положения], V [(K,) V*(x) = min по слоям], U [(K,) управление на последнем шаге перед точкой], T (n,) время до цели (nan — провал), sw (n,) переключения"""
     from ..algo import solve8
     g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); Tr, _ = solve8.t_ref(X0); path = []; T, sw = G.run_agent(X0, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES['look'])
-    ids = np.concatenate([a for a, _ in path]); P = np.concatenate([x for _, x in path]); order = np.argsort(ids, kind='stable'); ids, P = ids[order], P[order]       # внутри агента порядок записи сохранён (stable)
-    Vst = G.Vlayers(P).min(1); cut = np.flatnonzero(np.diff(ids)) + 1
-    return dict(paths=np.split(P, cut), V=np.split(Vst, cut), T=T, sw=sw, X0=X0)
+    ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
+    Vst = G.Vlayers(P).min(1); Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1
+    return dict(paths=np.split(P, cut), V=np.split(Vst, cut), U=np.split(Ul, cut), T=T, sw=sw, X0=X0)
 
 
 def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
-    """траектории → (floor (2E, 3), surf (2E', 3)) пары вершин для линий: на полу (y = y0) и на поверхности V* (y = V*·h + lift; сегмент с V* = ∞ — нет)"""
-    F, S = [], []
-    for P, V in zip(res['paths'], res['V']):
+    """траектории → dict: floor (2E, 3) / surf (2E', 3) — пары вершин линий (на полу y = y0, на поверхности V* y = V*·h + lift; сегмент с V* = ∞ — нет), fcol/scol (2E, 4) — цвет управления сегмента, pf/ps (P, 3) и pfc/psc (P, 4) — точки пути (на полу / на поверхности) и их цвет.
+    Управление сегмента (k−1 → k) и точки k — то, что действовало на последнем шаге перед k; у точки 0 — как у точки 1."""
+    F, FC, S, SC, PF, PFC, PS, PSC = [], [], [], [], [], [], [], []
+    for P, V, U in zip(res['paths'], res['V'], res['U']):
         if len(P) < 2: continue
-        f = np.zeros((len(P), 3)); f[:, 0] = P[:, ax[0]]; f[:, 2] = P[:, ax[1]]; f[:, 1] = y0; F.append(np.stack([f[:-1], f[1:]], 1).reshape(-1, 3))
-        ok = np.isfinite(V) & (V < BIG / 2); q = f.copy(); q[:, 1] = np.where(ok, V, 0.) * h + lift; e = ok[:-1] & ok[1:]; S.append(np.stack([q[:-1][e], q[1:][e]], 1).reshape(-1, 3))
-    z = np.zeros((0, 3)); return (np.concatenate(F) if F else z), (np.concatenate(S) if S else z)
+        U = U.copy(); U[0] = U[1]; col = ctrl_color(U); f = np.zeros((len(P), 3)); f[:, 0] = P[:, ax[0]]; f[:, 2] = P[:, ax[1]]; f[:, 1] = y0
+        F.append(np.stack([f[:-1], f[1:]], 1).reshape(-1, 3)); FC.append(np.repeat(col[1:], 2, axis=0)); PF.append(f); PFC.append(col)
+        ok = np.isfinite(V) & (V < BIG / 2); q = f.copy(); q[:, 1] = np.where(ok, V, 0.) * h + lift; e = ok[:-1] & ok[1:]
+        S.append(np.stack([q[:-1][e], q[1:][e]], 1).reshape(-1, 3)); SC.append(np.repeat(col[1:][e], 2, axis=0)); PS.append(q[ok]); PSC.append(col[ok])
+    z3, z4 = np.zeros((0, 3)), np.zeros((0, 4)); cat = lambda L, z: np.concatenate(L) if L else z
+    return dict(floor=cat(F, z3), fcol=cat(FC, z4), surf=cat(S, z3), scol=cat(SC, z4), pf=cat(PF, z3), pfc=cat(PFC, z4), ps=cat(PS, z3), psc=cat(PSC, z4))
 
 
 def vscale(Vs_u, q=99.):

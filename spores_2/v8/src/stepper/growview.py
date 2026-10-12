@@ -10,7 +10,7 @@ GrowView — рисует снимок паузы алгоритма роста 
 Рисование — по одному Scalable-объекту на слой геометрии (точки/отрезки одним мешем), поэтому
 тысячи узлов не создают тысячи Entity.
 """
-import time
+import time, threading
 import numpy as np
 
 HALO = .1
@@ -165,11 +165,11 @@ class GrowView:
     # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — светло-серые (контраст к зелёному и оранжевому на тёмно-синем); текущая клетка ярче, готовые приглушены
     COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .7),
            'points_cur': (.92, .92, .96, 1), 'segs_rows_cur': (.95, .95, 1.0, 1), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
-           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9),
+           'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.35, .9, .85, .8), 'segs_goal': (.55, 1.0, .65, .9),
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s._traj = None; s.vcalc = 'v'; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s.vcalc = 'v'; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -260,12 +260,18 @@ class GrowView:
         ks = [k for k, _ in s.VCALC]; s.vcalc = ks[(ks.index(s.vcalc) + 1) % len(ks)]; print('[vsurf] V calc: %s' % dict(s.VCALC)[s.vcalc], flush=True)
         if s.snap is not None: s.draw(s.snap)
 
+    TVIEWS = ('both', 'floor', 'surface')
+
     def toggle_traj(s):
-        s.tmode = not s.tmode; print('[vsurf] final trajectories %s' % ('on' if s.tmode else 'off'), flush=True)
+        """T: траектории выкл → пол+поверхность → только пол → только поверхность → выкл (слово пользователя 2026-10-12)"""
+        if not s.tmode: s.tmode = True; s.tview = 'both'
+        elif s.tview == 'surface': s.tmode = False
+        else: s.tview = s.TVIEWS[s.TVIEWS.index(s.tview) + 1]
+        print('[vsurf] final trajectories: %s' % (s.tview if s.tmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
     def vlabel(s):
-        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories', s.tmode)) if f]
+        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories on %s (%s)' % (s.tview, s._tstat or '...'), s.tmode)) if f]
         return ('%s [%s]: %s' % (' + '.join(on), dict(s.VCALC)[s.vcalc], s.vinfo or 'on')) if on else ''
 
     def _vcells(s, snap):
@@ -313,19 +319,41 @@ class GrowView:
                 Di, ii = _discs(m['inf'], R); s._layer(nm('inf'), w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
 
     def _clear_traj(s):
-        for n in ('traj_floor', 'traj_surf'):
+        for n in ('traj_floor', 'traj_surf', 'traj_pf', 'traj_ps'):
             if n in s.layers: s.layers[n].set_geometry(np.zeros((0, 3)))
 
     def _draw_traj(s):
-        """итоговые траектории (клавиша T): TRAJ_N стартов, агент solve8 (политика look) на графе показанного атласа; путь на полу и на поверхности V* (считается один раз на атлас)"""
+        """итоговые траектории (клавиша T): TRAJ_N стартов, агент solve8 (look) на графе показанного атласа считается в ФОНОВОМ потоке (UI не стоит; подпись «computing…»); готовый путь — на полу и на поверхности V*, линии и точки в цвет управления (u>0 фиолетовый, u<0 красный, u=0 серый), поверх всего"""
         from . import vsurf as VS
         if not s.tmode: s._clear_traj(); return
         if s._traj is None:
-            t0 = time.perf_counter(); res = VS.agent_paths(s._vres[3]['G']); ok = np.isfinite(res['T']); s._traj = (res, VS.traj_geom(res, s.ax))
-            print('[vsurf] trajectories: %d starts, reached %d, T median %.2f, switches mean %.1f, %.1f s' % (len(res['paths']), int(ok.sum()), float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'].mean()), time.perf_counter() - t0), flush=True)
-        (fl, sf) = s._traj[1]; w = (1., 1., 1., 1.)
-        s._layer('traj_floor', w).set_geometry(fl, kind='lines', thick=VS.TRAJ_FW, colors=np.tile((.55, .95, 1., VS.TRAJ_A), (len(fl), 1)), depth_write=False)
-        s._layer('traj_surf', w).set_geometry(sf, kind='lines', thick=VS.TRAJ_SW, colors=np.tile((1., .9, .2, 1.), (len(sf), 1)), depth_write=False, on_top=True)
+            s._clear_traj()
+            if s._tjob is None:
+                G = s._vres[3].get('G')
+                if G is None: s._tstat = 'no cells'; return
+                job = dict(sig=s._vsig, res=None, err=None, t0=time.perf_counter()); s._tstat = 'computing...'
+                def run():
+                    try: job['res'] = VS.agent_paths(G)
+                    except Exception as e: job['err'] = repr(e)
+                job['th'] = threading.Thread(target=run, daemon=True); s._tjob = job; job['th'].start()
+            return
+        res, m = s._traj; w = (1., 1., 1., 1.); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.) * VS.TRAJ_PT
+        z3, z4 = np.zeros((0, 3)), np.zeros((0, 4)); fl, sf = s.tview in ('both', 'floor'), s.tview in ('both', 'surface')
+        for nm, arr, col, th, on in (('traj_floor', m['floor'], m['fcol'], VS.TRAJ_FW, fl), ('traj_surf', m['surf'], m['scol'], VS.TRAJ_SW, sf)):
+            s._layer(nm, w).set_geometry(arr if on else z3, kind='lines', thick=th, colors=col if on else z4, depth_write=False, on_top=True)
+        for nm, pts, col, on in (('traj_pf', m['pf'], m['pfc'], fl), ('traj_ps', m['ps'], m['psc'], sf)):
+            D, ii = _discs(pts if on else z3, R); s._layer(nm, w).set_geometry(D, ii, colors=np.repeat(col if on else z4, 17, axis=0), depth_write=False, on_top=True)
+
+    def poll(s):
+        """каждый кадр (main.update): готов ли фоновый расчёт траекторий → нарисовать"""
+        j = s._tjob
+        if j is None or j['th'].is_alive(): return
+        s._tjob = None
+        if j['err']: s._tstat = 'failed: ' + j['err']; print('[vsurf] trajectories ' + s._tstat, flush=True); s.draw(s.snap); return
+        if j['sig'] != s._vsig or not s.tmode: s.draw(s.snap); return                                                 # атлас/расчёт поменялись — результат устарел
+        from . import vsurf as VS
+        res = j['res']; ok = np.isfinite(res['T']); s._traj = (res, VS.traj_geom(res, s.ax)); s._tstat = 'done: %d/%d reached, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), len(ok), float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'].mean()), time.perf_counter() - j['t0'])
+        print('[vsurf] trajectories ' + s._tstat, flush=True); s.draw(s.snap)
 
     def _box(s, extra):
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
