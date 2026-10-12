@@ -10,7 +10,7 @@ GrowView — рисует снимок паузы алгоритма роста 
 Рисование — по одному Scalable-объекту на слой геометрии (точки/отрезки одним мешем), поэтому
 тысячи узлов не создают тысячи Entity.
 """
-import sys, time, threading
+import os, sys, time, threading
 import numpy as np
 
 HALO = .1
@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -356,14 +356,9 @@ class GrowView:
         if not s.tmode: s._clear_traj(); return
         if s._traj is None:
             s._clear_traj()
-            if s._tjob is None:
-                G = s._vres[3].get('G')
-                if G is None: s._tstat = 'no cells'; return
-                job = dict(sig=s._vsig, res=None, err=None, t0=time.perf_counter()); s._tstat = 'computing...'
-                def run():
-                    try: job['res'] = VS.agent_paths(G)
-                    except Exception as e: job['err'] = repr(e)
-                job['th'] = threading.Thread(target=run, daemon=True); s._tjob = job; job['th'].start()
+            if s._tfail == s._vsig: s._tstat = 'failed (see console)'; return
+            if s._stj is None or not s._stj['th'].is_alive():
+                s._tstat = 'computing...'; job = dict(items=[dict(kind='T', calc=s._vsig[0], sig=s._vsig, cl=s._vres[2])], q=[], err=None); job['th'] = threading.Thread(target=s._stage_run, args=(job,), daemon=True); s._stj = job; job['th'].start()
             return
         res, m = s._traj; w = (1., 1., 1., 1.); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.) * VS.TRAJ_PT; tkey = (id(m), s.tview, round(R, 5))
         s.dinfo['traj_data'] = 'cached' if not s._tfresh else 'computed'
@@ -381,7 +376,7 @@ class GrowView:
         st = np.asarray(res['status'], object); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
         return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs)
 
-    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
+    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes%s' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'], '' if info.get('converged', True) else ' (NOT CONVERGED, capped; known defect of the old V)')
 
     def _put_v(s, sig, entry):
         if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))
@@ -417,25 +412,24 @@ class GrowView:
         items = todo if all_ else todo[:1]; job = dict(items=items, q=[], err=None, left=len(todo)); job['th'] = threading.Thread(target=s._stage_run, args=(job,), daemon=True); s._stj = job; job['th'].start(); return True
 
     def _stage_run(s, job):
+        """поток-читатель: запускает calc_worker.py (отдельный процесс — счёт вне GIL окна), печатает его прогресс как «[calc] k/N <имя> …», складывает результаты в job['q'] (poll → кэши)"""
+        import subprocess, pickle
         from . import vsurf as VS
-        names = dict(s.VCALC); n = len(job['items']); Gby = {}
-        sys.setswitchinterval(5e-4)      # поток счёта чаще получает GIL у кадров окна (иначе траектории ~2 мин)
+        names = dict(s.VCALC); items = job['items']; n = len(items); tag = lambda i: '[calc] %d/%d %s %s' % (i + 1, n, names[items[i]['calc']], 'V' if items[i]['kind'] == 'V' else 'trajectories')
         try:
-            for i, it in enumerate(job['items']):
-                kind, calc = it['kind'], it['calc']; tag = '[calc] %d/%d %s %s' % (i + 1, n, names[calc], 'V' if kind == 'V' else 'trajectories'); t0 = time.perf_counter(); last = [t0]
-                def say(msg, force=False):
-                    now = time.perf_counter()
-                    if force or now - last[0] >= 1.:
-                        last[0] = now; s._prog = '%s: %s, %.1f s' % (tag, msg, now - t0); print(s._prog, flush=True)
-                say('start', True)
-                if kind == 'V':
-                    Vs, info = VS.solve_layers(it['cl'], calc=calc, progress=lambda p, d, V: say('pass %d, residual %.1e, finite nodes %.0f%%' % (p, d, 100 * float((V < VS.BIG / 2).mean()))))
-                    secs = time.perf_counter() - t0; Gby[it['sig']] = info['G']; job['q'].append(('V', it, (Vs, VS.vscale(Vs), it['cl'], info), secs))
-                    say('done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s' % (info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t']), True)
-                else:
-                    G = Gby.get(it['sig']) or s._vcache[it['sig']][0][3]['G']
-                    res = VS.agent_paths(G, progress=lambda step, alive: say('agents in flight %d of %d, step %d (t=%.2f)' % (alive, VS.TRAJ_N, step, step * .01)))
-                    secs = time.perf_counter() - t0; job['q'].append(('T', it, res, secs)); say('done: ' + s._traj_stat(res, secs), True)
+            p = subprocess.Popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'calc_worker.py')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=os.environ.copy()); job['proc'] = p
+            pickle.dump([(it['kind'], it['calc'], it['cl']) for it in items], p.stdin, protocol=4); p.stdin.close()
+            while True:
+                try: m = pickle.load(p.stdout)
+                except EOFError: break
+                if m[0] == 'prog': s._prog = '%s: %s, %.1f s' % (tag(m[1]), m[2], m[3]); print(s._prog, flush=True)
+                elif m[0] == 'V':
+                    it = items[m[1]]; info = m[2][1]; job['q'].append(('V', it, (m[2][0], VS.vscale(m[2][0]), it['cl'], info), m[3]))
+                    print('%s: done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s, %.1f s' % (tag(m[1]), info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t'], m[3]), flush=True)
+                elif m[0] == 'T': job['q'].append(('T', items[m[1]], m[2], m[3])); print('%s: done: %s' % (tag(m[1]), s._traj_stat(m[2], m[3])), flush=True)
+                elif m[0] == 'err': job['err'] = m[2]; print('[calc] stage failed: %s' % m[2], flush=True); break
+            p.wait()
+            if p.returncode and not job['err']: job['err'] = 'worker exit code %s' % p.returncode; print('[calc] stage failed: ' + job['err'], flush=True)
         except Exception as e:
             job['err'] = repr(e); print('[calc] stage failed: %s' % job['err'], flush=True)
 
@@ -469,7 +463,9 @@ class GrowView:
             ev = sj['q'][:]; del sj['q'][:len(ev)]
             for e in ev: s._stage_adopt(e)
             if not sj['th'].is_alive():
-                s._stj = None; s._prog = ''; ev2 = sj['q'][:]; del sj['q'][:]
+                s._stj = None; s._prog = ''
+                if sj['err']: s._tfail = sj['items'][-1]['sig']
+                ev2 = sj['q'][:]; del sj['q'][:]
                 for e in ev2: s._stage_adopt(e)
                 ev = ev + ev2
             if ev or s._stj is None: s._stinfo = s._stage_text(s.snap); s.draw(s.snap)

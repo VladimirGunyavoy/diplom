@@ -6,7 +6,7 @@ for _s in (sys.stdout, sys.stderr):                           # growN печат
     try: _s.reconfigure(encoding='utf-8', errors='replace')
     except Exception: pass
 import numpy as np
-for k, v in dict(SYS='di', M='5', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2', ZSOFT='.05').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения (ZSOFT=.05 — softmin-нахлёст, решение пользователя 2026-10-12; ZSOFT=0 — как раньше)
+for k, v in dict(SYS='di', M='5', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2', ZSOFT='.05', COMMIT_EVERY='2').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения (ZSOFT=.05 — softmin-нахлёст, решение пользователя 2026-10-12; ZSOFT=0 — как раньше)
 from ..algo import growN as g
 from . import stepper as S
 

@@ -31,6 +31,9 @@ def gradient(t, alpha=ALPHA):
     out[..., 3] = alpha; return out
 
 
+OLD_V_MAXIT = int(os.environ.get('VSURF_OLD_V_MAXIT', 300))      # старая V не сходится за 2000 проходов (7 с впустую) — ограничена, в статусе «NOT CONVERGED» (решение research-4 2026-10-12, дефект известен)
+
+
 def solve_layers(cells_by_u, g=None, calc='v', progress=None):
     """cells_by_u: {u: [cell_dict, ...]} (порядок слоёв — порядок ключей) → ({u: [V (nt, M) на клетку]}, info); calc — 'v' (старый расчёт) | 'q' | 'qquad' (solve8.Graph.set_calc; узлы показывают V = min(Q…), запросы G.Vlayers — по Q). V ≥ BIG/2 — нет пути.
     info: n, t, calc, passes, finite, vmax, layers, wins {u: [bool (nt, M)]} — узел выигрывает у остальных слоёв, goalcols {u: [bool (M,)]} — столбец входит в цель."""
@@ -38,7 +41,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
     g = g or solve8.load_growN()
     atlas = {u: [SimpleNamespace(G=np.asarray(c['G']), tau=np.asarray(c['tau']), r=np.asarray(c['r']), hb=int(c['hb']), nb=int(c['nb']), nf=int(c['nf'])) for c in cl] for u, cl in cells_by_u.items() if len(cl)}
     if not atlas: return {}, dict(n=0, t=0., passes=0, wins={}, goalcols={})
-    t0 = time.perf_counter(); G = solve8.make_graph(g, atlas); G.set_calc(calc); G.solve(verbose=False, progress=progress); t = time.perf_counter() - t0; V = G.Vn; out = {}; off = 0
+    t0 = time.perf_counter(); G = solve8.make_graph(g, atlas); G.set_calc(calc); G.solve(verbose=False, progress=progress, maxit=OLD_V_MAXIT if calc == 'v' else 3000); t = time.perf_counter() - t0; V = G.Vn; out = {}; off = 0
     Vl = G.Vlayers(G.P); Vl[np.arange(G.n), G.layer] = np.where(V < BIG / 2, V, np.inf); best = Vl.min(1)                  # свой слой — V узла (не интерполяция); победитель — первый слой в пределах eps от минимума
     wall = (np.argmax(Vl <= best[:, None] + WIN_EPS, axis=1) == G.layer) & np.isfinite(best); wins = {}; gcols = {}; rho = G.rho
     for u, cl in atlas.items():

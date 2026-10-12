@@ -14,4 +14,6 @@ def rep(name, pol):
 G.solve(verbose=False); rep('V old, look', 'look')
 G.set_calc('q'); t1 = time.perf_counter(); G.solve(verbose=False); print('RES solve Q lin %.1f с' % (time.perf_counter() - t1), flush=True)
 rep('Q lin, look', 'look'); okc = rep('Q lin, commit', 'commit')
+for k in (2, 3, 5):
+    S.COMMIT_EVERY = k; rep('Q lin, commit /%d' % k, 'commit')
 print('RES КРИТЕРИЙ W1:', 'OK' if okc else 'НЕ ВЫПОЛНЕН')

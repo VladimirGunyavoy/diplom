@@ -196,17 +196,21 @@ class Graph:
 
     COMMIT_JS = np.array([0, 1, 2, 5, 10, 20, 40])
 
-    def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5, progress=None):
+    def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5, progress=None, every=None):
         """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent; progress(step, живых) — вызывается каждый шаг (для строки прогресса в консоли)"""
         n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s.Vlayers(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
+        every = every or COMMIT_EVERY
         while alive.any():
             a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; ar = np.arange(len(a))
-            best = np.full(len(a), np.inf); bj = np.zeros(len(a), int); bl = cur[a].copy(); qcur = None
-            for j in s.COMMIT_JS:
-                tj = j * dt; Q = s.Vlayers(np.stack([x + v * tj + u * tj * tj / 2, v + u * tj], 1))
-                if j == 0: qcur = Q[ar, cur[a]].copy()
-                Q[ar, cur[a]] = np.inf; g = tj + Q.min(1); better = g < best - 1e-12; best[better] = g[better]; bj[better] = j; bl[better] = Q.argmin(1)[better]
+            if step % every:                                                                               # решение о переключении — раз в every шагов (счёт ×every быстрее), между ними держим управление
+                u = uvec[cur[a]]; X[a, 0] = x + v * dt + u * dt * dt / 2; X[a, 1] = v + u * dt; t[a] += dt; step += 1
+                hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
+                if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
+                if progress is not None: progress(step, int(alive.sum()))
+                continue
+            tj = (s.COMMIT_JS * dt)[:, None]; nj = len(tj); xj = x[None] + v[None] * tj + u[None] * tj * tj / 2; vj = v[None] + u[None] * tj                       # все точки t_j одним запросом (быстрее: накладные расходы Vlayers на вызов, ×2.7 на ноуте)
+            Q = s.Vlayers(np.stack([xj.ravel(), vj.ravel()], 1)).reshape(nj, len(a), s.L); qcur = Q[0, ar, cur[a]].copy(); Q[:, ar, cur[a]] = np.inf; gg = tj + Q.min(2); bj = gg.argmin(0); best = gg[bj, ar]; bl = Q[bj, ar].argmin(1)
             chg = (bj == 0) & np.isfinite(best) & ((best < qcur - eps) | ~np.isfinite(qcur)); lost = ~np.isfinite(best) & ~np.isfinite(qcur)
             cur[a[chg]] = bl[chg]; sw[a[chg]] += 1; alive[a[lost]] = False; a = np.flatnonzero(alive)
             if not len(a): break
@@ -254,6 +258,7 @@ def starts(g, n, seed):
     return np.array(out)
 
 
+COMMIT_EVERY = int(os.environ.get('COMMIT_EVERY', 1))          # решение агента commit раз в N шагов dt (1 — каждый шаг, как в lr3/qagent)
 POLICIES = {'base': dict(), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'look': dict(look=True), 'commit': dict(commit=True)}
 
 
