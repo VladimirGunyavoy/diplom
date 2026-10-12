@@ -101,6 +101,19 @@ class TimeTable:
         return '\n'.join(rows)
 
 
+def _boxes(P, hw):
+    """точки рельса → «вагончики»: K брусьев с полуразмерами hw=(x, y, z) вокруг центров (K, 3); 8 вершин и 12 треугольников на брус"""
+    K = len(P)
+    if K == 0: return np.zeros((0, 3), np.float32), np.zeros((0,), np.uint32)
+    c = np.array([[sx, sy, sz] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)], float) * np.asarray(hw, float)
+    f = [(0, 1, 3), (0, 3, 2), (4, 6, 7), (4, 7, 5), (0, 4, 5), (0, 5, 1), (2, 3, 7), (2, 7, 6), (0, 2, 6), (0, 6, 4), (1, 5, 7), (1, 7, 3)]
+    V = (P[:, None, :] + c[None]).reshape(-1, 3).astype(np.float32); idx = (np.arange(K)[:, None, None] * 8 + np.array(f)[None]).reshape(-1).astype(np.uint32)
+    return V, idx
+
+
+RAIL_HW = tuple(float(v) for v in os.environ.get('V8_RAIL_HW', '.09,.06,.06').split(','))             # полуразмеры вагончика на рельсе (x вдоль рельса, y, z)
+
+
 def _discs(P, R, res=16):
     """K центров (K, 3) → вершины (K·(res+1), 3) и индексы треугольников: плоские диски радиуса R в плоскости XZ (как Spore: Circle, rotation 90°)"""
     K = len(P)
@@ -400,12 +413,16 @@ class GrowView:
         if o['new'] and t['floor'] is not None:
             for nm, arr, col, th in (('lv_ff@%d' % k, t['floor'], t['fcol'], VS.TRAJ_FW), ('lv_sf@%d' % k, t['surf'], t['scol'], VS.TRAJ_SW)):
                 s._layer(nm, w).set_geometry(arr, kind='lines', thick=th, colors=col, depth_write=False, on_top=True); s._live_used.add(nm)
+        fl = s.tmode and s.tview in ('both', 'floor'); sf = s.tmode and s.tview in ('both', 'surface')                 # P учитывает режим T: пол / поверхность / оба / выкл (слой-слот просто включается/выключается)
+        for nm in s._live_used:
+            if nm.startswith('lv_ff@') or nm == 'lv_head': s._layer(nm, w).enabled = fl
+            elif nm.startswith('lv_sf@'): s._layer(nm, w).enabled = sf
         H, HC = o['heads']; R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.) * VS.TRAJ_PT * 1.6
         if s._live_rail is None:                                                                         # «рельс»: реальная 1D-система (x по оси x, v — скорость точки) в мировой точке (0, 0, RAIL_Z); цель |x| ≤ ρ — отрезок; масштаб x как на плоскости
             xl = float(os.environ.get('XL', 3)) + float(os.environ.get('GMX', 3)); rho = float(os.environ.get('RHO', .2)); z = VS.RAIL_Z
             s._layer('lv_rail', w).set_geometry(np.array([[-xl, 0, z], [xl, 0, z]], float), kind='lines', thick=3, colors=np.tile((.75, .75, .8, .9), (2, 1)), depth_write=False); s._live_used.add('lv_rail')
             s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal'); s._live_rail = True
-        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _discs(RP, R); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')       # по точке на агента: x(t), цвет — текущее управление
+        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _boxes(RP, RAIL_HW); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')       # по точке на агента: x(t), цвет — текущее управление
         D, ii = _discs(H, R); s._layer('lv_head', w).set_geometry(D, ii, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_head')
 
     def _draw_traj(s):
