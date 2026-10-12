@@ -77,3 +77,4 @@
 - bench_runs — команды запуска лучших спор (маятник 84/56, дд grow3 17е, манип g300so) + разбор таблицы ДИ → `research/bench_runs.md`
 - [research/lit_gpu_live.md](research/lit_gpu_live.md) — GPU/ускорение для демо в прямом эфире: таблица Q на сетке + lookup (×30, 300 стартов 0.04 с, качество то же); numba.cuda на ноуте есть, но не нужен
 - research/pend_v8_plan.md — маятник на механике v8: что DI-специфично в solve8, порядок переноса (research-5)
+- race_track — гоночная трасса Картленд: 5D (руль по скорости, педаль — доля сцепления), gfree, 9 слоёв, бенч → `research/race_track.md`

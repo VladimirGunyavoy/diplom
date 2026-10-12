@@ -8,3 +8,4 @@ R=v5chain/reports/research
 ssh aida 'mkdir -p ~/spore_v5/c1/spores_2/v5chain/reports/research/r23'
 rsync -a $R/pend_ref_T.npy $R/pend_ref_best_u*.npy $R/dd_refbox_60.npy $R/dd_ref_60.npy aida:~/spore_v5/c1/spores_2/v5chain/reports/research/
 rsync -a $R/r23/manip_ref_ocp_20.npy $R/r23/dp1_ref_ocp_20.npy aida:~/spore_v5/c1/spores_2/v5chain/reports/research/r23/
+ssh aida 'mkdir -p ~/spore_v5/c1/spores_2/v5chain/reports/research/r25'; rsync -a v5chain/reports/research/r25/kartland_sdf_px.npz aida:~/spore_v5/c1/spores_2/v5chain/reports/research/r25/
