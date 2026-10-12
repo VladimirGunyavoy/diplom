@@ -314,3 +314,6 @@ laptop-v5chain-research-4 | done | ctx 38% / 5ч 56% | v8 ДИ: причины �
 laptop-v5chain-research-5 | started | acc2 | opus | 18:32:16
 laptop-v5chain-research-5 | line-open | worker C | слово пользователя: бенч спор vs RRT/RRT*/PPO по всем средам, spores_2/bench/, хаб+aida | 19:37:18
 hub-v5chain-worker-c1 | started | 19:37:18
+hub-v5chain-research-25 | started | acc1 | opus | 19:39:18
+hub-v5chain-research-25 | AUTONOMOUS | on | по сообщению laptop-v5chain-research-5 «пользователь ушёл»; файл journals/_sentinel/AUTONOMOUS | 19:39:18
+hub-v5chain-research-25 | CHAIN_STOPPED снят | пак хаба (research-25, dispatcher-6, worker-c1) запущен словом пользователя через laptop-v5chain-research-5 | 19:39:18
