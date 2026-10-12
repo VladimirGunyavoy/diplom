@@ -140,10 +140,12 @@ def _make_batch():
         """слой: один GeomNode; вершины в реальных координатах, a и b — масштаб/позиция самого узла (перестройка меша только при смене снимка)"""
         def __init__(self):
             super().__init__(); self._gn = None; self.col = (1., 1., 1., 1.); self.real_position = np.zeros(3); self.real_scale = np.ones(3)
-        def set_geometry(self, V, idx=None, kind='lines', thick=None):
+        def set_geometry(self, V, idx=None, kind='lines', thick=None, colors=None, depth_write=True):
+            """colors — (n, 4) цвета вершин (иначе один цвет слоя); depth_write=False — полупрозрачная поверхность не закрывает линии за ней"""
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
-            self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
+            self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col if colors is None else colors)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
+            if not depth_write: self._gn.set_depth_write(False)
             if kind != 'tris': self._gn.set_render_mode_thickness(thick or 2)
             else: self._gn.set_two_sided(True)
             self._gn.set_depth_offset(1)                                   # поверх пола (y = 0), без z-fighting
@@ -165,7 +167,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -234,10 +236,56 @@ class GrowView:
                 else: s._set_strips(name, st.get(grp, []), col)
         gp = build_geometry(snap, s.ax, s.halo, s.skel) if snap is not None else {}
         for name in ('points_seed', 'points_queue'): s._set_layer(name, gp.get(name, z3))
+        s._draw_vsurf(snap)
         gs = s._goal(); fixed = {'segs_goal': [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)], 'segs_field': [s._box(0.)], 'segs_growlim': [s._box(getattr(__import__('src.algo.growN', fromlist=['GM']), 'GM', 0.))]}   # цель, граница поля и роста
         for name, strips in fixed.items(): s._set_strips(name, strips)
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
+
+    # ---- поверхность V (src/stepper/vsurf.py): по клавише V; один меш на слой (+ узлы и «дыры»), слои 7/8/9 как у линий ----
+    def toggle_vsurf(s):
+        s.vmode = not s.vmode; print('[vsurf] %s' % ('on' if s.vmode else 'off'), flush=True)
+        if s.snap is not None: s.draw(s.snap)
+
+    def vlabel(s): return ('V surface: ' + (s.vinfo or 'on')) if s.vmode else ''
+
+    def _vcells(s, snap):
+        """{u: [cell_dict]} — готовые клетки показанных слоёв (до текущего включительно); скрытые 7/8/9 слои в расчёте участвуют (E3 — переходы между слоями)"""
+        layers = snap.get('layers') or (); cur = snap.get('layer_k', 0); cbl = snap.get('cells_by_layer') or {}; out = {}
+        for k, u in enumerate(layers):
+            if k > cur: break
+            cl = (snap.get('cells') if k == cur else cbl.get(u)) or []
+            if cl: out[u] = cl
+        return out
+
+    def _draw_vsurf(s, snap):
+        from . import vsurf as VS
+        names = lambda k: ('vsurf@%d' % k, 'vpts@%d' % k, 'vinf@%d' % k); z3 = np.zeros((0, 3))
+        for k in range(max(getattr(s, '_nk', 0), 3)):
+            if not (s.vmode and snap is not None):
+                for n in names(k):
+                    if n in s.layers: s.layers[n].set_geometry(z3)
+        if not (s.vmode and snap is not None): s._vsig = None; return
+        cl = s._vcells(snap); sig = tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
+        if sig != s._vsig:
+            s._vsig = sig; s._vres = None
+            try:
+                t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl); s._vres = (Vs, VS.vscale(Vs), cl)
+                s.vinfo = 'on, %d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'])
+                print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
+            except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = False
+        if s._vres is None: return
+        Vs, vmax, cl = s._vres; layers = snap.get('layers') or (); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.)
+        for k, u in enumerate(layers):
+            n_s, n_p, n_i = names(k)
+            if u not in cl or not s.vis[k]:
+                for n in names(k):
+                    if n in s.layers: s.layers[n].set_geometry(z3)
+                continue
+            m = VS.build_mesh(cl[u], Vs[u], s.ax, vmax); w = (1., 1., 1., 1.)
+            s._layer(n_s, w).set_geometry(m['verts'], m['tris'], kind='tris', colors=m['colors'], depth_write=False)
+            Dp, ip = _discs(m['pts'], R); s._layer(n_p, w).set_geometry(Dp, ip, kind='tris', colors=np.repeat(m['pcol'], 17, axis=0))
+            Di, ii = _discs(m['inf'], R); s._layer(n_i, w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
 
     def _box(s, extra):
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
