@@ -187,3 +187,20 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | hub-v5chain-research-24 | T_END | 5ч 8% / ctx 17% / 7д 77% | $5.26 | 2026-10-07 23:07:36 |
 | hub-v5chain-explainer-2 | T_END | 5ч 26% / ctx 10% / 7д 81% | $1.89 | 2026-10-07 23:07:40 |
 | hub-v5chain-dispatcher-5 | end | 5ч 3% / ctx 7% | $0.2 | 2026-10-07 23:08:48 |
+| yoga-v5chain-fixer-1 | start | 5ч 7% / ctx 4% | $0.05 | 2026-10-07 22:27:57 |
+| laptop-v5chain-research-2 | start | 5ч 50% / ctx 47% (чужая строка usage_log) | $9.42 | 2026-10-12 10:19:23 |
+| laptop-v5chain-research-2 | end | 5ч 6% / ctx 12% / 7д 95% | $2.48 | 2026-10-12 10:43:38 |
+| laptop-v5chain-research-3 | start | 5ч 0% / ctx 5% | $0.19 | 2026-10-12 10:46:36 |
+| laptop-v5chain-fixer-1 | start | 5ч 3% / ctx 4% | $0.05 | 2026-10-12 11:30:02 |
+| laptop-v5chain-worker-4 | start | 5ч 9% / ctx 5% | $0.08 | 2026-10-12 11:45:57 |
+| laptop-v5chain-searcher-2 | start | 5ч ?% / ctx 5% | $? | 2026-10-12 |
+| laptop-v5chain-worker-4 | T_END | 5ч 60% / ctx 37% | $6.68 | 2026-10-12 14:15:06 |
+| laptop-v5chain-worker-5 | start | 5ч 10% / ctx 5% | $0.10 | 2026-10-12 14:21:41 |
+| laptop-v5chain-worker-5 | T_BEFORE_END | 5ч ~22% / ctx ~28% | $~4.5 | 2026-10-12 15:02:51 |
+| laptop-v5chain-research-3 | end | 5ч 95% / ctx 37% | — | 2026-10-12 15:10:41 |
+| laptop-v5chain-research-4 | start | 5ч 97% / ctx 6% | $0.28 | 2026-10-12 15:13:03 |
+| laptop-v5chain-worker-6 | start | 5ч 1% / ctx 5% | $0.04 | 2026-10-12 16:08:11 |
+| laptop-v5chain-explainer-1 | start | 5ч ?% / ctx ~1% | ? | 2026-10-12 |
+| laptop-v5chain-worker-b1 | start | 5ч 17% / ctx 4% | $0.04 | 2026-10-12 17:05:01 |
+| laptop-v5chain-research-4 | end | 5ч 56% / ctx 38% | — | 2026-10-12 18:30:41 |
+| laptop-v5chain-research-5 | start | 5ч 20% / ctx 5% | $0.23 | 2026-10-12 18:32:16 |

@@ -32,6 +32,7 @@ class InputManager:
         self.object_manager: Optional["ObjectManager"] = None
 
         self._bindings: list[_Binding] = []
+        self._help_combo: list = []
 
         print(f"[DEBUG] InputManager initialized")
 
@@ -53,19 +54,27 @@ class InputManager:
         self._bindings.append(_Binding(key=key, action=action, mode=mode,
                                        description=description, value_getter=value_getter))
 
+    MOUSE_NAMES = {'left mouse down': 'LMB', 'right mouse down': 'RMB', 'middle mouse down': 'MMB'}
+
+    def add_help(self, key: str, description: str) -> None:
+        """help-only line for a combination that has no binding of its own (e.g. Shift+LMB handled inside another binding)"""
+        self._help_combo.append((key, description))
+
     def get_help(self) -> str:
+        """order: combinations (scroll+key, Shift+LMB...), then keys, then mouse"""
         lines = []
         scroll_bindings = [b for b in self._bindings if b.mode == 'scroll' and b.description]
         press_bindings  = [b for b in self._bindings if b.mode == 'press'  and b.description]
 
-        if scroll_bindings:
-            lines.append('scroll +')
-            for b in scroll_bindings:
-                value = f' - {b.value_getter():.3f}' if b.value_getter else ''
-                lines.append(f'  {b.key} - {b.description}{value}')
+        for b in scroll_bindings:
+            value = f' - {b.value_getter():.3f}' if b.value_getter else ''
+            lines.append(f'scroll + {b.key} - {b.description}{value}')
+        for k, d in self._help_combo: lines.append(f'{k} - {d}')
 
         for b in press_bindings:
-            lines.append(f'{b.key} - {b.description}')
+            if b.key not in self.MOUSE_NAMES: lines.append(f'{b.key} - {b.description}')
+        for b in press_bindings:
+            if b.key in self.MOUSE_NAMES: lines.append(f'{self.MOUSE_NAMES[b.key]} - {b.description}')
 
         return '\n'.join(lines)
 

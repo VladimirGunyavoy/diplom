@@ -42,3 +42,8 @@ config/json/colors.json
 
 # Ursina cache
 models_compressed/
+
+# локальные данные запусков окна (src/runlog.py); описание файлов — runs/README.md
+runs/*
+!runs/README.md
+

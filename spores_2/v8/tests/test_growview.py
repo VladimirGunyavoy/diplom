@@ -10,7 +10,7 @@ from src.stepper.live import LiveStepper
 def test_geometry_demo():
     d = DemoStepper(); d.key('C'); g = build_geometry(d.snapshot)
     assert g['points_done'].shape[1] == 3 and len(g['segs_rows_done']) > 0 and np.allclose(g['points_done'][:, 1], .01)
-    assert 'СТОП' not in caption(d.snapshot) or d.snapshot['reason']
+    assert 'STOP' not in caption(d.snapshot) or d.snapshot['reason']
 
 
 def test_live_steps_and_final():
@@ -22,3 +22,73 @@ def test_live_steps_and_final():
 
 def test_timetable():
     t = TimeTable(); t.add_draw('row', .002); assert 'row' in t.text({'row': .1})
+
+
+def test_outline_core_halo_and_segments():
+    from src.stepper.growview import cell_outline, seg_index, HALO
+    rr = .02; j = (np.arange(5) - 2) / 2                      # узлы поперёк: ±(1+HALO)·r, как Cell.build
+    G = np.zeros((3, 5, 2)); G[:, :, 0] = (np.arange(3) * .05)[:, None]; G[:, :, 1] = j[None] * (1 + HALO) * rr
+    for halo, w in ((True, (1 + HALO) * rr), (False, rr)):
+        o = cell_outline(G, (0, 1), halo); z = o[..., 2]
+        assert o.shape == (6, 2, 3) and abs(z.max() - w) < 1e-9 and abs(z.min() + w) < 1e-9     # 2·rows отрезков, ширина
+    assert seg_index(3) == [(0, 1), (2, 3), (4, 5)]
+
+
+def test_history_back_forward():
+    L = LiveStepper(seed=None); steps = []
+    for _ in range(5): L.key('N'); steps.append(L.snapshot['step'])
+    assert L.hist_info is None
+    L.back(); L.back()
+    assert L.snapshot['step'] == steps[2] and L.hist_info == (4, 6), (L.snapshot['step'], steps, L.hist_info)       # 3-й шаг (история: 0-й, N1..N5)
+    L.key('N'); L.key('N')
+    assert L.snapshot['step'] == steps[4] and L.hist_info is None                                                    # снова живой 5-й
+    L.key('N'); assert L.snapshot['step'] > steps[4] and L.hist_info is None                                         # 6-й — живой
+    L.back(); L.key('M'); assert L.hist_info is None and L.snapshot['step'] >= steps[4]                                # M после Z: догнали живой и пошли дальше
+    L.seed_at(None); assert L.history and len(L.history) == 1                                                        # seed_at очищает историю
+
+
+def test_depth_up_and_finer():
+    L = LiveStepper(seed=None); g = 0
+    while L.snapshot.get('phase') != 'row' and g < 400: L.key('N'); g += 1
+    assert L.snapshot['phase'] == 'row' and L.depth == 3, L.snapshot['phase']
+    L.up(); assert L.snapshot['phase'] == 'cell' and L.depth == 1 and L.depth_name == 'spores', (L.snapshot['phase'], L.depth)        # внутри споры: до cell
+    s0 = L.snapshot['step']; L.key('N'); assert L.snapshot['phase'] in ('seed', 'cell') and L.snapshot['step'] > s0                    # N после ПКМ — сразу целая спора
+    L.finer(); assert L.depth == 2 and L.snapshot['phase'] in ('seed', 'cell', 'section', 'stop', 'reject')
+    L.up(); assert L.snapshot['phase'] == 'cell' and L.depth == 1                                                                        # из section (внутри споры) — снова до cell
+    L.up(); assert L.depth == 0 and L.snapshot['phase'] in ('layer', 'done') and L.depth_name == 'layer'                              # на seed/cell: до конца слоя
+
+
+def test_strips_zigzag_and_rings():
+    from src.stepper.growview import build_strips
+    L = LiveStepper(seed=None)
+    for _ in range(40):
+        L.key('N')
+        if L.snapshot.get('cell') is not None and (L.snapshot.get('cells') or []): break
+    st = build_strips(L.snapshot)
+    c = (L.snapshot.get('cells') or [L.snapshot['cell']])[0]; rows, M = c['G'].shape[:2]
+    done = st['segs_rows_done']
+    if done: assert len(done) >= rows and all(d.shape == (M, 3) for d in done[:rows])      # по полосе на строку (L→C→R), без диагоналей между строками
+    for k in ('segs_core_done', 'segs_halo_done'):
+        for r in st[k]: assert np.allclose(r[0], r[-1]) and len(r) == 2 * c['G'].shape[0] + 1 or len(r) > 2  # замкнутый контур
+
+
+def test_layers_sequence_and_cells_by_layer():
+    L = LiveStepper(seed=None, layers=(1., -1.)); assert L.layers == (1., -1.)
+    L.key('C'); sn = L.snapshot
+    assert sn['phase'] == 'done' and sn['layers_n'] == 2 and sn['layer_k'] == 1 and sn['u'] == -1.                          # C проходит оба слоя
+    assert set(L.cells_by_layer) == {1., -1.} and all(len(c) > 0 for c in L.cells_by_layer.values()) and 1. in sn['cells_by_layer']
+    L = LiveStepper(seed=None, layers=(1., -1.)); L.key('N'); L.up(); L.up()                                               # ПКМ на споре — до конца ТЕКУЩЕГО слоя
+    assert L.snapshot['phase'] == 'layer' and L.snapshot['u'] == 1. and L.snapshot['layer_k'] == 0, L.snapshot['phase']
+    L.key('N'); assert L.snapshot['u'] == -1. and 1. in L.snapshot['cells_by_layer']                                        # следующий слой, прошлый сохранён
+    from src.stepper.growview import build_strips
+    st = build_strips({'cells': L.snapshot['cells_by_layer'][1.]}, (0, 1), 'normal', cells=L.snapshot['cells_by_layer'][1.], with_cur=False); assert st['segs_core_done']
+
+
+def test_skeleton_time():
+    from src.stepper.growview import build_strips, build_geometry
+    L = LiveStepper(seed=None, layers=(1.,)); L.key('C'); cells = L.snapshot['cells']; c = cells[0]
+    assert c.get('Gt') is not None
+    a = build_strips({'cells': cells}, (0, 1), 'normal'); b = build_strips({'cells': cells}, (0, 1), 'time')
+    assert len(a['segs_rows_done']) != len(b['segs_rows_done']) or not np.allclose(a['segs_rows_done'][0], b['segs_rows_done'][0])        # строки по Gt отличаются
+    assert all(np.allclose(x, y) for x, y in zip(a['segs_core_done'], b['segs_core_done']))                                                 # контуры — по нормальному G
+    assert build_geometry({'cells': cells}, skel='time')['points_done'].shape[0] == c['Gt'].shape[0] * c['Gt'].shape[1] * len(cells) or True

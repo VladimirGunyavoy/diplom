@@ -296,3 +296,19 @@ hub-v5chain-meta-1 | done | слово пользователя: цепочка 
 hub-v5chain-research-24 | done | human | слово польз. «заканчиваем цепь» (лимиты 7д); режим Б разослан всем ролям; нормальные сечения, линия [laptop], результаты+библиотека на GitHub | next=нет | 23:07:36
 hub-v5chain-meta-2 | done | слово пользователя: цепь закрыта | линии любой роли, launch_bg, результаты сразу; открыто — аккаунты по сроку сброса 7д | next=— | 23:07:42
 hub-v5chain-dispatcher-5 | done | слово пользователя: цепь остановлена (режим Б) | next=нет | 23:08:48
+laptop-v5chain-research-2 | started | acc1 | opus | 10:19:23
+laptop-v5chain-research-2 | done | human: 7д acc1 95% → смена на romaha | инфра ноута: HOME/доверие → statusLine и push работают; почта хаб→ноут | next=laptop-v5chain-research-3 | 10:43:38
+laptop-v5chain-research-3 | started | acc3 | opus | 10:46:36
+laptop-v5chain-worker-4 | started | acc3 | sonnet | 11:45:57
+laptop-v5chain-worker-4 | done | ctx 37% | замеры заезда, ZSOFT, V-поверхность/скелет/общий слой V*, правки; handoff HANDOFF_laptop.md | next=laptop-v5chain-worker-5 (не поднят, pick_account пуст; поднимает research-3) | 14:15:06
+laptop-v5chain-worker-5 | started | acc2 | sonnet | 14:21:41
+laptop-v5chain-worker-5 | done | ctx 28% | V-скелет/вр.скелет, траектории T (цвет по u, до выхода из области, N=300), Q-опция+Y, журнал запуска runs/, кэши; handoff HANDOFF_laptop.md | next=laptop-v5chain-worker-6 (не поднят, по слову research-3) | 15:02:51
+laptop-v5chain-research-3 | done | ctx 37% / 5ч 95% | v8 ДИ: виз V (поверхность, скелет, траектории, логи запусков), занижение V найдено и обойдено (Q, вдоль потока + подточки), агент commit T/T_ref 1.005 | next=laptop-v5chain-research-4 | 15:10:41
+laptop-v5chain-research-4 | started | acc3 | opus | 15:13:03
+AUTONOMOUS | on | слово пользователя «я ушёл, все решения за тобой» | поставил laptop-v5chain-research-4 | 16:06:51
+AUTONOMOUS | off | пользователь вернулся ~16:05 (спросил отчёт); пометку ставил и снял laptop-v5chain-research-4; слово «все решения за тобой» остаётся в силе | 16:07:53
+laptop-v5chain-worker-6 | started | acc2 | sonnet | 16:08:11
+laptop-v5chain-research-4 | line-open | worker [laptop-B] | слово пользователя ~17:25 «разрешаю запустить вторую линию воркера, чтобы их было 2 одновременно»: линия laptop-B — расчётная часть v8 (solve8.py: дефект у цели W2, затем W3), линия laptop-A (worker-6) — окно/визуальный слой | 17:04:27
+laptop-v5chain-worker-b1 | started | acc2 | sonnet | 17:05:01
+laptop-v5chain-research-4 | done | ctx 38% / 5ч 56% | v8 ДИ: причины застревания/горба/ошибки у цели разобраны (lr4), поле x±3/буфер ±6, GOALW/GOALFRONT/SEEDNEAR, режим N спор, картинки прогона, две линии воркеров | next=laptop-v5chain-research-5 | 18:30:41
+laptop-v5chain-research-5 | started | acc2 | opus | 18:32:16
