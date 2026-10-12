@@ -88,7 +88,7 @@ def freeze_idx(g, s):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.tab = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -311,6 +311,23 @@ class Graph:
             if s.xentry > 0 and s.calc != 'v': out[:, li] = np.minimum(out[:, li], entry_time(X, u, np.full(len(X), s.xentry), s.rho))       # точный вход по своему потоку — верхняя оценка Q_u (W2)
         out[inb] = 0.; return out
 
+    def build_table(s, h=.01, xr=3.5, vr=3.0, chunk=200000):
+        """таблица Q_u(x,v) на регулярной сетке (float32, inf — не покрыто): после solve; агенты (run_commit/run_agent) дальше берут билинейный lookup вместо поиска ячейки (searcher-3, lit_gpu_live: 300 стартов 1.26→0.04 с). Вне таблицы и у границы покрытия (смешанные углы) — точный Vlayers. → время построения"""
+        t0 = time.perf_counter(); xs = np.arange(-xr, xr + h / 2, h); vs = np.arange(-vr, vr + h / 2, h); XX, VV = np.meshgrid(xs, vs, indexing='ij'); P = np.c_[XX.ravel(), VV.ravel()]; tab = np.empty((len(P), s.L), np.float32)
+        for a in range(0, len(P), chunk): tab[a:a + chunk] = s.Vlayers(P[a:a + chunk])
+        s.tab = (tab.reshape(len(xs), len(vs), s.L), float(xs[0]), float(vs[0]), h); s.t_table = time.perf_counter() - t0; return s.t_table
+
+    def _vl(s, X):
+        """Vlayers для агента: lookup по таблице, если она есть (build_table) и TABLE_AGENT≠0; иначе точный"""
+        if s.tab is None or not int(os.environ.get('TABLE_AGENT', 1)): return s.Vlayers(X)
+        tab, x0, v0, h = s.tab; nx, nv, L = tab.shape; fx = (X[:, 0] - x0) / h; fv = (X[:, 1] - v0) / h; ok = (fx >= 0) & (fx < nx - 1) & (fv >= 0) & (fv < nv - 1); out = np.full((len(X), L), np.inf); k = np.flatnonzero(ok)
+        if len(k):
+            i = fx[k].astype(int); j = fv[k].astype(int); a = (fx[k] - i)[:, None]; b = (fv[k] - j)[:, None]; c = [tab[i, j], tab[i + 1, j], tab[i, j + 1], tab[i + 1, j + 1]]; fin = [np.isfinite(q) for q in c]; allf = fin[0] & fin[1] & fin[2] & fin[3]; anyf = fin[0] | fin[1] | fin[2] | fin[3]
+            val = (1 - a) * (1 - b) * np.where(fin[0], c[0], 0) + a * (1 - b) * np.where(fin[1], c[1], 0) + (1 - a) * b * np.where(fin[2], c[2], 0) + a * b * np.where(fin[3], c[3], 0); out[k] = np.where(allf, val, np.inf); ok[k[(anyf & ~allf).any(1)]] = False
+        k = np.flatnonzero(~ok)
+        if len(k): out[k] = s.Vlayers(X[k])
+        out[np.linalg.norm(X, axis=1) <= s.rho] = 0.; return out
+
     def Vstar(s, X):
         Vl = s.Vlayers(X); return Vl.min(1), Vl.argmin(1)
 
@@ -326,7 +343,7 @@ class Graph:
 
     def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5, progress=None, every=None, dlog=None):
         """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent; progress(step, живых) — вызывается каждый шаг (для строки прогресса в консоли)"""
-        n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s.Vlayers(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
+        n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s._vl(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         every = every or COMMIT_EVERY
         while alive.any():
@@ -338,7 +355,7 @@ class Graph:
                 if progress is not None: progress(step, int(alive.sum()))
                 continue
             tj = (s.COMMIT_JS * dt)[:, None]; nj = len(tj); xj = x[None] + v[None] * tj + u[None] * tj * tj / 2; vj = v[None] + u[None] * tj                       # все точки t_j одним запросом (быстрее: накладные расходы Vlayers на вызов, ×2.7 на ноуте)
-            Q = s.Vlayers(np.stack([xj.ravel(), vj.ravel()], 1)).reshape(nj, len(a), s.L); qcur = Q[0, ar, cur[a]].copy(); Q0 = Q[0].copy() if dlog is not None else None; Q[:, ar, cur[a]] = np.inf; gg = tj + Q.min(2); bj = gg.argmin(0); best = gg[bj, ar]; bl = Q[bj, ar].argmin(1)
+            Q = s._vl(np.stack([xj.ravel(), vj.ravel()], 1)).reshape(nj, len(a), s.L); qcur = Q[0, ar, cur[a]].copy(); Q0 = Q[0].copy() if dlog is not None else None; Q[:, ar, cur[a]] = np.inf; gg = tj + Q.min(2); bj = gg.argmin(0); best = gg[bj, ar]; bl = Q[bj, ar].argmin(1)
             chg = (bj == 0) & np.isfinite(best) & ((best < qcur - eps) | ~np.isfinite(qcur)); lost = ~np.isfinite(best) & ~np.isfinite(qcur)
             if dlog is not None:                                                                           # решения: переключения (rule commit) и сомнения — лучшая альтернатива в пределах DL_MARGIN (rule hold)
                 sel = chg | (np.isfinite(best) & (best < qcur + s.DL_MARGIN)); k = np.flatnonzero(sel)
@@ -355,7 +372,7 @@ class Graph:
         """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения, номер слоя = управление, действовавшее на последнем шаге) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
         if commit: return s.run_commit(X0, tmax, dt=dt, eps=eps, path=path, rec=rec, progress=progress, dlog=dlog)
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
-        Vl = s.Vlayers(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
+        Vl = s._vl(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
         step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         while alive.any():
@@ -366,13 +383,13 @@ class Graph:
             if not len(a): break
             if look:                                                                                         # Беллман на один шаг: слой с min V*(x после шага под этим слоем); смена слоя при выигрыше > eps
                 sc_ = np.empty((len(a), s.L))
-                for li, u_ in enumerate(uvec): xn = np.stack([X[a, 0] + X[a, 1] * dt + u_ * dt * dt / 2, X[a, 1] + u_ * dt], 1); sc_[:, li] = s.Vlayers(xn).min(1)
+                for li, u_ in enumerate(uvec): xn = np.stack([X[a, 0] + X[a, 1] * dt + u_ * dt * dt / 2, X[a, 1] + u_ * dt], 1); sc_[:, li] = s._vl(xn).min(1)
                 best = sc_.argmin(1); vc = sc_[np.arange(len(a)), cur[a]]; vb = sc_[np.arange(len(a)), best]; chg = (vb < vc - eps * dt) | (~np.isfinite(vc) & np.isfinite(vb))
                 if dlog is not None and chg.any(): k = np.flatnonzero(chg); s._dl(dlog, a[k], step, t[a[k]], X[a[k], 0], X[a[k], 1], cur[a[k]], best[k], sc_[k], np.ones(len(k), int), 'look')
                 sw[a[chg]] += 1; cur[a[chg]] = best[chg]; alive[a[~np.isfinite(vb)]] = False
                 if progress is not None: progress(step, int(alive.sum()))
                 continue
-            Vl = s.Vlayers(X[a]); best = Vl.argmin(1); vc = Vl[np.arange(len(a)), cur[a]]; vb = Vl[np.arange(len(a)), best]; thr = eps + kappa * np.maximum(0., vdz - vb); chg = ((vb < vc - thr) & ~((vb < vhold) & np.isfinite(vc))) | ~np.isfinite(vc) & np.isfinite(vb)
+            Vl = s._vl(X[a]); best = Vl.argmin(1); vc = Vl[np.arange(len(a)), cur[a]]; vb = Vl[np.arange(len(a)), best]; thr = eps + kappa * np.maximum(0., vdz - vb); chg = ((vb < vc - thr) & ~((vb < vhold) & np.isfinite(vc))) | ~np.isfinite(vc) & np.isfinite(vb)
             if dlog is not None and chg.any(): k = np.flatnonzero(chg); s._dl(dlog, a[k], step, t[a[k]], X[a[k], 0], X[a[k], 1], cur[a[k]], best[k], Vl[k], np.ones(len(k), int), 'look')
             sw[a[chg]] += 1; cur[a[chg]] = best[chg]; lost = ~np.isfinite(vb); alive[a[lost]] = False
             if progress is not None: progress(step, int(alive.sum()))
