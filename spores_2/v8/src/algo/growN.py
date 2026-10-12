@@ -16,6 +16,7 @@ GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSE
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 SEEDNEAR = int(E('SEEDNEAR', 1 if SYS == 'di' else 0)); GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+SMAX = float(E('SMAX', 0.))
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -321,7 +322,7 @@ def mlin(Pb, n_):
     for j in range(m_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
-REASON = dict(slow='slow', tslow='slow', fold='fold', tfold='fold', kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
+REASON = dict(tstretch='stretch', slow='slow', tslow='slow', fold='fold', tfold='fold', kf='RMAX', rows='TMAX', field='field', tfield='field', bend='bend', tbend='bend', goal='goal', tgoal='goal', ovh='neighbor', tovh='neighbor')
 def cell_dict(c):
     """поля клетки по контракту снимка; G — read-only вид (готовые клетки не копируются)"""
     G = c.G.view(); G.flags.writeable = False; Gt = c.Gt.view(); Gt.flags.writeable = False; tt = c.tt.view(); tt.flags.writeable = False; return dict(G=G, Gt=Gt, tt=tt, tau=c.tau, c=c.c, r=c.r, e=c.e, nb=c.nb, nf=c.nf, hb=c.hb, hf=c.hf, hfrac=c.hfrac, u=c.u)
@@ -424,6 +425,9 @@ def growN(p, u, idx, rm, tm):
     def dtau(i, cs):
         """шаг собственного времени клонов строки i относительно соседней строки к центру, в долях DTN (NaN — не посчитано)"""
         return np.abs(Tau[i - imin, cs] - Tau[(i - 1 if i > 0 else i + 1) - imin, cs]) / HS[i]
+    def stretch(i):
+        wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
+        w0 = wl(R[0 - imin, min(klo):max(khi) + 1]); wi = wl(R[i - imin, min(klo):max(khi) + 1]); return max(wi / w0, w0 / wi) > SMAX
     def fold_col(nk):
         if not NORMFRONT or TAUMIN <= 0: return False
         v = [dtau(i, nk) for i in range(ilo, ihi + 1) if i != 0]; return bool(v) and bool(np.nanmin(v) < TAUMIN)       # фронты сошлись/пересеклись хотя бы в одной строке
@@ -475,6 +479,7 @@ def growN(p, u, idx, rm, tm):
                 fb = not inbox_g(face).all(); sl_ = (not fb) and slowf(face, u).any(); fo = (not fb and not sl_) and m_ == 1 and fold_row(i); bb = (not fb and not sl_ and not fo) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not sl_ and not bb and not fo) and GOALB and nearb(face).any()
                 if sl_: halt(d, 'tslow', face); continue
                 if fo: halt(d, 'tfold', face); continue
+                if SMAX > 0 and m_ == 1 and stretch(i): halt(d, 'tstretch', face); continue                    # SMAX (v7 r18): ширина фронта w(строка)/w(строка 0) вне [1/SMAX, SMAX] — торец остановлен
                 if fb or bb or gb: halt(d, 'tfield' if fb else 'tbend' if bb else 'tgoal', face); continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i

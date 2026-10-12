@@ -219,7 +219,7 @@ class Graph:
         H = np.full(s.n, s.xentry); te = np.stack([entry_time(s.P, u, H, s.rho) for u in s.us], 1); Q0 = np.minimum(s.V0, np.where(np.isfinite(te[np.arange(s.n), s.layer]), te[np.arange(s.n), s.layer], BIG)); m = te.min(1)
         return Q0, np.minimum(Q0, np.where(np.isfinite(m), m, BIG))
 
-    def solve(s, maxit=2000, tol=1e-10, verbose=True, progress=None):
+    def solve(s, maxit=int(os.environ.get('MAXIT', 2000)), tol=1e-10, verbose=True, progress=None):
         """V (calc='v') или Q (calc='q'/'qquad': s.V = Q — запросы Vlayers/Vstar/агент идут по Q; s.Vn — V узлов = min(Q, Q чужих слоёв))"""
         if s.calc != 'v' or s.quad: s.set_calc(s.calc)
         if s.calc == 'q' and s.refthr > 0 and not s._refined:                                                # SOLVE8_PLUS / REFINE_THR: адаптивные полосы по скачку Q (refine_atlas), затем бисекция переключений; граф усыновляет уточнённый
