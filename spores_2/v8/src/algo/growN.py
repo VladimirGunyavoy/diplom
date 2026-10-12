@@ -136,6 +136,7 @@ def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 ZACEP = int(E('ZACEP', 1 if SYS == 'di' else 0)); HALOT = float(E('HALOT', .5)); ZD = E('ZDEPTH', 'auto'); ZDEPTH = -1. if ZD == 'auto' else float(ZD)      # HALOT — гало-строка за торцем на HALOT·DTN; ZDEPTH: глубина зацепа 0 гало-гало … 1 ядро-ядро, auto — мягкий (гало-гало, добирает до ядер, когда остальные стороны встали)
 LAZYR = int(E('LAZYR', 1)); NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS', 8))                                                                    # запас (узлов решётки) вокруг клетки для NORMFRONT-строк
 ADAPT = int(E('ADAPT', 1 if (SYS == 'di' and NORMFRONT != 2) else 0)); ETOL = float(E('ETOL', .01)); HMIN = float(E('HMIN', DTN)); HMAX = float(E('HMAX', 1.)); DSMAX = float(E('DSMAX', RMAX))      # адаптивный шаг строки: h = sqrt(8·ETOL·RMAX/|a|) (a = J·f — ускорение вдоль траектории), ≤ DSMAX/|f|, в [HMIN, HMAX]
+ZSOFT = float(E('ZSOFT', 0.)); ZSOFTLA = int(E('ZSOFTLA', 0))                                                                       # softmin-нахлёст (слово пользователя 2026-10-12): >0 — сторона при st==2 растёт дальше, пока заход в ядро соседа от первого касания < ZSOFT·h, h = 2·w1·w2/(w1+w2) (w1 — ширина ядра своей клетки, w2 — задетого соседа; несколько — min); ветка ZOVMAX тогда выключена. ZSOFTLA=1 — смотреть на шаг вперёд: растём, только если заход ПОСЛЕ шага ≤ ZSOFT·h (без: минимум один шаг сетки после касания)
 TAUMIN = float(E('TAUMIN', .3)); ZOVMAX = float(E('ZOVMAX', .3)); ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
 GM = float(E('GM', 1. if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
@@ -288,13 +289,14 @@ class HexIdx:
         """точка внутри какой-либо клетки — ядра ИЛИ гало (covered смотрит только ядро)"""
         Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi = s.query(Y)[0]; m[pi] = True; return m
     def covered(s, Y): return s.both(Y)[0]
-    def both(s, Y):
-        """один запрос на двоих: (покрыто ядром, внутри ядра ∪ гало)"""
-        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); ins = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y); ins[pi] = True
+    def both(s, Y): return s.both_r(Y)[:2]
+    def both_r(s, Y):
+        """один запрос на троих: (покрыто ядром, внутри ядра ∪ гало, наименьший r среди ядер, накрывших точку; inf — нет)"""
+        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); ins = np.zeros(len(Y), bool); rmin = np.full(len(Y), np.inf); pi, hid, sc = s.query(Y); ins[pi] = True
         if len(pi):
             R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
-            sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); TH = np.array(s.TH); tp = s.I[hid, 1] + sc[:, 0]; core &= (tp >= TH[cid, 0] - 1e-9) & (tp <= TH[cid, 0] + TH[cid, 1] + 1e-9); m[pi[core]] = True
-        return m, ins
+            sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); TH = np.array(s.TH); tp = s.I[hid, 1] + sc[:, 0]; core &= (tp >= TH[cid, 0] - 1e-9) & (tp <= TH[cid, 0] + TH[cid, 1] + 1e-9); m[pi[core]] = True; np.minimum.at(rmin, pi[core], R[cid[core], 0])
+        return m, ins, rmin
 def mlin(Pb, n_):
     """полилинейная заплатка по 2^m углам ящика Pb (строки, n_1..n_m, n)."""
     C = Pb
@@ -393,10 +395,13 @@ def growN(p, u, idx, rm, tm):
         r_ = (S[khi[k]] - S[klo[k]]) / 2 / (1 + HALO)
         face = faceof(d, khi[k] if sg > 0 else klo[k])
         if m_ == 1 and len(face) >= 3: face = face[(1 if tst.get(('B',), 0) > 0 else 0):len(face) - (1 if tst.get(('F',), 0) > 0 else 0)]     # строки торцевого соседа (зацеп по времени) не считаем
-        cv_, in_ = idx.both(face); ob_ = ~inbox_g(face); fc = ((cv_ | ob_).mean() >= ZFRAC); fi = fc or ((in_ | ob_).mean() >= ZFRAC)
+        cv_, in_, rn_ = idx.both_r(face); ob_ = ~inbox_g(face); fc = ((cv_ | ob_).mean() >= ZFRAC); fi = fc or ((in_ | ob_).mean() >= ZFRAC)
         st = 2 if fc or (fi and 0 <= ZDEPTH < .5) else 1 if fi else 0
         if st == 1 and r_ < RMINZ: st = 0
-        if st == 2 and r_ < RMINZ:                                                                         # узкая клетка добирает ширину за счёт соседа, но не глубже ZOVMAX своей ширины
+        if st == 2 and ZSOFT > 0 and cv_.any():                                                            # softmin: заход в ядро соседа от первого касания < ZSOFT·h, h — гармоническое среднее ширин ядер своей клетки и соседа
+            pos = S[khi[k]] if sg > 0 else -S[klo[k]]; t0 = touch.setdefault((k, sg), pos); w1 = 2 * r_; w2 = 2 * float(rn_[cv_].min())
+            if pos + (S[1] - S[0] if ZSOFTLA else 0.) - t0 < ZSOFT * 2 * w1 * w2 / (w1 + w2) + (1e-9 if ZSOFTLA else 0.): st = 0
+        elif st == 2 and ZSOFT <= 0 and r_ < RMINZ:                                                                         # узкая клетка добирает ширину за счёт соседа, но не глубже ZOVMAX своей ширины
             pos = S[khi[k]] if sg > 0 else -S[klo[k]]; t0 = touch.setdefault((k, sg), pos)
             if pos - t0 < ZOVMAX * 2 * r_: st = 0
         sc_[key] = st; return st
