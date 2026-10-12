@@ -341,3 +341,4 @@ laptop-v5chain-worker-b2 | done | ctx 26% | оптимизация скорос�
 laptop-v5chain-worker-b3 | started | acc3 | sonnet | 23:51:56
 hub-v5chain-research-25 | AUTONOMOUS | on | слово пользователя «я пока отойду… пока не вернусь идешь автономно» | 23:56:48
 laptop-v5chain-worker-8 | done | по слову пользователя | main_pend.py (маятник отдельным скриптом), рельс/пачки P; тайминг pend | next=laptop-v5chain-worker-9 | 00:54:26
+hub-v5chain-worker-b9 | done | ctx 28% + 5ч 68% | SPD1/1b/FIN-ω/FORB/SPD2(manip)/SPD4(часть) | next=hub-v5chain-worker-b10 | 01:31:32

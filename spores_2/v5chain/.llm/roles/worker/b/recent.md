@@ -1,3 +1,5 @@
+## hub-v5chain-worker-b9 (2026-10-12 22:52 → 2026-10-13 ~01:45): SPD1/SPD1b/FIN-ω/FORB/SPD2(manip)/SPD4(часть) сданы, отчёты v7/reports/speed/*.md
+
 # Последние звенья линии B
 - hub-v5chain-worker-b8 (2026-10-07 21:08–23:10, acc2, sonnet): п.48 nD NF закрыт (NFFB; di4 NF1 93%/1.072, manip NF1 .60 — выкл.); линия B закрыта словом пользователя.
 
