@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -137,7 +137,7 @@ class Graph:
             for k in has:
                 n_ = s.nxt[k]
                 if inn[n_] and V0[k] < BIG / 2: V0[n_] = max(V0[k] - s.cost[k], -s.extin)
-        s.V0 = V0; s.e3 = []
+        s.V0 = V0; s.e3 = []; s._subc = None
         for u2 in s.us:
             s.e3.append(s.locate(u2, s.P, excl=s.nodecell))
         s.t_prep = time.perf_counter() - t0
@@ -174,6 +174,14 @@ class Graph:
         if verbose: print('solve8: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
+    def _sub(s):
+        """подточки рёбер E1 (K на ребро, равные доли шага по времени; точный поток ДИ): (узел-владелец, время t_j, пары locate по слоям, число точек); кэш по K"""
+        if s._subc is not None and s._subc[0] == s.subk: return s._subc[1]
+        n = s.e1; c = s.cost[n]; u = np.array(s.us)[s.layer[n]]; own, tt, PP = [], [], []
+        for j in range(1, s.subk + 1):
+            t = c * j / (s.subk + 1); x, v = s.P[n, 0], s.P[n, 1]; PP.append(np.stack([x + v * t + u * t * t / 2, v + u * t], 1)); own.append(n); tt.append(t)
+        P = np.concatenate(PP); r = (np.concatenate(own), np.concatenate(tt), [s.locate(u2, P) for u2 in s.us], len(P)); s._subc = (s.subk, r); return r
+
     def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None):
         """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
         pen = s.pen if pen is None else pen; t0 = time.perf_counter(); Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); V = V0.copy(); Q = Q0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
@@ -183,6 +191,10 @@ class Graph:
             for li2, pairs in enumerate(s.e3):
                 Ei = s.evalpairs(Qo, s.n, pairs); Ei = np.where(np.isfinite(Ei), Ei, BIG); same = s.layer == li2
                 Q[same] = np.minimum(Q[same], Ei[same]); V[~same] = np.minimum(V[~same], Ei[~same] + pen)
+            if s.subk:                                                                                          # SUBK: переключение внутри ребра столбца — K подточек точного потока, Q(k) = min(…, t_j + Q чужого слоя в точке j)
+                own, tt, prs, ns = s._sub()
+                for li2, pairs in enumerate(prs):
+                    Ei = s.evalpairs(Qo, ns, pairs); m = np.isfinite(Ei) & (s.layer[own] != li2); np.minimum.at(Q, own[m], tt[m] + Ei[m] + pen)
             V = np.minimum(V, Q)
             for a, b in zip(cuts[:-1], cuts[1:]):
                 nd = e1[a:b]; Q[nd] = np.minimum(Q[nd], e1c[a:b] + V[e1n[a:b]]); V[nd] = np.minimum(V[nd], Q[nd])
