@@ -603,14 +603,14 @@ class GrowView:
     # ---- этапы после роста (слово пользователя 2026-10-12 ~16:35): расчёты V всех вариантов и траектории каждого; ЛКМ — следующий этап (пауза между ними, видно промежуточное), ПКМ — все оставшиеся подряд ----
     def _cellM(s):
         cl = s._vcells(s.snap) if s.snap is not None else {}
-        return int(np.shape(next(iter(cl.values()))[0]['G'])[1]) if cl else 0
+        Ms = {int(np.shape(c['G'])[1]) for cs in cl.values() for c in cs}; return Ms.pop() if len(Ms) == 1 else 0               # клетки могут иметь разное число столбцов (MADAPT): единое M — только если все равны, иначе 0
 
     def stage_todo(s, snap):
         """список ещё не посчитанных этапов (dict kind 'V'|'T', calc, sig, cl) — только когда рост закончен (phase done); готовое лежит в кэшах _vcache/_tcache; Q quad — только при M=3"""
         if snap is None or snap.get('phase') != 'done': return []
         cl = s._vcells(snap)
         if not cl: return []
-        M = int(np.shape(next(iter(cl.values()))[0]['G'])[1]); out = []
+        M = s._cellM(); out = []
         for calc, _ in s.VCALC:
             if calc != s.vcalc: continue                                                                 # только выбранный расчёт (Y переключает; его V и траектории считаются сами при показе): ПКМ не тянет чужие долгие этапы (старый V не сходится), траектории приходят сразу после V без клавиши T
             if calc == 'qquad' and M != 3: continue

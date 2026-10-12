@@ -16,7 +16,7 @@ GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSE
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 SEEDNEAR = int(E('SEEDNEAR', 1 if SYS == 'di' else 0)); GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
-SMAX = float(E('SMAX', 0.))
+SMAX = float(E('SMAX', 0.)); SELFOV = int(E('SELFOV', 0))
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -425,6 +425,13 @@ def growN(p, u, idx, rm, tm):
     def dtau(i, cs):
         """шаг собственного времени клонов строки i относительно соседней строки к центру, в долях DTN (NaN — не посчитано)"""
         return np.abs(Tau[i - imin, cs] - Tau[(i - 1 if i > 0 else i + 1) - imin, cs]) / HS[i]
+    def selfov(i, d):
+        """SELFOV (v7 r19, №16): новая строка торца i попала в многоугольник СВОЕЙ клетки (без 2 строк у растущего торца; копии через период) — кольцо замкнулось"""
+        lo_, hi_ = (ilo, ihi - 2) if d[0] == 'F' else (ilo + 2, ihi)
+        if hi_ - lo_ < 2: return False
+        from matplotlib.path import Path as MPath
+        c0, c1 = min(klo), max(khi); pg = np.concatenate([R[lo_ - imin:hi_ - imin + 1, c0], R[lo_ - imin:hi_ - imin + 1, c1][::-1]]); pth = MPath(pg); row = R[i - imin, c0:c1 + 1]
+        return any(pth.contains_points(row + sh_).any() for sh_ in SH)
     def stretch(i):
         wl = lambda r_: float(np.linalg.norm(np.diff(r_, axis=0), axis=1).sum()) + 1e-12
         w0 = wl(R[0 - imin, min(klo):max(khi) + 1]); wi = wl(R[i - imin, min(klo):max(khi) + 1]); return max(wi / w0, w0 / wi) > SMAX
@@ -484,6 +491,7 @@ def growN(p, u, idx, rm, tm):
                 if d[0] == 'F': ihi = i
                 else: ilo = i
                 pause('row', 3, u=u, seed=p, dir=d, face=face, cell=cur)
+                if SELFOV and m_ == 1 and d not in extra and selfov(i, d): extra[d] = 1; STOP['self'] += 1           # строка добавляется (наложение в 1 строку), торец останавливается ниже ('tovh')
                 if ZACEP:                                                                                  # зацеп по времени: 2 — торец ядра дошёл до ядра соседа, 1 — только до его гало
                     fm = face[cols()] if m_ == 1 else face                                                  # торцевая грань без боковых гало-узлов
                     cv_, in_ = idx.both(fm); ob_ = ~inbox_g(fm); fc = (cv_ | ob_).mean() > FRAC; fi = fc or (in_ | ob_).mean() > FRAC

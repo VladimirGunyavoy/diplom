@@ -110,7 +110,7 @@ class RunLog:
         if sig == s._asig: return
         s._asig = sig; info = {}
         for u, cl in cbl.items():
-            nt = sum(int(np.shape(c['G'])[0]) for c in cl); M = int(np.shape(cl[0]['G'])[1]) if cl else 0; info[str(float(u))] = dict(cells=len(cl), rows=nt, nodes=nt * M, M=M)
+            nt = sum(int(np.shape(c['G'])[0]) for c in cl); Ms = [int(np.shape(c['G'])[1]) for c in cl]; M = max(Ms) if Ms else 0; info[str(float(u))] = dict(cells=len(cl), rows=nt, nodes=sum(int(np.shape(c['G'])[0]) * int(np.shape(c['G'])[1]) for c in cl), M=M)       # M — максимум по клеткам (MADAPT)
         def run():
             L = s.atlas_d['layers']
             for k, v in info.items(): L.setdefault(k, {}).update(v)
