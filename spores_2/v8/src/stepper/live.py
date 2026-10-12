@@ -6,7 +6,7 @@ for _s in (sys.stdout, sys.stderr):                           # growN печат
     try: _s.reconfigure(encoding='utf-8', errors='replace')
     except Exception: pass
 import numpy as np
-for k, v in dict(SYS='di', M='5', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2', ZSOFT='.05', COMMIT_EVERY='2').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения (ZSOFT=.05 — softmin-нахлёст, решение пользователя 2026-10-12; ZSOFT=0 — как раньше)
+for k, v in dict(SYS='di', M='5', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2', ZSOFT='.05', COMMIT_EVERY='2', XL='3', VL='2.5', GMX='3').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения (ZSOFT=.05 — softmin-нахлёст, решение пользователя 2026-10-12; ZSOFT=0 — как раньше)
 V8_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 ONLY_GOAL = os.environ.get('V8_ONLY_GOAL') == '1' or os.path.exists(os.path.join(V8_ROOT, 'ONLY_GOAL'))      # режим «только первая спора каждого слоя» (слово пользователя 2026-10-12 ~17:15): включить — переменная V8_ONLY_GOAL=1 или пустой файл v8/ONLY_GOAL; выключить — убрать
 if ONLY_GOAL: os.environ['MAXC'] = '1'; os.environ['V8_ONLY_GOAL'] = '1'                   # по одной клетке на слой (спора на цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL

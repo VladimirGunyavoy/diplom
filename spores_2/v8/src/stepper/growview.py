@@ -242,7 +242,7 @@ class GrowView:
         if s.runlog is not None and snap is not None:
             try: s.runlog.atlas(snap)
             except Exception as e: print('[runlog] atlas: %r' % (e,))
-        gs = s._goal(); fixed = {'segs_goal': [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)], 'segs_field': [s._box(0.)], 'segs_growlim': [s._box(getattr(__import__('src.algo.growN', fromlist=['GM']), 'GM', 0.))]}   # цель, граница поля и роста
+        gs = s._goal(); fixed = {'segs_goal': [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)], 'segs_field': [s._box(0.)], 'segs_growlim': [s._box(getattr(__import__('src.algo.growN', fromlist=['GMV']), 'GMV', 0.))]}   # цель, граница поля и роста
         for name, strips in fixed.items(): s._set_strips(name, strips)
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
@@ -290,6 +290,7 @@ class GrowView:
             if k > cur: break
             cl = (snap.get('cells') if k == cur else cbl.get(u)) or []
             if cl: out[u] = cl
+        if os.environ.get('V8_ONLY_GOAL') == '1' and len(out) < len(layers): return {}                  # режим первой споры: V/траектории/карта ошибки — только когда выросли ОБА слоя (+1 и −1), а не после первого шага слоя
         return out
 
     VNAMES = ('surf', 'pts', 'inf', 'long', 'cross', 'cen', 'goal', 'gcen', 'under', 'undc')
@@ -305,7 +306,10 @@ class GrowView:
                     if pre + n + '@%d' % k in s.layers: s.layers[pre + n + '@%d' % k].set_geometry(z3)
         ks = range(max(getattr(s, '_nk', 0), 3)); s._vfresh = False; s._mh = s._mm = 0; s.dinfo = {}
         if not on: clear('v', ks); clear('c', ks); s._clear_traj(); s._draw_errmap(); return                                        # кэши V и траекторий остаются: повторное включение того же атласа/режима — без пересчёта
-        cl = s._vcells(snap); sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
+        cl = s._vcells(snap)
+        if not cl and os.environ.get('V8_ONLY_GOAL') == '1' and snap is not None and (snap.get('layers') or ()):
+            s.vinfo = 'waiting: first-spore mode needs BOTH layers grown (N / LMB until layer -1 is finished)'; s._vres = None; clear('v', ks); clear('c', ks); s._clear_traj(); s._draw_errmap(); return
+        sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
         if sig != s._vsig or s._vres is None:
             s._vsig = sig; hit = s._tcache.get(sig); s._traj = None if hit is None else hit[:2]; s._tstat = '' if hit is None else hit[2]; s._tfresh = False
             if sig in s._vcache:
@@ -535,6 +539,6 @@ class GrowView:
     def field_text(s):
         """размеры поля в статусе: рабочая зона ±XLV и граница роста ±(XLV+GM) по осям x, v"""
         from ..algo import growN as G
-        xl = np.asarray(G.XLV, float); gm = np.broadcast_to(np.asarray(getattr(G, 'GM', 0.), float), xl.shape); return 'field: work zone x +-%g, v +-%g; growth limit x +-%g, v +-%g' % (xl[0], xl[1], xl[0] + gm[0], xl[1] + gm[1])
+        xl = np.asarray(G.XLV, float); gm = np.broadcast_to(np.asarray(getattr(G, 'GMV', getattr(G, 'GM', 0.)), float)[:len(xl)], xl.shape); return 'field: work zone x +-%g, v +-%g; growth limit x +-%g, v +-%g' % (xl[0], xl[1], xl[0] + gm[0], xl[1] + gm[1])
 
     def caption(s): return caption(s.snap)

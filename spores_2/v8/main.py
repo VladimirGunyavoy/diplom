@@ -75,9 +75,9 @@ update_manager = UpdateManager()
 
 # ===== SCENE =====
 scene_setup = SceneManager(
-    init_position=(1.5, -1, -2),
-    init_rotation_x=21,
-    init_rotation_y=-35,
+    init_position=(0, 9, -12),      # поле x ±3 / буфер x ±6 (ширина 12) влезает целиком (2026-10-12)
+    init_rotation_x=38,
+    init_rotation_y=0,
     color_manager=color_manager,
     input_manager=input_manager,
     update_manager=update_manager
@@ -237,8 +237,8 @@ def _dense():
     growview.fine = not growview.fine; fine = growview.fine; _g.ETOL = .0025 if fine else .01
     if os.environ.get('V8_FINE_RMAX') == '1': _g.RMAX = _g.DSMAX = .25 if fine else float(os.environ.get('RMAX', .5))
     print('[grid] %s: ETOL %g, RMAX %g -> regrow' % ('FINE' if fine else 'normal', _g.ETOL, _g.RMAX), flush=True); _restart()
-input_manager.bind('l', _dense, description='grid density: normal / fine (ETOL .01 <-> .0025), regrow')
-input_manager.bind('j', growview.toggle_errmap, description='Q error map (first-spore mode): floor colour, crosses = V=inf nodes')
+input_manager.bind('l', _dense, description='L: grid normal / fine (finer rows, regrows; off by default)')
+input_manager.bind('j', growview.toggle_errmap, description='J: show where the query BETWEEN nodes differs from the exact time to enter the goal (first-spore mode; off by default)')
 input_manager.bind('y', growview.cycle_vcalc, description='V calc: old / by Q lin / by Q quad')
 input_manager.bind('t', growview.toggle_traj, description='trajectories: off / floor+surface / floor / surface')
 input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers)')

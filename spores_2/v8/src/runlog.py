@@ -9,7 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); V8 = os.path.abspath(os.path.
 RE_COV = re.compile(r'layer\s+(\S+)\s+стоп по покрытию:\s*(\d+)\s+клеток,\s+непокрыто\s+([0-9.eE+-]+)')
 RE_OVL = re.compile(r'seed u=(\S+) cells (\d+) overlap\(last (\d+)\) ([0-9.eE+-]+)')
 KEYS_SKIP = {'w', 'a', 's', 'd', 'space', 'shift', 'left shift', 'right shift', 'control', 'left control', 'right control', 'alt', 'left alt', 'right alt', 'mouse move', 'escape'}
-ENV_KEYS = ('SYS M KF MAXC NFAIL DELTA RMAX TMAX TQDM_MI GS GLIM GSEED GOALB GOALSHAPE RHO ZSOFT ZSOFTLA ETOL XL WS UM COVTOL COVP SEEDW DTN HALOT GM').split()
+ENV_KEYS = ('SYS M KF MAXC NFAIL DELTA RMAX TMAX TQDM_MI GS GLIM GSEED GOALB GOALSHAPE RHO ZSOFT ZSOFTLA ETOL XL VL GMX WS UM COVTOL COVP SEEDW DTN HALOT GM').split()
 
 
 def _jsonable(x):
@@ -84,7 +84,7 @@ class RunLog:
             try: from src.algo import solve8 as S; d['solve8'] = dict(POLICIES=_jsonable(S.POLICIES), BIG=S.BIG)
             except Exception as e: d['solve8'] = repr(e)
             if extra: d.update(_jsonable(extra))
-            s._wjson('params.json', d); s.summary['params'] = {k: d['growN'].get(k) for k in ('ZSOFT', 'ZSOFTLA', 'GM', 'M', 'RHO', 'KF', 'DELTA') if isinstance(d['growN'], dict)}; s.summary['git'] = d['git']; s._write_summary()
+            s._wjson('params.json', d); s.summary['params'] = {k: d['growN'].get(k) for k in ('ZSOFT', 'ZSOFTLA', 'GM', 'GMX', 'XL', 'VL', 'M', 'RHO', 'KF', 'DELTA') if isinstance(d['growN'], dict)}; s.summary['git'] = d['git']; s._write_summary()
         s._put(run)
 
     # ---- grow.log + разбор строк покрытия/нахлёста ----

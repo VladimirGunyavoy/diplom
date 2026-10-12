@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = int(os.environ.get('EXTIN', 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -132,6 +132,11 @@ class Graph:
         t0 = time.perf_counter(); rho = s.rho; V0 = np.full(s.n, BIG); inn = np.linalg.norm(s.P, axis=1) <= rho + 1e-12; V0[inn] = 0.
         for li, u in enumerate(s.us):                                                                               # E2: вход в круг на отрезке до следующего узла своего u
             k = np.flatnonzero((s.layer == li) & (s.nxt >= 0) & ~inn & (s.cost > 1e-12)); te = entry_time(s.P[k], u, s.cost[k], rho); ok = np.isfinite(te); V0[k[ok]] = np.minimum(V0[k[ok]], te[ok])
+        if s.extin:                                                                                                 # W2: внутри круга V продолжается отрицательным (−время после входа по потоку столбца) — интерполяция через излом на границе круга не завышает
+            has = np.flatnonzero((s.nxt >= 0) & (s.cost > 1e-12)); has = has[np.argsort(s.rowid[has], kind='stable')]
+            for k in has:
+                n_ = s.nxt[k]
+                if inn[n_] and V0[k] < BIG / 2: V0[n_] = V0[k] - s.cost[k]
         s.V0 = V0; s.e3 = []
         for u2 in s.us:
             s.e3.append(s.locate(u2, s.P, excl=s.nodecell))

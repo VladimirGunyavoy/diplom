@@ -54,7 +54,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
     assert off == G.n
     fin = V < BIG / 2; qerr = {}
     for li, u in enumerate(G.us):                                                      # ошибка Q_u против ТОЧНОГО входа в круг своим u (entry_time, аналитика) — в спорах без решений (первые споры слоёв ±1) она должна быть ≈ 0
-        m = (G.layer == li) & (np.linalg.norm(G.P, axis=1) > G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = (G.V[m] - te)[ok]
+        m = (G.layer == li) & (np.linalg.norm(G.P, axis=1) > G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = G.V[m][ok] - te[ok]
         qerr[u] = dict(n=int(ok.sum()), of=int(m.sum()), max=float(np.abs(e).max()) if len(e) else 0., med=float(np.median(np.abs(e))) if len(e) else 0., bias=float(np.median(e)) if len(e) else 0.)
     return out, dict(qerr=qerr, errmap=errmap(G, cells_by_u) if only_goal() else None, G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), converged=bool(getattr(G, 'converged', False)), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
 
@@ -114,7 +114,7 @@ def errmap(G, cells_by_u, sub=ERR_SUB):
         for c in cells_by_u.get(u, []):
             Gc = np.asarray(c['G'], float); nt, M = Gc.shape[:2]; ri = np.linspace(0, nt - 1, (nt - 1) * sub + 1); cj = np.linspace(0, M - 1, (M - 1) * sub + 1); i0 = np.minimum(ri.astype(int), nt - 2)[:, None]; j0 = np.minimum(cj.astype(int), M - 2)[None, :]; a = (ri[:, None] - i0); b = (cj[None, :] - j0)
             P = ((1 - a)[..., None] * (1 - b)[..., None] * Gc[i0, j0] + (1 - a)[..., None] * b[..., None] * Gc[i0, j0 + 1] + a[..., None] * (1 - b)[..., None] * Gc[i0 + 1, j0] + a[..., None] * b[..., None] * Gc[i0 + 1, j0 + 1]); sh = P.shape[:2]; X = P.reshape(-1, 2)
-            Q = G.Vlayers(X)[:, li]; inb = np.linalg.norm(X, axis=1) <= G.rho; te = solve8.entry_time(X, u, np.full(len(X), ERR_H), G.rho); te[inb] = 0.; ex = np.isfinite(te); nv = ex & ~(Q < solve8.BIG / 2); err = np.where(ex & ~nv, Q - te, np.nan)
+            Q = G.Vlayers(X)[:, li]; inb = np.linalg.norm(X, axis=1) <= G.rho; te = solve8.entry_time(X, u, np.full(len(X), ERR_H), G.rho); te[inb] = 0.; ex = np.isfinite(te); nv = ex & ~(Q < solve8.BIG / 2); err = np.full(len(X), np.nan); k_ = ex & ~nv; err[k_] = Q[k_] - te[k_]
             cells.append(dict(P=P.astype(np.float32), err=err.reshape(sh).astype(np.float32), noval=nv.reshape(sh))); allerr.append(err[np.isfinite(err) & ~inb]); noval += int((nv & ~inb).sum()); tot += int((ex & ~inb).sum())
         e = np.concatenate(allerr) if allerr else np.zeros(0); ae = np.abs(e); m = (G.layer == li) & (G.V >= solve8.BIG / 2)
         out[u] = dict(cells=cells, inf=G.P[m].astype(np.float32), stats=dict(points=int(len(e)), of=int(tot), noval=int(noval), med=float(np.median(ae)) if len(e) else 0., p90=float(np.percentile(ae, 90)) if len(e) else 0., max=float(ae.max()) if len(e) else 0., bias=float(np.median(e)) if len(e) else 0., inf_nodes=int(m.sum()), nodes=int((G.layer == li).sum())))
@@ -157,7 +157,7 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed) if (cl and only_goal()) else solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GM, np.inf)
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed) if (cl and only_goal()) else solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GMV, np.inf)
     pre = {int(i): r for i, r in zip(np.flatnonzero(~has), _prephase(G, X0[~has], box, rec=rec) if (~has).any() else [])}
     src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
     for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
