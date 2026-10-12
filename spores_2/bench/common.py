@@ -9,6 +9,7 @@ def wrap(d, period):
 
 class Env:
     name = ''; n = 0; m = 1; period = None; ball = None; half = None; umin = None; umax = None; lo = None; hi = None; X0 = None; Tref = None; keep = None
+    fl_lo = None; fl_hi = None
     nf = 0                                                   # счётчик вызовов f (RK4-шагов считаются как 4 f; точный шаг ДИ — как 1)
     def f(self, Y, u): raise NotImplementedError
     def in_goal(self, Y):
@@ -18,10 +19,28 @@ class Env:
         k1 = self.f(Y, u); k2 = self.f(Y + h / 2 * k1, u); k3 = self.f(Y + h / 2 * k2, u); k4 = self.f(Y + h * k3, u); self.nf += 4
         Z = Y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4); return np.where(self.period > 0, wrap(Z, self.period), Z)
     def out_of_box(self, Y): return ((Y < self.lo) | (Y > self.hi) & (self.period == 0)).any(-1)
+    def sample_field(self, rng): return rng.uniform(self.fl_lo, self.fl_hi)
+    def embed(self, Y):
+        Y = np.asarray(Y, float); s = (self.hi - self.lo) / 2 + 1e-9; cols = []
+        for i in range(self.n):
+            if self.period[i] > 0: a = Y[..., i] * 2 * np.pi / self.period[i]; cols += [np.cos(a), np.sin(a)]
+            else: cols.append(Y[..., i] / s[i])
+        return np.stack(cols, -1)
+    def embed_phys(self, Y):
+        """метрика в физических единицах (углы — sin/cos): радиусы SST .05–.4 имеют смысл"""
+        Y = np.asarray(Y, float); cols = []
+        for i in range(self.n):
+            if self.period[i] > 0: a = Y[..., i] * 2 * np.pi / self.period[i]; cols += [np.cos(a), np.sin(a)]
+            else: cols.append(Y[..., i])
+        return np.stack(cols, -1)
+    def goal_dist(self, Y):
+        Y = np.asarray(Y, float)
+        if self.ball is not None: return np.linalg.norm(Y, axis=-1) - self.ball
+        return (np.abs(wrap(Y, self.period)) / self.half).max(-1) - 1.
     def clip_u(self, u): return np.clip(u, self.umin, self.umax)
 
 class DI(Env):
-    name = 'di'; n = 2; m = 1; period = np.zeros(2); ball = .2; umin = np.array([-1.]); umax = np.array([1.]); lo = np.array([-6., -4.]); hi = np.array([6., 4.])
+    exact = True; name = "di"; n = 2; m = 1; period = np.zeros(2); ball = .2; umin = np.array([-1.]); umax = np.array([1.]); lo = np.array([-6., -4.]); hi = np.array([6., 4.]); fl_lo = np.array([-3., -2.5]); fl_hi = -fl_lo
     def __init__(s, nst=20, seed=1):
         rng = np.random.default_rng(seed); out = []
         while len(out) < nst:
