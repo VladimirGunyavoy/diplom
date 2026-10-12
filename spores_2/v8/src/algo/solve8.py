@@ -36,15 +36,22 @@ def t_ref(P):
     except Exception: return t_point(P[:, 0], P[:, 1]), 't_point'
 
 
+def goal_mask(g, Y, rho):
+    """точка в цели: ДИ — круг |y| ≤ rho (как раньше); иначе форма цели growN (box/ball по RHOV, wrap по PERIOD)"""
+    Y = np.asarray(Y, float)
+    if g.SYS == 'di': return np.linalg.norm(Y, axis=-1) <= rho + 1e-12
+    return g.ingoal(Y)
+
+
 def entry_time(X, u, dt, rho, n=32, sub=2):
     """первое t ∈ (0, dt] от x0 по u, при котором |y| ≤ rho; inf, если нет. Поток СИСТЕМЫ (growN._rkv, rk4 по сэмплам n×sub подшагов) + бисекция по времени внутри найденного шага — не формула ДИ, подходит и маятнику. X (n,N), dt (n,)"""
     g = load_growN(); X = np.asarray(X, float); dt = np.asarray(dt, float); h = dt / n; ys = [X]; y = X
     for _ in range(n): y = g._rkv(y, u, h, sub); ys.append(y)
-    Y = np.stack(ys, 1); inn = np.linalg.norm(Y, axis=2) <= rho; first = np.where(inn.any(1), inn.argmax(1), -1); out = np.full(len(X), np.inf); k = np.flatnonzero(first > 0)
+    Y = np.stack(ys, 1); inn = goal_mask(g, Y, rho); first = np.where(inn.any(1), inn.argmax(1), -1); out = np.full(len(X), np.inf); k = np.flatnonzero(first > 0)
     if len(k):
         y0 = Y[k, first[k] - 1]; lo = np.zeros(len(k)); hi = h[k].copy()
         for _ in range(30):
-            mid = (lo + hi) / 2; c = np.linalg.norm(g._rkv(y0, u, mid, sub), axis=1) <= rho; hi = np.where(c, mid, hi); lo = np.where(c, lo, mid)
+            mid = (lo + hi) / 2; c = goal_mask(g, g.wrapy(g._rkv(y0, u, mid, sub)), rho); hi = np.where(c, mid, hi); lo = np.where(c, lo, mid)
         out[k] = (first[k] - 1) * h[k] + hi
     return out
 
@@ -91,7 +98,7 @@ def freeze_idx(g, s):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.tab = None; s.di_fast = os.environ.get('SYS', 'di') == 'di' and not int(os.environ.get('FLOW_G', 0)); s.table_h = float(os.environ.get('TABLE_H', .02 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.ingoal = lambda Y: goal_mask(s.g, Y, s.rho); s.tab = None; s.di_fast = os.environ.get('SYS', 'di') == 'di' and not int(os.environ.get('FLOW_G', 0)); s.table_h = float(os.environ.get('TABLE_H', .02 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -168,7 +175,7 @@ class Graph:
 
     def prepare(s):
         """E2 и E3 заранее (геометрия не меняется между проходами)"""
-        t0 = time.perf_counter(); rho = s.rho; V0 = np.full(s.n, BIG); inn = np.linalg.norm(s.P, axis=1) <= rho + 1e-12; V0[inn] = 0.
+        t0 = time.perf_counter(); rho = s.rho; V0 = np.full(s.n, BIG); inn = s.ingoal(s.P); V0[inn] = 0.
         for li, u in enumerate(s.us):                                                                               # E2: вход в круг на отрезке до следующего узла своего u
             k = np.flatnonzero((s.layer == li) & (s.nxt >= 0) & ~inn & (s.cost > 1e-12)); te = entry_time(s.P[k], u, s.cost[k], rho); ok = np.isfinite(te); V0[k[ok]] = np.minimum(V0[k[ok]], te[ok])
         if s.extin:                                                                                                 # W2: внутри круга V продолжается отрицательным (−время после входа по потоку столбца) — интерполяция через излом на границе круга не завышает
@@ -309,29 +316,29 @@ class Graph:
     # --- запросы ---
     def Vlayers(s, X):
         """V_u(x) по слоям (n, L); inf — не покрыто / V не определено"""
-        out = np.full((len(X), s.L), np.inf); inb = np.linalg.norm(X, axis=1) <= s.rho
+        out = np.full((len(X), s.L), np.inf); inb = s.ingoal(X)
         PA = s.locate_all(X) if (not s.quad and int(os.environ.get('LOC_ALL', 1))) else None
         for li, u in enumerate(s.us):
             out[:, li] = s.evalpairs(s.V, len(X), PA[li] if PA is not None else s.locate(u, X))
             if s.xentry > 0 and s.calc != 'v': out[:, li] = np.minimum(out[:, li], entry_time(X, u, np.full(len(X), s.xentry), s.rho))       # точный вход по своему потоку — верхняя оценка Q_u (W2)
         out[inb] = 0.; return out
 
-    def build_table(s, h=.01, xr=3.5, vr=3.0, chunk=200000):
+    def build_table(s, h=.01, xr=None, vr=None, chunk=200000):
         """таблица Q_u(x,v) на регулярной сетке (float32, inf — не покрыто): после solve; агенты (run_commit/run_agent) дальше берут билинейный lookup вместо поиска ячейки (searcher-3, lit_gpu_live: 300 стартов 1.26→0.04 с). Вне таблицы и у границы покрытия (смешанные углы) — точный Vlayers. → время построения"""
-        t0 = time.perf_counter(); xs = np.arange(-xr, xr + h / 2, h); vs = np.arange(-vr, vr + h / 2, h); XX, VV = np.meshgrid(xs, vs, indexing='ij'); P = np.c_[XX.ravel(), VV.ravel()]; tab = np.empty((len(P), s.L), np.float32)
+        g = s.g; xr = xr if xr is not None else (float(g.PERIOD[0]) / 2 if g.PERIOD[0] > 0 else 3.5); vr = vr if vr is not None else (float(g.XLV[1]) if g.SYS != 'di' else 3.0); t0 = time.perf_counter(); xs = np.arange(-xr, xr + h / 2, h); vs = np.arange(-vr, vr + h / 2, h); XX, VV = np.meshgrid(xs, vs, indexing='ij'); P = np.c_[XX.ravel(), VV.ravel()]; tab = np.empty((len(P), s.L), np.float32)
         for a in range(0, len(P), chunk): tab[a:a + chunk] = s.Vlayers(P[a:a + chunk])
         s.tab = (tab.reshape(len(xs), len(vs), s.L), float(xs[0]), float(vs[0]), h); s.t_table = time.perf_counter() - t0; return s.t_table
 
     def _vl(s, X):
         """Vlayers для агента: lookup по таблице, если она есть (build_table) и TABLE_AGENT≠0; иначе точный"""
         if s.tab is None or not int(os.environ.get('TABLE_AGENT', 1)): return s.Vlayers(X)
-        tab, x0, v0, h = s.tab; nx, nv, L = tab.shape; fx = (X[:, 0] - x0) / h; fv = (X[:, 1] - v0) / h; ok = (fx >= 0) & (fx < nx - 1) & (fv >= 0) & (fv < nv - 1); out = np.full((len(X), L), np.inf); k = np.flatnonzero(ok)
+        X = s.g.wrapy(X); tab, x0, v0, h = s.tab; nx, nv, L = tab.shape; fx = (X[:, 0] - x0) / h; fv = (X[:, 1] - v0) / h; ok = (fx >= 0) & (fx < nx - 1) & (fv >= 0) & (fv < nv - 1); out = np.full((len(X), L), np.inf); k = np.flatnonzero(ok)
         if len(k):
             i = fx[k].astype(int); j = fv[k].astype(int); a = (fx[k] - i)[:, None]; b = (fv[k] - j)[:, None]; c = [tab[i, j], tab[i + 1, j], tab[i, j + 1], tab[i + 1, j + 1]]; fin = [np.isfinite(q) for q in c]; allf = fin[0] & fin[1] & fin[2] & fin[3]; anyf = fin[0] | fin[1] | fin[2] | fin[3]
             val = (1 - a) * (1 - b) * np.where(fin[0], c[0], 0) + a * (1 - b) * np.where(fin[1], c[1], 0) + (1 - a) * b * np.where(fin[2], c[2], 0) + a * b * np.where(fin[3], c[3], 0); out[k] = np.where(allf, val, np.inf); ok[k[(anyf & ~allf).any(1)]] = False
         k = np.flatnonzero(~ok)
         if len(k): out[k] = s.Vlayers(X[k])
-        out[np.linalg.norm(X, axis=1) <= s.rho] = 0.; return out
+        out[s.ingoal(X)] = 0.; return out
 
     def Vstar(s, X):
         Vl = s.Vlayers(X); return Vl.min(1), Vl.argmin(1)
@@ -355,14 +362,14 @@ class Graph:
 
     def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5, progress=None, every=None, dlog=None):
         """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent; progress(step, живых) — вызывается каждый шаг (для строки прогресса в консоли)"""
-        n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s._vl(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
+        n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s._vl(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = s.ingoal(X); T[inn] = 0; alive &= ~inn; step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         every = every or COMMIT_EVERY
         while alive.any():
             a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; ar = np.arange(len(a))
             if step % every:                                                                               # решение о переключении — раз в every шагов (счёт ×every быстрее), между ними держим управление
                 u = uvec[cur[a]]; X[a] = s.flow(X[a], u, dt); t[a] += dt; step += 1
-                hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
+                hit = s.ingoal(X[a]); T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
                 if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
                 if progress is not None: progress(step, int(alive.sum()))
                 continue
@@ -375,7 +382,7 @@ class Graph:
             cur[a[chg]] = bl[chg]; sw[a[chg]] += 1; alive[a[lost]] = False; a = np.flatnonzero(alive)
             if not len(a): break
             u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a] = s.flow(X[a], u, dt); t[a] += dt; step += 1
-            hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
+            hit = s.ingoal(X[a]); T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
             if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
             if progress is not None: progress(step, int(alive.sum()))
         return T, sw
@@ -384,12 +391,12 @@ class Graph:
         """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения, номер слоя = управление, действовавшее на последнем шаге) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
         if commit: return s.run_commit(X0, tmax, dt=dt, eps=eps, path=path, rec=rec, progress=progress, dlog=dlog)
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
-        Vl = s._vl(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
+        Vl = s._vl(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = s.ingoal(X); T[inn] = 0; alive &= ~inn
         step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         while alive.any():
             a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a] = s.flow(X[a], u, dt); t[a] += dt; step += 1
-            hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
+            hit = s.ingoal(X[a]); T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
             if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
             a = np.flatnonzero(alive)
             if not len(a): break
