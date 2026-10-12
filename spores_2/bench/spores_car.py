@@ -1,9 +1,10 @@
 """C2/CA2 статик кар: коридор v6 (research-21: CARL=6, NB 30000, NF 7500, K 5, зазор CM .002 → 20/20, 1.0467). Запуск на aida из ~/spore_v5/r21/v6 (там src.atlas6, car.py): CARL=6 CM=.002 python3 ~/spore_v5/c1/spores_2/bench/spores_car.py → data/car_spores.json.
 Управления (слой s, длительность d) проверяет единый проверяльщик common.verify (RK4 h=.01)."""
 import sys, time, os, json
-sys.path.insert(0, '.'); HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); CWD = os.getcwd()
 os.environ.setdefault('CARL', '6'); os.environ.setdefault('CM', '.002')
 import numpy as np, common
+sys.path.insert(0, CWD)       # v6 с src.atlas6 раньше v8/src, который common ставит в путь
 from src.atlas6.adaptive_nd import SysN, build_back
 from src.atlas6.corridor_nd import corridor_query
 import car as C

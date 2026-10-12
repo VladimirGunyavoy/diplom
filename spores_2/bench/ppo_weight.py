@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stable_baselines3 import PPO
 import common
 M = os.path.expanduser('~/spore_v5/c1/models'); out = {}
-for env in ('di', 'pend', 'dd', 'manip'):
+for env in ('di', 'pend', 'dd', 'manip', 'ddobst', 'car'):
     p = f'{M}/{env}_5000000_s0'
     if not os.path.exists(p + '.zip'): continue
     m = PPO.load(p, device='cpu'); n = sum(x.numel() for x in m.policy.parameters()); b = sum(x.numel() * x.element_size() for x in m.policy.state_dict().values())
