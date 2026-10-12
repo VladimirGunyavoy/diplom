@@ -245,6 +245,11 @@ def _make_batch():
             """colors — (n, 4) цвета вершин (иначе один цвет слоя); depth_write=False — полупрозрачная поверхность не закрывает линии за ней"""
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
+            if WRAP_X > 0 and kind == 'strips':                                                  # ломаные (строки/столбцы клеток) → пары вершин: резка по шву и копии работают только с парами
+                Vs_ = np.asarray(V, float).reshape(-1, 3); pc_ = colors is not None and np.ndim(colors) == 2 and len(colors) == len(Vs_)
+                ia = np.concatenate([np.arange(st, st + ln - 1) for st, ln in idx if ln > 1]) if len(idx) else np.zeros(0, int)
+                if len(ia) == 0: return
+                pr = np.empty(2 * len(ia), int); pr[0::2], pr[1::2] = ia, ia + 1; V = Vs_[pr]; colors = np.asarray(colors)[pr] if pc_ else colors; kind = 'lines'; idx = None
             if WRAP_X > 0:
                 if kind == 'lines': V, colors = wrap_lines(V, colors)
                 elif kind == 'tris' and idx is not None: V, idx, colors = wrap_tris(V, idx, colors)
