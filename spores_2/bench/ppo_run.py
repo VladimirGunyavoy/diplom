@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
 import common
-DT = float(os.environ.get('PPO_DT', .05)); TMAXEP = float(os.environ.get('PPO_TEP', 20.)); GAMMA = .99
+DT = float(os.environ.get('PPO_DT', .05)); TMAXEP = float(os.environ.get('PPO_TEP', 20.)); GAMMA = float(os.environ.get('PPO_GAMMA', .99)); GTAG = '' if GAMMA == .99 else '_g%g' % GAMMA
 
 class BenchGym(gym.Env):
     def __init__(s, env, starts=None):
@@ -71,4 +71,4 @@ if __name__ == '__main__':
     log = []; cb = EvalCb(e, venv, max(steps // 20, 5000), log); t0 = time.time(); model.learn(steps, callback=cb); t_train = time.time() - t0
     Ts, t_inf, t_batch = evaluate(model, venv, e, timing=True); s = common.summarize(e, Ts); e.nf = 0; e.step(e.X0[:1], np.zeros((1, e.m)), DT); nfs = e.nf
     s.update(env=name, method='PPO SB3', steps=steps, seed=seed, t_train=t_train, t_train_95=cb.hit95, t_infer_per_start=t_inf, t_infer_batch20=t_batch, nf_train=steps * nfs, nf_per_step=nfs, hw='CPU 1 proc, 16 envs Dummy', curve=log, T=[None if t is None else float(t) for t in Ts], Tref=e.Tref.tolist())
-    os.makedirs(common.DATA, exist_ok=True); json.dump(s, open(os.path.join(common.DATA, f'{name}_ppo_{steps}_s{seed}.json'), 'w'), indent=1, default=float); os.makedirs(os.path.expanduser('~/spore_v5/c1/models'), exist_ok=True); model.save(os.path.expanduser(f'~/spore_v5/c1/models/{name}_{steps}_s{seed}')); venv.save(os.path.expanduser(f'~/spore_v5/c1/models/{name}_{steps}_s{seed}_vn.pkl')); print('DONE', {k: v for k, v in s.items() if k not in ('curve', 'T', 'Tref')})
+    os.makedirs(common.DATA, exist_ok=True); json.dump(s, open(os.path.join(common.DATA, f'{name}_ppo_{steps}{GTAG}_s{seed}.json'), 'w'), indent=1, default=float); os.makedirs(os.path.expanduser('~/spore_v5/c1/models'), exist_ok=True); model.save(os.path.expanduser(f'~/spore_v5/c1/models/{name}_{steps}{GTAG}_s{seed}')); venv.save(os.path.expanduser(f'~/spore_v5/c1/models/{name}_{steps}{GTAG}_s{seed}_vn.pkl')); print('DONE', {k: v for k, v in s.items() if k not in ('curve', 'T', 'Tref')})
