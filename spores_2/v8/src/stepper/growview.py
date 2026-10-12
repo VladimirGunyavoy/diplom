@@ -290,11 +290,11 @@ class GrowView:
         for pre, flag in (('v', s.vmode), ('c', s.cmode)):                                                        # v — отдельные слои (видимость 7/8/9), c — общий слой V*: победители, видимость слоя тоже по 7/8/9
             for k, u in enumerate(layers):
                 if not flag or u not in cl or not s.vis[k]: clear(pre, [k]); continue
-                m = VS.build_mesh(cl[u], Vs[u], s.ax, vmax, win=info['wins'][u] if pre == 'c' else None, goalcols=info['goalcols'][u]); w = (1., 1., 1., 1.); nm = lambda t: pre + t + '@%d' % k
-                lc = s.tinted(s.COL['segs_core_done'], k)[:3]                                                      # скелет — в цвет группы слоя (как контур ядра клеток слоя)
+                m = VS.build_mesh(cl[u], Vs[u], s.ax, vmax, win=info['wins'][u] if pre == 'c' else None, goalcols=info['goalcols'][u], skel=s.skel); w = (1., 1., 1., 1.); nm = lambda t: pre + t + '@%d' % k
+                lc = VS.line_color(s.tinted(s.COL['segs_core_done'], k)[:3])                                       # скелет — оттенок группы слоя, осветлённый (читается на градиенте без чёрной подложки)
                 s._layer(nm('surf'), w).set_geometry(m['verts'], m['tris'], kind='tris', colors=m['colors'], depth_write=False)
                 Dp, ip = _discs(m['pts'], R); s._layer(nm('pts'), w).set_geometry(Dp, ip, kind='tris', colors=np.repeat(m['pcol'], 17, axis=0))
-                for nmu, arr, th in (('under', m['long'], VS.LONG_W), ('undc', m['center'], VS.CENTER_W)):                                  # тёмная подложка под продольными линиями (синие читаются на синей части градиента)
+                for nmu, arr, th in ((('under', m['long'], VS.LONG_W), ('undc', m['center'], VS.CENTER_W)) if VS.UNDER_A > 0 else ()):                                  # тёмная подложка под продольными линиями (синие читаются на синей части градиента)
                     s._layer(nm(nmu), w).set_geometry(arr, kind='lines', thick=th + VS.UNDER_DW, colors=np.tile((.04, .04, .10, VS.UNDER_A), (len(arr), 1)), depth_write=False, fixed=31)
                 for t, a_, th, col, top in (('long', VS.LONG_A, VS.LONG_W, lc, False), ('cross', VS.CROSS_A, VS.CROSS_W, lc, False), ('cen', VS.CENTER_A, VS.CENTER_W, lc, False), ('goal', VS.GOAL_A, VS.GOAL_SIDE_W, (1., 1., 1.), True), ('gcen', VS.GOAL_A, VS.GOAL_W, (1., 1., 1.), True)):
                     arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top, fixed=None if top else 32)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)

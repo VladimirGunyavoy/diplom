@@ -75,3 +75,21 @@ def test_common_layer_and_goal_columns():
 def test_lift():
     A = _atlas(); Vs, _ = VS.solve_layers(A); u = next(iter(A)); m = VS.build_mesh(A[u], Vs[u], vmax=1., lift=.05); m0 = VS.build_mesh(A[u], Vs[u], vmax=1., lift=0.)
     assert np.allclose(m['pts'][:, 1] - m0['pts'][:, 1], .05) and np.allclose(m['long'][:, 1] - m0['long'][:, 1], .05)
+
+
+def test_time_skeleton():
+    """временной скелет на поверхности: V(t) по Gt — интерполяция вдоль столбца по tau; в узлах, где tt совпал с tau, V та же; рёбра есть, поверхность и узлы не меняются, высота в пределах [V]"""
+    A = _atlas(); Vs, _ = VS.solve_layers(A); vmax = VS.vscale(Vs); nhit = 0; nl = 0
+    for u, cl in A.items():
+        for c, V in zip(cl, Vs[u]):
+            fin = V < VS.BIG / 2; Gt, Vt, ok = VS.time_nodes(c, V, fin); tau = np.asarray(c['tau']); tt = np.asarray(c['tt']); assert Vt.shape == (len(tt), V.shape[1]) and Gt.shape[:2] == Vt.shape
+            for j in range(V.shape[1]):
+                for k in range(len(tau)):
+                    m = np.abs(tt - tau[k, j]) < 1e-9
+                    if m.any() and fin[k, j] and ok[m, j].all(): assert np.allclose(Vt[m, j], V[k, j], atol=1e-6); nhit += 1
+            if not fin.any(): assert not ok.any(); continue
+            assert (Vt[ok] >= V[fin].min() - 1e-9).all() and (Vt[ok] <= V[fin].max() + 1e-9).all()
+        m0 = VS.build_mesh(cl, Vs[u], vmax=vmax); m1 = VS.build_mesh(cl, Vs[u], vmax=vmax, skel='time')
+        assert np.array_equal(m0['verts'], m1['verts']) and np.array_equal(m0['pts'], m1['pts']) and len(m1['long']) > 0 and len(m1['cross']) > 0 and len(m1['center']) > 0
+        assert (m1['long'][:, 1] <= vmax * 100 * VS.VH + 1).all() and not np.array_equal(m0['long'], m1['long']); nl += len(m1['long'])
+    assert nhit > 0 and nl > 0

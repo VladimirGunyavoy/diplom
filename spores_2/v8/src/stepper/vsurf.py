@@ -11,11 +11,14 @@ import numpy as np
 VH = float(os.environ.get('VSURF_H', .35))                 # высота на единицу V (в мировых единицах до зума)
 ALPHA = float(os.environ.get('VSURF_ALPHA', .55))
 LIFT = float(os.environ.get('VSURF_LIFT', .04))            # подъём скелета и узлов над поверхностью (мировые единицы высоты), чтобы линии не тонули в радуге
-LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', .9)); LONG_W = int(os.environ.get('VSURF_LONG_W', 2))        # боковые линии вдоль траекторий эволюции (столбцы j ≠ центрального), цвет слоя
+LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', 1.)); LONG_W = int(os.environ.get('VSURF_LONG_W', 2))        # боковые линии вдоль траекторий эволюции (столбцы j ≠ центрального), цвет слоя
 CENTER_A = float(os.environ.get('VSURF_CENTER_ALPHA', 1.)); CENTER_W = int(os.environ.get('VSURF_CENTER_W', 4))   # центральная линия эволюции клетки (столбец M//2): непрозрачная и жирнее
-CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .6)); CROSS_W = int(os.environ.get('VSURF_CROSS_W', 1))      # поперечные линии (узлы одной строки)
+CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .8)); CROSS_W = int(os.environ.get('VSURF_CROSS_W', 2))      # поперечные линии (узлы одной строки)
 GOAL_A = float(os.environ.get('VSURF_GOAL_ALPHA', 1.)); GOAL_W = int(os.environ.get('VSURF_GOAL_W', 6)); GOAL_SIDE_W = int(os.environ.get('VSURF_GOAL_SIDE_W', 2))   # траектории, входящие в цель: белые, поверх всего; центральный столбец клетки — GOAL_W, остальные входящие — тоньше (GOAL_SIDE_W)
-UNDER_A = float(os.environ.get('VSURF_UNDER_ALPHA', .85)); UNDER_DW = int(os.environ.get('VSURF_UNDER_DW', 2))      # тёмная подложка под боковыми/центральными линиями (синие линии читаются на синей части градиента): alpha и добавка к толщине
+UNDER_A = float(os.environ.get('VSURF_UNDER_ALPHA', 0.)); UNDER_DW = int(os.environ.get('VSURF_UNDER_DW', 2))      # тёмная подложка под боковыми/центральными линиями: ВЫКЛ. по умолчанию (слово пользователя 2026-10-12: чёрные границы не надо), alpha и добавка к толщине
+LINE_LIGHT = float(os.environ.get('VSURF_LINE_LIGHT', .4))     # линии скелета на поверхности: оттенок слоя, осветлённый к белому на эту долю (синие слоя читаются на синем градиенте без подложки), alpha 1
+def line_color(c, light=None):
+    c = np.asarray(c, float)[:3]; l = LINE_LIGHT if light is None else light; return tuple(float(x) for x in c + (1. - c) * l)
 WIN_EPS = float(os.environ.get('VSURF_WIN_EPS', 1e-3))
 BIG = 1e9                                                   # solve8.BIG: V ≥ BIG/2 — «нет пути»
 GRAD = np.array([[0., .20, .25, .95], [.25, .10, .75, .95], [.5, .20, .90, .30], [.75, 1., .85, .10], [1., .95, .20, .15]])     # t, R, G, B: синий → бирюзовый → зелёный → жёлтый → красный
@@ -55,10 +58,22 @@ def vscale(Vs_u, q=99.):
     a = np.concatenate([v[v < BIG / 2].ravel() for vs in Vs_u.values() for v in vs] or [np.zeros(0)]); return float(np.percentile(a, q)) if len(a) else 1.
 
 
-def build_mesh(cells, Vs, ax=(0, 1), vmax=1., h=VH, alpha=ALPHA, y0=.01, win=None, goalcols=None, lift=LIFT):
+def time_nodes(c, V, fin):
+    """временной скелет на поверхности V: узлы Gt (те же столбцы-траектории, равные шаги времени tt) → (Gt, Vt (ntt, M), ok (ntt, M)).
+    V вдоль столбца j интерполируется линейно по tau[:, j] (тот же приём, что и у столбцов потока); вне диапазона tau и при ∞/не-победителе на любом из двух соседних узлов — нет значения."""
+    tau = np.asarray(c['tau'], float); tt = np.asarray(c['tt'], float); nt, M = V.shape; Vt = np.zeros((len(tt), M)); ok = np.zeros((len(tt), M), bool)
+    for j in range(M):
+        tj = tau[:, j]; i = np.clip(np.searchsorted(tj, tt) - 1, 0, nt - 2); t0, t1 = tj[i], tj[i + 1]; w = np.clip((tt - t0) / np.maximum(t1 - t0, 1e-12), 0., 1.)
+        Vt[:, j] = (1 - w) * np.where(fin[i, j], V[i, j], 0.) + w * np.where(fin[i + 1, j], V[i + 1, j], 0.)
+        ok[:, j] = fin[i, j] & fin[i + 1, j] & (tt >= tj[0] - 1e-9) & (tt <= tj[-1] + 1e-9)
+    return np.asarray(c['Gt']), Vt, ok
+
+
+def build_mesh(cells, Vs, ax=(0, 1), vmax=1., h=VH, alpha=ALPHA, y0=.01, win=None, goalcols=None, lift=LIFT, skel='normal'):
     """клетки слоя + их V (nt, M) → dict: verts (K, 3), colors (K, 4), tris (T,) индексы, pts (P, 3), pcol (P, 4) — узлы на поверхности, inf (Q, 3) — узлы без V (серые, y = y0),
     long (2E, 3) — рёбра вдоль потока (k,j)–(k+1,j), j ≠ M//2, парами вершин, center (2E', 3) — то же для центрального столбца j = M//2, cross (2F, 3) — рёбра поперёк (k,j)–(k,j+1),
     goal (2E'', 3) — рёбра боковых столбцов (j ≠ M//2), входящих в цель (goalcols[i] — bool (M,)), goalc — то же для центрального столбца; ребро с V=∞ нет. win — bool (nt, M) на клетку: оставить только выигрывающие узлы (общий слой V*; серых ∞-узлов тогда нет).
+    skel='time' (клетка с Gt): продольные/поперечные/целевые линии идут по временным узлам Gt на высоте V(t) (интерполяция вдоль столбца по tau); поверхность и узлы — по нормальным G.
     Координаты Ursina: x = ось ax[0], y = V·h (вверх), z = ось ax[1]; скелет и узлы — на lift выше."""
     VV, CC, TT, PP, PC, II, LG, CR, CE, GL, GC = [], [], [], [], [], [], [], [], [], [], []; n0 = 0
     for i, (c, V) in enumerate(zip(cells, Vs)):
@@ -69,7 +84,10 @@ def build_mesh(cells, Vs, ax=(0, 1), vmax=1., h=VH, alpha=ALPHA, y0=.01, win=Non
         ids = n0 + np.arange(nt * M).reshape(nt, M); a, b, c_, d = ids[:-1, :-1], ids[:-1, 1:], ids[1:, :-1], ids[1:, 1:]; fa, fb, fc, fd = fin[:-1, :-1], fin[:-1, 1:], fin[1:, :-1], fin[1:, 1:]
         t1 = np.stack([a, b, c_], -1)[fa & fb & fc]; t2 = np.stack([b, d, c_], -1)[fb & fd & fc]; TT.append(np.concatenate([t1, t2]).ravel())
         VV.append(P.reshape(-1, 3)); CC.append(col.reshape(-1, 4)); n0 += nt * M
-        Pl = P + [0., lift, 0.]; okl = fin[:-1] & fin[1:]; okc = fin[:, :-1] & fin[:, 1:]                                 # скелет на поверхности (+lift): ребро с вершиной V=∞ не рисуется
+        Pl = P + [0., lift, 0.]; fk = fin
+        if skel == 'time' and c.get('Gt') is not None:
+            Gt, Vt, fk = time_nodes(c, V, fin); Pl = np.empty(Gt.shape[:2] + (3,)); Pl[..., 0] = Gt[..., ax[0]]; Pl[..., 2] = Gt[..., ax[1]]; Pl[..., 1] = np.where(fk, Vt * h, y0) + lift
+        okl = fk[:-1] & fk[1:]; okc = fk[:, :-1] & fk[:, 1:]                                 # скелет на поверхности (+lift): ребро с вершиной V=∞ не рисуется
         cmask = np.zeros(M, bool); cmask[M // 2] = True; gm = np.zeros(M, bool) if goalcols is None else np.asarray(goalcols[i], bool)
         e2 = lambda ok: np.stack([Pl[:-1][ok], Pl[1:][ok]], 1).reshape(-1, 3)
         GL.append(e2(okl & (gm & ~cmask)[None, :])); GC.append(e2(okl & (gm & cmask)[None, :])); CE.append(e2(okl & cmask[None, :])); LG.append(e2(okl & ~cmask[None, :])); CR.append(np.stack([Pl[:, :-1][okc], Pl[:, 1:][okc]], 1).reshape(-1, 3))
