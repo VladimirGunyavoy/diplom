@@ -88,7 +88,7 @@ def freeze_idx(g, s):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 1 if pl else 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -197,9 +197,9 @@ class Graph:
         if s.calc == 'q' and s.refthr > 0 and not s._refined:                                                # SOLVE8_PLUS / REFINE_THR: адаптивные полосы по скачку Q (refine_atlas), затем бисекция переключений; граф усыновляет уточнённый
             _, G2, ins = refine_atlas(s.g, s._atlas, s.refthr, s.rdepth, 'q', verbose=False); G2._refined = True; G2.refined = ins; keep = (s.bis, s.bisr, s.bnd, s.refthr, s.rdepth); s.__dict__.update(G2.__dict__); s.bis, s.bisr, s.bnd, s.refthr, s.rdepth = keep; s._refined = True; s.refined = ins
         if s.calc != 'v':
-            V = s._solve_q(maxit, max(tol, s.wtol) if s.warm else tol, verbose, progress=progress)
+            V = s._solve_q(maxit, max(tol, s.wtol), verbose, progress=progress)
             if s.bis > 0 and not s.subk:                                                                      # BISECT: подточки — моменты переключения, найденные бисекцией по времени на рёбрах, где «продолжать» и «переключиться» меняются местами
-                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol) if s.warm else tol, False, progress=progress, warm=bool(s.warm))
+                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol), False, progress=progress, warm=bool(s.warm))
                 s.subk = 0; s._subc = None
             return V
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
@@ -388,7 +388,7 @@ def starts(g, n, seed):
     return np.array(out)
 
 
-COMMIT_EVERY = int(os.environ.get('COMMIT_EVERY', 1))          # решение агента commit раз в N шагов dt (1 — каждый шаг, как в lr3/qagent)
+COMMIT_EVERY = int(os.environ.get('COMMIT_EVERY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 1))          # решение агента commit раз в N шагов dt (1 — каждый шаг, как в lr3/qagent)
 POLICIES = {'base': dict(), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'look': dict(look=True), 'commit': dict(commit=True)}
 
 
