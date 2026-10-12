@@ -111,6 +111,15 @@ def _boxes(P, hw):
     return V, idx
 
 
+LIVE_BATCH = int(os.environ.get('V8_LIVE_BATCH', 25)); LIVE_DELAY = float(os.environ.get('V8_LIVE_DELAY', 3.))               # P: агенты стартуют пачками по BATCH каждые DELAY с
+def _box_edges(P, hw):
+    """рёбра брусьев (как в _boxes): 12 рёбер на брус парами вершин → (K·24, 3)"""
+    if len(P) == 0: return np.zeros((0, 3), np.float32)
+    c = np.array([[sx, sy, sz] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)], float) * np.asarray(hw, float)
+    e = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)]
+    return (P[:, None, None, :] + c[np.array(e)][None]).reshape(-1, 3).astype(np.float32)
+
+
 RAIL_HW = tuple(float(v) for v in os.environ.get('V8_RAIL_HW', '.16,.11,.11').split(','))             # полуразмеры вагончика на рельсе (x вдоль рельса, y, z)
 
 
@@ -392,7 +401,7 @@ class GrowView:
             return
         if s._traj is None: print('[live] no trajectories yet (wait for the calculation)', flush=True); return
         from .liveplay import LivePlay
-        s._live = LivePlay(s.ax); s._live.add(s._traj[0]); s._live_on = True; s._live_t = time.perf_counter(); s._clear_traj(); s._live_table(); print('[live] playing %d trajectories' % len(s._traj[0]['paths']), flush=True)
+        s._live = LivePlay(s.ax); R0 = s._traj[0]; s._live_q = [{k: R0[k][i:i + LIVE_BATCH] for k in ('paths', 'V', 'U')} for i in range(0, len(R0['paths']), LIVE_BATCH)]; s._live.add(s._live_q.pop(0)); s._live_next = time.perf_counter() + LIVE_DELAY; s._live_on = True; s._live_t = time.perf_counter(); s._clear_traj(); s._live_table(); print('[live] playing %d trajectories: batches of %d every %.1f s' % (len(s._traj[0]['paths']), LIVE_BATCH, LIVE_DELAY), flush=True)
 
     def live_launch(s, xv):
         """O: агент от точки взгляда xv=(x, v) — новый старт сразу (таблица Q / точный поиск), путь раскрывается вместе с остальными"""
@@ -408,7 +417,9 @@ class GrowView:
     def live_update(s):
         """каждый кадр (main.update): шаг проигрывания → новые сегменты в хвостовой слот пула слоёв + головы агентов"""
         if not s._live_on or s._live is None: return
-        now = time.perf_counter(); dt = min(now - s._live_t, .1); s._live_t = now; o = s._live.step(dt); w = (1., 1., 1., 1.); k = o['slot']; t = o['tail']
+        now = time.perf_counter()
+        if getattr(s, '_live_q', None) and now >= s._live_next: s._live.add(s._live_q.pop(0)); s._live_next = now + LIVE_DELAY            # следующая пачка стартует по таймеру
+        dt = min(now - s._live_t, .1); s._live_t = now; o = s._live.step(dt); w = (1., 1., 1., 1.); k = o['slot']; t = o['tail']
         from . import vsurf as VS
         if o['new'] and t['floor'] is not None:
             for nm, arr, col, th in (('lv_ff@%d' % k, t['floor'], t['fcol'], VS.TRAJ_FW), ('lv_sf@%d' % k, t['surf'], t['scol'], VS.TRAJ_SW)):
@@ -421,10 +432,9 @@ class GrowView:
         if s._live_rail is None:                                                                         # «рельс»: реальная 1D-система (x по оси x, v — скорость точки) в мировой точке (0, 0, RAIL_Z); цель |x| ≤ ρ — отрезок; масштаб x как на плоскости
             xl = float(os.environ.get('XL', 3)) + float(os.environ.get('GMX', 3)); rho = float(os.environ.get('RHO', .2)); z = VS.RAIL_Z
             s._layer('lv_rail', w).set_geometry(np.array([[-xl, 0, z], [xl, 0, z]], float), kind='lines', thick=3, colors=np.tile((.75, .75, .8, .9), (2, 1)), depth_write=False); s._live_used.add('lv_rail')
-            s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal')
-            h = RAIL_HW[1] * 3; X = float(os.environ.get('XL', 3)); fp = np.array([[-X, -h, z], [X, -h, z], [X, -h, z], [X, h, z], [X, h, z], [-X, h, z], [-X, h, z], [-X, -h, z]], float)      # рамка границы области вагонетки: x∈[-XL, XL] (за ней — буфер GMX), вертикальный прямоугольник вокруг рельса
-            s._layer('lv_frame', w).set_geometry(fp, kind='lines', thick=7, colors=np.tile((1., .85, .2, 1.), (len(fp), 1)), depth_write=False, on_top=True); s._live_used.add('lv_frame'); s._live_rail = True
-        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _boxes(RP, RAIL_HW); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')       # по точке на агента: x(t), цвет — текущее управление
+            s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal'); s._live_rail = True
+        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _boxes(RP, RAIL_HW); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')
+        E = _box_edges(RP, RAIL_HW); s._layer('lv_pts_edge', w).set_geometry(E, kind='lines', thick=2, colors=np.tile((0., 0., 0., 1.), (len(E), 1)) if len(E) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts_edge')       # чёрная рамка у каждой вагонетки       # по точке на агента: x(t), цвет — текущее управление
         D, ii = _discs(H, R); s._layer('lv_head', w).set_geometry(D, ii, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_head')
 
     def _draw_traj(s):
