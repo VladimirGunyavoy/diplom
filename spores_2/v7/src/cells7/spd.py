@@ -10,12 +10,27 @@ import growN as G
 
 
 class GoalSolver:
-    def __init__(s, A, prefix, dev='cuda'):
-        s.A, s.dev = A, dev
-        I = np.load(prefix + '_I.npy'); IDX = np.load(prefix + '_IDX.npy'); W = np.load(prefix + '_W.npy')
-        s.gI = torch.as_tensor(I.astype(np.int64), device=dev); s.gX = torch.as_tensor(IDX, device=dev); s.gW = torch.as_tensor(W, device=dev)
-        s.hasE = torch.zeros(A.N, dtype=torch.bool, device=dev); s.hasE[s.gI] = True; s.ne = len(I)
+    def __init__(s, A, prefix, dev='cuda', compact=False, sc_dtype='float32'):
+        """compact=True (SPD4): стенсил = (владелец int32, base int32, 4 координаты sc в ячейке); вершины base + смещения, вес = Π(sc | 1−sc) — считаются на лету.
+        Рёбра не-аффинные (столбцовые SBCAUS) хранятся как раньше. sc_dtype: float32 (≡ W до 1e-7) или float16 (≈7e-4)."""
+        s.A, s.dev, s.compact = A, dev, compact
+        I = np.load(prefix + '_I.npy', mmap_mode='r'); IDX = np.load(prefix + '_IDX.npy', mmap_mode='r'); W = np.load(prefix + '_W.npy', mmap_mode='r'); s.ne = len(I); s.parts = []   # части: ('full', I, X, W) | ('cmp', I, B, SC)
+        if not compact:
+            s.parts.append(('full', torch.as_tensor(np.asarray(I).astype(np.int64), device=dev), torch.as_tensor(np.asarray(IDX), device=dev), torch.as_tensor(np.asarray(W), device=dev)))
+        else:
+            VOFF = G.VOFF; off = VOFF @ np.array([G.M ** (G.m_ - k) for k in range(G.N)]); ch = 1 << 21; Ia, Ba, Sa, If, Xf, Wf = [], [], [], [], [], []
+            for a in range(0, s.ne, ch):
+                x = np.asarray(IDX[a:a + ch]).astype(np.int64); w = np.asarray(W[a:a + ch]); i_ = np.asarray(I[a:a + ch]); aff = (x == x[:, :1] + off[None]).all(1)
+                sc = np.stack([w[:, VOFF[:, k] == 1].sum(1, dtype=np.float64) for k in range(G.N)], 1)
+                Ia.append(i_[aff].astype(np.int32)); Ba.append(x[aff, 0].astype(np.int32)); Sa.append(sc[aff].astype(sc_dtype)); If.append(i_[~aff]); Xf.append(x[~aff].astype(np.int32)); Wf.append(w[~aff])
+            s.parts.append(('cmp', torch.as_tensor(np.concatenate(Ia), device=dev), torch.as_tensor(np.concatenate(Ba), device=dev), torch.as_tensor(np.concatenate(Sa), device=dev)))
+            s.parts.append(('full', torch.as_tensor(np.concatenate(If).astype(np.int64), device=dev), torch.as_tensor(np.concatenate(Xf), device=dev), torch.as_tensor(np.concatenate(Wf), device=dev)))
+        s.hasE = torch.zeros(A.N, dtype=torch.bool, device=dev)
+        for p in s.parts: s.hasE[p[1].long()] = True
+        s.vo = torch.as_tensor(G.VOFF, device=dev); s.off = torch.as_tensor(G.VOFF @ np.array([G.M ** (G.m_ - k) for k in range(G.N)]), device=dev)
         s.P = A.P; s.fmax = None
+
+    def nbytes(s): return sum(t.numel() * t.element_size() for p in s.parts for t in p[1:])
 
     def tgoal_min(s, gc):
         """Vg = min по u времени входа в цель за шаг DTN (growN.Atlas.tgoal), считается только у границы цели."""
@@ -34,11 +49,15 @@ class GoalSolver:
         while n < maxit:
             new = Vt.clone()
             if G.NOLATCH: new[s.hasE] = Vgt[s.hasE]
-            for a in range(0, s.ne, ch):
-                vi = Vt[s.gX[a:a + ch].long()]; w_ = s.gW[a:a + ch].to(dt)
-                ok = vi < G.BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
-                v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < G.WTHR] = G.BIG
-                new.scatter_reduce_(0, s.gI[a:a + ch], G.DTN + v, 'amin')
+            for kind, gI, gX, gW in s.parts:
+                for a in range(0, len(gI), ch):
+                    if kind == 'full': vi = Vt[gX[a:a + ch].long()]; w_ = gW[a:a + ch].to(dt)
+                    else:
+                        sc = gW[a:a + ch].to(dt); vi = Vt[gX[a:a + ch].long()[:, None] + s.off[None]]; w_ = torch.ones(len(sc), 2 ** G.N, dtype=dt, device=dev)
+                        for k in range(G.N): w_ = w_ * torch.where(s.vo[None, :, k] == 1, sc[:, k:k + 1], 1 - sc[:, k:k + 1])
+                    ok = vi < G.BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
+                    v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < G.WTHR] = G.BIG
+                    new.scatter_reduce_(0, gI[a:a + ch].long(), G.DTN + v, 'amin')
             new[goal] = 0.; df = (new - Vt).abs()
             if lcut is not None: df = torch.where(new < lcut, df, torch.zeros_like(df))
             d = float(df.max()); Vt = new; n += 1
@@ -107,6 +126,6 @@ def reseed(S, gc, lays, log=print, t_grow=0.):
     ea = np.concatenate([c.o + np.arange((c.G.shape[0] - 1) * mm) for c in new]); ex = np.zeros((len(ea), 2 ** G.N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** G.N), idt); eI[:] = (ea + mm)[:, None]
     Ie.append(ea); Xe.append(eI); We.append(ex)
     I = np.concatenate(Ie); X = np.concatenate(Xe); W = np.concatenate(We); dev = S.dev
-    S.gI = torch.cat([S.gI, torch.as_tensor(I.astype(np.int64), device=dev)]); S.gX = torch.cat([S.gX, torch.as_tensor(X, device=dev)]); S.gW = torch.cat([S.gW, torch.as_tensor(W, device=dev)])
-    hasE = torch.zeros(A.N, dtype=torch.bool, device=dev); hasE[:S.hasE.numel()] = S.hasE; hasE[S.gI] = True; S.hasE = hasE; S.ne = len(S.gI)
+    S.parts.append(('full', torch.as_tensor(I.astype(np.int64), device=dev), torch.as_tensor(X, device=dev), torch.as_tensor(W, device=dev)))
+    hasE = torch.zeros(A.N, dtype=torch.bool, device=dev); hasE[:S.hasE.numel()] = S.hasE; hasE[S.parts[-1][1]] = True; S.hasE = hasE; S.ne += len(I)
     log('reseed: gc %s | новых клеток %s, узлов %d (было %d) | рост %.1f с, дописывание: рёбра +%d, %.1f с' % (np.round(gc, 3).tolist(), [len(l) for l in lays], nN, N0, t_grow, len(I), time.time() - t0)); return S

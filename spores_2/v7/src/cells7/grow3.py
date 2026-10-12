@@ -201,7 +201,37 @@ def _free(y, tp, d, n=30):
         z = arc(z, US[k], dt)
     return True
 def _key(y): return (int(round(y[0] / .06)), int(round(y[1] / .06)), int(round(wrap(y[2]) / .2)))
+FINPOL = int(E('FINPOL', 0))                                                                           # SPD2 (b10): финиш через finish_gen.shoot_pol (сетка H .1 + доводка лучшей топологии) вместо SLSQP по всем топологиям
 def shoot(y, tmax):
+    if FINPOL == 2: return shoot_fast(y, tmax)
+    if FINPOL:
+        import finish_gen as FG
+        FG.FREE = (lambda z: dobs(z) > 0) if DISCS else None
+        Ts, tp = FG.shoot_pol(y, f, US, np.full(3, RHO), wrapy, tmax, NA=NA)
+        return (Ts, tp) if np.isfinite(Ts) else (np.inf, None)
+    return shoot_slsqp(y, tmax)
+def arc_b(Z, u, t):
+    v, w = u; t = np.maximum(t, 0.)
+    if w == 0: return np.stack([Z[:, 0] + v * t * np.cos(Z[:, 2]), Z[:, 1] + v * t * np.sin(Z[:, 2]), Z[:, 2]], 1)
+    return np.stack([Z[:, 0], Z[:, 1], Z[:, 2] + w * t], 1)
+def shoot_fast(y, tmax):
+    """SPD2 (b10): тот же SLSQP по топологиям, но конец дуг и якобиан ограничений — батчем (arc_b), jac цели = 1; результат тот же, питоновских вызовов ×n меньше."""
+    from scipy.optimize import minimize
+    best = (np.inf, None); R = RHO * .9; y = np.array(y, float)
+    for tp in TOPS:
+        n = len(tp)
+        def end_b(D):
+            Z = np.tile(y, (len(D), 1))
+            for i, k in enumerate(tp): Z = arc_b(Z, US[k], D[:, i])
+            Z[:, 2] = wrap(Z[:, 2]); return Z
+        def cjac(d, eps=1e-6):
+            C = R - np.abs(end_b(np.vstack([d[None], d[None] + eps * np.eye(n)]))); return ((C[1:] - C[0]) / eps).T
+        cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end_b(d[None])[0]), "jac": cjac}]
+        for d0 in (np.full(n, tmax / (2 * n)), np.full(n, tmax / n))[:int(E('FININITS', 2))]:
+            r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones(n), method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=100, ftol=1e-9))
+            if r.success and np.all(np.abs(end_b(r.x[None])[0]) <= RHO) and r.x.sum() < best[0] and (not DISCS or _free(y, tp, r.x)): best = (r.x.sum(), tp)
+    return best
+def shoot_slsqp(y, tmax):
     """best shooting finish from y: arcs of the 4 rhombus vertices in closed form, durations by SLSQP, end inside the goal box; returns (time, topology) or (inf, None)."""
     from scipy.optimize import minimize
     best = (np.inf, None); R = RHO * .9
