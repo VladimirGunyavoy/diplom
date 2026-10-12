@@ -111,7 +111,7 @@ def _boxes(P, hw):
     return V, idx
 
 
-RAIL_HW = tuple(float(v) for v in os.environ.get('V8_RAIL_HW', '.09,.06,.06').split(','))             # полуразмеры вагончика на рельсе (x вдоль рельса, y, z)
+RAIL_HW = tuple(float(v) for v in os.environ.get('V8_RAIL_HW', '.16,.11,.11').split(','))             # полуразмеры вагончика на рельсе (x вдоль рельса, y, z)
 
 
 def _discs(P, R, res=16):
@@ -423,7 +423,7 @@ class GrowView:
             s._layer('lv_rail', w).set_geometry(np.array([[-xl, 0, z], [xl, 0, z]], float), kind='lines', thick=3, colors=np.tile((.75, .75, .8, .9), (2, 1)), depth_write=False); s._live_used.add('lv_rail')
             s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal')
             h = RAIL_HW[1] * 3; X = float(os.environ.get('XL', 3)); fp = np.array([[-X, -h, z], [X, -h, z], [X, -h, z], [X, h, z], [X, h, z], [-X, h, z], [-X, h, z], [-X, -h, z]], float)      # рамка границы области вагонетки: x∈[-XL, XL] (за ней — буфер GMX), вертикальный прямоугольник вокруг рельса
-            s._layer('lv_frame', w).set_geometry(fp, kind='lines', thick=4, colors=np.tile((1., .85, .2, 1.), (len(fp), 1)), depth_write=False, on_top=True); s._live_used.add('lv_frame'); s._live_rail = True
+            s._layer('lv_frame', w).set_geometry(fp, kind='lines', thick=7, colors=np.tile((1., .85, .2, 1.), (len(fp), 1)), depth_write=False, on_top=True); s._live_used.add('lv_frame'); s._live_rail = True
         RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _boxes(RP, RAIL_HW); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')       # по точке на агента: x(t), цвет — текущее управление
         D, ii = _discs(H, R); s._layer('lv_head', w).set_geometry(D, ii, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_head')
 
