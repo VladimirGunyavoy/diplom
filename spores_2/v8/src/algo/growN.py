@@ -579,6 +579,8 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
                 rows = [k for k in range(c.G.shape[0]) if not ingoal(c.G[k][ctr])]; rows.sort(key=lambda k: abs(float(c.tau[k][ctr])))
                 for k in rows[::3][:8]:
                     d_ = c.G[k, -1] - c.G[k, 0]; d_ = d_ / max(np.linalg.norm(d_), 1e-12); sd += [c.G[k][ctr] + ZSEED * c.r[0] * d_, c.G[k][ctr] - ZSEED * c.r[0] * d_]
+        if SEEDNEAR and N == 2 and m_ == 1 and u != 0:                                                       # симметрия (x,v)→(−x,−v): в каждой паре боковых затравок первой — та, у которой u·x больше (слой +1: справа, слой −1: слева — зеркало), стороны чередуются
+            sd = [q_ for i in range(0, len(sd), 2) for q_ in sorted(sd[i:i + 2], key=lambda q: -u * q[0])]
         queue += sd
         if SEEDNEAR: queue += [yf, yb]                                                                       # соседи (боковые затравки) — раньше торцевых и случайных проб
         for q_ in c.chain[::-1]: queue.insert(0, q_)                                                          # цепочка зацепа — первой
