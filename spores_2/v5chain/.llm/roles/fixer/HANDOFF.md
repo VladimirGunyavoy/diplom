@@ -1,7 +1,8 @@
-# fixer HANDOFF — [РУТИНА НЕ ВЫПОЛНЕНА] (цепочка остановлена словом пользователя ~22:40, режим Б; преемника нет)
-Сдал hub-v5chain-fixer-5. Открытых задач fixer'у нет — все взятые закончены. Что стоит знать следующему fixer:
-- **Не запушено:** репозиторий `~/claude-work/system` опережает origin на ~20 коммитов (мои: ee7c2d8, ae3389b, ccfdbf7, c5c1885, 64f4485 и др.) — по слову пользователя пушить (git pull --no-rebase && git push); перед пушем посмотреть, чьи коммиты там.
-- **Ручные процессы на хабе без автозапуска:** `deck.py serve` (:8765, перезапускал 2026-10-06) и `~/grafana/feeder.py` (:8770, перезапускал 2026-10-07) — после перезагрузки хаба/падения tmux подняты не будут.
-- **Ноутбук (yoga):** с хаба недостижим, кроме relay деки; сессия worker'а без tmux-панели писать не даёт; sid-файлы ноутбука на хабе не синкаются (в графане агенты ноута подписаны «yoga»).
-- **diplom** (spores_2/v5chain): origin переключён на ssh `git@github-paper:…`, пуш работает.
-- Уроки: не убивать PID «tmux new-session …» (это tmux-сервер, 2026-10-06 упали все сессии) — записано в infra-rules/infra.md; `pick_account --env` теперь резервирует аккаунт (пробы — `--no-reserve`).
+# HANDOFF fixer (2026-10-12, от yoga-v5chain-fixer-1)
+Открыто:
+1. **Графана/хаб:** передал hop-hub-v5chain-fixer-5 проверить, что usage_log_yoga.jsonl ноута (spores_2/v5chain, метки .claude/.claude-romaha, агенты laptop-*) попадает в analytics/графану. Ответа не было — спросить/проверить самому.
+2. **Почему /mnt/c падает** (9p EIO, 3 раза за вечер 07.10): причина не найдена (в dmesg лавина «FS-Cache: Duplicate cookie» 9p.inode, ядро 5.15.167.4; Windows-журнал не читался — powershell.exe тоже на C:). Лекарство — авто-ремоунт в wsl_revive (проверен вручную, автоматически вживую не срабатывал). Варианты дальше: wsl --update, перенос рабочего на Linux-ФС.
+3. **Реестр ревайва:** сейчас research-3 (romaha), worker-2/3 (/root/.claude), «hop-yoga-v5chain-fixer-1» (это я). Новый fixer на другом аккаунте → заменить мою запись в `~/.wsl_revive/agents.json` (+копию в system/…/wsl_revive_agents.json) на его (sid, config_dir, имя; call_fixer ищет hop-laptop-v5chain-fixer-N).
+4. Аккаунты: /root/.claude 7д ~96%, romaha свежий. worker-2/3 при необходимости: `python3 ~/.wsl_revive/move_session.py laptop-v5chain-worker-2 romaha`.
+5. searcher-1 (процесс claude) мог остаться запущенным — не в реестре, не поднимается.
+Пульса у меня не было.
