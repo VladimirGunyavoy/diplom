@@ -8,6 +8,8 @@ g = S.load_growN(); layers = [float(x) for x in os.environ.get('LAYERS', '1,-1,0
 t0 = time.perf_counter(); atlas, _ = S.build_atlas(layers, 0, par=False); tg = time.perf_counter() - t0; G = S.make_graph(g, atlas, 'N')
 nc = sum(len(atlas[u]) for u in atlas); G.set_calc('q'); t0 = time.perf_counter(); G.solve(verbose=False); ts = time.perf_counter() - t0
 print('RES XLV=%s GMV=%s M=%d | клеток %d (по слоям %s), узлов %d | рост %.1f с, solve Q %.1f с' % (g.XLV, g.GMV, G.M, nc, [len(atlas[u]) for u in atlas], G.n, tg, ts))
+for li, u in enumerate(G.us):
+    m = (G.layer == li) & (G.nodecell == G.gcell[u][0]); print('RES спора цели u=%+g: узлов %d, V=inf %d, столбцов %d' % (u, m.sum(), (G.V[m] >= S.BIG / 2).sum(), np.asarray(atlas[u][0].G).shape[1]))
 X0 = S.starts(g, int(os.environ.get('N', '1000')), 1); Tr = R.T_ref(X0, G.rho); mx = S.path_extent(X0, G.rho); inw = mx <= float(g.XLV[0]); inb = mx <= float(g.XLV[0] + g.GMV[0]); tmax = 3 * Tr + 2
 hasV = np.isfinite(G.Vstar(X0)[0])
 print('RES стартов %d: оптимум выходит за зону %d, за буфер %d; с V* %.1f%% (в зоне %.1f%%, в буфере %.1f%%)' % (len(X0), (~inw).sum(), (~inb).sum(), 100 * hasV.mean(), 100 * hasV[inw].mean(), 100 * hasV[inb].mean()))
