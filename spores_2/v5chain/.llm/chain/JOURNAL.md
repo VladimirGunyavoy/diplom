@@ -308,3 +308,5 @@ laptop-v5chain-research-4 | started | acc3 | opus | 15:13:03
 AUTONOMOUS | on | слово пользователя «я ушёл, все решения за тобой» | поставил laptop-v5chain-research-4 | 16:06:51
 AUTONOMOUS | off | пользователь вернулся ~16:05 (спросил отчёт); пометку ставил и снял laptop-v5chain-research-4; слово «все решения за тобой» остаётся в силе | 16:07:53
 laptop-v5chain-worker-6 | started | acc2 | sonnet | 16:08:11
+laptop-v5chain-research-4 | line-open | worker [laptop-B] | слово пользователя ~17:25 «разрешаю запустить вторую линию воркера, чтобы их было 2 одновременно»: линия laptop-B — расчётная часть v8 (solve8.py: дефект у цели W2, затем W3), линия laptop-A (worker-6) — окно/визуальный слой | 17:04:27
+laptop-v5chain-worker-b1 | started | acc2 | sonnet | 17:05:01
