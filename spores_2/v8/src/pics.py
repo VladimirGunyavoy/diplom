@@ -32,10 +32,10 @@ def _save(fig, name, dirs):
 
 def _frames(ax, G):
     from matplotlib.patches import Rectangle, Circle
-    xl = np.asarray(G.g.XLV, float); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
+    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
     ax.add_patch(Rectangle((-xl[0], -xl[1]), 2 * xl[0], 2 * xl[1], fill=False, ec='#2a9d3a', ls='--', lw=1.3, label='work zone ±(%g, %g)' % (xl[0], xl[1])))
     ax.add_patch(Rectangle((-xl[0] - gm[0], -xl[1] - gm[1]), 2 * (xl[0] + gm[0]), 2 * (xl[1] + gm[1]), fill=False, ec='#777777', ls=':', lw=1.3, label='growth limit ±(%g, %g)' % (xl[0] + gm[0], xl[1] + gm[1])))
-    ax.add_patch(Circle((0, 0), G.rho, fill=False, ec='k', lw=1.8)); ax.set_xlabel('x'); ax.set_ylabel('v'); ax.grid(alpha=.2)
+    ax.add_patch(Circle((0, 0), G.rho, fill=False, ec='k', lw=1.8) if os.environ.get('GOALSHAPE', 'ball' if os.environ.get('SYS', 'di') == 'di' else 'box') == 'ball' else Rectangle((-G.rho, -G.rho), 2 * G.rho, 2 * G.rho, fill=False, ec='k', lw=1.8)); ax.set_xlabel('x'); ax.set_ylabel('v'); ax.grid(alpha=.2)
     return xl, xl + gm
 
 
@@ -60,8 +60,30 @@ TREF_SMALL = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'run
 TREF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tref_cache')      # кэш T_ref на диске (в git): T_ref зависит только от точек и RHO, не от графа
 
 
+PEND_REF = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'v5chain', 'reports', 'research'))
+
+
+def pend_starts(n=100):
+    """старты эталона маятника (как bench/common.py Pend): rng(0), θ∈±π, ω∈±2, первые n из 100"""
+    rq = np.random.default_rng(0); return np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1)[:n]
+
+
+def pend_tref(X):
+    """T_ref маятника только для 100 стартов эталона (pend_ref_best_u<UM>.npy, иначе pend_ref_T.npy); остальные точки — NaN"""
+    X = np.asarray(X, float).reshape(-1, 2); out = np.full(len(X), np.nan); Q = pend_starts()
+    fb = os.path.join(PEND_REF, 'pend_ref_best_u%s.npy' % float(os.environ.get('UM', .3)))
+    f = fb if os.path.exists(fb) else os.path.join(PEND_REF, 'pend_ref_T.npy')
+    try: ref = np.load(f)[:len(Q)]
+    except Exception: return out
+    for i, x in enumerate(X):
+        d = np.abs(Q - x).max(1); j = int(d.argmin())
+        if d[j] < 1e-9: out[i] = ref[j]
+    return out
+
+
 def t_ref_cached(X):
     """solve8.t_ref(X)[0] с кэшем по хэшу (X, RHO, константы ref_di_disk): сетка карты ошибки фиксирована — T_ref (~6 мин на 16 тыс. точек) считается один раз; значения те же побитно"""
+    if os.environ.get('SYS', 'di') == 'pend': return pend_tref(X)
     import hashlib
     from .algo import solve8, ref_di_disk as R
     X = np.ascontiguousarray(X, float); rho = float(os.environ.get('RHO', .2)); key = hashlib.md5(X.tobytes() + repr((X.shape, rho, R.TMAX1, R.GRID0, R.ZOOM_N, R.ZOOM_ROUNDS)).encode()).hexdigest()[:20]; f = os.path.join(TREF_DIR if len(X) >= 1000 else TREF_SMALL, '%d_%s.npy' % (len(X), key))                # большие (сетка карты ошибки) — в git; малые (старты траекторий) — runs/ (не в git)
@@ -74,7 +96,7 @@ def t_ref_cached(X):
 
 
 def _grid(G, n=140):
-    xl = np.asarray(G.g.XLV, float); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
+    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
     Vs = G.Vlayers(X).min(1); Vs = np.where(np.isfinite(Vs), Vs, np.nan); return xs, vs, X, Vs.reshape(XX.shape)
 
 
@@ -110,7 +132,7 @@ def traj_png(G, res, dirs, calc, stat=''):
 def hist_png(G, res, dirs, calc):
     """распределение T/T_ref по стартам + мед/p90/max, доля дошедших"""
     from .algo import solve8
-    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = np.asarray(res['Tref'], float) if 'Tref' in res else t_ref_cached(X0); ok = np.isfinite(T); r = T[ok] / Tr[ok]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = np.asarray(res['Tref'], float) if 'Tref' in res else t_ref_cached(X0); ok = np.isfinite(T); r = T[ok] / Tr[ok]; r = r[np.isfinite(r)]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
     if len(r):
         lo, hi = min(float(r.min()), 1.) - .02, float(r.max()) + .02; ax.hist(r, bins=np.linspace(lo, hi, 63), color='#4a90c8', density=True); ax.set_xlim(lo, hi);       # шкала X по данным (слово пользователя 2026-10-12), Y обычная (линейная)
         [ax.axvline(v, color=c, ls=l, label='%s %.3f' % (n, v)) for v, c, l, n in ((np.mean(r), '#d62728', '-', 'mean'), (np.median(r), '#2ca02c', '--', 'median'), (np.percentile(r, 90), '#ff7f0e', ':', 'p90'), (r.max(), 'k', ':', 'max'))]

@@ -133,7 +133,7 @@ class RunLog:
         k = max(len(P) // 5, 2); span = float(np.linalg.norm(P[-1][:2] - P[-k][:2])) if len(P) > 2 else nan; ul = float(U[-1]) if len(U) else nan
         if status == 'reached': reason = 'ok'
         elif status == 'out_of_area': reason = 'start_out_of_V_area'
-        elif not np.isfinite(Ve): reason = 'left_V_area_or_inf_at_end'
+        elif not np.isfinite(Ve) or (len(V) >= 5 and (~(np.isfinite(V[-5:]) & (V[-5:] < 1e8))).sum() >= 3): reason = 'left_V_area_or_inf_at_end'      # V* конца бывает конечен случайно (узкая полоска у шва) — смотрим на последние 5 точек
         elif span < 0.02: reason = 'stalled_at_end'
         else: reason = 'timeout_or_cycle'
         return (Tr, T / Tr if np.isfinite(T) and np.isfinite(Tr) and Tr > 0 else nan, V0, V0 - Tr if np.isfinite(V0) else nan, hump, Ve, span, ul, len(P), reason)

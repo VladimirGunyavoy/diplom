@@ -34,7 +34,7 @@ def main():
                 Vs, info = VS.solve_layers(cl, calc=calc, progress=lambda p, d, V: say('pass %d, residual %.1e, finite nodes %.0f%%' % (p, d, 100 * float((V < VS.BIG / 2).mean()))))
                 Gby[calc] = info.pop('G')
                 if kind == 'V': send('V', i, (Vs, info), time.perf_counter() - t0)
-                if dirs: draw(i, lambda: ([] if done_cells[0] else PX.cells_png(Gby[calc], cl, dirs, title='(%s)' % os.environ.get('SYS', 'di'))) or PX.error_map(Gby[calc], dirs, calc), 'cells.png, error_%s.png' % calc); done_cells[0] = True
+                if dirs: draw(i, lambda: ([] if done_cells[0] else PX.cells_png(Gby[calc], cl, dirs, title='(%s)' % os.environ.get('SYS', 'di'))) or (PX.error_map(Gby[calc], dirs, calc) if os.environ.get('SYS', 'di') == 'di' else None), 'cells.png, error_%s.png' % calc); done_cells[0] = True
             if kind == 'T':
                 if getattr(Gby[calc], 'tab', 1) is None and hasattr(Gby[calc], 'build_table'): say('building the lookup table', True); Gby[calc].build_table(); say('lookup table %.1f s' % Gby[calc].t_table, True)     # таблица Q по слоям (b2): агенты берут lookup вместо поиска ячейки
                 state = [0]

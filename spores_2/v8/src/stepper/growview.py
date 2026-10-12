@@ -134,6 +134,85 @@ def _discs(P, R, res=16):
     return V, idx
 
 
+WRAP_X = 0.                                                                                       # период по оси x (θ маятника = 2π); 0 — без шва. Задаёт main_pend.
+
+
+def wrap_lines(V, colors=None):
+    """отрезки-пары (2K, 3), пересекающие шов x = ±P/2, режем на две части в периодических копиях (а не тянем через поле); colors (2K, 4) режутся так же"""
+    P = WRAP_X; V = np.asarray(V, float).reshape(-1, 3)
+    if P <= 0 or len(V) < 2: return V, colors
+    A, B = V[0::2], V[1::2]; far = np.abs(B[:, 0] - A[:, 0]) > P / 2
+    if not far.any(): return V, colors
+    ca = cb = None
+    if colors is not None and np.ndim(colors) == 2 and len(colors) == len(V): ca, cb = np.asarray(colors)[0::2], np.asarray(colors)[1::2]
+    keep = ~far; a, b = A[far], B[far]; sg = np.where(a[:, 0] < b[:, 0], 1., -1.)           # a левее b: короткий путь идёт влево от a через шов (-P/2), b — вправо от шва
+    b2 = b.copy(); b2[:, 0] -= sg * P                                                          # b в копии, ближайшей к a
+    seam = -sg * P / 2; t = (seam - a[:, 0]) / (b2[:, 0] - a[:, 0]); m = a + t[:, None] * (b2 - a); m1 = m.copy(); m1[:, 0] = seam; m2 = m.copy(); m2[:, 0] = seam + sg * P
+    a2 = a.copy(); a2[:, 0] += sg * P                                                          # a в копии, ближайшей к b
+    out = np.empty((2 * (int(keep.sum()) + 2 * int(far.sum())), 3)); n = 2 * int(keep.sum())
+    out[0:n:2], out[1:n:2] = A[keep], B[keep]; k = int(far.sum()); out[n:n + 2 * k:2], out[n + 1:n + 2 * k:2] = a, m1; out[n + 2 * k::2], out[n + 2 * k + 1::2] = m2, b
+    if ca is None: return out, colors
+    cm = ca[far] + t[:, None] * (cb[far] - ca[far]); C = np.empty((len(out), colors.shape[1]))
+    C[0:n:2], C[1:n:2] = ca[keep], cb[keep]; C[n:n + 2 * k:2], C[n + 1:n + 2 * k:2] = ca[far], cm; C[n + 2 * k::2], C[n + 2 * k + 1::2] = cm, cb[far]
+    return out, C
+
+
+SHOW_X = 0.                                                                                       # показывать периодические копии (±WRAP_X) на x ∈ [−SHOW_X, SHOW_X] (θ маятника: 8); 0 — только один период. Задаёт main_pend.
+
+
+def clone_lines(V, colors=None):
+    """отрезки-пары → копии со сдвигами k·WRAP_X, обрезанные по |x| ≤ SHOW_X (после wrap_lines: ни один отрезок не пересекает шов)"""
+    P, X = WRAP_X, SHOW_X; V = np.asarray(V, float).reshape(-1, 3)
+    if P <= 0 or X <= 0 or len(V) < 2: return V, colors
+    pc = colors is not None and np.ndim(colors) == 2 and len(colors) == len(V); outV, outC = [], []
+    for k in range(-int(np.ceil((X + P / 2) / P)), int(np.ceil((X + P / 2) / P)) + 1):
+        W = V.copy(); W[:, 0] += k * P; A, B = W[0::2].copy(), W[1::2].copy(); ca = np.asarray(colors)[0::2].copy() if pc else None; cb = np.asarray(colors)[1::2].copy() if pc else None
+        dx = B[:, 0] - A[:, 0]; t0 = np.zeros(len(A)); t1 = np.ones(len(A)); ok = np.ones(len(A), bool)
+        for lim, sg in ((-X, 1.), (X, -1.)):                                              # x ≥ −X и x ≤ X
+            num = sg * (A[:, 0] - lim); den = sg * dx                                  # inside: num + t·den ≥ 0
+            with np.errstate(divide='ignore', invalid='ignore'):
+                t = -num / den
+            par = np.abs(den) < 1e-15; ok &= ~(par & (num < 0))
+            ent = (~par) & (den > 0); lea = (~par) & (den < 0); t0 = np.where(ent, np.maximum(t0, t), t0); t1 = np.where(lea, np.minimum(t1, t), t1)
+        ok &= t0 < t1
+        if not ok.any(): continue
+        a2 = A[ok] + t0[ok, None] * (B[ok] - A[ok]); b2 = A[ok] + t1[ok, None] * (B[ok] - A[ok]); n = len(a2); o = np.empty((2 * n, 3)); o[0::2], o[1::2] = a2, b2; outV.append(o)
+        if pc:
+            c2 = np.empty((2 * n, colors.shape[1])); c2[0::2] = ca[ok] + t0[ok, None] * (cb[ok] - ca[ok]); c2[1::2] = ca[ok] + t1[ok, None] * (cb[ok] - ca[ok]); outC.append(c2)
+    if not outV: return np.zeros((0, 3)), (np.zeros((0, np.shape(colors)[1])) if pc else colors)
+    return np.vstack(outV), (np.vstack(outC) if pc else colors)
+
+
+def clone_tris(V, idx, colors=None):
+    """треугольники → копии со сдвигами k·WRAP_X; оставляем те, что хоть одной вершиной попадают в |x| ≤ SHOW_X"""
+    P, X = WRAP_X, SHOW_X; V = np.asarray(V, float).reshape(-1, 3); idx0 = np.asarray(idx); T = idx0.reshape(-1, 3)
+    if P <= 0 or X <= 0 or len(T) == 0: return V, idx0, colors
+    pc = colors is not None and np.ndim(colors) == 2 and len(colors) == len(V); outV, outI, outC = [], [], []; nv = 0; K = int(np.ceil((X + P / 2) / P))
+    for k in range(-K, K + 1):
+        x = V[T, 0] + k * P; keep = ((x >= -X) & (x <= X)).any(1) | ((x.min(1) <= -X) & (x.max(1) >= X))
+        if not keep.any(): continue
+        u, inv = np.unique(T[keep], return_inverse=True); W = V[u].copy(); W[:, 0] += k * P; outV.append(W); outI.append(inv.reshape(-1, 3) + nv); nv += len(u)
+        if pc: outC.append(np.asarray(colors)[u])
+    if not outV: return np.zeros((0, 3)), np.zeros(0, np.uint32), (np.zeros((0, np.shape(colors)[1])) if pc else colors)
+    return np.vstack(outV), np.vstack(outI).ravel(), (np.vstack(outC) if pc else colors)
+
+
+def wrap_tris(V, idx, colors=None):
+    """треугольники с разбросом по x > P/2 — дублируем в периодические копии (вершины с x<0 сдвигаем на +P в одной копии, с x>0 на −P в другой), без растяжки через поле"""
+    P = WRAP_X; V = np.asarray(V, float).reshape(-1, 3); idx0 = idx; idx = np.asarray(idx).reshape(-1, 3)
+    if colors is not None and not (np.ndim(colors) == 2 and len(colors) == len(V)): colors = None if False else colors; pervert = False
+    else: pervert = colors is not None
+    if P <= 0 or len(idx) == 0: return V, idx0, colors
+    x = V[idx, 0]; far = (x.max(1) - x.min(1)) > P / 2
+    if not far.any(): return V, idx0, colors
+    T = idx[far]; nv = len(V); newV, newC, newI = [V], ([np.asarray(colors)] if pervert else None), [idx[~far]]
+    for sgn in ((1.,) if SHOW_X > 0 else (1., -1.)):                                       # при показе копий достаточно одной (остальные дадут clone_tris — без двойного наложения)
+        u, inv = np.unique(T, return_inverse=True); W = V[u].copy(); W[(W[:, 0] < 0) if sgn > 0 else (W[:, 0] > 0), 0] += sgn * P
+        newI.append(inv.reshape(-1, 3) + nv); newV.append(W); nv += len(u)
+        if newC is not None: newC.append(np.asarray(colors)[u])
+    return np.vstack(newV), np.vstack(newI).ravel(), (np.vstack(newC) if newC is not None else colors)
+
+
 def _geom_node(V, kind, idx=None, col=(1., 1., 1., 1.)):
     """GeomNode напрямую из panda3d: kind='lines' — пары вершин (один GeomLines), 'tris' — индексированные треугольники (один GeomTriangles)"""
     from panda3d.core import GeomVertexData, GeomVertexFormat, Geom, GeomLines, GeomTriangles, GeomNode, GeomEnums
@@ -161,18 +240,29 @@ def _make_batch():
     class _Batch(Entity):
         """слой: один GeomNode; вершины в реальных координатах, a и b — масштаб/позиция самого узла (перестройка меша только при смене снимка)"""
         def __init__(self):
-            super().__init__(); self._gn = None; self.col = (1., 1., 1., 1.); self.real_position = np.zeros(3); self.real_scale = np.ones(3)
+            super().__init__(); self._gn = None; self.col = (1., 1., 1., 1.); self.tk = 1.; self._thick = None; self.real_position = np.zeros(3); self.real_scale = np.ones(3)
         def set_geometry(self, V, idx=None, kind='lines', thick=None, colors=None, depth_write=True, on_top=False, fixed=None):
             """colors — (n, 4) цвета вершин (иначе один цвет слоя); depth_write=False — полупрозрачная поверхность не закрывает линии за ней"""
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
+            if WRAP_X > 0:
+                if kind == 'lines': V, colors = wrap_lines(V, colors)
+                elif kind == 'tris' and idx is not None: V, idx, colors = wrap_tris(V, idx, colors)
+                if SHOW_X > 0:
+                    if kind == 'lines': V, colors = clone_lines(V, colors)
+                    elif kind == 'tris' and idx is not None: V, idx, colors = clone_tris(V, idx, colors)
+                    if len(V) == 0: return
             self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col if colors is None else colors)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
             if not depth_write: self._gn.set_depth_write(False)
             if fixed is not None: self._gn.set_bin('fixed', fixed)                                        # порядок отрисовки: подложка (31) → линии скелета (32) → траектории в цель (60)
             if on_top: self._gn.set_depth_test(False); self._gn.set_bin('fixed', 60)                  # поверх всего (белые траектории, входящие в цель)
-            if kind != 'tris': self._gn.set_render_mode_thickness(thick or 2)
+            if kind != 'tris': self._thick = thick or 2; self._gn.set_render_mode_thickness(max(1., self._thick * self.tk))
             else: self._gn.set_two_sided(True)
             self._gn.set_depth_offset(1)                                   # поверх пола (y = 0), без z-fighting
+        def set_tk(self, k):
+            """множитель толщины (1 + колесо: размер траекторий); применяется к уже построенной геометрии"""
+            self.tk = k
+            if self._gn is not None and self._thick is not None: self._gn.set_render_mode_thickness(max(1., self._thick * k))
         def apply_transform(self, a, b, **kw): self.position = b; self.scale = a
     return _Batch
 
@@ -191,7 +281,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''; s._live = None; s._live_on = False; s._live_t = 0.; s._live_used = set(); s._live_tab = None; s._live_rail = None
+        s.sm = spore_manager; s._sz0 = float(spore_manager.size) if spore_manager is not None else 1.; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''; s._live = None; s._live_on = False; s._live_t = 0.; s._live_used = set(); s._live_tab = None; s._live_rail = None
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -219,8 +309,15 @@ class GrowView:
         if name not in s.layers:
             e = _Batch(); e.col = tuple(float(x) for x in (col or s.COL[name.split('@')[0]]))
             s.zm.register_object(e, name='growview_' + name); s.layers[name] = e
+            if name.split('@')[0] in s.TRAJ_THICK: e.tk = s.tk()
         elif col is not None: s.layers[name].col = tuple(float(x) for x in col)
         return s.layers[name]
+
+    TRAJ_THICK = ('lv_ff', 'lv_sf', 'lv_pts_edge', 'traj_floor', 'traj_surf')      # линии траекторий масштабируются клавишей 1 + колесо (как споры)
+
+    def tk(s):
+        """множитель размера относительно начального SporeManager.size"""
+        return (s.sm.size / s._sz0) if (s.sm is not None and s._sz0) else 1.
 
     def _set_layer(s, name, arr, col=None):
         e = s._layer(name, col); arr = np.asarray(arr, float).reshape(-1, 3)
@@ -238,6 +335,12 @@ class GrowView:
         """размер спор ('1') поменялся — пересобрать диски (зум этого не требует)"""
         if s.sm is not None and getattr(s, '_built_size', None) not in (None, s.sm.size):
             for name, arr in list(s._pts.items()): s._set_layer(name, arr)
+        if s.sm is not None and getattr(s, '_tr_size', s._sz0) != s.sm.size:                                       # траектории: толщина линий, диски и маркеры — тем же размером
+            s._tr_size = s.sm.size; k = s.tk()
+            for nm, e in s.layers.items():
+                if nm.split('@')[0] in s.TRAJ_THICK: e.set_tk(k)
+            s._gkey.pop('traj', None)
+            if s.tmode and not s._live_on: s._draw_traj()
 
     def draw(s, snap):
         """нарисовать снимок (None — очистить). Время отрисовки уходит в TimeTable по имени паузы."""
@@ -433,8 +536,8 @@ class GrowView:
             xl = float(os.environ.get('XL', 3)) + float(os.environ.get('GMX', 3)); rho = float(os.environ.get('RHO', .2)); z = VS.RAIL_Z
             s._layer('lv_rail', w).set_geometry(np.array([[-xl, 0, z], [xl, 0, z]], float), kind='lines', thick=3, colors=np.tile((.75, .75, .8, .9), (2, 1)), depth_write=False); s._live_used.add('lv_rail')
             s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal'); s._live_rail = True
-        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _boxes(RP, RAIL_HW); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')
-        E = _box_edges(RP, RAIL_HW); s._layer('lv_pts_edge', w).set_geometry(E, kind='lines', thick=2, colors=np.tile((0., 0., 0., 1.), (len(E), 1)) if len(E) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts_edge')       # чёрная рамка у каждой вагонетки       # по точке на агента: x(t), цвет — текущее управление
+        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; hw_ = tuple(h_ * s.tk() for h_ in RAIL_HW); D2, i2 = _boxes(RP, hw_); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 8, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')
+        E = _box_edges(RP, hw_); s._layer('lv_pts_edge', w).set_geometry(E, kind='lines', thick=2, colors=np.tile((0., 0., 0., 1.), (len(E), 1)) if len(E) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts_edge')       # чёрная рамка у каждой вагонетки       # по точке на агента: x(t), цвет — текущее управление
         D, ii = _discs(H, R); s._layer('lv_head', w).set_geometry(D, ii, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_head')
 
     def _draw_traj(s):
@@ -461,6 +564,11 @@ class GrowView:
     def _sig(s, calc, cl): return (calc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
 
     def _traj_stat(s, res, secs):
+        t = s._traj_stat0(res, secs)
+        if os.environ.get('SYS') == 'pend' and os.environ.get('GOALSHAPE', 'box') == 'ball': t += '  [T_ref pend — для ящика ±.1; для круга чуть занижен]'
+        return t
+
+    def _traj_stat0(s, res, secs):
         st = np.asarray(res['status'], object); fl = np.flatnonzero(st == 'failed'); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
         return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs) + ('' if not len(fl) else '; NOT REACHED: ' + '; '.join('#%d start (%.2f,%.2f) end (%.3f,%.3f) last u=%+g, V*(end) %s' % (i, *res['X0'][i][:2], *res['paths'][i][-1][:2], res['U'][i][-1], ('%.3f' % res['V'][i][-1]) if np.isfinite(res['V'][i][-1]) and res['V'][i][-1] < 1e8 else 'inf') for i in fl[:8]))
 
@@ -587,7 +695,7 @@ class GrowView:
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
         from ..algo import growN as G
         ex = np.broadcast_to(np.asarray(extra, float), (len(G.XLV),)); a, b = G.XLV[s.ax[0]] + ex[s.ax[0]], G.XLV[s.ax[1]] + ex[s.ax[1]]      # extra — число или вектор по осям (GM покомпонентно: рабочая зона ±(3, 2.5), буфер ±(6, 3.5))
-        if G.XLV[s.ax[0]] == 0: a = np.pi                                # периодическая ось: рамка по периоду
+        if G.XLV[s.ax[0]] == 0: a = SHOW_X if SHOW_X > 0 else np.pi                                # периодическая ось: рамка по периоду
         if G.XLV[s.ax[1]] == 0: b = np.pi
         C = np.array([(-a, -b), (a, -b), (a, b), (-a, b), (-a, -b)]); P = np.zeros((5, 3)); P[:, 0] = C[:, 0]; P[:, 1] = Y0; P[:, 2] = C[:, 1]; return P
 

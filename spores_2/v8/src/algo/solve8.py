@@ -32,6 +32,7 @@ def t_point(x0, v0):
 
 def t_ref(P):
     """T_ref до круга: ref_di_disk (worker-1), если есть, иначе формула до точки (грубая замена, верхняя оценка)"""
+    if os.environ.get('SYS', 'di') != 'di': return np.full(len(P), np.nan), 'none (нет эталона для SYS=%s)' % os.environ.get('SYS')            # ref_di_disk — только ДИ
     try: from src.algo import ref_di_disk as R; return R.T_ref(P, float(os.environ.get('RHO', .2))), 'ref_di_disk'
     except Exception: return t_point(P[:, 0], P[:, 1]), 't_point'
 
@@ -96,23 +97,23 @@ def freeze_idx(g, s):
     s.query = query
 
 
-ACTIVE = int(os.environ.get('ACTIVE', 0)); ACTEPS = float(os.environ.get('ACTEPS', 1e-7))
+FATE = int(os.environ.get('FATE', 0)); ACTIVE = int(os.environ.get('ACTIVE', 0)); ACTEPS = float(os.environ.get('ACTEPS', 1e-7))
 class _Active:
     """список активных узлов (b3): E_li(точка) пересчитывается только для точек, у которых изменилась вершина ячейки хотя бы в одной из пар; остальное — из кэша. Q монотонно убывает, значит кэш согласован"""
-    def __init__(a, s, pairs, npts=None):
-        a.s = s; a.np = s.n if npts is None else npts; pi, verts, w, rank = pairs; o = np.argsort(pi, kind='stable'); a.pi, a.verts, a.w, a.rank = pi[o], verts[o], w[o], rank[o]
+    def __init__(a, s, pairs, npts=None, fate=None):
+        a.s = s; a.fate = fate; a.np = s.n if npts is None else npts; pi, verts, w, rank = pairs; o = np.argsort(pi, kind='stable'); a.pi, a.verts, a.w, a.rank = pi[o], verts[o], w[o], rank[o]
         a.ps = np.searchsorted(a.pi, np.arange(a.np + 1))                                                   # строки точки i: ps[i]:ps[i+1]
         vf = a.verts.ravel(); a.vo = np.argsort(vf, kind='stable'); a.vs = np.searchsorted(vf[a.vo], np.arange(s.n + 1)); a.E = np.full(a.np, np.inf); a.first = True; a.last = None
     def update(a, Q, chg):
         s = a.s
-        if a.first: a.first = False; a.last = None; a.E = s.evalpairs(Q, a.np, (a.pi, a.verts, a.w, a.rank)); return a.E
+        if a.first: a.first = False; a.last = None; a.E = s.evalpairs(Q, a.np, (a.pi, a.verts, a.w, a.rank), fate=a.fate); return a.E
         a.last = np.zeros(0, np.int64)
         if not len(chg): return a.E
         st, en = a.vs[chg], a.vs[chg + 1]; ln = en - st; tot = int(ln.sum())
         if tot == 0: return a.E
         idx = np.repeat(st - np.cumsum(np.r_[0, ln[:-1]]), ln) + np.arange(tot); rows = a.vo[idx] // a.verts.shape[1]; pts = np.unique(a.pi[rows])
         st, en = a.ps[pts], a.ps[pts + 1]; ln = en - st; tot = int(ln.sum()); idx = np.repeat(st - np.cumsum(np.r_[0, ln[:-1]]), ln) + np.arange(tot)
-        Ev = s.evalpairs(Q, a.np, (a.pi[idx], a.verts[idx], a.w[idx], a.rank[idx])); a.E[pts] = Ev[pts]; a.last = pts; return a.E
+        Ev = s.evalpairs(Q, a.np, (a.pi[idx], a.verts[idx], a.w[idx], a.rank[idx]), fate=a.fate); a.E[pts] = Ev[pts]; a.last = pts; return a.E
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
@@ -173,7 +174,7 @@ class Graph:
         xi = col + sc[:, 1]; L = np.stack([(xi - 1) * (xi - 2) / 2, -xi * (xi - 2), xi * (xi - 1) / 2], 1); wt = np.stack([1 - sc[:, 0], sc[:, 0]], 1)
         verts = np.stack([b + (row + r) * 3 + c for r in (0, 1) for c in (0, 1, 2)], 1); w = np.stack([wt[:, r] * L[:, c] for r in (0, 1) for c in (0, 1, 2)], 1); return pi, verts, w, rank
 
-    def evalpairs(s, V, n, pairs):
+    def evalpairs(s, V, n, pairs, fate=None):
         """V в точках по лучшей (самой центральной) из ≤K ячеек, у которой все вершины определены; inf — нет такой"""
         out = np.full(n, np.inf); done = np.zeros(n, bool); pi, verts, w, rank = pairs
         if s.spsel and s.mode == 'lin':                                                                      # SPSEL: из перекрывающихся ячеек берём ту, у которой меньше разброс значений по вершинам (разброс = ячейка режет излом/дыру), а не самую центральную
@@ -187,6 +188,9 @@ class Graph:
                 wr1 = w_[:, 2] + w_[:, 3]; c1 = (w_[:, 1] + w_[:, 3]) > .5; w2 = np.stack([(1 - wr1) * ~c1, (1 - wr1) * c1, wr1 * ~c1, wr1 * c1], 1); ok = (fin | (w2 <= 0)).all(1) & ~done[p_]; val = (w2 * np.where(w2 > 0, Vv, 0)).sum(1)
             elif s.mode == 'maxv':                                                                           # большой разброс V по вершинам (излом) → оценка сверху: max по вершинам с весом > .05
                 ok = fin.all(1) & ~done[p_]; spread = Vv.max(1) - Vv.min(1); val = np.where(spread > s.thr, np.where(w_ > .05, Vv, -np.inf).max(1), (w_ * Vv).sum(1))
+            elif fate is not None and FATE:                                                                  # FATE: у точки без прямого входа в цель своим потоком (Fp=0) вершины с входом (Fv=1) не берём; веса перенормируем (нет таких вершин — все)
+                Fv, Fp = fate; w2 = np.where(Fv[v_] & ~Fp[p_][:, None], 0., w_); sw = w2.sum(1); w2 = np.where((sw < 1e-9)[:, None], w_, w2 / np.maximum(sw, 1e-12)[:, None])
+                ok = (fin | (w2 <= 0)).all(1) & ~done[p_]; val = (w2 * np.where(w2 > 0, Vv, 0)).sum(1)
             else: ok = fin.all(1) & ~done[p_]; val = (w_ * Vv).sum(1)
             out[p_[ok]] = val[ok]; done[p_[ok]] = True
         return out
@@ -216,7 +220,7 @@ class Graph:
 
     def _xentry_init(s):
         """W2 (laptop-v5chain-worker-6): точный вход в цель по прямому потоку на горизонте xentry — верхняя оценка, не зависящая от грубой сетки у цели. Q0: свой слой (продолжать своё u до входа); V0: любой слой (переключиться сразу и идти прямо)"""
-        H = np.full(s.n, s.xentry); te = np.stack([entry_time(s.P, u, H, s.rho) for u in s.us], 1); Q0 = np.minimum(s.V0, np.where(np.isfinite(te[np.arange(s.n), s.layer]), te[np.arange(s.n), s.layer], BIG)); m = te.min(1)
+        H = np.full(s.n, s.xentry); te = np.stack([entry_time(s.P, u, H, s.rho) for u in s.us], 1); s._F = [np.isfinite(te[:, li]) for li in range(s.L)] if FATE else None; Q0 = np.minimum(s.V0, np.where(np.isfinite(te[np.arange(s.n), s.layer]), te[np.arange(s.n), s.layer], BIG)); m = te.min(1)
         return Q0, np.minimum(Q0, np.where(np.isfinite(m), m, BIG))
 
     def solve(s, maxit=int(os.environ.get('MAXIT', 2000)), tol=1e-10, verbose=True, progress=None):
@@ -312,7 +316,7 @@ class Graph:
         if warm and getattr(s, 'V', None) is not None and getattr(s, 'Vn', None) is not None and len(s.V) == s.n: Q = np.minimum(Q, s.V); V = np.minimum(V, s.Vn)                  # тёплый старт: Q/V прошлого решения — верхняя оценка (подточки бисекции только добавляют опции)
         e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
-        act = [_Active(s, pr) for pr in s.e3] if ACTIVE else None; Qref = None; actS = None
+        act = [_Active(s, pr, fate=((s._F[li], s._F[li]) if FATE and s._F else None)) for li, pr in enumerate(s.e3)] if ACTIVE else None; Qref = None; actS = None
         for passes in range(1, maxit + 1):
             Vo = V.copy(); Qo = Q.copy()
             Qprev_ = Qref if Qref is not None else Qo
@@ -323,7 +327,7 @@ class Graph:
             if act is not None and os.environ.get('ACTDBG') and passes % 50 == 1: d_ = np.abs(np.minimum(Qo, BIG) - np.minimum(Qprev_, BIG)); print('ACT pass', passes, 'changed', len(chg), '>1e-6:', int((d_ > 1e-6).sum()), '>1e-4:', int((d_ > 1e-4).sum()), '>1e-2:', int((d_ > 1e-2).sum()), 'max', float(d_.max()), flush=True)
             for li2, pairs in enumerate(s.e3):
                 if act is not None: Ei = act[li2].update(Qo, chg)
-                else: Ei = s.evalpairs(Qo, s.n, pairs)
+                else: Ei = s.evalpairs(Qo, s.n, pairs, fate=((s._F[li2], s._F[li2]) if FATE and s._F else None))
                 Ei = np.where(np.isfinite(Ei), Ei, BIG); same = s.layer == li2
                 Q[same] = np.minimum(Q[same], Ei[same]); V[~same] = np.minimum(V[~same], Ei[~same] + pen)
             if s.subk:                                                                                          # SUBK: переключение внутри ребра столбца — K подточек точного потока, Q(k) = min(…, t_j + Q чужого слоя в точке j)
@@ -352,8 +356,9 @@ class Graph:
         out = np.full((len(X), s.L), np.inf); inb = s.ingoal(X)
         PA = s.locate_all(X) if (not s.quad and int(os.environ.get('LOC_ALL', 1))) else None
         for li, u in enumerate(s.us):
-            out[:, li] = s.evalpairs(s.V, len(X), PA[li] if PA is not None else s.locate(u, X))
-            if s.xentry > 0 and s.calc != 'v': out[:, li] = np.minimum(out[:, li], entry_time(X, u, np.full(len(X), s.xentry), s.rho))       # точный вход по своему потоку — верхняя оценка Q_u (W2)
+            ef = entry_time(X, u, np.full(len(X), s.xentry), s.rho) if (s.xentry > 0 and s.calc != 'v') else None
+            out[:, li] = s.evalpairs(s.V, len(X), PA[li] if PA is not None else s.locate(u, X), fate=((s._F[li], np.isfinite(ef)) if FATE and ef is not None and getattr(s, '_F', None) and len(s._F[0]) == s.n else None))
+            if ef is not None: out[:, li] = np.minimum(out[:, li], ef)       # точный вход по своему потоку — верхняя оценка Q_u (W2)
         out[inb] = 0.; return out
 
     def build_table(s, h=.01, xr=None, vr=None, chunk=200000):

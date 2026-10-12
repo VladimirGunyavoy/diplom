@@ -48,13 +48,13 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
         out[u] = []; wins[u] = []; gcols[u] = []
         for c in cl:
             nt, M = c.G.shape[:2]; out[u].append(V[off:off + nt * M].reshape(nt, M).copy()); wins[u].append(wall[off:off + nt * M].reshape(nt, M).copy()); off += nt * M
-            inn = np.linalg.norm(c.G, axis=-1) <= rho + 1e-12; cost = c.tau[1:] - c.tau[:-1]; m = (~inn[:-1] & (cost > 1e-12)).ravel(); te = np.full(len(m), np.inf)
+            inn = solve8.goal_mask(solve8.load_growN(), c.G, rho); cost = c.tau[1:] - c.tau[:-1]; m = (~inn[:-1] & (cost > 1e-12)).ravel(); te = np.full(len(m), np.inf)
             if m.any(): te[m] = solve8.entry_time(c.G[:-1].reshape(-1, 2)[m], u, cost.ravel()[m], rho)
             gcols[u].append(inn.any(0) | np.isfinite(te.reshape(nt - 1, M)).any(0))
     assert off <= G.n                                                                   # SOLVE8_PLUS: узлы полос идут после узлов клеток
     fin = V < BIG / 2; qerr = {}
     for li, u in enumerate(G.us):                                                      # ошибка Q_u против ТОЧНОГО входа в круг своим u (entry_time, аналитика) — в спорах без решений (первые споры слоёв ±1) она должна быть ≈ 0
-        m = (G.layer == li) & (np.linalg.norm(G.P, axis=1) > G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = G.V[m][ok] - te[ok]
+        m = (G.layer == li) & ~solve8.goal_mask(solve8.load_growN(), G.P, G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = G.V[m][ok] - te[ok]
         qerr[u] = dict(n=int(ok.sum()), of=int(m.sum()), max=float(np.abs(e).max()) if len(e) else 0., med=float(np.median(np.abs(e))) if len(e) else 0., bias=float(np.median(e)) if len(e) else 0.)
     return out, dict(qerr=qerr, G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), converged=bool(getattr(G, 'converged', False)), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
 
@@ -85,7 +85,7 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
     for step in range(1, maxsteps + 1):
         ii, ll = np.nonzero(kind == 0)
         if not len(ii): break
-        x, v, u = S[ii, ll, 0], S[ii, ll, 1], us[ll]; S[ii, ll, 0] = x + v * dt + u * dt * dt / 2; S[ii, ll, 1] = v + u * dt; Y = S[ii, ll]
+        S[ii, ll] = G.flow(S[ii, ll], us[ll], dt); Y = S[ii, ll]                                                       # поток системы (rk4 + wrap θ у маятника; для ДИ flow сам берёт быструю формулу)
         out = (np.abs(Y) > box).any(1); kind[ii[out], ll[out]] = 2; tstop[ii[out], ll[out]] = step; k = ~out
         if k.any():
             Vs = G.Vlayers(Y[k]).min(1); d = np.isfinite(Vs) & (Vs < BIG / 2); jj, mm = ii[k][d], ll[k][d]; kind[jj, mm] = 1; tstop[jj, mm] = step
@@ -105,6 +105,28 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
 
 def only_goal(): return os.environ.get('V8_ONLY_GOAL') == '1'
 
+def starts_grid_cells(cl, k, xlv=None):
+    """сетка k×k точек (центры k×k подъячеек, билинейно по узлам) внутри КАЖДОЙ выросшей клетки — траектории ложатся по всей клетке; точки в цели и вне рабочей зоны отбрасываются (θ маятника периодичен)"""
+    rho = float(os.environ.get('RHO', .2)); pend = os.environ.get('SYS') == 'pend'; ball = os.environ.get('GOALSHAPE', 'ball' if not pend else 'box') == 'ball'; c_ = (np.arange(k) + .5) / k; out = []
+    for cs in cl.values():
+        for c in cs:
+            Gc = np.asarray(c['G'], float); ni, nj = Gc.shape[0] - 1, Gc.shape[1] - 1
+            if ni < 1 or nj < 1: continue
+            for s_ in c_:
+                for t_ in c_:
+                    x = s_ * ni; y = t_ * nj; i = min(int(x), ni - 1); j = min(int(y), nj - 1); a_, b_ = x - i, y - j
+                    p = (1 - a_) * (1 - b_) * Gc[i, j] + (1 - a_) * b_ * Gc[i, j + 1] + a_ * (1 - b_) * Gc[i + 1, j] + a_ * b_ * Gc[i + 1, j + 1]
+                    q = p.copy()
+                    if pend: q[0] = (q[0] + np.pi) % (2 * np.pi) - np.pi
+                    in_goal = (np.linalg.norm(q) <= rho + 1e-12) if (ball or not pend) else bool((np.abs(q) <= rho + 1e-12).all())
+                    zone = xlv is None or bool(((np.abs(q) <= xlv + 1e-12) | (xlv == 0)).all())
+                    if not in_goal and zone: out.append(p)
+    return np.array(out).reshape(-1, 2)
+
+
+GRID_K = int(os.environ.get('V8_GRID', 0))            # >0: старты траекторий — сетка k×k в каждой выросшей клетке (вместо случайных по полю); 0 — как раньше
+
+
 def starts_in_cells(cl, n, seed, xlv=None):
     """режим «только первая спора» (V8_ONLY_GOAL): n стартов ВНУТРИ готовых клеток (билинейно по четырём узлам случайной ячейки), вне круга цели; клетки по очереди поровну; только в рабочей зоне |p| ≤ xlv (слово пользователя 2026-10-12 ~19:05: вне рабочей зоны не спавнить)"""
     rng = np.random.default_rng(seed); rho = float(os.environ.get('RHO', .2)); tries = 0; cells = [np.asarray(c['G'], float) for cs in cl.values() for c in cs]; out = []
@@ -112,7 +134,7 @@ def starts_in_cells(cl, n, seed, xlv=None):
         Gc = cells[len(out) % len(cells)]; i = rng.integers(0, len(Gc) - 1); j = rng.integers(0, Gc.shape[1] - 1); s_, t_ = rng.random(2)
         p = (1 - s_) * (1 - t_) * Gc[i, j] + (1 - s_) * t_ * Gc[i, j + 1] + s_ * (1 - t_) * Gc[i + 1, j] + s_ * t_ * Gc[i + 1, j + 1]; tries += 1
         if tries > 200000: raise RuntimeError('starts_in_cells: no points of the cells inside the work zone')
-        if os.environ.get('SYS') == 'pend': q = p.copy(); q[0] = (q[0] + np.pi) % (2 * np.pi) - np.pi; in_goal = bool(np.linalg.norm(q) <= rho + 1e-12); zone = xlv is None or bool(((np.abs(q) <= xlv + 1e-12) | (xlv == 0)).all())     # маятник: θ периодично (XLV[0]=0 — без границы), цель — круг RHO как в ДИ
+        if os.environ.get('SYS') == 'pend': q = p.copy(); q[0] = (q[0] + np.pi) % (2 * np.pi) - np.pi; in_goal = bool((np.linalg.norm(q) <= rho + 1e-12) if os.environ.get('GOALSHAPE') == 'ball' else (np.abs(q) <= rho + 1e-12).all()); zone = xlv is None or bool(((np.abs(q) <= xlv + 1e-12) | (xlv == 0)).all())     # маятник: θ периодично (XLV[0]=0 — без границы), цель — ящик ±RHO (ball — круг)
         else: in_goal = bool(np.linalg.norm(p) <= rho); zone = xlv is None or bool((np.abs(p) <= xlv + 1e-12).all())
         if not in_goal and zone: out.append(p)
     return np.array(out)
@@ -124,7 +146,8 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = np.asarray(starts, float).reshape(-1, 2) if starts is not None else (starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed))
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); from .. import pics as _pp; X0 = np.asarray(starts, float).reshape(-1, 2) if starts is not None else (starts_grid_cells(cl, GRID_K, np.asarray(g.XLV, float)) if (cl and GRID_K > 0) else (_pp.pend_starts() if os.environ.get('SYS', 'di') == 'pend' else None))
+    if X0 is None: X0 = (starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed))
     if not batch or batch >= len(X0): return _agent_core(G, g, X0, rec, policy, progress, 0)
     parts = []                                                                                      # пачками (агенты независимы): after each batch on_batch(part, done, total) — окно дорисовывает путь сразу
     for lo in range(0, len(X0), batch):
@@ -153,7 +176,7 @@ def _agent_core(G, g, X0, rec, policy, progress, base=0):
         from .. import pics as _px; Tref0 = _px.t_ref_cached(X0)                                  # T_ref по стартам — с диском-кэшем (старты детерминированы: seed): повторный прогон без eigvals (~6 с на 300)
         Tr = np.array([Tref0[i] for i in src], float); mpre = np.array([i in pre for i in src], bool)
         if mpre.any(): Tr[mpre] = _px.t_ref_cached(Xa[mpre])                                         # у предфазы старт агента другой (X1)
-        path = []; dl = [] if (DLOG and hasattr(G, 'DLOG_COLS')) else None; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, progress=progress, **({} if dl is None else dict(dlog=dl)), **solve8.POLICIES[policy])
+        path = []; dl = [] if (DLOG and hasattr(G, 'DLOG_COLS')) else None; Ta, swa = G.run_agent(Xa, 3 * np.where(np.isfinite(Tr), Tr, 8.) + 2, rec=rec, path=path, progress=progress, **({} if dl is None else dict(dlog=dl)), **solve8.POLICIES[policy])
         ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
         Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
         for k, i in enumerate(src):

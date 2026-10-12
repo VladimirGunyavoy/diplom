@@ -2,7 +2,9 @@
 import sys, os, numpy as np
 from scipy.optimize import differential_evolution
 PI = np.pi; rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-PI, PI, 100), rq.uniform(-2, 2, 100)], 1); ref = np.load(os.environ.get('PEND_REF', 'pend_ref_best_u0.3.npy'))
-i = int(sys.argv[1]); K = int(sys.argv[2]) if len(sys.argv) > 2 else 5; DT = .01; TM = 14.
+X0 = os.environ.get('X0')
+if X0: Q[0] = [float(a) for a in X0.split(',')]
+i = 0 if X0 else int(sys.argv[1]); K = int(sys.argv[2]) if len(sys.argv) > 2 else 5; DT = .01; TM = 14.
 def run(x):
     c, d = x[:K], x[K:]; th, w = Q[i]; t = 0.; best = 1e3
     for k in range(K):
