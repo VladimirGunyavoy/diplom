@@ -54,6 +54,7 @@ def solve(e, y0, seed, N=NI, T0s=(3., 6., 10.)):
             try: opti.solve()
             except RuntimeError: pass
             Tv = float(opti.debug.value(T)); Uv = np.asarray(opti.debug.value(U)).reshape(e.m, N)
+            if not (np.isfinite(Tv) and Tv >= .05 - 1e-6 and np.isfinite(Uv).all()): continue      # невыполненные границы у необойдённого итерата
             Tc, why = common.verify(e, y0, Uv.T, np.full(N, Tv / N))
             if Tc is not None and (best is None or Tc < best): best = Tc
     return best, nsolve
