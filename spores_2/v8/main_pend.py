@@ -4,7 +4,7 @@ main_pend.py — МАЯТНИК в окне (отдельный скрипт, Д
 Картинки: projects/spore/img/pend/<дата>/expNNN + last_exp; логи: v8/runs_pend/<время>/. Первый запуск: по одной споре от цели на слой u=±UM (V8_MAXCELLS=1; слой 0 не растим; ЛКМ после этапов +1 спора; V8_MAXCELLS=0 — полный атлас). Запуск: python main_pend.py (offscreen: V8_WINDOW=offscreen).
 """
 import os as _os
-for _k, _v in dict(SYS='pend', SEEDLINE='.2', V8_GRID='4', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='3', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
+for _k, _v in dict(SYS='pend', SEEDELL='1', SEEDELLD='.5', SEEDELL0='.1', SEEDLINE='.2', V8_GRID='4', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='0', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
 _os.environ['SYS'] = 'pend'
 
 import sys

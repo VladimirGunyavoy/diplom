@@ -283,7 +283,7 @@ class GrowView:
     COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .7),
            'points_cur': (.92, .92, .96, 1), 'segs_rows_cur': (.95, .95, 1.0, 1), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
            'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.35, .9, .85, .8), 'segs_goal': (.55, 1.0, .65, .9),
-           'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
+           'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25), 'segs_ell': (1.0, .85, .25, 1.0), 'segs_ellp': (1.0, .85, .25, .35)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
         s.sm = spore_manager; s._sz0 = float(spore_manager.size) if spore_manager is not None else 1.; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''; s._live = None; s._live_on = False; s._live_t = 0.; s._live_used = set(); s._live_tab = None; s._live_rail = None
@@ -373,6 +373,13 @@ class GrowView:
             try: s.runlog.atlas(snap)
             except Exception as e: print('[runlog] atlas: %r' % (e,))
         gs = s._goal(); fixed = {'segs_goal': [np.concatenate([gs[:, 0], gs[-1:, 1]], 0)], 'segs_field': [s._box(0.)], 'segs_growlim': [s._box(getattr(__import__('src.algo.growN', fromlist=['GMV']), 'GMV', 0.))]}   # цель, граница поля и роста
+        try:                                                                                                  # №14: границы эллипсов посева (SEEDELL): текущая — ярко, прежние ступени — тоньше
+            G_ = __import__('src.algo.growN', fromlist=['ELLS']); Ss = list(G_.ELLS.get(snap.get('u') if snap is not None else None, [])) if getattr(G_, 'SEEDELL', 0) else []
+            def _el(S): return [proj(np.stack([l[:, 0] if i == s.ax[0] else l[:, 1] if i == s.ax[1] else np.zeros(len(l)) for i in range(G_.N)], 1), s.ax) for l in G_.ell_lines(S)]
+            key = tuple(round(x, 3) for x in Ss)
+            if key != getattr(s, '_ell_key', None): s._ell_cache = ([x for S in Ss[:-1] for x in _el(S)], _el(Ss[-1]) if Ss else []); s._ell_key = key
+            fixed['segs_ellp'], fixed['segs_ell'] = s._ell_cache
+        except Exception as e: print('[ell] %r' % (e,), flush=True)
         for name, strips in fixed.items(): s._set_strips(name, strips)
         if snap is not None and t0 is not None:
             s.times.add_draw(snap.get('phase', '?'), time.perf_counter() - t0); s.draw_hist = getattr(s, 'draw_hist', {}); s.draw_hist[id(snap)] = (dict(s.times.draw), dict(s.times.n))
