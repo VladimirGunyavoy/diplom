@@ -11,7 +11,7 @@ def timed(cls, name):
     def w(*a, **k):
         t0 = time.perf_counter(); r = f(*a, **k); TM[name] = TM.get(name, 0) + time.perf_counter() - t0; TM[name + '#'] = TM.get(name + '#', 0) + 1; return r
     setattr(cls, name, w)
-t0 = time.perf_counter(); g = S.load_growN(); atlas, _ = S.build_atlas([1., -1., 0.], 0, par=False); G = S.make_graph(g, atlas, 'N'); G.set_calc('q'); tb = time.perf_counter() - t0
+t0 = time.perf_counter(); g = S.load_growN(); atlas, _ = S.build_atlas([1., -1., 0.], int(os.environ.get('SEED', 0)), par=False); G = S.make_graph(g, atlas, 'N'); G.set_calc('q'); tb = time.perf_counter() - t0
 for nm in ('_solve_q', '_bisect_pass', 'locate'): timed(type(G), nm)
 rho = G.rho; t0 = time.perf_counter(); G.solve(verbose=False); ts = time.perf_counter() - t0
 X0 = S.starts(g, 600, 1); mx = S.path_extent(X0, rho); inw = mx <= float(g.XLV[0]); Xz = X0[inw]; U0, T1, TT = H.opt_switch(Xz, rho)
