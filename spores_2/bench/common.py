@@ -98,6 +98,20 @@ class DD2(DD):
     """чувствительность: дифдрайв с шире целью ±.2 (в 3D); T_ref — прежний (для ±.05), т.е. T/T_ref может быть < 1"""
     name = 'dd2'; half = np.full(3, .2)
 
+class DDObst(DD):
+    """дд + 2 диска (all_systems 5): диски (1,.3,.45), (−.8,−.9,.4) в (x,y), любые θ; столкновение = неуспех (выход из «коробки»); 20 стартов — первые 20 из dd_obst_ref_KB60_NG21.npy (свободные), эталон dd_obst_refbox (стрельба ≤5 дуг, в коробку цели)"""
+    name = 'ddobst'; DISKS = np.array([[1., .3, .45], [-.8, -.9, .4]])
+    def __init__(s, nst=20):
+        o = np.load(os.path.join(REF, 'dd_obst_ref_KB60_NG21.npy')); rb = np.load(os.path.join(REF, 'dd_obst_refbox.npy')); s.X0 = o[:nst, :3].copy(); s.Tref = rb[:nst].copy(); s.keep = np.ones(nst, bool)
+    def out_of_box(s, Y):
+        Y = np.asarray(Y); hit = Env.out_of_box(s, Y)
+        for cx, cy, r in s.DISKS: hit = hit | (np.hypot(Y[..., 0] - cx, Y[..., 1] - cy) < r)
+        return hit
+    def sample_field(s, rng):
+        while True:
+            y = rng.uniform(s.fl_lo, s.fl_hi)
+            if not s.out_of_box(y): return y
+
 class Manip(Env):
     """плоский манипулятор 2 зв. без g, 4D (θ1, θ2, ω1, ω2), моменты |τi| ≤ 1; цель ящик ±(.3,.3,.5,.5); |ω| ≤ 3; 20 стартов и эталон OCP (CasADi, |ω| ≤ 3) r23/manip_ref_ocp_20.npy"""
     name = 'manip'; n = 4; m = 2; period = np.array([2 * PI, 2 * PI, 0., 0.]); half = np.array([.3, .3, .5, .5]); lo = np.array([-PI, -PI, -3., -3.]); hi = np.array([PI, PI, 3., 3.]); umin = -np.ones(2); umax = np.ones(2); fl_lo = np.array([-PI, -PI, -1., -1.]); fl_hi = -fl_lo
@@ -110,7 +124,7 @@ class Manip(Env):
         return np.stack([w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, manip=Manip)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, manip=Manip)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""

@@ -20,11 +20,17 @@ def seg(p, q):
     us.append([-1. if back else 1., 0.]); dts.append(d)
     if abs(a2) > 1e-12: us.append([0., np.sign(a2)]); dts.append(abs(a2))
     return us, dts
+def seg_free(A, B, disks, mar=.01):
+    """прямая часть A→B (n,2 или 2) не заходит в диски (с запасом mar); повороты на месте не двигают x, y"""
+    A = np.atleast_2d(A)[:, :2]; B = np.atleast_2d(B)[:, :2]; A, B = np.broadcast_arrays(A, B); ok = np.ones(len(A), bool)
+    for cx, cy, r in disks:
+        d = B - A; f = A - [cx, cy]; L2 = np.maximum((d ** 2).sum(1), 1e-18); t = np.clip(-(f * d).sum(1) / L2, 0, 1); ok &= np.hypot(*(f + t[:, None] * d).T) >= r + mar
+    return ok
 def rrtstar(e, y0, budgets, seed=0, goal_bias=.05, cap=40000, gam=2.):
     rng = np.random.default_rng(seed); X = np.zeros((cap, 3)); par = np.full(cap, -1); cost = np.zeros(cap); X[0] = y0; N = 1; kids = {0: []}; t0 = time.perf_counter(); e.nf = 0
-    goal = np.zeros(3); snaps = []; bi = 0; hist = []; lastbest = np.inf
+    DK = getattr(e, 'DISKS', np.zeros((0, 3))); goal = np.zeros(3); snaps = []; bi = 0; hist = []; lastbest = np.inf
     def best():
-        c, *_ = tgt_cost(X[:N], goal); tot = cost[:N] + c; j = int(np.argmin(tot)); return j, float(tot[j])
+        c, *_ = tgt_cost(X[:N], goal); tot = cost[:N] + np.where(seg_free(X[:N], goal, DK), c, np.inf); j = int(np.argmin(tot)); return j, float(tot[j])
     def chain(j):
         path = []; i = j
         while par[i] >= 0: path.append(i); i = par[i]
@@ -39,12 +45,15 @@ def rrtstar(e, y0, budgets, seed=0, goal_bias=.05, cap=40000, gam=2.):
         for _ in range(20):
             if N >= cap - 1: break
             xn = goal.copy() if rng.random() < goal_bias else np.array([rng.uniform(-2.2, 2.2), rng.uniform(-2.2, 2.2), rng.uniform(-np.pi, np.pi)]); e.nf += 1
+            if len(DK) and np.any(np.hypot(xn[0] - DK[:, 0], xn[1] - DK[:, 1]) < DK[:, 2] + .02): continue
             Tin, *_ = tgt_cost(X[:N], xn); k = min(N, int(np.ceil(2 * np.e * np.log(N + 1))) + 1); near = np.argpartition(Tin, k - 1)[:k] if k < N else np.arange(N)
-            tot = cost[near] + Tin[near]; pb = int(near[np.argmin(tot)]); cb = float(tot.min()); n_ = N; X[n_] = xn; par[n_] = pb; cost[n_] = cb; kids[n_] = []; kids[pb].append(n_); N += 1
+            tot = cost[near] + np.where(seg_free(X[near], xn, DK), Tin[near], np.inf)
+            if not np.isfinite(tot.min()): continue
+            pb = int(near[np.argmin(tot)]); cb = float(tot.min()); n_ = N; X[n_] = xn; par[n_] = pb; cost[n_] = cb; kids[n_] = []; kids[pb].append(n_); N += 1
             To, *_ = tgt_cost(xn, X[near])                                                         # перепривязка: new → near
             for kk, j in enumerate(near):
                 if j == pb or j == 0: continue
-                if cost[n_] + To[kk] < cost[j] - 1e-9:
+                if cost[n_] + To[kk] < cost[j] - 1e-9 and seg_free(xn, X[j], DK)[0]:
                     kids[par[j]].remove(j); upd(j, cost[n_] + To[kk] - cost[j]); par[j] = n_; kids[n_].append(j)
         el = time.perf_counter() - t0
         j, bc = best()
