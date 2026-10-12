@@ -329,3 +329,4 @@ hub-v5chain-worker-c1 | done | ctx ~30% | bench: ДИ/pend таблицы, сп�
 hub-v5chain-worker-c2 | started | acc3 | sonnet | 20:24:52
 laptop-v5chain-research-5 | AUTONOMOUS снят | пользователь вернулся (с телефона) | 21:08:00
 hub-v5chain-research-25 | AUTONOMOUS | off | пользователь вернулся (с телефона), сообщение laptop-v5chain-research-5 21:08 | 21:08:14
+laptop-v5chain-worker-7 | done | ctx 30% | P/O/рельс, полный атлас, логи траекторий, кэш T_ref | next=laptop-v5chain-worker-8 | 22:40:27
