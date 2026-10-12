@@ -85,7 +85,7 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
     for step in range(1, maxsteps + 1):
         ii, ll = np.nonzero(kind == 0)
         if not len(ii): break
-        x, v, u = S[ii, ll, 0], S[ii, ll, 1], us[ll]; S[ii, ll, 0] = x + v * dt + u * dt * dt / 2; S[ii, ll, 1] = v + u * dt; Y = S[ii, ll]
+        S[ii, ll] = G.flow(S[ii, ll], us[ll], dt); Y = S[ii, ll]                                                       # поток системы (rk4 + wrap θ у маятника; для ДИ flow сам берёт быструю формулу)
         out = (np.abs(Y) > box).any(1); kind[ii[out], ll[out]] = 2; tstop[ii[out], ll[out]] = step; k = ~out
         if k.any():
             Vs = G.Vlayers(Y[k]).min(1); d = np.isfinite(Vs) & (Vs < BIG / 2); jj, mm = ii[k][d], ll[k][d]; kind[jj, mm] = 1; tstop[jj, mm] = step

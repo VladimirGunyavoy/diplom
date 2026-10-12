@@ -32,6 +32,8 @@ def t_point(x0, v0):
 
 def t_ref(P):
     """T_ref до круга: ref_di_disk (worker-1), если есть, иначе формула до точки (грубая замена, верхняя оценка)"""
+    if os.environ.get('SYS', 'di') != 'di': return np.full(len(P), np.nan), 'none (нет эталона для SYS=%s)' % os.environ.get('SYS')            # ref_di_disk — только ДИ
+    if os.environ.get('SYS', 'di') != 'di': return np.full(len(P), np.nan), 'none (нет эталона для SYS=%s)' % os.environ.get('SYS')            # ref_di_disk — только ДИ
     try: from src.algo import ref_di_disk as R; return R.T_ref(P, float(os.environ.get('RHO', .2))), 'ref_di_disk'
     except Exception: return t_point(P[:, 0], P[:, 1]), 't_point'
 

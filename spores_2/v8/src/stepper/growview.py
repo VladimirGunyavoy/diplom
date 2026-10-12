@@ -134,6 +134,45 @@ def _discs(P, R, res=16):
     return V, idx
 
 
+WRAP_X = 0.                                                                                       # период по оси x (θ маятника = 2π); 0 — без шва. Задаёт main_pend.
+
+
+def wrap_lines(V, colors=None):
+    """отрезки-пары (2K, 3), пересекающие шов x = ±P/2, режем на две части в периодических копиях (а не тянем через поле); colors (2K, 4) режутся так же"""
+    P = WRAP_X; V = np.asarray(V, float).reshape(-1, 3)
+    if P <= 0 or len(V) < 2: return V, colors
+    A, B = V[0::2], V[1::2]; far = np.abs(B[:, 0] - A[:, 0]) > P / 2
+    if not far.any(): return V, colors
+    ca = cb = None
+    if colors is not None and np.ndim(colors) == 2 and len(colors) == len(V): ca, cb = np.asarray(colors)[0::2], np.asarray(colors)[1::2]
+    keep = ~far; a, b = A[far], B[far]; sg = np.where(a[:, 0] < b[:, 0], 1., -1.)           # a левее b: короткий путь идёт влево от a через шов (-P/2), b — вправо от шва
+    b2 = b.copy(); b2[:, 0] -= sg * P                                                          # b в копии, ближайшей к a
+    seam = -sg * P / 2; t = (seam - a[:, 0]) / (b2[:, 0] - a[:, 0]); m = a + t[:, None] * (b2 - a); m1 = m.copy(); m1[:, 0] = seam; m2 = m.copy(); m2[:, 0] = seam + sg * P
+    a2 = a.copy(); a2[:, 0] += sg * P                                                          # a в копии, ближайшей к b
+    out = np.empty((2 * (int(keep.sum()) + 2 * int(far.sum())), 3)); n = 2 * int(keep.sum())
+    out[0:n:2], out[1:n:2] = A[keep], B[keep]; k = int(far.sum()); out[n:n + 2 * k:2], out[n + 1:n + 2 * k:2] = a, m1; out[n + 2 * k::2], out[n + 2 * k + 1::2] = m2, b
+    if ca is None: return out, colors
+    cm = ca[far] + t[:, None] * (cb[far] - ca[far]); C = np.empty((len(out), colors.shape[1]))
+    C[0:n:2], C[1:n:2] = ca[keep], cb[keep]; C[n:n + 2 * k:2], C[n + 1:n + 2 * k:2] = ca[far], cm; C[n + 2 * k::2], C[n + 2 * k + 1::2] = cm, cb[far]
+    return out, C
+
+
+def wrap_tris(V, idx, colors=None):
+    """треугольники с разбросом по x > P/2 — дублируем в периодические копии (вершины с x<0 сдвигаем на +P в одной копии, с x>0 на −P в другой), без растяжки через поле"""
+    P = WRAP_X; V = np.asarray(V, float).reshape(-1, 3); idx0 = idx; idx = np.asarray(idx).reshape(-1, 3)
+    if colors is not None and not (np.ndim(colors) == 2 and len(colors) == len(V)): colors = None if False else colors; pervert = False
+    else: pervert = colors is not None
+    if P <= 0 or len(idx) == 0: return V, idx0, colors
+    x = V[idx, 0]; far = (x.max(1) - x.min(1)) > P / 2
+    if not far.any(): return V, idx0, colors
+    T = idx[far]; nv = len(V); newV, newC, newI = [V], ([np.asarray(colors)] if pervert else None), [idx[~far]]
+    for sgn in (1., -1.):
+        u, inv = np.unique(T, return_inverse=True); W = V[u].copy(); W[(W[:, 0] < 0) if sgn > 0 else (W[:, 0] > 0), 0] += sgn * P
+        newI.append(inv.reshape(-1, 3) + nv); newV.append(W); nv += len(u)
+        if newC is not None: newC.append(np.asarray(colors)[u])
+    return np.vstack(newV), np.vstack(newI).ravel(), (np.vstack(newC) if newC is not None else colors)
+
+
 def _geom_node(V, kind, idx=None, col=(1., 1., 1., 1.)):
     """GeomNode напрямую из panda3d: kind='lines' — пары вершин (один GeomLines), 'tris' — индексированные треугольники (один GeomTriangles)"""
     from panda3d.core import GeomVertexData, GeomVertexFormat, Geom, GeomLines, GeomTriangles, GeomNode, GeomEnums
@@ -166,6 +205,9 @@ def _make_batch():
             """colors — (n, 4) цвета вершин (иначе один цвет слоя); depth_write=False — полупрозрачная поверхность не закрывает линии за ней"""
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
+            if WRAP_X > 0:
+                if kind == 'lines': V, colors = wrap_lines(V, colors)
+                elif kind == 'tris' and idx is not None: V, idx, colors = wrap_tris(V, idx, colors)
             self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col if colors is None else colors)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
             if not depth_write: self._gn.set_depth_write(False)
             if fixed is not None: self._gn.set_bin('fixed', fixed)                                        # порядок отрисовки: подложка (31) → линии скелета (32) → траектории в цель (60)
