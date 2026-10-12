@@ -190,3 +190,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | yoga-v5chain-fixer-1 | start | 5ч 7% / ctx 4% | $0.05 | 2026-10-07 22:27:57 |
 | laptop-v5chain-research-2 | start | 5ч 50% / ctx 47% (чужая строка usage_log) | $9.42 | 2026-10-12 10:19:23 |
 | laptop-v5chain-research-2 | end | 5ч 6% / ctx 12% / 7д 95% | $2.48 | 2026-10-12 10:43:38 |
+| laptop-v5chain-research-3 | start | 5ч 0% / ctx 5% | $0.19 | 2026-10-12 10:46:36 |

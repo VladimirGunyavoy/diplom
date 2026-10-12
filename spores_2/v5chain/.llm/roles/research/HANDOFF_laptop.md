@@ -1,6 +1,5 @@
 # RESEARCH_HANDOFF (линия [laptop]) — свежее сверху
 ## laptop-v5chain-research-2 (2026-10-12 10:17–10:50, acc vladimirgun26, Opus) — смена по слову пользователя: 7д 95% → новый research на romaha
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Сделано: только инфра, к v8 не приступал (цепь на паузе, CHAIN_STOPPED; задачу ждали от пользователя).
 - Токены/statusLine на ноуте: процесс claude из деки запускался БЕЗ HOME и из симлинка /root/claude-work → statusLine не шёл, git push не находил /root/.git-credentials. Рестарт с HOME=/root и cwd /mnt/c/GitHub/... — всё работает. Доверие симлинк-путей добавлено во все 3 .claude.json ноута. Системный фикс деки — просьба hub-v5chain-fixer-1 (ответ придёт почтой).
 - Почта хаб→ноут: на каждого агента ноута нужен свой watch-yoga (tmux `mail-<имя>`; у research-2 был, после финиша убрать/поднять свой).
