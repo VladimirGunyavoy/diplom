@@ -1,6 +1,6 @@
 # Session Handoff — линия [laptop] (worker; хабовый HANDOFF.md линии A не трогать)
 [РУТИНА НЕ ВЫПОЛНЕНА]
-Звено: laptop-v5chain-worker-4 (acc3, Sonnet, 2026-10-12 11:45–~14:30), причина смены: ctx ~38% (софт 30, хард 40)
+Звено: laptop-v5chain-worker-4 (acc3, Sonnet, 2026-10-12 11:45–~14:30), причина смены: ctx 37% (софт 30, хард 40); преемник НЕ поднят — pick_account пуст (сброс 5ч ~0.9ч), поднимает research-3
 ЖЁСТКОЕ ПРАВИЛО ПОЛЬЗОВАТЕЛЯ (2026-10-12, дословно): делаешь ТОЛЬКО то, на что пользователь дал добро — задачу тебе передаст research-3 с пометкой «добро пользователя» или сам пользователь; сам задач из PLAN не берёшь, экспериментов не запускаешь, после старта ждёшь. Ничего сверх задачи.
 Тема: spores_2/v8 (ДИ, окно v8). Все коммиты ЛОКАЛЬНЫЕ (не запушены). Отчёты — research-3: `python3 ~/claude-work/system/infra/mail/send_verified.py --sender <имя> laptop-v5chain-research-3 "<текст>"`.
 Сделано (мои коммиты в спор-репо): замер заезда клеток (tests/overlap_first_cells.py, reports/overlap_first_cells*); ZSOFT/ZSOFTLA в growN.stat() + свип (reports/zsoft_report.md); поверхность V (клавиша V), скелет, общий слой V* (клавиша B) — src/stepper/vsurf.py + GrowView (growview.py `_draw_vsurf`), env VSURF_*; ZSOFT=.05 по умолчанию в live.py (4053bb6, ждёт отчёта research-3 — отправлю сам).
@@ -14,6 +14,6 @@
 Грабли: (1) окно крутится в tmux v8run на Windows-питоне диплома (/mnt/c/GitHub/diplom/.venv/Scripts/python.exe run.py), вотчдог перезапускает его при ЛЮБОЙ правке файлов v8 — перед правками предупреди research-3 или правь пачкой; (2) локальный python3 WSL без numpy — тесты и счёт на aida: rsync v8/src и tests в ~/spore_v5/laptop_worker-<N>/v8/, раннер ~/spore_v5/laptop_worker-4/runtests.py <файл теста> (pytest нет), `ssh aida`; (3) offscreen-смоук окна: Windows-питон `timeout 110 /mnt/c/GitHub/diplom/.venv/Scripts/python.exe tests/smoke_vsurf_window.py` (скриншоты reports/vsurf_smoke_*.png; розовый ромб — перекрестие FPC, не дефект); (4) /mnt/c в WSL иногда падает (EIO) — подождать, поднимается само/fixer; (5) git push с ноута: `git -c credential.helper="store --file=/root/.git-credentials" push` (только со словом); (6) почта хаб→ноут — свой watch-yoga в tmux mail-<имя> (образец моей сессии mail-laptop-v5chain-worker-4); (7) pick_account — только с --why --no-reserve для проверки, реальный спавн — без --no-reserve.
 Решения цепочки: нет (решения пользователя — в отчётах research-3).
 Коммиты: 4053bb6 live ZSOFT=.05; 58bfaf0 боковые траектории в цель тоньше; bb0d9fe V-виз 4 правки; 7a25592 ZSOFT.
-Токены: T_START 5ч 8% / ctx 4% / $0.04 (11:45) / T_BEFORE_END 5ч ~50% / ctx ~38%.
+Токены: T_START 5ч 8% / ctx 4% / $0.04 (11:45) / T_BEFORE_END 5ч 60% / ctx 37% / $6.68 (14:35).
 Спавн: когда pick_account даст аккаунт (fixer-1 чинит; либо сброс 5ч ~15:15) — по слову research-3.
 NEXT_LINK: laptop-v5chain-worker-5   NEXT_MODEL: sonnet

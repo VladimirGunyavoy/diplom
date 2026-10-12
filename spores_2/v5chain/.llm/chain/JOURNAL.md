@@ -300,3 +300,4 @@ laptop-v5chain-research-2 | started | acc1 | opus | 10:19:23
 laptop-v5chain-research-2 | done | human: 7д acc1 95% → смена на romaha | инфра ноута: HOME/доверие → statusLine и push работают; почта хаб→ноут | next=laptop-v5chain-research-3 | 10:43:38
 laptop-v5chain-research-3 | started | acc3 | opus | 10:46:36
 laptop-v5chain-worker-4 | started | acc3 | sonnet | 11:45:57
+laptop-v5chain-worker-4 | done | ctx 37% | замеры заезда, ZSOFT, V-поверхность/скелет/общий слой V*, правки; handoff HANDOFF_laptop.md | next=laptop-v5chain-worker-5 (не поднят, pick_account пуст; поднимает research-3) | 14:15:06
