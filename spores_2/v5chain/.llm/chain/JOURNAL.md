@@ -316,3 +316,6 @@ laptop-v5chain-worker-7 | started | acc1 | sonnet | 19:13:35
 laptop-v5chain-research-5 | AUTONOMOUS | слово пользователя 19:40 «я отхожу… автономный режим»; файл journals/_sentinel/AUTONOMOUS | 19:38:54
 laptop-v5chain-research-5 | line-open | worker C | слово пользователя: бенч спор vs RRT/RRT*/PPO по всем средам, spores_2/bench/, хаб+aida | 19:37:18
 hub-v5chain-worker-c1 | started | 19:37:18
+hub-v5chain-research-25 | started | acc1 | opus | 19:39:18
+hub-v5chain-research-25 | AUTONOMOUS | on | по сообщению laptop-v5chain-research-5 «пользователь ушёл»; файл journals/_sentinel/AUTONOMOUS | 19:39:18
+hub-v5chain-research-25 | CHAIN_STOPPED снят | пак хаба (research-25, dispatcher-6, worker-c1) запущен словом пользователя через laptop-v5chain-research-5 | 19:39:18
