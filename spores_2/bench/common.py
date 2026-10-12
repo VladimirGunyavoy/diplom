@@ -112,6 +112,27 @@ class DDObst(DD):
             y = rng.uniform(s.fl_lo, s.fl_hi)
             if not s.out_of_box(y): return y
 
+class Car(Env):
+    """статик кар (static_car.md): (x, y, θ, v), u = (a, ω), |a| ≤ 1.5, |ω| ≤ 1.8, v̇ = a − .625 v, поле |x|,|y| ≤ 5, v ∈ [−1, 2], 3 диска r .7, цель круг (4, 3.6) r .45 (θ, v любые); 20 стартов research-21 (r21/ref_car.starts), эталон OCP IPOPT r21/car_ref20.npy; касание диска ≥ −1e-3 допускается как у эталона"""
+    name = 'car'; n = 4; m = 2; period = np.array([0., 0., 2 * PI, 0.]); lo = np.array([-5., -5., -PI, -1.]); hi = np.array([5., 5., PI, 2.]); umin = np.array([-1.5, -1.8]); umax = np.array([1.5, 1.8]); fl_lo = np.array([-4.25, -4.25, -PI, 0.]); fl_hi = np.array([0., .3, PI, 0.])
+    K = .625; HZ = np.array([[0., .2], [1.8, 1.5], [-1.6, 2.3]]); HR = .70; GOAL = np.array([4., 3.6]); GR = .45; DISKS = None
+    def __init__(s, nst=20):
+        s.X0 = np.array(s.sample_starts(np.random.default_rng(0), nst)); s.Tref = np.load(os.path.join(REF, 'r21', 'car_ref20.npy'))[:nst].copy(); s.keep = np.ones(nst, bool)
+    def sample_starts(s, rng, n):
+        S = []
+        while len(S) < n:
+            p = rng.uniform([-4.25, -4.25], [0., .3])
+            if np.linalg.norm(p - s.GOAL) < s.GR + .8 or (np.linalg.norm(s.HZ - p, axis=1) - s.HR).min() <= .2: continue
+            d = s.GOAL - p; S.append(np.array([p[0], p[1], np.arctan2(d[1], d[0]) + rng.normal(0, .25), 0.]))
+        return S
+    def sample_field(s, rng): return s.sample_starts(rng, 1)[0]
+    def f(s, Y, u): s.nf += 1; return np.stack([Y[..., 3] * np.cos(Y[..., 2]), Y[..., 3] * np.sin(Y[..., 2]), u[..., 1] + 0 * Y[..., 0], u[..., 0] - s.K * Y[..., 3]], -1)
+    def in_goal(s, Y): return np.linalg.norm(np.asarray(Y)[..., :2] - s.GOAL, axis=-1) <= s.GR + 1e-6
+    def goal_dist(s, Y): return np.linalg.norm(np.asarray(Y)[..., :2] - s.GOAL, axis=-1) - s.GR
+    def out_of_box(s, Y):
+        Y = np.asarray(Y); dh = (np.linalg.norm(Y[..., None, :2] - s.HZ, axis=-1) - s.HR).min(-1); dw = 5. - np.abs(Y[..., :2]).max(-1)
+        return np.minimum(np.minimum(dh, dw), np.minimum(Y[..., 3] + 1., 2. - Y[..., 3])) < -1e-3
+
 class Manip(Env):
     """плоский манипулятор 2 зв. без g, 4D (θ1, θ2, ω1, ω2), моменты |τi| ≤ 1; цель ящик ±(.3,.3,.5,.5); |ω| ≤ 3; 20 стартов и эталон OCP (CasADi, |ω| ≤ 3) r23/manip_ref_ocp_20.npy"""
     name = 'manip'; n = 4; m = 2; period = np.array([2 * PI, 2 * PI, 0., 0.]); half = np.array([.3, .3, .5, .5]); lo = np.array([-PI, -PI, -3., -3.]); hi = np.array([PI, PI, 3., 3.]); umin = -np.ones(2); umax = np.ones(2); fl_lo = np.array([-PI, -PI, -1., -1.]); fl_hi = -fl_lo
@@ -124,7 +145,7 @@ class Manip(Env):
         return np.stack([w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, manip=Manip)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, car=Car, manip=Manip)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
