@@ -96,6 +96,24 @@ def freeze_idx(g, s):
     s.query = query
 
 
+ACTIVE = int(os.environ.get('ACTIVE', 0)); ACTEPS = float(os.environ.get('ACTEPS', 1e-7))
+class _Active:
+    """список активных узлов (b3): E_li(точка) пересчитывается только для точек, у которых изменилась вершина ячейки хотя бы в одной из пар; остальное — из кэша. Q монотонно убывает, значит кэш согласован"""
+    def __init__(a, s, pairs, npts=None):
+        a.s = s; a.np = s.n if npts is None else npts; pi, verts, w, rank = pairs; o = np.argsort(pi, kind='stable'); a.pi, a.verts, a.w, a.rank = pi[o], verts[o], w[o], rank[o]
+        a.ps = np.searchsorted(a.pi, np.arange(a.np + 1))                                                   # строки точки i: ps[i]:ps[i+1]
+        vf = a.verts.ravel(); a.vo = np.argsort(vf, kind='stable'); a.vs = np.searchsorted(vf[a.vo], np.arange(s.n + 1)); a.E = np.full(a.np, np.inf); a.first = True; a.last = None
+    def update(a, Q, chg):
+        s = a.s
+        if a.first: a.first = False; a.last = None; a.E = s.evalpairs(Q, a.np, (a.pi, a.verts, a.w, a.rank)); return a.E
+        a.last = np.zeros(0, np.int64)
+        if not len(chg): return a.E
+        st, en = a.vs[chg], a.vs[chg + 1]; ln = en - st; tot = int(ln.sum())
+        if tot == 0: return a.E
+        idx = np.repeat(st - np.cumsum(np.r_[0, ln[:-1]]), ln) + np.arange(tot); rows = a.vo[idx] // a.verts.shape[1]; pts = np.unique(a.pi[rows])
+        st, en = a.ps[pts], a.ps[pts + 1]; ln = en - st; tot = int(ln.sum()); idx = np.repeat(st - np.cumsum(np.r_[0, ln[:-1]]), ln) + np.arange(tot)
+        Ev = s.evalpairs(Q, a.np, (a.pi[idx], a.verts[idx], a.w[idx], a.rank[idx])); a.E[pts] = Ev[pts]; a.last = pts; return a.E
+
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
         s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.ingoal = lambda Y: goal_mask(s.g, Y, s.rho); s.tab = None; s.di_fast = os.environ.get('SYS', 'di') == 'di' and not int(os.environ.get('FLOW_G', 0)); s.table_h = float(os.environ.get('TABLE_H', .02 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
@@ -294,15 +312,29 @@ class Graph:
         if warm and getattr(s, 'V', None) is not None and getattr(s, 'Vn', None) is not None and len(s.V) == s.n: Q = np.minimum(Q, s.V); V = np.minimum(V, s.Vn)                  # тёплый старт: Q/V прошлого решения — верхняя оценка (подточки бисекции только добавляют опции)
         e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
+        act = [_Active(s, pr) for pr in s.e3] if ACTIVE else None; Qref = None; actS = None
         for passes in range(1, maxit + 1):
             Vo = V.copy(); Qo = Q.copy()
+            Qprev_ = Qref if Qref is not None else Qo
+            if act is not None:
+                chg = np.arange(s.n) if Qref is None else np.flatnonzero(np.abs(np.minimum(Qo, BIG) - np.minimum(Qref, BIG)) > ACTEPS)
+                if Qref is None: Qref = Qo.copy()
+                else: Qref[chg] = Qo[chg]                                                                  # ниже порога — накапливаем, пока не превысит
+            if act is not None and os.environ.get('ACTDBG') and passes % 50 == 1: d_ = np.abs(np.minimum(Qo, BIG) - np.minimum(Qprev_, BIG)); print('ACT pass', passes, 'changed', len(chg), '>1e-6:', int((d_ > 1e-6).sum()), '>1e-4:', int((d_ > 1e-4).sum()), '>1e-2:', int((d_ > 1e-2).sum()), 'max', float(d_.max()), flush=True)
             for li2, pairs in enumerate(s.e3):
-                Ei = s.evalpairs(Qo, s.n, pairs); Ei = np.where(np.isfinite(Ei), Ei, BIG); same = s.layer == li2
+                if act is not None: Ei = act[li2].update(Qo, chg)
+                else: Ei = s.evalpairs(Qo, s.n, pairs)
+                Ei = np.where(np.isfinite(Ei), Ei, BIG); same = s.layer == li2
                 Q[same] = np.minimum(Q[same], Ei[same]); V[~same] = np.minimum(V[~same], Ei[~same] + pen)
             if s.subk:                                                                                          # SUBK: переключение внутри ребра столбца — K подточек точного потока, Q(k) = min(…, t_j + Q чужого слоя в точке j)
                 own, tt, prs, ns = s._sub()
+                if actS is None and ACTIVE: actS = [_Active(s, pr, ns) for pr in prs]
                 for li2, pairs in enumerate(prs):
-                    Ei = s.evalpairs(Qo, ns, pairs); m = np.isfinite(Ei) & (s.layer[own] != li2); np.minimum.at(Q, own[m], tt[m] + Ei[m] + pen)
+                    if actS is not None:
+                        Ei = actS[li2].update(Qo, chg); pts = actS[li2].last; m = np.zeros(ns, bool); pp = np.arange(ns) if pts is None else pts
+                        m[pp] = np.isfinite(Ei[pp]) & (s.layer[own[pp]] != li2)
+                    else: Ei = s.evalpairs(Qo, ns, pairs); m = np.isfinite(Ei) & (s.layer[own] != li2)
+                    np.minimum.at(Q, own[m], tt[m] + Ei[m] + pen)
             V = np.minimum(V, Q)
             for a, b in zip(cuts[:-1], cuts[1:]):
                 nd = e1[a:b]; Q[nd] = np.minimum(Q[nd], e1c[a:b] + V[e1n[a:b]]); V[nd] = np.minimum(V[nd], Q[nd])
@@ -310,6 +342,7 @@ class Graph:
             if progress is not None: progress(passes, dd, V)
             if dd < tol: break
         s.converged = dd < tol; s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
+        if os.environ.get('ACTDBG'): print('SOLVEQ n=%d passes=%d %.1f с warm=%s act=%s' % (s.n, passes, s.t_solve, warm, act is not None), flush=True)
         if verbose: print('solve8[%s]: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.calc, s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
