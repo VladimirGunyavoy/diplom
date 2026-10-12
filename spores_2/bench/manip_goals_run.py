@@ -80,6 +80,27 @@ def stage_run(kind, K):
         print(k, res[-1], flush=True)
     json.dump(res, open(os.path.join(common.DATA, 'mg_%s_spores.json' % kind), 'w'), indent=1, default=float)
 
+def wr(x): return (x + np.pi) % (2 * np.pi) - np.pi
+ATL = {0.: ('g300so', os.path.join(SRC, 'L_g300so.pkl'), os.path.expanduser('~/spore_v5/b9/E_g300so')), np.pi / 2: ('q157', os.path.join(SRC, 'L_q157.pkl'), os.path.join(SRC, 'E_q157')), np.pi: ('q314', os.path.join(SRC, 'L_q314.pkl'), os.path.join(SRC, 'E_q314'))}
+def stage_b2(kind, K):
+    """CA4-B2: 3 атласа (q2g = 0, π/2, π), цель → зеркало (q2g < 0) + сдвиг q1 → ближайший атлас → retarget → агент; проверка в исходной задаче (u = m·u')"""
+    import manip_goals as MGm, torch
+    tr, _ = MGm.transitions(kind); tr = tr[:K]; ref = {r['k']: r['Tref'] for r in json.load(open(os.path.join(common.DATA, 'mg_%s_ref.json' % kind)))}; res = {}
+    plan = []
+    for k, (st, g) in enumerate(tr):
+        m = -1. if wr(g[1]) < 0 else 1.; q2 = abs(wr(g[1])); a = min(ATL, key=lambda x: abs(x - q2)); plan.append((k, m, q2, a))
+    for a, (tag, lp, ep) in ATL.items():
+        ks = [p for p in plan if p[3] == a]
+        if not ks: continue
+        A = G.Atlas.__new__(G.Atlas); A.layers = pickle.load(open(lp, 'rb'))['layers']; A.finish(); S = spd.GoalSolver(A, ep)
+        for k, m, q2, _ in ks:
+            st, g = tr[k]; t0 = time.perf_counter(); S.retarget(np.array([0., q2, 0., 0.]), tol=1e-4, lcut=LCUT, fp32=True, log=lambda *x: None); tg = time.perf_counter() - t0
+            y0 = np.array([[wr(st[0] - g[0]) * m, wr(st[1]) * m, 0., 0.]]); t1 = time.perf_counter(); T, seg = rollout_rec(A, y0); dtq = time.perf_counter() - t1; sg = seg[0]
+            e = MGm.MG(g, st); Tv, why = common.verify(e, e.X0[0], [m * np.array(u, float) for u, d in sg], [d for u, d in sg])
+            res[k] = dict(k=k, start=list(map(float, st)), goal=list(map(float, g)), atlas=tag, mirror=m, q2g_eff=float(q2), Tref=ref.get(k), T_agent=float(T[0]) if np.isfinite(T[0]) else None, T_verify=Tv, why=why, t_goal=tg, t_query=dtq); print(k, res[k], flush=True)
+        del S, A; torch.cuda.empty_cache()
+    json.dump([res[k] for k in sorted(res)], open(os.path.join(common.DATA, 'mg_%s2_spores.json' % kind), 'w'), indent=1, default=float)
+
 if __name__ == '__main__':
     a = sys.argv[1:]
-    stage_run(a[1], int(a[2]) if len(a) > 2 else 99)
+    (stage_b2 if a[0] == 'b2' else stage_run)(a[1], int(a[2]) if len(a) > 2 else 99)

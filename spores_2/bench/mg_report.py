@@ -15,7 +15,14 @@ for j, kind in enumerate('AB'):
     nd = len({tuple(np.round(x['goal'], 6)) for x in sp}); tg = float(np.mean([x['t_goal'] for x in sp if x['t_goal']])); tq = float(np.median([x['t_query'] for x in sp[1:]])); first = sp[0]['t_query']
     ok, med, p90 = stat([x['T_verify'] for x in sp], Tr); K = np.arange(0, n + 1)
     tot_sp = BASE + first + (nd * tg if kind == 'A' else 0) + (K * tg if kind == 'B' else 0) + K * tq
-    rows.append((kind, 'споры (retarget b9, без досева цели)', ok, med, p90, BASE + first, tg, tq, tot_sp[-1]))
+    rows.append((kind, 'споры (retarget b9, без досева цели; FIN-ω: финиш в коробке |ω|≤3)', ok, med, p90, BASE + first, tg, tq, tot_sp[-1]))
+    pf = L('mg_%s_spores_prefin.json' % kind)
+    if pf: okp, medp, p90p = stat([x['T_verify'] for x in pf], Tr); rows.append((kind, 'споры до FIN-ω (финиш мог выйти за |ω|≤3 — «выигрыш» нарушением)', okp, medp, p90p, BASE + first, tg, tq, tot_sp[-1]))
+    b2 = L('mg_%s2_spores.json' % kind)
+    if b2:
+        a2 = {x['atlas'] for x in b2}; okb, medb, p90b = stat([x['T_verify'] for x in b2], Tr); tgb = float(np.mean([x['t_goal'] for x in b2])); tqb = float(np.median([x['t_query'] for x in b2]))
+        base3 = BASE + first + sum((L('mg_atlas_%s.json' % t) or {}).get('t_layers', 0) + (L('mg_atlas_%s.json' % t) or {}).get('t_solve_savee', 0) for t in ('q157', 'q314'))
+        rows.append((kind, 'споры B2: 3 атласа (q2g 0, π/2, π) + зеркало/сдвиг, FIN-ω', okb, medb, p90b, base3, tgb, tqb, base3 + n * (tgb + tqb)))
     ax[j].plot(K, tot_sp, label='споры'); ax[j].plot(K, K * t_ocp, label='OCP IPOPT на переход (%.0f с)' % t_ocp)
     rows.append((kind, 'OCP IPOPT на переход (эталон)', 1., 1., 1., 0., 0., t_ocp, n * t_ocp))
     if sst:
