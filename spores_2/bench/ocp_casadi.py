@@ -12,6 +12,7 @@ def dyn(name, x, u):
     if name == 'pend': return ca.vertcat(x[1], ca.sin(x[0]) + u[0])
     if name == 'dd': return ca.vertcat(u[0] * ca.cos(x[2]), u[0] * ca.sin(x[2]), u[1])
     if name == 'di': return ca.vertcat(x[1], u[0])
+    if name == 'di4': return ca.vertcat(x[2], x[3], u[0], u[1])
     if name in ('manip', 'mg'):
         A, B, D = common.Manip.AA, common.Manip.BB, common.Manip.DD
         c, s = ca.cos(x[1]), ca.sin(x[1]); w1, w2 = x[2], x[3]; h = -B * s

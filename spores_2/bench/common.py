@@ -150,8 +150,20 @@ class Manip(Env):
         m11, m12, m22 = s.AA + 2 * s.BB * c, s.DD + s.BB * c, s.DD * np.ones_like(c); det = m11 * m22 - m12 ** 2
         return np.stack([w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
+class DI4(Env):
+    """ДИ 4D (два независимых ДИ, ẍ_i = u_i, |u_i| ≤ 1): состояние (x1, x2, v1, v2), цель ящик ±.35 по всем, поле |x| ≤ 2.5 (+.25 рост клеток), коробка проверки ±(3.5, 3.5, 4, 4);
+    старты — 60 из r22/di4_ref_60_rho35.npy (эталон — точная нижняя граница max по осям, bang-bang), keep — где остановочный путь внутри поля (53/60, как в r22/18)"""
+    exact = True; name = 'di4'; n = 4; m = 2; period = np.zeros(4); half = np.full(4, .35); umin = -np.ones(2); umax = np.ones(2); lo = np.array([-3.5, -3.5, -4., -4.]); hi = -lo; fl_lo = np.array([-2.5, -2.5, -2., -2.]); fl_hi = -fl_lo
+    def __init__(s, nst=60):
+        a = np.load(os.path.join(REF, 'r22', 'di4_ref_60_rho35.npy'))[:nst]; s.X0 = a[:, :4].copy(); s.Tref = a[:, 6].copy(); Q = s.X0
+        s.keep = np.abs(np.c_[Q[:, 0] + Q[:, 2] * abs(Q[:, 2]) / 2, Q[:, 1] + Q[:, 3] * abs(Q[:, 3]) / 2]).max(1) <= 2.5
+    def f(s, Y, u): s.nf += 1; return np.concatenate([Y[..., 2:], np.broadcast_to(u, Y[..., :2].shape)], -1)
+    def step(s, Y, u, h):
+        s.nf += 1; h = np.asarray(h, float)[..., None] if np.ndim(h) else h; a = np.broadcast_to(u, Y[..., :2].shape); return np.concatenate([Y[..., :2] + Y[..., 2:] * h + a * h * h / 2, Y[..., 2:] + a * h], -1)
+    def out_of_box(s, Y): return (np.abs(Y) > s.hi).any(-1)
+
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
