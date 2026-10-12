@@ -32,7 +32,7 @@ def _save(fig, name, dirs):
 
 def _frames(ax, G):
     from matplotlib.patches import Rectangle, Circle
-    xl = np.asarray(G.g.XLV, float); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
+    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
     ax.add_patch(Rectangle((-xl[0], -xl[1]), 2 * xl[0], 2 * xl[1], fill=False, ec='#2a9d3a', ls='--', lw=1.3, label='work zone ±(%g, %g)' % (xl[0], xl[1])))
     ax.add_patch(Rectangle((-xl[0] - gm[0], -xl[1] - gm[1]), 2 * (xl[0] + gm[0]), 2 * (xl[1] + gm[1]), fill=False, ec='#777777', ls=':', lw=1.3, label='growth limit ±(%g, %g)' % (xl[0] + gm[0], xl[1] + gm[1])))
     ax.add_patch(Circle((0, 0), G.rho, fill=False, ec='k', lw=1.8) if os.environ.get('GOALSHAPE', 'ball' if os.environ.get('SYS', 'di') == 'di' else 'box') == 'ball' else Rectangle((-G.rho, -G.rho), 2 * G.rho, 2 * G.rho, fill=False, ec='k', lw=1.8)); ax.set_xlabel('x'); ax.set_ylabel('v'); ax.grid(alpha=.2)
@@ -132,7 +132,7 @@ def traj_png(G, res, dirs, calc, stat=''):
 def hist_png(G, res, dirs, calc):
     """распределение T/T_ref по стартам + мед/p90/max, доля дошедших"""
     from .algo import solve8
-    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = np.asarray(res['Tref'], float) if 'Tref' in res else t_ref_cached(X0); ok = np.isfinite(T); r = T[ok] / Tr[ok]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = np.asarray(res['Tref'], float) if 'Tref' in res else t_ref_cached(X0); ok = np.isfinite(T); r = T[ok] / Tr[ok]; r = r[np.isfinite(r)]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
     if len(r):
         lo, hi = min(float(r.min()), 1.) - .02, float(r.max()) + .02; ax.hist(r, bins=np.linspace(lo, hi, 63), color='#4a90c8', density=True); ax.set_xlim(lo, hi);       # шкала X по данным (слово пользователя 2026-10-12), Y обычная (линейная)
         [ax.axvline(v, color=c, ls=l, label='%s %.3f' % (n, v)) for v, c, l, n in ((np.mean(r), '#d62728', '-', 'mean'), (np.median(r), '#2ca02c', '--', 'median'), (np.percentile(r, 90), '#ff7f0e', ':', 'p90'), (r.max(), 'k', ':', 'max'))]

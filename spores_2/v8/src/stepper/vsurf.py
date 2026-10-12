@@ -176,7 +176,7 @@ def _agent_core(G, g, X0, rec, policy, progress, base=0):
         from .. import pics as _px; Tref0 = _px.t_ref_cached(X0)                                  # T_ref по стартам — с диском-кэшем (старты детерминированы: seed): повторный прогон без eigvals (~6 с на 300)
         Tr = np.array([Tref0[i] for i in src], float); mpre = np.array([i in pre for i in src], bool)
         if mpre.any(): Tr[mpre] = _px.t_ref_cached(Xa[mpre])                                         # у предфазы старт агента другой (X1)
-        path = []; dl = [] if (DLOG and hasattr(G, 'DLOG_COLS')) else None; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, progress=progress, **({} if dl is None else dict(dlog=dl)), **solve8.POLICIES[policy])
+        path = []; dl = [] if (DLOG and hasattr(G, 'DLOG_COLS')) else None; Ta, swa = G.run_agent(Xa, 3 * np.where(np.isfinite(Tr), Tr, 8.) + 2, rec=rec, path=path, progress=progress, **({} if dl is None else dict(dlog=dl)), **solve8.POLICIES[policy])
         ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
         Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
         for k, i in enumerate(src):
