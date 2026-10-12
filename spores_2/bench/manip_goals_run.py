@@ -1,6 +1,7 @@
 """CA4: споры на манипуляторе 4D с переменной целью, интерфейс b9 (v7/src/cells7/spd.py: GoalSolver.retarget; growN.GC — центр цели).
 Слои и рёбра графа (стенсилы) от цели не зависят: заготовка = слои (270 с, CPU) + один полный solve с SAVEE (~300 с, строит кэш рёбер ~4 ГБ) — цифры b9 (spd1.md); рёбра берём готовые b9 (E_g300so_*).
 На новую цель: retarget (tgoal у границы + GPU-Якоби tol 1e-4, lcut 4.5, fp32, ~11 с); запрос — агент (rollout_rec) с целью GC. Без досева клеток цели (SPD1b у b9 — потом).
+FINBOX=1 (по умолч.): финиш-дуги целиком в коробке |ω| ≤ 3 (b9 FIN-ω); FINBOX=0 — как до FIN-ω (данные mg_*_spores_prefin.json).
 Запуск (aida, venv-sb3, под flock GPU): ~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python manip_goals_run.py run A|B [K] → data/mg_{A,B}_spores.json; эталон — data/mg_{A,B}_ref.json (OCP IPOPT, вне таймера)."""
 import os, sys, time, json, pickle
 ENV = dict(SYS='manip', KF='11', M='3', FRAC='.5', OVH='.5', MINROWS='3', GLIM='0', RMAX='.6', TMAX='3', SBCAUS='1', SBLAY='0', NOLATCH='1', FINGRID='2', VF='2', PESS='1', GPUMAX='1000000', GS='300', DELTA='.3', MAXC='3000', SONE='1', TQDM_MI='1000', OMP_NUM_THREADS='4')
@@ -20,13 +21,23 @@ def shoot_pol_rec(y, tmax, NA, inits=2, H=.1):                      # как в 
         z = np.array(y, float)
         for k, dt in zip(tp, d): z = FG.flow(z, G.US[k], max(dt, 0.), G.f)
         return G.wrapg(z)
+    def path_free(d):                                                  # FIN-ω (b9): вся дуга внутри коробки состояний (|ω| ≤ WM)
+        if FG.FREE is None: return True
+        z = np.array(y, float)
+        for k, dt in zip(tp, d):
+            ns = max(1, int(np.ceil(max(dt, 0.) / FG.HS)))
+            for _ in range(ns):
+                z = FG.flow(z, G.US[k], max(dt, 0.) / ns, G.f)
+                if not FG.FREE(z): return False
+        return True
     cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
     for d0 in (np.full(n, T0 / n), np.r_[T0 * .6, np.full(n - 1, T0 * .4 / max(n - 1, 1))][:n]):
         r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
-        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(G.RHOV)) and r.x.sum() < best[0]: best = (float(r.x.sum()), tp, r.x.copy())
+        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(G.RHOV)) and r.x.sum() < best[0] and path_free(r.x): best = (float(r.x.sum()), tp, r.x.copy())
     return best
 
 def rollout_rec(A, Q, tmax=40.):
+    FG.FREE = (lambda y: G.inbox(y)) if int(os.environ.get('FINBOX', 1)) else None
     E = os.environ.get; DTN = G.DTN; US = G.US; VF = G.VF
     Y = G.wrapy(Q); n = len(Y); T = np.zeros(n); done = G.ingoal(Y); tried = np.zeros(n, bool); fin = np.zeros(n, bool); seg = [[] for _ in range(n)]
     for _ in range(int(tmax / DTN)):
