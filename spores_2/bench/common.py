@@ -169,7 +169,7 @@ class ManipForb(Manip):
     def __init__(s, nst=20):
         super().__init__(nst); s.free0 = s.gfree(s.X0) > 0; fn = os.path.join(DATA, 'manipf_ref.json')
         if os.path.exists(fn):
-            import json; R = json.load(open(fn)); T = np.array([np.nan if r['Tref'] is None else r['Tref'] for r in R[:nst]]); s.Tref = T; s.keep = s.free0 & np.isfinite(T)
+            import json; R = json.load(open(fn)); T = np.array([np.nan if r['Tref'] is None else r['Tref'] for r in R[:nst]]); s.keep = s.free0 & np.isfinite(T); s.Tref = np.where(np.isfinite(T), T, 8.)      # NaN → 8 с: только потолок прокатки PPO (3·T_ref); итоговые отношения — к best-known в mf_report
         else: s.Tref = np.full(nst, np.nan); s.keep = s.free0.copy()
     def gfree(s, Y):
         Y = np.asarray(Y, float); g = (PI - s.FD) - np.abs(wrap(Y[..., 1], 2 * PI)); ye = s.ML * np.sin(Y[..., 0]); yt = ye + s.ML * np.sin(Y[..., 0] + Y[..., 1]); return np.minimum(g, np.minimum(ye, yt) - s.TY)
