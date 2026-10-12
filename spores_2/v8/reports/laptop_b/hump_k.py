@@ -6,8 +6,11 @@ sys.path.insert(0, os.path.abspath('.')); sys.path.insert(0, os.path.join(os.pat
 from src.algo import solve8 as S, ref_di_disk as R
 import hump as H
 OUT = os.environ.get('OUT', 'hump_k'); TG = H.TG
-g = S.load_growN(); atlas, _ = S.build_atlas([1., -1., 0.] if not os.environ.get('NO0') else [1., -1.], 0, par=False); G = S.make_graph(g, atlas, 'N'); rho = G.rho; G.set_calc('q')
-print('RES MAXC=%s GOALFRONT=%s клеток %s узлов %d' % (os.environ.get('MAXC', '-'), os.environ.get('GOALFRONT', '0'), {u: len(atlas[u]) for u in atlas}, G.n))
+g = S.load_growN(); atlas, _ = S.build_atlas([1., -1., 0.] if not os.environ.get('NO0') else [1., -1.], 0, par=False); ins = 0
+if os.environ.get('REFINE'): atlas, G, ins = S.refine_atlas(g, atlas, float(os.environ['REFINE']), int(os.environ.get('RDEPTH', 2)))
+else: G = S.make_graph(g, atlas, 'N')
+rho = G.rho; G.set_calc('q')
+print('RES MAXC=%s GOALFRONT=%s REFINE=%s клеток %s (вставлено полос %d) узлов %d' % (os.environ.get('MAXC', '-'), os.environ.get('GOALFRONT', '0'), os.environ.get('REFINE', '-'), {u: len(atlas[u]) for u in atlas}, ins, G.n))
 X0 = S.starts(g, int(os.environ.get('N', '600')), 1); mx = S.path_extent(X0, rho); inw = mx <= float(g.XLV[0]); Xz = X0[inw]; U0, T1, TT = H.opt_switch(Xz, rho)
 ids = np.flatnonzero(np.isfinite(T1) & (T1 >= .8) & (TT - T1 >= .3)); PTS = np.zeros((len(ids), len(TG), 2)); TRF = np.zeros((len(ids), len(TG)))
 for r, i in enumerate(ids):
@@ -26,6 +29,7 @@ for K in [int(k) for k in os.environ.get('KS', '0,1,3').split(',')]:
     for name, pol in (('commit', 'commit'), ('look', 'look')):
         T, sw = G.run_agent(X0, tmax, **S.POLICIES[pol]); ok = np.isfinite(T); r = T[ok & inw] / Tr[ok & inw]
         print('RES   K=%d %-6s в зоне дошли %.3f | T/T_ref мед %.3f p90 %.3f max %.2f' % (K, name, ok[inw].mean(), np.median(r), np.percentile(r, 90), r.max()), flush=True)
+np.save(OUT + '_prof.npy', np.array([TG] + [prof[k] for k in sorted(prof)]))
 try:
     import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
     plt.figure(figsize=(7, 4.5))

@@ -69,16 +69,17 @@ class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
         s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
+        prio = []
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
             for c in atlas[u]:
                 if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], M, 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
                 else: G, tau, hb, nb, nf = c.G, c.tau, c.hb, c.nb, c.nf
-                lc = Light(G, tau, c.r, hb, nb, nf); idx.add(lc); nt = len(G); base.append(n0); ids = n0 + np.arange(nt * M).reshape(nt, M)
+                prio.append(float(getattr(c, 'prio', 0)));                 lc = Light(G, tau, c.r, hb, nb, nf); idx.add(lc); nt = len(G); base.append(n0); ids = n0 + np.arange(nt * M).reshape(nt, M)
                 P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * M, gc)); layer.append(np.full(nt * M, li)); rowid.append(np.repeat(np.arange(nt), M))
                 nx = np.full((nt, M), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, M)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * M; gc += 1
             s.idx[u] = idx; s.base[u] = np.array(base)
-        s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
+        s.prio = np.array(prio);         s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
         off = 0; s.gcell = {}
         for u in s.us: s.gcell[u] = off + np.arange(len(atlas[u])); off += len(atlas[u])
         s.layer_counts = {u: (len(atlas[u]), int(sum(len(c.G) * M for c in atlas[u]))) for u in s.us}
@@ -93,7 +94,7 @@ class Graph:
         if excl is not None:
             k = gcid != excl[pi]; pi, hid, sc, cid = pi[k], hid[k], sc[k], cid[k]
             if not len(pi): return np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int)
-        cen = np.minimum(sc, 1 - sc).min(1); o = np.lexsort((-cen, pi)); pi, hid, sc, cid = pi[o], hid[o], sc[o], cid[o]; st = np.r_[True, pi[1:] != pi[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0))
+        cen = np.minimum(sc, 1 - sc).min(1) + s.prio[s.gcell[u2][cid]]; o = np.lexsort((-cen, pi)); pi, hid, sc, cid = pi[o], hid[o], sc[o], cid[o]; st = np.r_[True, pi[1:] != pi[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0))
         k = rank < s.K; pi, hid, sc, cid, rank = pi[k], hid[k], sc[k], cid[k], rank[k]
         row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]; vo = s.g.VOFF; M = s.M
         verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in vo], 1)
@@ -273,6 +274,41 @@ class Graph:
 
 def make_graph(g, atlas, interp='N'):
     G = Graph(g, atlas, interp); G.prepare(); return G
+
+
+class Refined:
+    """уточнённая клетка-полоса между соседними столбцами j, j+1 родителя: M столбцов (концы — столбцы родителя, внутри — выращенные как обычные столбцы потоком от интерполированной затравки), те же строки; prio выше родителя"""
+    def __init__(s, G, tau, r, hb, nb, nf, prio, depth): s.G, s.tau, s.r, s.hb, s.nb, s.nf, s.prio, s.depth = G, tau, r, hb, nb, nf, prio, depth
+
+
+def refine_atlas(g, atlas, thr=.15, maxdepth=2, calc='q', verbose=True):
+    """адаптивные столбцы по скачку V (слово пользователя «бисекция»): после solve у соседних столбцов клетки в строке |ΔQ| > thr ⇒ полоса между ними пересеивается M столбцами (новые — потоком от затравки на опорной строке, время строки — интерполяция времён соседей); повтор, пока скачок < thr или глубина maxdepth (ширина < r/16 при M=5, maxdepth 2). Запрос — ячейки полосы (prio). → (новый атлас, граф, число вставленных клеток-полос)"""
+    from copy import copy
+    M = g.M; US = {u: u for u in atlas}; cur = {u: list(atlas[u]) for u in atlas}; ins = 0
+    for d in range(maxdepth + 1):
+        G = make_graph(g, cur, 'N'); G.set_calc(calc); G.solve(verbose=False)
+        if d == maxdepth: break
+        new = {u: [] for u in cur}; added = 0
+        for u in cur:
+            for ci, c in enumerate(cur[u]):
+                if getattr(c, 'depth', 0) != d: continue
+                nt = len(c.G); b = G.base[u][ci]; V = G.V[b:b + nt * M].reshape(nt, M); Gc = np.asarray(c.G); tau = np.asarray(c.tau); k0 = int(min(max(c.nb, 0), nt - 1))
+                for j in range(M - 1):
+                    fin = (V[:, j] < BIG / 2) & (V[:, j + 1] < BIG / 2)
+                    if not (fin & (np.abs(V[:, j] - V[:, j + 1]) > thr)).any(): continue
+                    cols = [Gc[:, j]]; ts = [tau[:, j]]
+                    for f in np.linspace(0, 1, M)[1:-1]:
+                        tt = (1 - f) * tau[:, j] + f * tau[:, j + 1]; y = np.zeros((nt, 2)); y[k0] = (1 - f) * Gc[k0, j] + f * Gc[k0, j + 1]
+                        for k in range(k0 + 1, nt): y[k] = g.adv(y[k - 1], u, tt[k] - tt[k - 1])
+                        for k in range(k0 - 1, -1, -1): y[k] = g.adv(y[k + 1], u, tt[k] - tt[k + 1])
+                        cols.append(y); ts.append(tt)
+                    cols.append(Gc[:, j + 1]); ts.append(tau[:, j + 1]); r = float(np.asarray(c.r).ravel()[0]) / (M - 1)
+                    new[u].append(Refined(np.stack(cols, 1), np.stack(ts, 1), np.array([r]), c.hb, c.nb, c.nf, getattr(c, 'prio', 0) + 1, d + 1)); added += 1
+        if verbose: print('refine: глубина %d → вставлено клеток-полос %d' % (d + 1, added), flush=True)
+        if not added: break
+        for u in cur: cur[u] += new[u]
+        ins += added
+    return cur, G, ins
 
 
 # ---------- сценарий ----------
