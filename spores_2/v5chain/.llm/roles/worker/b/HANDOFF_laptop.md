@@ -9,3 +9,9 @@
 Коммиты: 3a30f7e (merge), d3dcb54 бисекция+граница+SOLVE8_PLUS, b1c0754 refine_atlas, f4c2bb0 SUBK.
 Токены: T_START 5ч 6% / ctx 5% (17:07) / T_BEFORE_END 5ч ~48% / ctx ~31% (19:55)
 NEXT_LINK: laptop-v5chain-worker-b2 (если research-5 скажет поднять)   NEXT_MODEL: sonnet
+
+## b2 (2026-10-12 20:00–): оптимизация скорости SOLVE8_PLUS (aida: ~/spore_v5/laptop_worker-b2/v8, бенч reports/laptop_b/bench_opt.py, warm_cmp.py)
+- п.1: tol 1e-6 при PLUS (ΔV 4.5e-5, безопасно). Тёплый старт (WARM=1) ПУТЬ-ЗАВИСИМ: 24% узлов ΔV=.043 → по умолч. WARM=0. Выигрыш WARM был бы solve 3.3→2.8 с — не стоит.
+- п.2: CSR-заморозка HexIdx + общий индекс слоёв (locate_all) в Vlayers: агент commit 3.4→1.5 с, look 2.9→0.9 с (бит-в-бит). Остаток — Ньютон в growN._test (~3 мс/вызов); QB не помогает.
+- п.3: COMMIT_EVERY=3 по умолч. при PLUS: commit 200 стартов 0.5 с, T/T_ref мед 1.0178 (было 1.0195), p90 1.235 (1.249).
+- Осталось: кэш ячейки/Ньютон от прошлого sc; п.4 (commit с бисекцией момента; занижение 6% BOUND).
