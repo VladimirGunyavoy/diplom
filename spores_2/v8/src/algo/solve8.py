@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -145,6 +145,11 @@ class Graph:
         s.calc = calc
         if (calc == 'qquad') != s.quad: s.quad = calc == 'qquad'; s.prepare()                                    # геометрия переходов (e3) другая
 
+    def _xentry_init(s):
+        """W2 (laptop-v5chain-worker-6): точный вход в цель по прямому потоку на горизонте xentry — верхняя оценка, не зависящая от грубой сетки у цели. Q0: свой слой (продолжать своё u до входа); V0: любой слой (переключиться сразу и идти прямо)"""
+        H = np.full(s.n, s.xentry); te = np.stack([entry_time(s.P, u, H, s.rho) for u in s.us], 1); Q0 = np.minimum(s.V0, np.where(np.isfinite(te[np.arange(s.n), s.layer]), te[np.arange(s.n), s.layer], BIG)); m = te.min(1)
+        return Q0, np.minimum(Q0, np.where(np.isfinite(m), m, BIG))
+
     def solve(s, maxit=2000, tol=1e-10, verbose=True, progress=None):
         """V (calc='v') или Q (calc='q'/'qquad': s.V = Q — запросы Vlayers/Vstar/агент идут по Q; s.Vn — V узлов = min(Q, Q чужих слоёв))"""
         if s.calc != 'v' or s.quad: s.set_calc(s.calc)
@@ -166,7 +171,7 @@ class Graph:
 
     def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None):
         """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
-        pen = s.pen if pen is None else pen; t0 = time.perf_counter(); V = s.V0.copy(); Q = s.V0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
+        pen = s.pen if pen is None else pen; t0 = time.perf_counter(); Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); V = V0.copy(); Q = Q0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
         for passes in range(1, maxit + 1):
             Vo = V.copy(); Qo = Q.copy()
@@ -189,6 +194,7 @@ class Graph:
         out = np.full((len(X), s.L), np.inf); inb = np.linalg.norm(X, axis=1) <= s.rho
         for li, u in enumerate(s.us):
             out[:, li] = s.evalpairs(s.V, len(X), s.locate(u, X))
+            if s.xentry > 0 and s.calc != 'v': out[:, li] = np.minimum(out[:, li], entry_time(X, u, np.full(len(X), s.xentry), s.rho))       # точный вход по своему потоку — верхняя оценка Q_u (W2)
         out[inb] = 0.; return out
 
     def Vstar(s, X):

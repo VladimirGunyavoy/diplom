@@ -7,7 +7,7 @@ g = S.load_growN(); layers = [float(x) for x in os.environ.get('LAYERS', '1,-1,0
 np.set_printoptions(linewidth=250, precision=3, suppress=True); u = -1.; li = G.us.index(u); M = G.M
 print('RES M=%d, слой u=-1: клеток %d' % (M, len(atlas[u])))
 for ci, c in enumerate(atlas[u]):
-    Gc = np.asarray(c.G); print('RES клетка %d: строк %d, tau 0..%.2f, hb %d nb %d nf %d, r %.3f; центр. столбец: старт (%.3f, %.3f) конец (%.3f, %.3f); bbox x [%.2f, %.2f] v [%.2f, %.2f]' % (ci, len(Gc), c.tau[-1], c.hb, c.nb, c.nf, float(np.asarray(c.r).ravel()[0]), *Gc[0, M // 2], *Gc[-1, M // 2], Gc[..., 0].min(), Gc[..., 0].max(), Gc[..., 1].min(), Gc[..., 1].max()))
+    Gc = np.asarray(c.G); print('RES клетка %d: строк %d, tau 0..%.2f, hb %d nb %d nf %d, r %.3f; центр. столбец: старт (%.3f, %.3f) конец (%.3f, %.3f); bbox x [%.2f, %.2f] v [%.2f, %.2f]' % (ci, len(Gc), float(np.max(c.tau[-1])), c.hb, c.nb, c.nf, float(np.asarray(c.r).ravel()[0]), *Gc[0, M // 2], *Gc[-1, M // 2], Gc[..., 0].min(), Gc[..., 0].max(), Gc[..., 1].min(), Gc[..., 1].max()))
 for x in [float(t) for t in os.environ.get('XS', '.25,.3,.35,.5').split(',')]:
     for v in (-.15, -.1, -.06, -.02, 0., .02, .06, .15):
         X = np.array([[x, v]]); pi, verts, w, rank = G.locate(u, X); Tr = R.T_ref(X, G.rho)[0]
