@@ -39,7 +39,7 @@ v8 pend сейчас (b3, `v_kink_q.md`): commit мед **1.029/p90 1.169/max 1.
 | SELFOV, OWN, NFDEAD, BFINE, SEEDEPS, MADAPT, MROW | grep: 0 вхождений | нет |
 | посев | `build_layer :522`, `covcheck/covdone :528–541`, COVTOL .003, `goal_seeds :514` | посев в непокрытое по доле (v7: SEEDEPS + GOALB) |
 | периодика θ | `PERIOD`, `SH :72–73`, `wrapy :74`, `HexIdx` с копиями `:229–236` | nD-вариант того же приёма |
-| стены CUT/CUTR | `BARRIER/nearb :166` (1 вхождение CUTR), 2-проходности нет | нет прохода 0/бисекции |
+| стены CUT/CUTR | не используются: заменены ограничением роста ширины фронта (слово пользователя через research-6; SMAX/`stretch` `growN.py:434,:486`, TAUMIN) | `BARRIER/nearb :166` остался в коде, 2-проходности нет |
 | расчёт V | `solve8.Graph.solve :226`, `_solve_q :313`, E1/E2/E3, `_bisect_pass :258`, XENTRY | граф рёбер по узлам; переход слой→слой в узле, не «шаг Δt в любую точку» (`lit_v8_regress.md` (а)) |
 | V* чужого слоя | `Vlayers :354`, `Vstar :381`, PESS | v7: min по ячейкам; v8: Q-опции, PESS |
 | агент | `run_commit :401`, `run_agent :428` dt .01, eps 1e-3; look = 1 шаг Беллмана | v7 DTN .06, LOOK 20 |
