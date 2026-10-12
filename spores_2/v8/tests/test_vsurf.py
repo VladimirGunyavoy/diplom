@@ -58,3 +58,20 @@ def test_skeleton_edges():
         for V in Vs[u]: f = V < VS.BIG / 2; e = f[:-1] & f[1:]; ncen += int(e[:, V.shape[1] // 2].sum()); nl += int(e.sum()) - int(e[:, V.shape[1] // 2].sum()); nc += int((f[:, :-1] & f[:, 1:]).sum())
         assert len(m['long']) == 2 * nl and len(m['cross']) == 2 * nc and len(m['center']) == 2 * ncen and nl > 0 and nc > 0 and ncen > 0
         pts = {tuple(np.round(p, 6)) for p in m['pts']}; assert all(tuple(np.round(p, 6)) in pts for p in m['long'][:200]) and all(tuple(np.round(p, 6)) in pts for p in m['cross'][:200]) and all(tuple(np.round(p, 6)) in pts for p in m['center'][:200])
+
+
+def test_common_layer_and_goal_columns():
+    """общий слой V*: у каждого узла ≤1 победитель по слоям (в разных слоях узлы разные — проверяем долю), узлы с V=∞ не побеждают; столбцы, входящие в цель, есть в каждом слое; рёбра goal лежат на конечных узлах"""
+    A = _atlas(); Vs, info = VS.solve_layers(A); vmax = VS.vscale(Vs); nw = nn = 0; ng = 0
+    for u, cl in A.items():
+        assert len(info['wins'][u]) == len(cl) and len(info['goalcols'][u]) == len(cl)
+        for V, w in zip(Vs[u], info['wins'][u]): assert not (w & (V >= VS.BIG / 2)).any(); nw += int(w.sum()); nn += w.size
+        m = VS.build_mesh(cl, Vs[u], vmax=vmax, win=info['wins'][u], goalcols=info['goalcols'][u]); mf = VS.build_mesh(cl, Vs[u], vmax=vmax, goalcols=info['goalcols'][u])
+        assert len(m['pts']) == sum(int(w.sum()) for w in info['wins'][u]) and len(m['pts']) <= len(mf['pts']) and len(m['inf']) == 0 and len(m['tris']) <= len(mf['tris'])
+        ng += len(mf['goal']); assert len(mf['goal']) > 0 and len(m['goal']) <= len(mf['goal'])
+    assert 0 < nw < nn          # общий слой — часть узлов (оба слоя что-то выигрывают, но не всё)
+
+
+def test_lift():
+    A = _atlas(); Vs, _ = VS.solve_layers(A); u = next(iter(A)); m = VS.build_mesh(A[u], Vs[u], vmax=1., lift=.05); m0 = VS.build_mesh(A[u], Vs[u], vmax=1., lift=0.)
+    assert np.allclose(m['pts'][:, 1] - m0['pts'][:, 1], .05) and np.allclose(m['long'][:, 1] - m0['long'][:, 1], .05)
