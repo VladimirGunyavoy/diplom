@@ -29,6 +29,7 @@ if __name__ == "__main__":
         out.append((a[0], b[0])); print("closed %.4f %s | rk4 %.4f %s | %.1fs %.1fs" % (a[0], a[1], b[0], b[1], t1 - t0, t2 - t1), flush=True)
     o = np.array(out); m = np.isfinite(o).all(1); print("rk4/closed mean %.5f max %.5f, both found %d/12" % ((o[m, 1] / o[m, 0]).mean(), (o[m, 1] / o[m, 0]).max(), m.sum()))
 
+FREE = None                                                                                            # FORB (b9): free(y) -> bool (…,) из growN; None — без запретов
 def shoot_grid(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.05):
     """п.42 (research-22, r22/13_di4_fast_finish/fin.py; FINGRID=1 в growN): перебор времён ≤ NA дуг на сетке шага H пачкой rk4 (все топологии и времена сразу); минимум суммарного времени среди концов в коробке .9·RHOV. Сигнатура как у shoot."""
     K = int(round(tmax / H)); R = .9 * np.asarray(RHOV); best = (np.inf, None); nu = len(US)
@@ -37,25 +38,29 @@ def shoot_grid(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.05):
         for _ in range(K):
             k1 = f(Y, u); k2 = f(Y + H / 2 * k1, u); k3 = f(Y + H / 2 * k2, u); k4 = f(Y + H * k3, u); Y = Y + H / 6 * (k1 + 2 * k2 + 2 * k3 + k4); out.append(Y)
         return np.stack(out, 1)
-    def upd(S, T, tp):
+    def alive(S):                                                                                          # FORB: точки траектории свободны на всём пути (кумулятивно по времени, ось -1 предпоследняя)
+        return None if FREE is None else np.logical_and.accumulate(FREE(S), axis=-1)
+    def upd(S, T, tp, A=None):
         nonlocal best
         ok = (np.abs(wrapy(S)) <= R).all(-1)
+        if A is not None: ok = ok & A
         if ok.any():
             t = np.where(ok, T, np.inf).min()
             if t < best[0]: best = (float(t), tp)
-    tj = np.arange(K + 1) * H; L1 = {a: traj(np.asarray(y, float)[None], US[a]) for a in range(nu)}
-    for a in range(nu): upd(L1[a], tj[None], (a,))
+    tj = np.arange(K + 1) * H; L1 = {a: traj(np.asarray(y, float)[None], US[a]) for a in range(nu)}; A1 = {a: alive(L1[a]) for a in range(nu)}
+    if FREE is not None and not FREE(np.asarray(y, float)[None])[0]: return best
+    for a in range(nu): upd(L1[a], tj[None], (a,), A1[a])
     if NA >= 2:
         for a in range(nu):
-            S1 = L1[a][0, 1:]; T1 = tj[1:]
+            S1 = L1[a][0, 1:]; T1 = tj[1:]; a1 = None if FREE is None else A1[a][0, 1:]
             for b in range(nu):
                 if b == a: continue
-                S2 = traj(S1, US[b]); T2 = T1[:, None] + tj[None]; upd(S2, T2, (a, b))
+                S2 = traj(S1, US[b]); T2 = T1[:, None] + tj[None]; A2 = None if FREE is None else alive(S2) & a1[:, None]; upd(S2, T2, (a, b), A2)
                 if NA >= 3:
-                    m = T2[:, 1:] < min(best[0], tmax); S2f = S2[:, 1:][m]; T2f = T2[:, 1:][m]
+                    m = T2[:, 1:] < min(best[0], tmax); S2f = S2[:, 1:][m]; T2f = T2[:, 1:][m]; A2f = None if A2 is None else A2[:, 1:][m]
                     for c in range(nu):
                         if c == b or not len(S2f): continue
-                        S3 = traj(S2f, US[c]); upd(S3, T2f[:, None] + tj[None], (a, b, c))
+                        S3 = traj(S2f, US[c]); upd(S3, T2f[:, None] + tj[None], (a, b, c), None if A2f is None else alive(S3) & A2f[:, None])
     return best
 
 def shoot_pol(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.1):
@@ -67,8 +72,16 @@ def shoot_pol(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.1):
         z = np.array(y, float)
         for k, dt in zip(tp, d): z = flow(z, US[k], max(dt, 0.), f)
         return wrapy(z)
+    def path_free(d):                                                                                      # FORB: путь доведённых длительностей свободен
+        if FREE is None: return True
+        z = np.array(y, float)
+        for k, dt in zip(tp, d):
+            for _ in range(max(1, int(np.ceil(max(dt, 0.) / HS)))):
+                z = flow(z, US[k], max(dt, 0.) / max(1, int(np.ceil(max(dt, 0.) / HS))), f)
+                if not FREE(z): return False
+        return True
     cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
     for d0 in (np.full(n, T0 / n), np.r_[T0 * .6, np.full(n - 1, T0 * .4 / max(n - 1, 1))][:n]):
         r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
-        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(RHOV)) and r.x.sum() < best[0]: best = (float(r.x.sum()), tp)
+        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(RHOV)) and r.x.sum() < best[0] and path_free(r.x): best = (float(r.x.sum()), tp)
     return best

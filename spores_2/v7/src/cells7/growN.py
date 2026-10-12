@@ -90,6 +90,14 @@ def ingoal(y): return (np.abs(wrapg(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
+GF = None                                                                                             # FORB (b9): gfree(y) -> (…) знаковое расстояние до запрещённого (>0 свободно), на обёрнутых состояниях; None — запретов нет. Задаётся средой (ниже) или снаружи: growN.GF = fn
+def free(y): return np.ones(np.shape(y)[:-1], bool) if GF is None else GF(wrapy(y)) > 0
+if SYS == 'manip' and E('FORB'):                                                                      # FORB=1: самостолкновение плоского 2-звенника (|q2| ≤ π − FD) и стол (оба сустава/конец не ниже TY); L1=L2=ML
+    FD = float(E('FD', .5)); TY = float(E('TY', -9.)); ML = float(E('ML', 1.))
+    def GF(y):
+        g = (np.pi - FD) - np.abs(y[..., 1])
+        if TY > -9.: ye = ML * np.sin(y[..., 0]); yt = ye + ML * np.sin(y[..., 0] + y[..., 1]); g = np.minimum(g, np.minimum(ye, yt) - TY)
+        return g
 def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
@@ -110,6 +118,8 @@ def goal_dist(P):
     """расстояние до поверхности коробки цели (>0 снаружи и внутри — модуль), по Евклиду."""
     d = np.abs(wrapy(P)) - RHOV; out = np.linalg.norm(np.maximum(d, 0), axis=-1); ins = -d.max(-1); return np.where(d.max(-1) > 0, out, ins)
 def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEPS
+def edge_ok(P, u):                                                                                       # FORB: узел свободен и шаг DTN (середина и конец) не заходит в запрещённое
+    return np.ones(len(P), bool) if GF is None else free(P) & free(rk4(P, u, DTN / 2, 1)) & free(step(P, u))
 LAT = (slice(None),) * m_
 class Cell:
     def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0
@@ -241,11 +251,12 @@ def growN(p, u, idx, rm, tm):
         for i in range(1, nmax + 1):
             y = step(y, u, float(sg)); yc = step(yc, u, float(sg)); W = wstep(W, jac(yc, u), Bq(yc), DTN, sg); Wt[sg * i] = W * (i * DTN)
             if not NORMFRONT: rows[sg * i] = y
-            if not inbox_g(yc): break
+            if not inbox_g(yc) or not free(yc): break
         if NORMFRONT:
             for i, Pn in enumerate(nf_rows(base, p, u, float(sg), nmax), 1): rows[sg * i] = Pn
             for i in [k for k in Wt if k != 0 and np.sign(k) == sg and k not in rows]: del Wt[i]
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
+    if GF is not None and not free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all(): return None                         # FORB: начальная заплатка вся свободна
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
@@ -263,7 +274,7 @@ def growN(p, u, idx, rm, tm):
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
                 if nk < 0 or nk >= KF: act[d] = False; STOP['kf'] += 1; continue
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
-                fb = not inbox_g(face).all(); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['field' if fb else 'bend' if bb else 'goal'] += 1; continue
                 klo, khi = nlo, nhi
                 if d in extra:
@@ -274,7 +285,7 @@ def growN(p, u, idx, rm, tm):
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax: act[d] = False; STOP['rows'] += 1; continue
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
-                fb = not inbox_g(face).all(); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['tfield' if fb else 'tbend' if bb else 'tgoal'] += 1; continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i
@@ -298,7 +309,7 @@ def build_layer(u, rng, log=None):
     while fails < NFAIL and len(cells) < MAXC:
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
-        if not inbox(p): continue
+        if not inbox(p) or not free(p): continue
         p = wrapy(p)
         if ingoal(p): continue
         if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
@@ -408,8 +419,11 @@ class Atlas:
         if len(I): np.minimum.at(out, I, s.interp(W, s.V[IDX]))
         out[ingoal(Y)] = 0.; return out
     def tgoal(s, Y, u, n=8):
-        tg = np.full(len(Y), np.inf); y = Y
-        for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
+        tg = np.full(len(Y), np.inf); y = Y; al = free(Y) if GF is not None else None                                   # FORB: путь к цели не должен заходить в запрещённое
+        for i in range(1, n + 1):
+            y = rk4(y, u, DTN / n, 1)
+            if al is not None: al = al & free(y)
+            tg = np.where(np.isinf(tg) & ingoal(y) & (True if al is None else al), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
@@ -423,12 +437,14 @@ class Atlas:
                 if SONE:                                                                                            # п.44 (research-22, r22/18/p18.py): ОДИН (самый центральный = max наибольшего веса) стенсил на группу (узел, слой приземления), потоково по CHN узлов
                     aa, bb, cc = [], [], []; nc0 = 0
                     for s0 in range(0, s.N, SONE_CH):
-                        a, b, c_ = s.stencils(step(s.P[s0:s0 + SONE_CH], u)); a = a + s0; nc0 += len(a); nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1; dl = cl_[vc_]
-                        keep = np.where(cl_[nc_] == ui, vc_ != nc_, (dl == ui) if SBL else True); a, b, c_, dl = a[keep], b[keep], c_[keep], dl[keep]
+                        okc = edge_ok(s.P[s0:s0 + SONE_CH], u); a, b, c_ = s.stencils(step(s.P[s0:s0 + SONE_CH], u)); a = a + s0; nc0 += len(a); nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1; dl = cl_[vc_]
+                        keep = np.where(cl_[nc_] == ui, vc_ != nc_, (dl == ui) if SBL else True) & okc[a - s0]; a, b, c_, dl = a[keep], b[keep], c_[keep], dl[keep]
                         key = a.astype(np.int64) * 4 + dl; o2 = np.lexsort((c_.max(1), key)); key = key[o2]; f = o2[np.r_[True, key[1:] != key[:-1]]] if len(o2) else o2
                         aa.append(a[f]); bb.append(b[f]); cc.append(c_[f])
                     a = np.concatenate(aa); b = np.concatenate(bb); c_ = np.concatenate(cc); nst += nc0 - len(a); print('SONE u', u, ': пар', nc0, '→ оставлено', len(a), flush=True)
-                else: a, b, c_ = s.stencils(step(s.P, u))
+                else:
+                    a, b, c_ = s.stencils(step(s.P, u))
+                    if GF is not None: k_ = edge_ok(s.P, u)[a]; a, b, c_ = a[k_], b[k_], c_[k_]
                 print('stencils built for u =', u, flush=True)
                 if SBC and not SONE:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
@@ -438,7 +454,9 @@ class Atlas:
             if SBC:
                 mm = M ** m_; ea = []
                 for c in s.cells: ea.append(c.o + np.arange((c.G.shape[0] - 1) * mm))
-                ea = np.concatenate(ea); ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
+                ea = np.concatenate(ea)
+                if GF is not None: fr_ = free(s.P); ea = ea[fr_[ea] & fr_[ea + mm]]
+                ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
                 I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
             I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
@@ -499,10 +517,14 @@ class Atlas:
             if d < 1e-9: break
         s.V = V; s.n_it = n; s.edges = len(I); return s
     def rollout(s, Q, tmax=40.):
+        FINBOX = int(E('FINBOX', 1 if SYS == 'manip' else 0))                                                   # FIN-ω (b9): финиш-дуги целиком в коробке состояний (|ω| ≤ WM и т.д.) и в свободном; manip по умолч. вкл. (T_agent < T_ref за счёт нарушения |ω|)
+        FG.FREE = (lambda y: inbox(y) & free(y)) if FINBOX else free if GF is not None else None
         Y = wrapy(Q); n = len(Y); T = np.zeros(n); done = ingoal(Y); sw = np.zeros(n, int); pk = np.full(n, -1); path = [Y.copy()]; tried = np.zeros(n, bool); fin = np.zeros(n, bool)
         for _ in range(int(tmax / DTN)):
             if done.all(): break
-            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
+            tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1))
+            if GF is not None: J = np.where(np.stack([~edge_ok(Y, u) for u in US], 1), BIG, J)                            # FORB: шаг, заходящий в запрещённое, недопустим; нет допустимого — «застрял» (T = inf)
+            k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
                     tried[i] = True; Ts, tp = (FG.shoot_pol if int(E('FINGRID', 0)) == 2 else FG.shoot_grid if int(E('FINGRID', 0)) else FG.shoot)(Y[i], f, US, RHOV, wrapg, FTMAX, NA=int(E('NA', 3)))
