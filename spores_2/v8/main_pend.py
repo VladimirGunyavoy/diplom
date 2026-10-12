@@ -138,6 +138,7 @@ shared_context.bind('model', lambda: model, default=model)
 # N — до следующей паузы, M — до паузы того же или крупнее уровня, C — до конца; G — новая затравка в точке взгляда
 # (или клик мыши по полю); 1 — размер маркеров. Пока нет алгоритма b6 (src/algo/growN.py + src/stepper/stepper.py) — DemoStepper (синтетические снимки).
 from src.stepper.growview import GrowView
+import src.stepper.growview as _gvmod; _gvmod.WRAP_X = 2 * 3.141592653589793    # шов θ=±π: отрезки/треугольники режутся и клонируются периодически
 try:
     from src.stepper.live import LiveStepper                 # настоящий алгоритм (b6, src/algo/growN.py SYS=di) под Stepper
     stepper = LiveStepper(seed=None)
