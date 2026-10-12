@@ -59,4 +59,5 @@ if __name__ == '__main__':
         res.append(dict(i=i, T_agent=float(T[0]) if np.isfinite(T[0]) else None, T_verify=Tv, why=why, t_query=dtq, nseg=len(sg), finish_no_durations=bool(nodur[0]))); print(i, res[-1], flush=True)
     s = common.summarize(e, Ts); s.update(env='manip', method='spores growN g300 SONE VF2 PESS1 4x3000 (%s)' % mode, t_grow=t_grow, t_solve=t_solve, t_build=(t_grow or 0) + (t_solve or 0) if t_grow else None, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)),
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (запросы)', per_start=res, Tref=e.Tref.tolist())
+    s['weight'] = common.deep_weight(A)
     json.dump(s, open(os.path.join(common.DATA, 'manip_spores%s.json' % ('' if mode == 'full' else '_load')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

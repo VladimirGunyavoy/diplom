@@ -107,3 +107,27 @@ class Manip(Env):
 
 def make(name):
     return dict(di=DI, pend=Pend, dd=DD, manip=Manip)[name]()
+
+def deep_weight(*objs):
+    """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
+    seen = set(); tot = [0, 0]
+    def add(n, b): tot[0] += int(n); tot[1] += int(b)
+    def go(o, d=0):
+        if id(o) in seen or d > 12 or o is None or isinstance(o, (int, float, str, bool, type, bytes)): return
+        seen.add(id(o))
+        if isinstance(o, np.ndarray):
+            if o.dtype != object: add(o.size, o.nbytes); return
+            for x in o.ravel(): go(x, d + 1)
+        elif hasattr(o, 'tocsr') and hasattr(o, 'indptr') or hasattr(o, 'indices') and hasattr(o, 'data'):
+            for a in ('data', 'indices', 'indptr', 'row', 'col'):
+                x = getattr(o, a, None)
+                if isinstance(x, np.ndarray): add(x.size, x.nbytes)
+        elif hasattr(o, 'element_size') and hasattr(o, 'numel'): add(o.numel(), o.numel() * o.element_size())
+        elif isinstance(o, dict):
+            for x in o.values(): go(x, d + 1)
+        elif isinstance(o, (list, tuple, set)):
+            for x in o: go(x, d + 1)
+        elif hasattr(o, '__dict__'):
+            for x in vars(o).values(): go(x, d + 1)
+    for o in objs: go(o)
+    return dict(elems=tot[0], bytes=tot[1])
