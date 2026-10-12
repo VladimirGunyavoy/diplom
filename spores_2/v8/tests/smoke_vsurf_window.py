@@ -11,4 +11,5 @@ P.position = (0, 6, -9); P.camera_pivot.rotation_x = 32; P.rotation_y = 0
 M.stepper.key('C'); M.growview.draw(M.stepper.snapshot); shot('vsurf_smoke_off.png')
 M.growview.toggle_vsurf(); print(M.growview.vlabel()); shot('vsurf_smoke_on.png')
 M.growview.toggle_layer(1); shot('vsurf_smoke_layer2_hidden.png'); M.growview.toggle_layer(1)
+P.position = (0.5, 3.2, -3.6); P.camera_pivot.rotation_x = 40; shot('vsurf_smoke_close.png')
 M.growview.toggle_vsurf(); print('off ok', M.growview.vlabel() == ''); print('SMOKE OK')

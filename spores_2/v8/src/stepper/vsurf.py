@@ -8,8 +8,9 @@ import numpy as np
 
 VH = float(os.environ.get('VSURF_H', .35))                 # высота на единицу V (в мировых единицах до зума)
 ALPHA = float(os.environ.get('VSURF_ALPHA', .55))
-LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', .9))     # скелет: линии вдоль траекторий эволюции (узлы одного столбца)
-CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .25))   # скелет: поперечные линии (узлы одной строки), заметно прозрачнее
+LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', .6)); LONG_W = int(os.environ.get('VSURF_LONG_W', 2))        # скелет: боковые линии вдоль траекторий эволюции (узлы столбцов j ≠ центрального)
+CENTER_A = float(os.environ.get('VSURF_CENTER_ALPHA', 1.)); CENTER_W = int(os.environ.get('VSURF_CENTER_W', 4))   # центральная линия эволюции клетки (столбец M//2): непрозрачная и жирнее
+CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .4)); CROSS_W = int(os.environ.get('VSURF_CROSS_W', 1))      # поперечные линии (узлы одной строки), прозрачнее продольных
 BIG = 1e9                                                   # solve8.BIG: V ≥ BIG/2 — «нет пути»
 GRAD = np.array([[0., .20, .25, .95], [.25, .10, .75, .95], [.5, .20, .90, .30], [.75, 1., .85, .10], [1., .95, .20, .15]])     # t, R, G, B: синий → бирюзовый → зелёный → жёлтый → красный
 
@@ -42,9 +43,9 @@ def vscale(Vs_u, q=99.):
 
 
 def build_mesh(cells, Vs, ax=(0, 1), vmax=1., h=VH, alpha=ALPHA, y0=.01):
-    """клетки слоя + их V (nt, M) → dict: verts (K, 3), colors (K, 4), tris (T,) индексы, pts (P, 3), pcol (P, 4) — узлы на поверхности, inf (Q, 3) — узлы без V (серые, y = y0), long (2E, 3) — рёбра вдоль потока (k,j)–(k+1,j) парами вершин, cross (2F, 3) — рёбра поперёк (k,j)–(k,j+1); ребро с V=∞ нет.
+    """клетки слоя + их V (nt, M) → dict: verts (K, 3), colors (K, 4), tris (T,) индексы, pts (P, 3), pcol (P, 4) — узлы на поверхности, inf (Q, 3) — узлы без V (серые, y = y0), long (2E, 3) — рёбра вдоль потока (k,j)–(k+1,j), j ≠ M//2, парами вершин, center (2E', 3) — то же для центрального столбца j = M//2, cross (2F, 3) — рёбра поперёк (k,j)–(k,j+1); ребро с V=∞ нет.
     Координаты Ursina: x = ось ax[0], y = V·h (вверх), z = ось ax[1]."""
-    VV, CC, TT, PP, PC, II, LG, CR = [], [], [], [], [], [], [], []; n0 = 0
+    VV, CC, TT, PP, PC, II, LG, CR, CE = [], [], [], [], [], [], [], [], []; n0 = 0
     for c, V in zip(cells, Vs):
         G = np.asarray(c['G']); nt, M = V.shape; fin = V < BIG / 2; P = np.empty((nt, M, 3)); P[..., 0] = G[..., ax[0]]; P[..., 2] = G[..., ax[1]]; P[..., 1] = np.where(fin, V * h, y0)
         col = gradient(np.where(fin, V, 0.) / max(vmax, 1e-9), alpha); col[~fin, 3] = 0.
@@ -52,7 +53,8 @@ def build_mesh(cells, Vs, ax=(0, 1), vmax=1., h=VH, alpha=ALPHA, y0=.01):
         t1 = np.stack([a, b, c_], -1)[fa & fb & fc]; t2 = np.stack([b, d, c_], -1)[fb & fd & fc]; TT.append(np.concatenate([t1, t2]).ravel())
         VV.append(P.reshape(-1, 3)); CC.append(col.reshape(-1, 4)); n0 += nt * M
         Pl = P + [0., .004, 0.]; okl = fin[:-1] & fin[1:]; okc = fin[:, :-1] & fin[:, 1:]                       # скелет на поверхности: ребро с вершиной V=∞ не рисуется
+        jc = M // 2; okc0 = okl.copy(); okc0[:, [j for j in range(M) if j != jc]] = False; okl[:, jc] = False; CE.append(np.stack([Pl[:-1][okc0], Pl[1:][okc0]], 1).reshape(-1, 3))
         LG.append(np.stack([Pl[:-1][okl], Pl[1:][okl]], 1).reshape(-1, 3)); CR.append(np.stack([Pl[:, :-1][okc], Pl[:, 1:][okc]], 1).reshape(-1, 3))
         PP.append(P[fin] + [0., .004, 0.]); PC.append(np.broadcast_to([.96, .96, .96, .95], (int(fin.sum()), 4))); II.append(P[~fin])
     z3, z4 = np.zeros((0, 3)), np.zeros((0, 4)); cat = lambda L, z: np.concatenate(L) if L else z
-    return dict(verts=cat(VV, z3), colors=cat(CC, z4), tris=cat(TT, np.zeros(0, int)).astype(np.uint32), pts=cat(PP, z3), pcol=cat(PC, z4), inf=cat(II, z3), long=cat(LG, z3), cross=cat(CR, z3))
+    return dict(verts=cat(VV, z3), colors=cat(CC, z4), tris=cat(TT, np.zeros(0, int)).astype(np.uint32), pts=cat(PP, z3), pcol=cat(PC, z4), inf=cat(II, z3), long=cat(LG, z3), center=cat(CE, z3), cross=cat(CR, z3))
