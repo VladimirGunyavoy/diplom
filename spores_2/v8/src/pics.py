@@ -30,9 +30,15 @@ def _save(fig, name, dirs):
     _plt().close(fig)
 
 
+def _showx(G):
+    """показываемая полуширина по периодической оси θ (клонирование копиями ±2π; слово пользователя 2026-10-13: ±7); 0 — без копий (ДИ и т.п.)"""
+    xl = np.asarray(G.g.XLV, float)
+    return float(os.environ.get('V8_PIC_THETA', 7)) if (os.environ.get('SYS') == 'pend' and xl[0] == 0) else 0.
+
+
 def _frames(ax, G):
     from matplotlib.patches import Rectangle, Circle
-    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
+    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, _showx(G) or np.pi); gm = np.broadcast_to(np.asarray(getattr(G.g, 'GMV', 0.), float), xl.shape)
     ax.add_patch(Rectangle((-xl[0], -xl[1]), 2 * xl[0], 2 * xl[1], fill=False, ec='#2a9d3a', ls='--', lw=1.3, label='work zone ±(%g, %g)' % (xl[0], xl[1])))
     ax.add_patch(Rectangle((-xl[0] - gm[0], -xl[1] - gm[1]), 2 * (xl[0] + gm[0]), 2 * (xl[1] + gm[1]), fill=False, ec='#777777', ls=':', lw=1.3, label='growth limit ±(%g, %g)' % (xl[0] + gm[0], xl[1] + gm[1])))
     ax.add_patch(Circle((0, 0), G.rho, fill=False, ec='k', lw=1.8) if os.environ.get('GOALSHAPE', 'ball' if os.environ.get('SYS', 'di') == 'di' else 'box') == 'ball' else Rectangle((-G.rho, -G.rho), 2 * G.rho, 2 * G.rho, fill=False, ec='k', lw=1.8)); ax.set_xlabel('x'); ax.set_ylabel('v'); ax.grid(alpha=.2)
@@ -96,8 +102,10 @@ def t_ref_cached(X):
 
 
 def _grid(G, n=140):
-    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
-    Vs = G.Vlayers(X).min(1); Vs = np.where(np.isfinite(Vs), Vs, np.nan); return xs, vs, X, Vs.reshape(XX.shape)
+    xl = np.asarray(G.g.XLV, float); sh = _showx(G); xl = np.where(xl > 0, xl, sh or np.pi); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
+    Xw = X.copy()
+    if sh: Xw[:, 0] = (Xw[:, 0] + np.pi) % (2 * np.pi) - np.pi                                        # V периодично по θ: значения в копиях берём из одного периода
+    Vs = G.Vlayers(Xw).min(1); Vs = np.where(np.isfinite(Vs), Vs, np.nan); return xs, vs, X, Vs.reshape(XX.shape)
 
 
 def error_png(G, dirs, calc_name, extra=''):
@@ -119,13 +127,19 @@ def error_map(G, dirs, calc):
 def traj_png(G, res, dirs, calc, stat=''):
     """V* фоном + пути агента, цвет по управлению (+1 красный, −1 фиолетовый, 0 зелёный), старты точками"""
     from matplotlib.collections import LineCollection
-    plt = _plt(); xs, vs, X, V = _grid(G); fig, ax = plt.subplots(figsize=(8.8, 5.8)); p = ax.pcolormesh(xs, vs, V, cmap='YlGnBu_r', shading='auto', alpha=.8); plt.colorbar(p, ax=ax, label='V*, s'); segs, cols = [], []
+    plt = _plt(); sh = _showx(G); xs, vs, X, V = _grid(G); fig, ax = plt.subplots(figsize=(8.8, 5.8)); p = ax.pcolormesh(xs, vs, V, cmap='YlGnBu_r', shading='auto', alpha=.8); plt.colorbar(p, ax=ax, label='V*, s'); segs, cols = [], []
     for P, U in zip(res['paths'], res['U']):
         if len(P) < 2: continue
         U = np.asarray(U, float).copy(); U[0] = U[1]; col = np.where(U > 1e-9, 0, np.where(U < -1e-9, 1, 2)); cc = [UCOL[1], UCOL[-1], UCOL[0]]
-        segs.append(np.stack([P[:-1, :2], P[1:, :2]], 1)); cols += [cc[k] for k in col[1:]]
+        A, B = P[:-1, :2].copy(), P[1:, :2].copy()
+        if sh:                                                                                           # шов θ: конец сегмента — в ближайшей копии (без линии через всё поле), затем копии ±2π
+            B[:, 0] -= 2 * np.pi * np.round((B[:, 0] - A[:, 0]) / (2 * np.pi))
+            for kk in range(-2, 3): segs.append(np.stack([A + [kk * 2 * np.pi, 0], B + [kk * 2 * np.pi, 0]], 1)); cols += [cc[k] for k in col[1:]]
+        else: segs.append(np.stack([A, B], 1)); cols += [cc[k] for k in col[1:]]
     if segs: ax.add_collection(LineCollection(np.concatenate(segs), colors=cols, lw=.8, alpha=.75))
-    X0 = np.asarray(res['X0']); st = np.asarray(res['status'], object); ax.plot(X0[st == 'reached', 0], X0[st == 'reached', 1], '.', ms=3, color='k'); ax.plot(X0[st != 'reached', 0], X0[st != 'reached', 1], 'x', ms=6, color='#ff00aa', label='not reached')
+    X0 = np.asarray(res['X0']); st = np.asarray(res['status'], object)
+    for kk in (range(-2, 3) if sh else (0,)):
+        D = np.array([kk * 2 * np.pi, 0]); ax.plot(*(X0[st == 'reached'] + D).T, '.', ms=3, color='k'); ax.plot(*(X0[st != 'reached'] + D).T, 'x', ms=6, color='#ff00aa', label='not reached' if kk == 0 else None)
     xl, xb = _frames(ax, G); ax.set_xlim(-xb[0] - .2, xb[0] + .2); ax.set_ylim(-xb[1] - .2, xb[1] + .2); ax.set_title('%s: agent paths from %d starts (u=+1 purple, -1 red, 0 green)%s' % (_name(calc), len(X0), ('; ' + stat) if stat else ''), fontsize=9); ax.legend(fontsize=7, loc='lower left'); fig.tight_layout(); _save(fig, 'traj_%s.png' % calc, dirs)
 
 

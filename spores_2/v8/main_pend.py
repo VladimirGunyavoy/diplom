@@ -4,7 +4,7 @@ main_pend.py — МАЯТНИК в окне (отдельный скрипт, Д
 Картинки: projects/spore/img/pend/<дата>/expNNN + last_exp; логи: v8/runs_pend/<время>/. Первый запуск: по одной споре от цели на слой u=±UM (V8_MAXCELLS=1; слой 0 не растим; ЛКМ после этапов +1 спора; V8_MAXCELLS=0 — полный атлас). Запуск: python main_pend.py (offscreen: V8_WINDOW=offscreen).
 """
 import os as _os
-for _k, _v in dict(SYS='pend', V8_GRID='4', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='5', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
+for _k, _v in dict(SYS='pend', SEEDLINE='.2', V8_GRID='4', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='3', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
 _os.environ['SYS'] = 'pend'
 
 import sys
@@ -160,8 +160,8 @@ growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first 
 def _add_spore():
     """режим первых N спор: ЛКМ после всех этапов — +1 спора каждому слою (рост заново до N+1, этапы заново; первые N спор те же: rng и очередь затравок детерминированы)"""
     from src.stepper import live as _live; from src.algo import growN as _g
-    n0 = sum(len(c) for c in getattr(stepper, 'cells_by_layer', {}).values()); n = int(os.environ.get('V8_MAXCELLS', 1)) + 1
-    os.environ['V8_MAXCELLS'] = str(n); os.environ['MAXC'] = str(n); _g.MAXC = n; print('[spores] +1 spore per layer: N = %d, regrow' % n, flush=True)
+    n0 = sum(len(c) for c in getattr(stepper, 'cells_by_layer', {}).values()); n = int(os.environ.get('V8_MAXCELLS', 3)) + int(os.environ.get('V8_ADD', 2))
+    os.environ['V8_MAXCELLS'] = str(n); os.environ['MAXC'] = str(n); _g.MAXC = n; print('[spores] +%s spores per layer: N = %d, regrow' % (os.environ.get('V8_ADD', 2), n), flush=True)
     growview.draw(None); growview.times = type(growview.times)(); _last_seed[0] = None; stepper.seed_at(None); growview.draw(None); stepper.key('C'); growview.draw(stepper.snapshot)
     n1 = sum(len(c) for c in stepper.cells_by_layer.values()); print('[spores] cells per layer now: %s (total %d, was %d)%s' % ({u: len(c) for u, c in stepper.cells_by_layer.items()}, n1, n0, '' if n1 > n0 else ' - no more spores can grow'), flush=True)
     for u, cs in stepper.cells_by_layer.items():
@@ -207,7 +207,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), growview.field_text(), growview.pics_label(), ('[MODE: first %s spores per layer (layers +1/-1); LMB after the stages adds one more spore per layer; off: delete v8/ONLY_GOAL]' % os.environ.get('V8_MAXCELLS', '1') if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), growview.field_text(), growview.pics_label(), ('[MODE: first %s spores per layer (layers +1/-1); LMB after the stages adds 2 more spores per layer; off: delete v8/ONLY_GOAL]' % os.environ.get('V8_MAXCELLS', '1') if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():

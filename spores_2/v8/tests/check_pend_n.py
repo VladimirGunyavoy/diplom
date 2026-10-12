@@ -6,6 +6,8 @@ G = M.growview; M.stepper.key('C'); G.draw(M.stepper.snapshot); t0 = time.time()
 while (G._traj is None or G._tprog) and time.time() - t0 < 250: M.app.step(); G.poll(); time.sleep(.05)
 res, m = G._traj; st = np.asarray(res['status'], object); np.set_printoptions(precision=3, suppress=True, linewidth=200)
 import collections
+for u, cs in M.stepper.cells_by_layer.items():
+    print('ORDER u=%+g:' % u, [tuple(round(float(x), 2) for x in np.asarray(c['G'], float)[len(c['G']) // 2, np.asarray(c['G']).shape[1] // 2]) for c in cs])
 print('CELLS', {u: len(c) for u, c in M.stepper.cells_by_layer.items()} if hasattr(M.stepper, 'cells_by_layer') else '?')
 print('N', len(st), 'reached', int((st == 'reached').sum()), collections.Counter(st.tolist()))
 for i in np.flatnonzero(st != 'reached'): P = res['paths'][i]; print('FAIL #%d start (%.2f,%.2f) end (%.2f,%.2f) n=%d pre=%s Vend=%s' % (i, P[0, 0], P[0, 1], P[-1, 0], P[-1, 1], len(P), bool(res['prephase'][i]), np.asarray(res['V'][i])[-1]))
