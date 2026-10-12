@@ -37,4 +37,5 @@ if __name__ == '__main__':
     t1 = time.perf_counter(); Tb, _ = rollout_rec(A, Q); t_batch = time.perf_counter() - t1
     s = common.summarize(e, Ts); s.update(env='pend', method='spores v7 grow_cells2d ' + ('84 (по времени: LOOK 0)' if V == '84' else '56 (по T: LOOK 20)'), t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (1 proc; numpy)', per_start=res, Tref=e.Tref.tolist())
+    s['weight'] = common.deep_weight(A)
     json.dump(s, open(os.path.join(common.DATA, 'pend_spores%s.json' % ('' if V == '84' else '_T')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

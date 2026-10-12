@@ -94,6 +94,10 @@ class DD(Env):
     def clip_u(s, u):
         u = np.clip(u, -1, 1); a = np.abs(u).sum(-1, keepdims=True); return np.where(a > 1, u / np.maximum(a, 1e-12), u)
 
+class DD2(DD):
+    """чувствительность: дифдрайв с шире целью ±.2 (в 3D); T_ref — прежний (для ±.05), т.е. T/T_ref может быть < 1"""
+    name = 'dd2'; half = np.full(3, .2)
+
 class Manip(Env):
     """плоский манипулятор 2 зв. без g, 4D (θ1, θ2, ω1, ω2), моменты |τi| ≤ 1; цель ящик ±(.3,.3,.5,.5); |ω| ≤ 3; 20 стартов и эталон OCP (CasADi, |ω| ≤ 3) r23/manip_ref_ocp_20.npy"""
     name = 'manip'; n = 4; m = 2; period = np.array([2 * PI, 2 * PI, 0., 0.]); half = np.array([.3, .3, .5, .5]); lo = np.array([-PI, -PI, -3., -3.]); hi = np.array([PI, PI, 3., 3.]); umin = -np.ones(2); umax = np.ones(2); fl_lo = np.array([-PI, -PI, -1., -1.]); fl_hi = -fl_lo
@@ -106,4 +110,28 @@ class Manip(Env):
         return np.stack([w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, manip=Manip)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, manip=Manip)[name]()
+
+def deep_weight(*objs):
+    """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
+    seen = set(); tot = [0, 0]
+    def add(n, b): tot[0] += int(n); tot[1] += int(b)
+    def go(o, d=0):
+        if id(o) in seen or d > 12 or o is None or isinstance(o, (int, float, str, bool, type, bytes)): return
+        seen.add(id(o))
+        if isinstance(o, np.ndarray):
+            if o.dtype != object: add(o.size, o.nbytes); return
+            for x in o.ravel(): go(x, d + 1)
+        elif hasattr(o, 'tocsr') and hasattr(o, 'indptr') or hasattr(o, 'indices') and hasattr(o, 'data'):
+            for a in ('data', 'indices', 'indptr', 'row', 'col'):
+                x = getattr(o, a, None)
+                if isinstance(x, np.ndarray): add(x.size, x.nbytes)
+        elif hasattr(o, 'element_size') and hasattr(o, 'numel'): add(o.numel(), o.numel() * o.element_size())
+        elif isinstance(o, dict):
+            for x in o.values(): go(x, d + 1)
+        elif isinstance(o, (list, tuple, set)):
+            for x in o: go(x, d + 1)
+        elif hasattr(o, '__dict__'):
+            for x in vars(o).values(): go(x, d + 1)
+    for o in objs: go(o)
+    return dict(elems=tot[0], bytes=tot[1])

@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
 import common
-DT = float(os.environ.get('PPO_DT', .05)); TMAXEP = float(os.environ.get('PPO_TEP', 20.)); GAMMA = float(os.environ.get('PPO_GAMMA', .99)); GTAG = '' if GAMMA == .99 else '_g%g' % GAMMA
+DT = float(os.environ.get('PPO_DT', .05)); TMAXEP = float(os.environ.get('PPO_TEP', 20.)); GAMMA = float(os.environ.get('PPO_GAMMA', .99)); BOXPEN = float(os.environ.get('PPO_BOXPEN', 5.)); GTAG = ('' if GAMMA == .99 else '_g%g' % GAMMA) + ('' if BOXPEN == 5. else '_pen')
 
 class BenchGym(gym.Env):
     def __init__(s, env, starts=None):
@@ -26,7 +26,7 @@ class BenchGym(gym.Env):
         u = s.e.clip_u(s.mid + s.span * np.clip(a, -1, 1))[None]; y2 = s.e.step(s.y[None], u, DT)[0]; r = -DT + GAMMA * s.phi(y2) - s.phi(s.y); s.y = y2; s.t += DT
         goal = bool(s.e.in_goal(y2)); box = bool(s.e.out_of_box(y2)); 
         if goal: r += 5.
-        if box: r -= 5.
+        if box: r -= BOXPEN
         return s.e.embed(y2).astype(np.float32), float(r), goal or box, s.t >= TMAXEP, {}
 
 def rollout(model, vn, e, y0, Tref):

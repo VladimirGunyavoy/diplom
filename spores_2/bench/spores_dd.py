@@ -65,4 +65,5 @@ if __name__ == '__main__':
     t1 = time.perf_counter(); rollout_rec(A, Q); t_batch = time.perf_counter() - t1
     s = common.summarize(e, Ts); s.update(env='dd', method='spores v7 grow3 (VF 5 NA 4 VFR 1)', t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (PAR=1: 4 процесса на рост; solve 1 proc)', per_start=res, Tref=e.Tref.tolist())
+    s['weight'] = common.deep_weight(A)
     json.dump(s, open(os.path.join(common.DATA, 'dd_spores.json'), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

@@ -15,7 +15,7 @@ def _first_n():
     if os.path.exists(f):
         try: t = open(f, encoding='utf-8').read().strip()
         except Exception: t = ''
-        return int(t) if t.isdigit() else 1                                    # число > 0 — N спор; 0 — режим выключен (полный атлас); пусто — 1
+        return int(t) if t.isdigit() and int(t) > 0 else 1
     return 1 if os.environ.get('V8_ONLY_GOAL') == '1' else 0
 
 

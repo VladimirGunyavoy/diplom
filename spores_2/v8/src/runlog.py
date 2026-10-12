@@ -124,33 +124,19 @@ class RunLog:
         s._put(run)
 
     # ---- traj_<режим>.csv + traj_summary.jsonl ----
-    @staticmethod
-    def _tdiag(res, i, status, T):
-        """диагностика траектории (почему занижение/фейл): T_ref, T/T_ref, V*(x0), V*(x0)−T_ref (<0 — занижение в старте), max рост V* вдоль пути (горб), V* и скорость в конце, u последнего шага, число точек, причина (reason)"""
-        nan = float('nan'); Tr = float(res['Tref'][i]) if 'Tref' in res else nan; V = np.asarray(res['V'][i], float); P = np.asarray(res['paths'][i], float); U = np.asarray(res['U'][i], float)
-        fin = V[np.isfinite(V) & (V < 1e8)]; V0 = float(fin[0]) if len(fin) else nan; Ve = float(V[-1]) if len(V) and np.isfinite(V[-1]) and V[-1] < 1e8 else nan
-        d = np.diff(np.where(np.isfinite(V) & (V < 1e8), V, nan)) if len(V) > 1 else np.zeros(0); hump = float(np.nanmax(d)) if np.isfinite(d).any() else nan
-        k = max(len(P) // 5, 2); span = float(np.linalg.norm(P[-1][:2] - P[-k][:2])) if len(P) > 2 else nan; ul = float(U[-1]) if len(U) else nan
-        if status == 'reached': reason = 'ok'
-        elif status == 'out_of_area': reason = 'start_out_of_V_area'
-        elif not np.isfinite(Ve): reason = 'left_V_area_or_inf_at_end'
-        elif span < 0.02: reason = 'stalled_at_end'
-        else: reason = 'timeout_or_cycle'
-        return (Tr, T / Tr if np.isfinite(T) and np.isfinite(Tr) and Tr > 0 else nan, V0, V0 - Tr if np.isfinite(V0) else nan, hump, Ve, span, ul, len(P), reason)
-
     def traj(s, mode, res, seconds=None):
         """таблица стартов: x0, v0, status (reached / failed / out_of_area), left_work_area, T, переключений, доля записей по u=+1/−1/0, конечная точка у недошедших; сводка — по траекториям не вне области (out_of_area — отдельным числом) и отдельно по оставшимся целиком в ±XL"""
         T = np.asarray(res['T'], float); n = len(T); st = np.asarray(res['status'], object); left = np.asarray(res['left_work'], bool); pre = np.asarray(res['prephase'], bool); nan = float('nan'); rows = []
         for i in range(n):
             U = np.asarray(res['U'][i], float)[1:]; tot = max(len(U), 1); sh = [float((U > 0).sum()) / tot, float((U < 0).sum()) / tot, float((U == 0).sum()) / tot]; x0 = np.asarray(res['X0'][i], float)[:2]; end = res['paths'][i][-1][:2] if st[i] != 'reached' else (nan, nan)
-            rows.append((i, x0[0], x0[1], str(st[i]), int(left[i]), int(pre[i]), T[i], int(res['sw'][i]), *sh, *end, *s._tdiag(res, i, st[i], T[i])))
+            rows.append((i, x0[0], x0[1], str(st[i]), int(left[i]), int(pre[i]), T[i], int(res['sw'][i]), *sh, *end))
         ok = st == 'reached'; nin = st != 'out_of_area'; w = nin & ~left; okw = ok & ~left; sw_ = np.asarray(res['sw'], float); q = lambda a, p: float(np.percentile(a, p)) if len(a) else None
         summ = dict(t_s=round(time.time() - s.t0, 1), mode=mode, n=int(n), out_of_area=int((~nin).sum()), in_area=int(nin.sum()), prephase_starts=int(pre.sum()), reached=int(ok.sum()), failed=int((nin & ~ok).sum()), T_median=q(T[ok], 50), T_p90=q(T[ok], 90), switches_mean=float(sw_[nin].mean()) if nin.any() else None,
                     work=dict(n=int(w.sum()), reached=int(okw.sum()), failed=int((w & ~ok).sum()), T_median=q(T[okw], 50), T_p90=q(T[okw], 90), switches_mean=float(sw_[w].mean()) if w.any() else None), left_work_area=int(left.sum()), seconds=None if seconds is None else round(float(seconds), 1))
         def run():
             with open(os.path.join(s.dir, 'traj_%s.csv' % mode), 'w', encoding='utf-8') as f:
-                f.write('i,x0,v0,status,left_work_area,prephase,T,switches,share_u+1,share_u-1,share_u0,end_x,end_v,T_ref,T_over_Tref,V0,V0_minus_Tref,max_V_rise,V_end,end_span,last_u,n_pts,reason\n')
-                for r in rows: f.write('%d,%.6g,%.6g,%s,%d,%d,%.6g,%d,%s\n' % (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], ','.join('%.4f' % x for x in r[8:11]) + ',' + ','.join('%.6g' % x for x in r[11:13]) + ',' + ','.join('%.6g' % x for x in r[13:21]) + ',%d,%s' % (r[21], r[22])))
+                f.write('i,x0,v0,status,left_work_area,prephase,T,switches,share_u+1,share_u-1,share_u0,end_x,end_v\n')
+                for r in rows: f.write('%d,%.6g,%.6g,%s,%d,%d,%.6g,%d,%s\n' % (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], ','.join('%.4f' % x for x in r[8:11]) + ',' + ','.join('%.6g' % x for x in r[11:13])))
             s._append('traj_summary.jsonl', json.dumps(summ, ensure_ascii=False)); s.summary['trajs'] = [t for t in s.summary['trajs'] if t['mode'] != mode] + [summ]; s._write_summary()
         s._put(run)
 

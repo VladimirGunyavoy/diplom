@@ -1,0 +1,791 @@
+{
+ "env": "dd2",
+ "algo": "sst",
+ "prune": 0.05,
+ "sel": 0.1,
+ "starts": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "budgets": [
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 1.0,
+   "t_wall_sum": 20.132682449999265,
+   "nf_med": 24064.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 10.0,
+   "t_wall_sum": 200.4961764201289,
+   "nf_med": 85472.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 60.0,
+   "t_wall_sum": 1200.821024954901,
+   "nf_med": 211772.0
+  }
+ ],
+ "raw": [
+  {
+   "i": 0,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0080836210399866,
+     "has": true,
+     "nodes": 8718,
+     "nf": 24720,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.000041626975872,
+     "has": true,
+     "nodes": 26443,
+     "nf": 76224,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.01971695001703,
+     "has": true,
+     "nodes": 62704,
+     "nf": 185256,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 1,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0079415009822696,
+     "has": true,
+     "nodes": 8657,
+     "nf": 24384,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.018272896995768,
+     "has": true,
+     "nodes": 29725,
+     "nf": 86016,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.007229696027935,
+     "has": true,
+     "nodes": 71178,
+     "nf": 211368,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 2,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.005096297012642,
+     "has": true,
+     "nodes": 8425,
+     "nf": 23776,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.028571131057106,
+     "has": true,
+     "nodes": 29700,
+     "nf": 85664,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.0638069229899,
+     "has": true,
+     "nodes": 66289,
+     "nf": 196304,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 3,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.00253610603977,
+     "has": true,
+     "nodes": 7928,
+     "nf": 22672,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.023161998018622,
+     "has": true,
+     "nodes": 29450,
+     "nf": 85496,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.04598914505914,
+     "has": true,
+     "nodes": 71297,
+     "nf": 212200,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 4,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0039229029789567,
+     "has": true,
+     "nodes": 7721,
+     "nf": 21728,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.0143516700482,
+     "has": true,
+     "nodes": 29399,
+     "nf": 85120,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.06772719102446,
+     "has": true,
+     "nodes": 71231,
+     "nf": 212176,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 5,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0091476660454646,
+     "has": true,
+     "nodes": 7501,
+     "nf": 21080,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.025336308055557,
+     "has": true,
+     "nodes": 26007,
+     "nf": 74728,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.0075459870277,
+     "has": true,
+     "nodes": 66991,
+     "nf": 198200,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 6,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0120552380103618,
+     "has": true,
+     "nodes": 8698,
+     "nf": 24352,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.0366257870337,
+     "has": true,
+     "nodes": 27296,
+     "nf": 78768,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.06867200497072,
+     "has": true,
+     "nodes": 72038,
+     "nf": 214360,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 7,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0102037499891594,
+     "has": true,
+     "nodes": 8114,
+     "nf": 22816,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.029194214032032,
+     "has": true,
+     "nodes": 27097,
+     "nf": 78080,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.08285125705879,
+     "has": true,
+     "nodes": 66601,
+     "nf": 197200,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 8,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0139828170649707,
+     "has": true,
+     "nodes": 8906,
+     "nf": 25240,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.03081917099189,
+     "has": true,
+     "nodes": 27120,
+     "nf": 78384,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.009054583031684,
+     "has": true,
+     "nodes": 65451,
+     "nf": 194560,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 9,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.007991380058229,
+     "has": true,
+     "nodes": 8149,
+     "nf": 23144,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.03198956605047,
+     "has": true,
+     "nodes": 26914,
+     "nf": 77560,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.081030999077484,
+     "has": true,
+     "nodes": 65798,
+     "nf": 194680,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 10,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.000171915977262,
+     "has": true,
+     "nodes": 8358,
+     "nf": 23760,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.014959611929953,
+     "has": true,
+     "nodes": 29603,
+     "nf": 85688,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.02269498293754,
+     "has": true,
+     "nodes": 71293,
+     "nf": 212224,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 11,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0100719989277422,
+     "has": true,
+     "nodes": 8056,
+     "nf": 22544,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.034744738019072,
+     "has": true,
+     "nodes": 29613,
+     "nf": 85448,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.02629775891546,
+     "has": true,
+     "nodes": 69331,
+     "nf": 205400,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 12,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0059307520277798,
+     "has": true,
+     "nodes": 7457,
+     "nf": 21080,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.034879019018263,
+     "has": true,
+     "nodes": 26049,
+     "nf": 75104,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.024999454035424,
+     "has": true,
+     "nodes": 62496,
+     "nf": 184800,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 13,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0087896540062502,
+     "has": true,
+     "nodes": 7482,
+     "nf": 21088,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.03628642600961,
+     "has": true,
+     "nodes": 26015,
+     "nf": 74880,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.052120093023404,
+     "has": true,
+     "nodes": 67435,
+     "nf": 199872,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 14,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0031351139768958,
+     "has": true,
+     "nodes": 9202,
+     "nf": 26336,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.029921851935796,
+     "has": true,
+     "nodes": 31686,
+     "nf": 91776,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.06983643793501,
+     "has": true,
+     "nodes": 77539,
+     "nf": 230816,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 15,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.003840426914394,
+     "has": true,
+     "nodes": 9205,
+     "nf": 26152,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.03157963999547,
+     "has": true,
+     "nodes": 31091,
+     "nf": 89944,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.02300840290263,
+     "has": true,
+     "nodes": 76663,
+     "nf": 228208,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 16,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.009135470027104,
+     "has": true,
+     "nodes": 9209,
+     "nf": 26032,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.017877288977616,
+     "has": true,
+     "nodes": 31041,
+     "nf": 89688,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.05296997400001,
+     "has": true,
+     "nodes": 76801,
+     "nf": 228528,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 17,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0007768139475957,
+     "has": true,
+     "nodes": 9389,
+     "nf": 26632,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.020680430927314,
+     "has": true,
+     "nodes": 31880,
+     "nf": 92408,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.04638674494345,
+     "has": true,
+     "nodes": 78137,
+     "nf": 232984,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 18,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0030689240666106,
+     "has": true,
+     "nodes": 9245,
+     "nf": 26192,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.032178632100113,
+     "has": true,
+     "nodes": 31039,
+     "nf": 89944,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.03007593401708,
+     "has": true,
+     "nodes": 76597,
+     "nf": 228504,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  },
+  {
+   "i": 19,
+   "runs": [
+    {
+     "budget": 1.0,
+     "t": 1.0068001009058207,
+     "has": true,
+     "nodes": 9311,
+     "nf": 26328,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 10.0,
+     "t": 10.004704411956482,
+     "has": true,
+     "nodes": 31742,
+     "nf": 91920,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    },
+    {
+     "budget": 60.0,
+     "t": 60.01901043590624,
+     "has": true,
+     "nodes": 77925,
+     "nf": 232552,
+     "hist": null,
+     "T": null,
+     "why": "no_goal"
+    }
+   ]
+  }
+ ],
+ "Tref": [
+  4.191172933123325,
+  4.4267102498011,
+  2.121182647138139,
+  2.0974251314761783,
+  4.355579560979505,
+  1.9620256048428977,
+  3.6736204641934083,
+  2.679194419223048,
+  3.1511445659924835,
+  3.6032870895093216,
+  2.3863071609993494,
+  4.492261844886479,
+  4.901027922957298,
+  2.5261076619957157,
+  4.527938961604541,
+  3.065738594320532,
+  2.7201389232797695,
+  4.242898968722739,
+  3.0202495874650226,
+  4.553902265725318
+ ],
+ "hw": "CPU 1 proc/\u0437\u0430\u043f\u0440\u043e\u0441, numpy"
+}

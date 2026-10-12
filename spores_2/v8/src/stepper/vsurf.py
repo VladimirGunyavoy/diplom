@@ -135,8 +135,7 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     allP = np.concatenate(paths); Vst = G.Vlayers(allP).min(1); cut = np.cumsum([len(p) for p in paths])[:-1]; Vl_ = np.split(Vst, cut)
     status = np.where(np.isfinite(T), 'reached', np.where(np.array([i in pre and pre[i]['X1'] is None for i in range(n)]), 'out_of_area', 'failed')).astype(object)
     xlv = np.asarray(g.XLV, float); left = np.array([bool(((np.abs(p) > xlv + 1e-12) & (xlv > 0)).any()) for p in paths])                  # хоть раз вышла за рабочее поле ±XL (без GM)
-    Tref = np.asarray(solve8.t_ref(X0)[0], float)                                                    # эталон по каждому старту (для лога траекторий: T/T_ref, занижение V*(x0)−T_ref)
-    return dict(paths=paths, V=Vl_, U=Us, T=T, sw=sw, X0=X0, status=status, prephase=~has, mark=mark, left_work=left, Tref=Tref)
+    return dict(paths=paths, V=Vl_, U=Us, T=T, sw=sw, X0=X0, status=status, prephase=~has, mark=mark, left_work=left)
 
 
 def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
