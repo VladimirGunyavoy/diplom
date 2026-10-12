@@ -13,7 +13,7 @@ def dyn(name, x, u):
     if name == 'dd': return ca.vertcat(u[0] * ca.cos(x[2]), u[0] * ca.sin(x[2]), u[1])
     if name == 'di': return ca.vertcat(x[1], u[0])
     if name == 'di4': return ca.vertcat(x[2], x[3], u[0], u[1])
-    if name in ('manip', 'mg'):
+    if name in ('manip', 'mg', 'manipf'):
         A, B, D = common.Manip.AA, common.Manip.BB, common.Manip.DD
         c, s = ca.cos(x[1]), ca.sin(x[1]); w1, w2 = x[2], x[3]; h = -B * s
         r1 = u[0] - h * (2 * w1 * w2 + w2 ** 2); r2 = u[1] + h * w1 ** 2
@@ -35,6 +35,10 @@ def build(e, N):
     for i in range(n):
         if e.period[i] == 0: opti.subject_to(opti.bounded(float(e.lo[i]), X[i, :], float(e.hi[i])))
     for i in range(n): opti.subject_to(opti.bounded(-0.9 * float(e.half[i]), X[i, N] - tg[i], 0.9 * float(e.half[i])))
+    if e.name == 'manipf':                                                              # запреты в узлах (+ запас .05): самостолкновение, стол
+        for k in range(N + 1):
+            q1, q2 = X[0, k], X[1, k]; ye = e.ML * ca.sin(q1); yt = ye + e.ML * ca.sin(q1 + q2)
+            opti.subject_to(ca.pi - e.FD - ca.fabs(q2) >= .05); opti.subject_to(ye - e.TY >= .05); opti.subject_to(yt - e.TY >= .05)
     opti.subject_to(opti.bounded(.05, T, 40.)); opti.minimize(T)
     opti.solver('ipopt', dict(print_time=False), dict(print_level=0, max_iter=300, tol=1e-6, sb='yes'))
     return opti, T, X, U, x0, tg
@@ -61,7 +65,7 @@ def solve(e, y0, seed, N=NI, T0s=(3., 6., 10.)):
     return best, nsolve
 
 def work(i):
-    e = common.make(ENV); t0 = time.perf_counter(); b, ns = solve(e, e.X0[i], 100 + i); return dict(i=i, T=b, t=time.perf_counter() - t0, nsolve=ns)
+    e = common.make(ENV); t0 = time.perf_counter(); b, ns = solve(e, e.X0[i], 100 + i, T0s=(1.5, 2.5, 4., 6., 10.) if ENV == 'manipf' else (3., 6., 10.)); return dict(i=i, T=b, t=time.perf_counter() - t0, nsolve=ns)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('env'); p.add_argument('--procs', type=int, default=16); p.add_argument('--only', type=int, default=None); a = p.parse_args(); ENV = a.env; e = common.make(a.env)

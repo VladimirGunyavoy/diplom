@@ -39,5 +39,7 @@ with open(os.path.join(os.path.dirname(D), 'table_mg.md'), 'w') as f:
     for r in rows: f.write('| %s | %s | %.0f%% | %.3f | %.3f | %.0f | %.1f | %.2f | %.0f |\n' % (r[0], r[1], 100 * r[2], r[3], r[4], r[5], r[6], r[7], r[8]))
     for kind in 'AB':
         sp = [r for r in rows if r[0] == kind and r[1].startswith('споры')][0]; oc = [r for r in rows if r[0] == kind and r[1].startswith('OCP')][0]
+        b2r = [r for r in rows if r[0] == kind and r[1].startswith('споры B2')]
+        if b2r and kind == 'B': f.write('\nБезубыточность B2 (3 атласа) vs OCP: K* = %.0f переходов (заготовка %.0f с / (OCP %.1f − споры %.1f на цель)).\n' % (b2r[0][5] / (oc[7] - b2r[0][6] - b2r[0][7]), b2r[0][5], oc[7], b2r[0][6] + b2r[0][7]))
         per = sp[6] * (1 if kind == 'B' else 0) + sp[7]; f.write('\nБезубыточность %s vs OCP: K* = %.0f переходов (заготовка %.0f с / (OCP %.1f − споры %.2f на переход)).\n' % (kind, (sp[5] / (oc[7] - per)) if kind == 'B' else (sp[5] + 4 * sp[6]) / (oc[7] - sp[7]), sp[5], oc[7], per if kind == 'B' else sp[7]))
 print(open(os.path.join(os.path.dirname(D), 'table_mg.md')).read())

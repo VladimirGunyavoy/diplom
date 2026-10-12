@@ -4,7 +4,7 @@
   venv-sb3 mg_atlas.py edges TAG Q2G     (GPU, под flock: полный solve с SAVEE → кэш рёбер E_TAG_*.npy; время — в заготовку)
 Рабочая папка ~/spore_v5/c1/manip_b9; результаты времени → data/mg_atlas_TAG.json."""
 import os, sys, time, json, pickle
-for k, v in dict(SYS='manip', KF='11', M='3', FRAC='.5', OVH='.5', MINROWS='3', GLIM='0', RMAX='.6', TMAX='3', SBCAUS='1', SBLAY='0', NOLATCH='1', FINGRID='2', VF='2', PESS='1', GPUMAX='1000000', GS='300', DELTA='.3', MAXC='3000', SONE='1', FINBOX='1', OMP_NUM_THREADS='2', PYTHONUNBUFFERED='1').items(): os.environ.setdefault(k, v)
+for k, v in dict(SYS='manip', KF='11', M='3', FRAC='.5', OVH='.5', MINROWS='3', GLIM='0', RMAX='.6', TMAX='3', SBCAUS='1', SBLAY='0', NOLATCH='1', FINGRID='2', VF='2', PESS='1', GPUMAX='1000000', GS='300', DELTA='.3', MAXC='3000', SONE='1', FINBOX='1', STGPU=os.environ.get('STGPU', '1' if sys.argv[1] == 'edges' else '0'), OMP_NUM_THREADS='2', PYTHONUNBUFFERED='1').items(): os.environ.setdefault(k, v)
 WD = os.path.expanduser('~/spore_v5/c1/manip_b9'); sys.path.insert(0, WD); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np, common
 import growN as G

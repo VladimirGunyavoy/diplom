@@ -162,8 +162,21 @@ class DI4(Env):
         s.nf += 1; h = np.asarray(h, float)[..., None] if np.ndim(h) else h; a = np.broadcast_to(u, Y[..., :2].shape); return np.concatenate([Y[..., :2] + Y[..., 2:] * h + a * h * h / 2, Y[..., 2:] + a * h], -1)
     def out_of_box(s, Y): return (np.abs(Y) > s.hi).any(-1)
 
+class ManipForb(Manip):
+    """manip 4D с запретами (FORB b9, forb.md): самостолкновение |q2| ≤ π − .5 и стол (локоть и конец звена y ≥ −.6, звенья длины 1). Запрещённое = out_of_box для проверяльщика, SST/RRT (validity) и PPO (штраф выхода).
+    Старты — те же 20, keep = свободны (gfree > 0) И OCP с запретами дошёл (data/manipf_ref.json, мультистарт; одинаково для всех методов); T_ref — этот OCP (в нём запреты)."""
+    name = 'manipf'; FD = .5; TY = -.6; ML = 1.
+    def __init__(s, nst=20):
+        super().__init__(nst); s.free0 = s.gfree(s.X0) > 0; fn = os.path.join(DATA, 'manipf_ref.json')
+        if os.path.exists(fn):
+            import json; R = json.load(open(fn)); T = np.array([np.nan if r['Tref'] is None else r['Tref'] for r in R[:nst]]); s.Tref = T; s.keep = s.free0 & np.isfinite(T)
+        else: s.Tref = np.full(nst, np.nan); s.keep = s.free0.copy()
+    def gfree(s, Y):
+        Y = np.asarray(Y, float); g = (PI - s.FD) - np.abs(wrap(Y[..., 1], 2 * PI)); ye = s.ML * np.sin(Y[..., 0]); yt = ye + s.ML * np.sin(Y[..., 0] + Y[..., 1]); return np.minimum(g, np.minimum(ye, yt) - s.TY)
+    def out_of_box(s, Y): return super().out_of_box(Y) | (s.gfree(Y) < 0)
+
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
