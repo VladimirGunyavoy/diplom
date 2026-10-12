@@ -7,7 +7,7 @@ from tqdm import tqdm
 import finish_gen as FG
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
-DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1', 'race') else 41))
+DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1', 'race', 'race4') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2)); NFFB = float(E('NFFB', 0))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
@@ -73,6 +73,19 @@ elif SYS == 'race':                                                             
     def GFR(y):                                                                                           # >0 свободно: до края трассы (м) минус запас, срыв сцепления v²|κ| < μg (в м/с²·0.1), |κ|, v — коробка поля
         px = (y[..., 0] + CX) / PXM; py = (y[..., 1] + CY) / PXM; g1 = map_coordinates(SDF, [py.ravel(), px.ravel()], order=1, mode='constant', cval=-5.).reshape(px.shape) * PXM - float(E('TRM', .3))
         v = y[..., 3] + CV; g2 = (MUG - v * v * np.abs(y[..., 4]) / KS) * .1; return np.minimum(g1, g2)
+elif SYS == 'race4':                                                                                        # b10 (RACE-4D, решение research-25): картинг (x, y, θ, v), κ слоями — 8 направлений круга трения (a_прод, a_бок) + 0 = 9 слоёв; θ̇ = a_бок/max(v, V0), |θ̇| ≤ κ_max·v
+    N = 4; PERIOD = np.array([0, 0, PI2, 0]); MUG = float(E('MUG', 12.)); VMAX = float(E('VMAX', 15.)); AMAX = float(E('AMAX', 4.)); BMAX = float(E('BMAX', 8.)); KMAX = float(E('KMAX', 1 / 3.)); V0 = float(E('V0', 1.))
+    PXM = .2; _d = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../v5chain/reports/research/r25/kartland_sdf_px.npz')); SDF = _d['sdf'].astype(float); FIN = _d['finish']
+    CX, CY, CV = SDF.shape[1] * PXM / 2, SDF.shape[0] * PXM / 2, VMAX / 2
+    XLV = np.array([CX, CY, 0., CV]); RHOV = np.array([(FIN[1, 0] - FIN[0, 0]) * PXM / 2, float(E('FINY', .5)), float(E('FINTH', .6)), CV])
+    US = ((0., 0.),) + tuple((MUG * np.cos(a), MUG * np.sin(a)) for a in np.arange(8) * np.pi / 4)
+    def f(y, u):
+        th, v = y[..., 2], y[..., 3] + CV; al = min(u[0], AMAX) if u[0] > 0 else max(u[0], -BMAX); w = np.clip(u[1] / np.maximum(v, V0), -KMAX * v, KMAX * v)
+        return np.stack([v * np.cos(th), v * np.sin(th), w + 0 * th, al + 0 * th], -1)
+    def Bq(y): return np.diag([0., 0., (MUG / max(y[3] + CV, V0)) ** 2, MUG ** 2])
+    GC0 = np.array([(FIN[:, 0].mean()) * PXM - CX, FIN[0, 1] * PXM - CY, np.pi / 2, 0.])
+    from scipy.ndimage import map_coordinates
+    def GFR(y): px = (y[..., 0] + CX) / PXM; py = (y[..., 1] + CY) / PXM; return map_coordinates(SDF, [py.ravel(), px.ravel()], order=1, mode='constant', cval=-5.).reshape(px.shape) * PXM - float(E('TRM', .3))
 else: raise SystemExit('SYS?')
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
@@ -101,7 +114,7 @@ def nf_rows(P0, p, u, sg, nmax):
         out.append((Xw[kk, j] * (1 - w)[:, None] + Xw[kk + 1, j] * w[:, None]).reshape(sh))
         if not inbox_g(c): break
     return out
-GC = GC0.copy() if SYS == 'race' else np.zeros(N)                                                                                       # SPD1 (b9): центр цели (0 = как раньше); смена цели без пересборки слоёв/рёбер — spd.py
+GC = GC0.copy() if SYS in ('race', 'race4') else np.zeros(N)                                                                                       # SPD1 (b9): центр цели (0 = как раньше); смена цели без пересборки слоёв/рёбер — spd.py
 def wrapg(y): return wrapy(np.asarray(y, float) - GC)
 def ingoal(y): return (np.abs(wrapg(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
@@ -109,7 +122,7 @@ def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
 GF = None                                                                                             # FORB (b9): gfree(y) -> (…) знаковое расстояние до запрещённого (>0 свободно), на обёрнутых состояниях; None — запретов нет. Задаётся средой (ниже) или снаружи: growN.GF = fn
 def free(y): return np.ones(np.shape(y)[:-1], bool) if GF is None else GF(wrapy(y)) > 0
-if SYS == 'race': GF = GFR                                                                                 # b10: трек и срыв — всегда запрещённые состояния
+if SYS in ('race', 'race4'): GF = GFR                                                                                 # b10: трек и срыв — всегда запрещённые состояния
 if SYS == 'manip' and E('FORB'):                                                                      # FORB=1: самостолкновение плоского 2-звенника (|q2| ≤ π − FD) и стол (оба сустава/конец не ниже TY); L1=L2=ML
     FD = float(E('FD', .5)); TY = float(E('TY', -9.)); ML = float(E('ML', 1.))
     def GF(y):
