@@ -51,7 +51,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
             inn = np.linalg.norm(c.G, axis=-1) <= rho + 1e-12; cost = c.tau[1:] - c.tau[:-1]; m = (~inn[:-1] & (cost > 1e-12)).ravel(); te = np.full(len(m), np.inf)
             if m.any(): te[m] = solve8.entry_time(c.G[:-1].reshape(-1, 2)[m], u, cost.ravel()[m], rho)
             gcols[u].append(inn.any(0) | np.isfinite(te.reshape(nt - 1, M)).any(0))
-    assert off == G.n
+    assert off <= G.n                                                                   # SOLVE8_PLUS: узлы полос идут после узлов клеток
     fin = V < BIG / 2; qerr = {}
     for li, u in enumerate(G.us):                                                      # ошибка Q_u против ТОЧНОГО входа в круг своим u (entry_time, аналитика) — в спорах без решений (первые споры слоёв ±1) она должна быть ≈ 0
         m = (G.layer == li) & (np.linalg.norm(G.P, axis=1) > G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = G.V[m][ok] - te[ok]

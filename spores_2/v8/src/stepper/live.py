@@ -21,6 +21,7 @@ def _first_n():
 
 FIRST_N = _first_n(); ONLY_GOAL = FIRST_N > 0
 if ONLY_GOAL: os.environ['MAXC'] = str(FIRST_N); os.environ['V8_ONLY_GOAL'] = '1'; os.environ['V8_MAXCELLS'] = str(FIRST_N)       # по FIRST_N клеток на слой (споры от цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL                   # по одной клетке на слой (спора на цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL
+os.environ.setdefault('SOLVE8_PLUS', '1')                                                  # окно: бисекция по времени + полосы (b1, горб p90 .246→.037); SOLVE8_PLUS=0 — как раньше
 from ..algo import growN as g
 from . import stepper as S
 
