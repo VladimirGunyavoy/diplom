@@ -140,12 +140,13 @@ def _make_batch():
         """слой: один GeomNode; вершины в реальных координатах, a и b — масштаб/позиция самого узла (перестройка меша только при смене снимка)"""
         def __init__(self):
             super().__init__(); self._gn = None; self.col = (1., 1., 1., 1.); self.real_position = np.zeros(3); self.real_scale = np.ones(3)
-        def set_geometry(self, V, idx=None, kind='lines', thick=None, colors=None, depth_write=True, on_top=False):
+        def set_geometry(self, V, idx=None, kind='lines', thick=None, colors=None, depth_write=True, on_top=False, fixed=None):
             """colors — (n, 4) цвета вершин (иначе один цвет слоя); depth_write=False — полупрозрачная поверхность не закрывает линии за ней"""
             if self._gn is not None: self._gn.remove_node(); self._gn = None
             if len(V) == 0: return
             self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col if colors is None else colors)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
             if not depth_write: self._gn.set_depth_write(False)
+            if fixed is not None: self._gn.set_bin('fixed', fixed)                                        # порядок отрисовки: подложка (31) → линии скелета (32) → траектории в цель (60)
             if on_top: self._gn.set_depth_test(False); self._gn.set_bin('fixed', 60)                  # поверх всего (белые траектории, входящие в цель)
             if kind != 'tris': self._gn.set_render_mode_thickness(thick or 2)
             else: self._gn.set_two_sided(True)
@@ -162,7 +163,7 @@ def _Batch():
 class GrowView:
     """Ursina-часть: создаёт по Scalable на слой геометрии и перерисовывает при смене снимка. Импорт Ursina — лениво."""
     # цвета: центральная линия + зерно — зелёные; боковые линии — оранжевые (гало бледнее ядра); зигзаг строк и их узлы — светло-серые (контраст к зелёному и оранжевому на тёмно-синем); текущая клетка ярче, готовые приглушены
-    COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .45),
+    COL = {'points_done': (.62, .62, .68, .9), 'segs_rows_done': (.74, .74, .80, .85), 'segs_center_done': (.35, .78, .45, .9), 'segs_core_done': (.88, .60, .30, .9), 'segs_halo_done': (.72, .55, .38, .7),
            'points_cur': (.92, .92, .96, 1), 'segs_rows_cur': (.95, .95, 1.0, 1), 'segs_center_cur': (.20, 1.0, .30, 1), 'segs_core_cur': (1.0, .55, .10, 1), 'segs_halo_cur': (1.0, .70, .40, .6),
            'points_seed': (.2, 1.0, .3, 1), 'points_queue': (.9, .4, 1.0, .8), 'segs_goal': (.55, 1.0, .65, .9),
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
@@ -177,7 +178,7 @@ class GrowView:
         """оттенок слоя k: 0 — как есть; 1 — холодный (R↔B); 2 — жёлто-зелёный (R→G→R); прошлые слои приглушены"""
         r, g_, b, a = col
         r, g_, b = ((r, g_, b), (b, g_, r), (g_, r, b))[k % 3]
-        return (r * .85, g_ * .85, b * .85, a * .7) if past else (r, g_, b, a)
+        return (r * .85, g_ * .85, b * .85, a * .9) if past else (r, g_, b, a)
 
     def toggle_layer(s, k):
         s.vis[k] = not s.vis[k]
@@ -265,7 +266,7 @@ class GrowView:
             if cl: out[u] = cl
         return out
 
-    VNAMES = ('surf', 'pts', 'inf', 'long', 'cross', 'cen', 'goal', 'gcen')
+    VNAMES = ('surf', 'pts', 'inf', 'long', 'cross', 'cen', 'goal', 'gcen', 'under', 'undc')
 
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
@@ -293,8 +294,10 @@ class GrowView:
                 lc = s.tinted(s.COL['segs_core_done'], k)[:3]                                                      # скелет — в цвет группы слоя (как контур ядра клеток слоя)
                 s._layer(nm('surf'), w).set_geometry(m['verts'], m['tris'], kind='tris', colors=m['colors'], depth_write=False)
                 Dp, ip = _discs(m['pts'], R); s._layer(nm('pts'), w).set_geometry(Dp, ip, kind='tris', colors=np.repeat(m['pcol'], 17, axis=0))
+                for nmu, arr, th in (('under', m['long'], VS.LONG_W), ('undc', m['center'], VS.CENTER_W)):                                  # тёмная подложка под продольными линиями (синие читаются на синей части градиента)
+                    s._layer(nm(nmu), w).set_geometry(arr, kind='lines', thick=th + VS.UNDER_DW, colors=np.tile((.04, .04, .10, VS.UNDER_A), (len(arr), 1)), depth_write=False, fixed=31)
                 for t, a_, th, col, top in (('long', VS.LONG_A, VS.LONG_W, lc, False), ('cross', VS.CROSS_A, VS.CROSS_W, lc, False), ('cen', VS.CENTER_A, VS.CENTER_W, lc, False), ('goal', VS.GOAL_A, VS.GOAL_SIDE_W, (1., 1., 1.), True), ('gcen', VS.GOAL_A, VS.GOAL_W, (1., 1., 1.), True)):
-                    arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)
+                    arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top, fixed=None if top else 32)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)
                 Di, ii = _discs(m['inf'], R); s._layer(nm('inf'), w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
 
     def _box(s, extra):

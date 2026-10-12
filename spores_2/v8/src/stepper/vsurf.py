@@ -11,10 +11,11 @@ import numpy as np
 VH = float(os.environ.get('VSURF_H', .35))                 # высота на единицу V (в мировых единицах до зума)
 ALPHA = float(os.environ.get('VSURF_ALPHA', .55))
 LIFT = float(os.environ.get('VSURF_LIFT', .04))            # подъём скелета и узлов над поверхностью (мировые единицы высоты), чтобы линии не тонули в радуге
-LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', .6)); LONG_W = int(os.environ.get('VSURF_LONG_W', 2))        # боковые линии вдоль траекторий эволюции (столбцы j ≠ центрального), цвет слоя
+LONG_A = float(os.environ.get('VSURF_LONG_ALPHA', .9)); LONG_W = int(os.environ.get('VSURF_LONG_W', 2))        # боковые линии вдоль траекторий эволюции (столбцы j ≠ центрального), цвет слоя
 CENTER_A = float(os.environ.get('VSURF_CENTER_ALPHA', 1.)); CENTER_W = int(os.environ.get('VSURF_CENTER_W', 4))   # центральная линия эволюции клетки (столбец M//2): непрозрачная и жирнее
-CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .4)); CROSS_W = int(os.environ.get('VSURF_CROSS_W', 1))      # поперечные линии (узлы одной строки)
+CROSS_A = float(os.environ.get('VSURF_CROSS_ALPHA', .6)); CROSS_W = int(os.environ.get('VSURF_CROSS_W', 1))      # поперечные линии (узлы одной строки)
 GOAL_A = float(os.environ.get('VSURF_GOAL_ALPHA', 1.)); GOAL_W = int(os.environ.get('VSURF_GOAL_W', 6)); GOAL_SIDE_W = int(os.environ.get('VSURF_GOAL_SIDE_W', 2))   # траектории, входящие в цель: белые, поверх всего; центральный столбец клетки — GOAL_W, остальные входящие — тоньше (GOAL_SIDE_W)
+UNDER_A = float(os.environ.get('VSURF_UNDER_ALPHA', .85)); UNDER_DW = int(os.environ.get('VSURF_UNDER_DW', 2))      # тёмная подложка под боковыми/центральными линиями (синие линии читаются на синей части градиента): alpha и добавка к толщине
 WIN_EPS = float(os.environ.get('VSURF_WIN_EPS', 1e-3))
 BIG = 1e9                                                   # solve8.BIG: V ≥ BIG/2 — «нет пути»
 GRAD = np.array([[0., .20, .25, .95], [.25, .10, .75, .95], [.5, .20, .90, .30], [.75, 1., .85, .10], [1., .95, .20, .15]])     # t, R, G, B: синий → бирюзовый → зелёный → жёлтый → красный
