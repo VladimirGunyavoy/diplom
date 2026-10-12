@@ -29,6 +29,14 @@ if __name__ == "__main__":
         out.append((a[0], b[0])); print("closed %.4f %s | rk4 %.4f %s | %.1fs %.1fs" % (a[0], a[1], b[0], b[1], t1 - t0, t2 - t1), flush=True)
     o = np.array(out); m = np.isfinite(o).all(1); print("rk4/closed mean %.5f max %.5f, both found %d/12" % ((o[m, 1] / o[m, 0]).mean(), (o[m, 1] / o[m, 0]).max(), m.sum()))
 
+HSF = .1                                                                                               # шаг rk4 батчевого расчёта доводки (HS .02 → .1: ×2.5 быстрее, max|dT| 3e-5; путь на запреты проверяется с HS)
+FAST = True                                                                                            # SPD2 (b9): батчевый якобиан ограничений SLSQP (все возмущения длительностей одним векторным rk4) — быстрее, тот же результат до ~1e-4
+def flow_batch(Y, u, t, f):
+    """Y (B, N), t (B,) — свои длительности; общее число шагов n = ceil(max t / HS), шаг h_i = t_i / n."""
+    u = np.asarray(u, float); n = max(1, int(np.ceil(float(t.max()) / HSF))); h = (t / n)[:, None]
+    for _ in range(n):
+        k1 = f(Y, u); k2 = f(Y + h / 2 * k1, u); k3 = f(Y + h / 2 * k2, u); k4 = f(Y + h * k3, u); Y = Y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+    return Y
 FREE = None                                                                                            # FORB (b9): free(y) -> bool (…,) из growN; None — без запретов
 def shoot_grid(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.05):
     """п.42 (research-22, r22/13_di4_fast_finish/fin.py; FINGRID=1 в growN): перебор времён ≤ NA дуг на сетке шага H пачкой rk4 (все топологии и времена сразу); минимум суммарного времени среди концов в коробке .9·RHOV. Сигнатура как у shoot."""
@@ -80,8 +88,15 @@ def shoot_pol(y, f, US, RHOV, wrapy, tmax, NA=3, inits=2, H=.1):
                 z = flow(z, US[k], max(dt, 0.) / max(1, int(np.ceil(max(dt, 0.) / HS))), f)
                 if not FREE(z): return False
         return True
-    cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
+    def end_b(D):                                                                                          # D (B, n) -> концы (B, N) батчем
+        z = np.tile(np.array(y, float), (len(D), 1))
+        for i, k in enumerate(tp): z = flow_batch(z, US[k], np.maximum(D[:, i], 0.), f)
+        return wrapy(z)
+    def cjac(d, eps=1e-6):
+        D = np.vstack([d[None], d[None] + eps * np.eye(n)]); E = end_b(D); C = R - np.abs(E)
+        return ((C[1:] - C[0]) / eps).T
+    cons = [{"type": "ineq", "fun": (lambda d: R - np.abs(end_b(d[None])[0])), "jac": cjac}] if FAST else [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
     for d0 in (np.full(n, T0 / n), np.r_[T0 * .6, np.full(n - 1, T0 * .4 / max(n - 1, 1))][:n]):
-        r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
+        r = minimize(lambda d: d.sum(), d0, jac=lambda d: np.ones(n), method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
         if r.success and np.all(np.abs(end(r.x)) <= np.asarray(RHOV)) and r.x.sum() < best[0] and path_free(r.x): best = (float(r.x.sum()), tp)
     return best
