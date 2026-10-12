@@ -5,7 +5,7 @@ os.environ.setdefault('OMP_NUM_THREADS', '1'); sys.path.insert(0, os.path.dirnam
 from multiprocessing import Pool
 from scipy.optimize import minimize
 import common
-ENV = None; NI = 40
+ENV = None; NI = int(os.environ.get("OCP_N", 40))
 def solve(e, y0, seed, N=NI, T0s=(2., 4., 8.), maxit=200):
     rng = np.random.default_rng(seed); best = None; m = e.m; e.nf = 0
     def roll(z):

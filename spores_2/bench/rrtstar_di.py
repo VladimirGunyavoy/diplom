@@ -26,7 +26,7 @@ def arcs_ok(x0, v0, s, t1, t2, hi):
 
 def rrtstar(e, y0, budgets, seed=0, gamma=2., goal_bias=.05, cap=60000):
     rng = np.random.default_rng(seed); X = np.zeros((cap, 2)); par = np.full(cap, -1); cost = np.zeros(cap); X[0] = y0; N = 1; kids = {0: []}; t0 = time.perf_counter(); e.nf = 0
-    best = np.inf; bnode = -1; snaps = []; bi = 0; goal_nodes = []
+    best = np.inf; bnode = -1; snaps = []; bi = 0; hist = []
     def chain(i):
         us, dts = [], []
         path = []
@@ -66,8 +66,9 @@ def rrtstar(e, y0, budgets, seed=0, gamma=2., goal_bias=.05, cap=60000):
             if e.in_goal(xn[None])[0] and cost[n_] < best: best = cost[n_]; bnode = n_
             elif bnode >= 0 and e.in_goal(X[bnode][None])[0]: best = cost[bnode]
         el = time.perf_counter() - t0
+        if bnode >= 0 and (not hist or abs(hist[-1][1] - cost[bnode]) > 1e-12): hist.append((el, float(cost[bnode])))
         while bi < len(budgets) and el >= budgets[bi]:
             if bnode >= 0: us, dts = chain(bnode)
             else: us = dts = None
-            snaps.append(dict(budget=budgets[bi], t=el, has=bnode >= 0, T_plan=float(cost[bnode]) if bnode >= 0 else None, us=us, dts=dts, nodes=N, witnesses=0, nf=int(e.nf))); bi += 1
+            snaps.append(dict(budget=budgets[bi], t=el, has=bnode >= 0, T_plan=float(cost[bnode]) if bnode >= 0 else None, us=us, dts=dts, nodes=N, witnesses=0, nf=int(e.nf), hist=list(hist))); bi += 1
     return snaps
