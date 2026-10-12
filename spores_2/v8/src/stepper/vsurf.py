@@ -106,8 +106,8 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
 def only_goal(): return os.environ.get('V8_ONLY_GOAL') == '1'
 
 def starts_grid_cells(cl, k, xlv=None):
-    """сетка k×k точек (центры k×k подъячеек, билинейно по узлам) внутри КАЖДОЙ выросшей клетки — траектории ложатся по всей клетке; точки в цели и вне рабочей зоны отбрасываются (θ маятника периодичен)"""
-    rho = float(os.environ.get('RHO', .2)); pend = os.environ.get('SYS') == 'pend'; ball = os.environ.get('GOALSHAPE', 'ball' if not pend else 'box') == 'ball'; c_ = (np.arange(k) + .5) / k; out = []
+    """сетка k×k точек от края до края клетки (билинейно по узлам) внутри КАЖДОЙ выросшей клетки — траектории ложатся по всей клетке; точки в цели и вне рабочей зоны отбрасываются (θ маятника периодичен)"""
+    rho = float(os.environ.get('RHO', .2)); pend = os.environ.get('SYS') == 'pend'; ball = os.environ.get('GOALSHAPE', 'ball' if not pend else 'box') == 'ball'; c_ = np.clip(np.linspace(0., 1., k), .003, .997) if k > 1 else np.array([.5]); out = []        # края включены: крайние траектории стартуют у самых концов клетки (с центрами подъячеек они начинались на 1/(2k) длины внутри — «обрубки»)
     for cs in cl.values():
         for c in cs:
             Gc = np.asarray(c['G'], float); ni, nj = Gc.shape[0] - 1, Gc.shape[1] - 1
