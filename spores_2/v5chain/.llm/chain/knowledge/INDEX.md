@@ -78,3 +78,4 @@
 - [research/lit_gpu_live.md](research/lit_gpu_live.md) — GPU/ускорение для демо в прямом эфире: таблица Q на сетке + lookup (×30, 300 стартов 0.04 с, качество то же); numba.cuda на ноуте есть, но не нужен
 - research/pend_v8_plan.md — маятник на механике v8: что DI-специфично в solve8, порядок переноса (research-5)
 - race_track — гоночная трасса Картленд: 5D (руль по скорости, педаль — доля сцепления), gfree, 9 слоёв, бенч → `research/race_track.md`
+- [research/lit_pend_insights.md](research/lit_pend_insights.md) — маятник v5–v7: сепаратриса (CUTR 1.050→1.028), стоп торца по расширению фронта (SMAX 2: 1.026→1.016), NF2+DELTA, MADAPT, LOOK, exact_switch, LQR, FMIN; таблица файл:строка, замеры, топ-5 к переносу в v8
