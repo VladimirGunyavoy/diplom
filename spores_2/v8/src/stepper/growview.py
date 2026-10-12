@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -249,11 +249,11 @@ class GrowView:
 
     # ---- поверхность V (src/stepper/vsurf.py): V — по слоям (7/8/9), B — общий слой V* (победители по слоям); один меш на слой и тип ----
     def toggle_vsurf(s):
-        s.vmode = not s.vmode; print('[vsurf] per-layer surfaces %s' % ('on' if s.vmode else 'off'), flush=True)
+        s._auto = False; s.vmode = not s.vmode; print('[vsurf] per-layer surfaces %s' % ('on' if s.vmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
     def toggle_common(s):
-        s.cmode = not s.cmode; print('[vsurf] common V* layer %s' % ('on' if s.cmode else 'off'), flush=True)
+        s._auto = False; s.cmode = not s.cmode; print('[vsurf] common V* layer %s' % ('on' if s.cmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
     VCALC = (('v', 'V old'), ('q', 'V by Q (lin)'), ('qquad', 'V by Q (quad)'))
@@ -268,6 +268,7 @@ class GrowView:
 
     def toggle_traj(s):
         """T: траектории выкл → пол+поверхность → только пол → только поверхность → выкл (слово пользователя 2026-10-12)"""
+        s._auto = False
         if not s.tmode: s.tmode = True; s.tview = 'both'
         elif s.tview == 'surface': s.tmode = False
         else: s.tview = s.TVIEWS[s.TVIEWS.index(s.tview) + 1]
@@ -298,7 +299,7 @@ class GrowView:
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
         s._stinfo = s._stage_text(snap)
-        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode)
+        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode) and not (s._auto and snap.get('phase') != 'done')      # V и траектории включены по умолчанию (слово пользователя 2026-10-12), но показываются/считаются, только когда рост закончен (phase done: в режиме N спор — оба слоя); любая клавиша V/B/T передаёт управление пользователю
         def clear(pre, ks):
             for k in ks:
                 s._gkey.pop(pre + '@%d' % k, None)
