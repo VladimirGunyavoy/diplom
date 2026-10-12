@@ -60,12 +60,12 @@ TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ
 TRAJ_SAT = float(os.environ.get('VSURF_TRAJ_SAT', .62))                              # доля насыщенности цветов траекторий (слово пользователя 2026-10-12: «менее насыщенные»; .62 = −38%, яркость V из HSV остаётся)
 def _desat(c, k=TRAJ_SAT):
     import colorsys; h, sa, v = colorsys.rgb_to_hsv(*c); return tuple(float(x) for x in colorsys.hsv_to_rgb(h, sa * k, v))
-CTRL_COL = {1: _desat((.72, .25, 1.)), -1: _desat((1., .12, .12)), 0: (.82, .82, .86)}             # цвет управления (слово пользователя 2026-10-12): u>0 фиолетовый, u<0 красный, u=0 серо-белый; эти два цвета зарезервированы под управление
+CTRL_COL = {1: _desat((.72, .25, 1.)), -1: _desat((1., .12, .12)), 0: (.10, .66, .16)}             # цвет управления (слово пользователя 2026-10-12): u>0 фиолетовый, u<0 красный, u=0 ЗЕЛЁНЫЙ (слово пользователя 2026-10-12 ~16:25; тёмнее зелёной затравки и не бирюзовый, как очередь спор); эти два цвета зарезервированы под управление
 TRAJ_PT = float(os.environ.get('VSURF_TRAJ_PT', .5))                               # радиус точек траектории — доля радиуса точки споры
 
 
 def ctrl_color(U, alpha=1.):
-    """управления (...,) → RGBA (..., 4): u>0 фиолетовый, u<0 красный, u=0 серо-белый"""
+    """управления (...,) → RGBA (..., 4): u>0 фиолетовый, u<0 красный, u=0 зелёный"""
     U = np.asarray(U, float); out = np.empty(U.shape + (4,)); out[..., :3] = np.array(CTRL_COL[0]); out[..., :3][U > 1e-9] = CTRL_COL[1]; out[..., :3][U < -1e-9] = CTRL_COL[-1]; out[..., 3] = alpha; return out
 
 
@@ -94,18 +94,18 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
     return out_l
 
 
-def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC):
-    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → путь агента solve8 (политика look) на графе G для каждого старта.
+def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None):
+    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → путь агента solve8 на графе G (политика: policy; по умолчанию commit при расчёте по Q, иначе look) для каждого старта.
     У старта без V* путь начинается с _prephase (поток слоя до V* или до выхода за область ±(XL+GM)); вышел — status 'out_of_area' (конец — mark на границе), нашёл V* — дальше обычный агент (может дойти).
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GM, np.inf)
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GM, np.inf)
     pre = {int(i): r for i, r in zip(np.flatnonzero(~has), _prephase(G, X0[~has], box, rec=rec) if (~has).any() else [])}
     src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
     for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
     if src:
-        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES['look'])
+        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES[policy])
         ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
         Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
         for k, i in enumerate(src):

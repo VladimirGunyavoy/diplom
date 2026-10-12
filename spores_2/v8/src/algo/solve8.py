@@ -192,8 +192,30 @@ class Graph:
     def Vstar(s, X):
         Vl = s.Vlayers(X); return Vl.min(1), Vl.argmin(1)
 
-    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False, path=None, rec=5):
+    COMMIT_JS = np.array([0, 1, 2, 5, 10, 20, 40])
+
+    def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5):
+        """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent"""
+        n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s.Vlayers(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
+        if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
+        while alive.any():
+            a = np.flatnonzero(alive); u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; ar = np.arange(len(a))
+            best = np.full(len(a), np.inf); bj = np.zeros(len(a), int); bl = cur[a].copy(); qcur = None
+            for j in s.COMMIT_JS:
+                tj = j * dt; Q = s.Vlayers(np.stack([x + v * tj + u * tj * tj / 2, v + u * tj], 1))
+                if j == 0: qcur = Q[ar, cur[a]].copy()
+                Q[ar, cur[a]] = np.inf; g = tj + Q.min(1); better = g < best - 1e-12; best[better] = g[better]; bj[better] = j; bl[better] = Q.argmin(1)[better]
+            chg = (bj == 0) & np.isfinite(best) & ((best < qcur - eps) | ~np.isfinite(qcur)); lost = ~np.isfinite(best) & ~np.isfinite(qcur)
+            cur[a[chg]] = bl[chg]; sw[a[chg]] += 1; alive[a[lost]] = False; a = np.flatnonzero(alive)
+            if not len(a): break
+            u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a, 0] = x + v * dt + u * dt * dt / 2; X[a, 1] = v + u * dt; t[a] += dt; step += 1
+            hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
+            if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
+        return T, sw
+
+    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False, path=None, rec=5, commit=False):
         """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения, номер слоя = управление, действовавшее на последнем шаге) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
+        if commit: return s.run_commit(X0, tmax, dt=dt, eps=eps, path=path, rec=rec)
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
         Vl = s.Vlayers(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
         step = 0
@@ -226,7 +248,7 @@ def starts(g, n, seed):
     return np.array(out)
 
 
-POLICIES = {'base': dict(), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'look': dict(look=True)}
+POLICIES = {'base': dict(), 'dead+hold': dict(kappa=.05, vdz=.5, vhold=.3), 'look': dict(look=True), 'commit': dict(commit=True)}
 
 
 def path_extent(X, rho):
