@@ -12,7 +12,7 @@ def dyn(name, x, u):
     if name == 'pend': return ca.vertcat(x[1], ca.sin(x[0]) + u[0])
     if name == 'dd': return ca.vertcat(u[0] * ca.cos(x[2]), u[0] * ca.sin(x[2]), u[1])
     if name == 'di': return ca.vertcat(x[1], u[0])
-    if name == 'manip':
+    if name in ('manip', 'mg'):
         A, B, D = common.Manip.AA, common.Manip.BB, common.Manip.DD
         c, s = ca.cos(x[1]), ca.sin(x[1]); w1, w2 = x[2], x[3]; h = -B * s
         r1 = u[0] - h * (2 * w1 * w2 + w2 ** 2); r2 = u[1] + h * w1 ** 2
@@ -40,12 +40,12 @@ def build(e, N):
 
 def solve(e, y0, seed, N=NI, T0s=(3., 6., 10.)):
     rng = np.random.default_rng(seed); e.nf = 0; y0 = np.asarray(y0, float); opti, T, X, U, px0, ptg = build(e, N)
-    per = [i for i in range(e.n) if e.period[i] > 0]; ks = []
+    per = [i for i in range(e.n) if e.period[i] > 0]; ks = []; g0 = np.asarray(getattr(e, 'goal', np.zeros(e.n)), float)
     for i in per:
-        P = e.period[i]; ks.append([np.floor(y0[i] / P) * P, np.ceil(y0[i] / P) * P])      # две ближайшие обмотки цели
+        P = e.period[i]; ks.append([g0[i] + np.floor((y0[i] - g0[i]) / P) * P, g0[i] + np.ceil((y0[i] - g0[i]) / P) * P])      # две ближайшие обмотки цели (центр цели g0)
     best = None; nsolve = 0
     for comb in (itertools.product(*ks) if per else [()]):
-        tg = np.zeros(e.n)
+        tg = g0.copy()
         for i, v in zip(per, comb): tg[i] = v
         for T0 in T0s:
             opti.set_value(px0, y0); opti.set_value(ptg, tg); a = np.linspace(0, 1, N + 1)
