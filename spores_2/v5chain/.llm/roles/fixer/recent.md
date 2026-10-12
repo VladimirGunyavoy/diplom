@@ -1,4 +1,8 @@
 # fixer — последние смены (новые сверху)
+## 2026-10-12 вечер laptop-v5chain-fixer-1 — аккаунты ноута
+- Нумерация аккаунтов единая на хабе и ноуте (слово пользователя): 1 vladimirgun26 (ноут: `.claude`, он же `.claude-vladimirgun26` — дубль того же логина), 2 gun.vladimir26 (ноут: `.claude-gunvladimir26`, залогинен пользователем `claude auth login`), 3 romaha. Файл `~/claude-work/system/accounts/accounts.json` вне git; на хабе алиасы `machine_aliases.yoga`.
+- Токен входа в git не хранится — на новой машине аккаунт надо залогинить руками. Новая папка аккаунта: скопировать settings.json (statusLine, autoMode), в `.claude.json` — hasCompletedOnboarding + trust проектов; `move_session.py <tmux> gun|romaha|default|<путь>`.
+- pick_account: аккаунт без записей в логах опознаётся пробным запросом; выбор по max запас-в-час (romaha раньше сгорает) — для предпочтения gun/другого нужен явный флаг (не сделано).
 ## 2026-10-12 laptop-v5chain-fixer-1 (ноут GunPC/WSL, romaha)
 - WSL перезапущен пользователем 11:33, автоподъём сработал (research-3, worker-2/3, fixer, v8run). `wsl_boot.sh` теперь поднимает деку (tunnel+link) и почту (`watch-yoga` fixer-1/research-3) сам (после рестарта без терминала их не было; ждёт 15 с, чтобы .bashrc успел первым); при рестарте всё же вышли ДУБЛИ link/tunnel/почты yoga-ftl-worker-1 — убить не дали права, ждёт слова пользователя.
 - Имена агентов ноута в графане: `yoga_usage_sync.py` пишет на хаб `sid_agent-<name>.txt` живых claude (из ~/.claude*/sessions). `hub_usage_sync.py` — в cron ноута.
