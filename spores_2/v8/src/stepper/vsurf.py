@@ -60,6 +60,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
 
 
 TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 300)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
+RAIL_Z = float(os.environ.get('V8_RAIL_Z', 6.))                                              # живое проигрывание (P): «рельс» — реальная 1D-система в мировой точке (0, 0, RAIL_Z) (слово пользователя 2026-10-12)
 DLOG = os.environ.get('VSURF_DLOG', '1') != '0'                                              # журнал решений агента (traj_decisions.csv); VSURF_DLOG=0 — выкл.
 TRAJ_BATCH = int(os.environ.get('VSURF_TRAJ_BATCH', 25))                               # траектории считаются пачками по BATCH стартов; после каждой окно дорисовывает пути (0 — одним пакетом)
 TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 3)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 3))
@@ -115,13 +116,13 @@ def starts_in_cells(cl, n, seed, xlv=None):
     return np.array(out)
 
 
-def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, progress=None, cl=None, batch=None, on_batch=None):
+def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, progress=None, cl=None, batch=None, on_batch=None, starts=None):
     """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → путь агента solve8 на графе G (политика: policy; по умолчанию commit при расчёте по Q, иначе look) для каждого старта.
     У старта без V* путь начинается с _prephase (поток слоя до V* или до выхода за область ±(XL+GM)); вышел — status 'out_of_area' (конец — mark на границе), нашёл V* — дальше обычный агент (может дойти).
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed)
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = np.asarray(starts, float).reshape(-1, 2) if starts is not None else (starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed))
     if not batch or batch >= len(X0): return _agent_core(G, g, X0, rec, policy, progress, 0)
     parts = []                                                                                      # пачками (агенты независимы): after each batch on_batch(part, done, total) — окно дорисовывает путь сразу
     for lo in range(0, len(X0), batch):

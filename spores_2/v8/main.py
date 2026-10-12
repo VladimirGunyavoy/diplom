@@ -251,6 +251,8 @@ input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal 
 input_manager.bind('v', growview.toggle_vsurf, description='V surface per layer (height, colour = V)')
 input_manager.bind('y', growview.cycle_vcalc, description='V calc: old / by Q lin / by Q quad')
 input_manager.bind('t', growview.toggle_traj, description='trajectories: off / floor+surface / floor / surface')
+input_manager.bind('p', growview.live_toggle, description='play the trajectories live (again: off)')
+input_manager.bind('o', lambda: growview.live_launch(tuple(shared_context.look_point)), description='new agent from the look point (live)')
 input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers)')
 def _toggle_floor(): floor.visible_self = not floor.visible_self
 input_manager.bind('f', _toggle_floor, description='toggle floor')
@@ -279,7 +281,7 @@ update_manager.register(
 
 # ===== LOOP =====
 def update():
-    update_manager.update_all(); growview.poll()
+    update_manager.update_all(); growview.poll(); growview.live_update()
     growview.refresh()    # spore size ('1') changed -> rebuild the point discs
 
 def input(key):

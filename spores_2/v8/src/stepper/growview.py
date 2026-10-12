@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''; s._live = None; s._live_on = False; s._live_t = 0.; s._live_used = set(); s._live_tab = None; s._live_rail = None
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -356,10 +356,62 @@ class GrowView:
         for n in ('traj_floor', 'traj_surf', 'traj_pf', 'traj_ps', 'traj_mk'):
             if n in s.layers: s.layers[n].set_geometry(np.zeros((0, 3)))
 
+    # ---- живое проигрывание траекторий (P) и агент от точки взгляда (O): src/stepper/liveplay.py; в кадре дорисовываются только новые сегменты ----
+    def _live_G(s):
+        return None if s._vres is None else s._vres[3].get('G')
+
+    def _live_table(s):
+        """таблица Q (b2: Graph.build_table) в фоновом потоке при первом использовании: до готовности агент считает точным поиском (~50 мс), потом lookup (~8 мс)"""
+        G = s._live_G()
+        if G is None or getattr(G, 'tab', 1) is not None or (s._live_tab is not None and s._live_tab.is_alive()): return
+        s._live_tab = threading.Thread(target=G.build_table, daemon=True); s._live_tab.start()
+
+    def _live_clear(s):
+        z3 = np.zeros((0, 3))
+        for nm in list(s._live_used): s._layer(nm, (1., 1., 1., 1.)).set_geometry(z3)
+        s._live_used = set(); s._live_rail = None
+
+    def live_toggle(s):
+        """P: проиграть траектории (300 агентов) как анимацию; повторно — выключить и вернуть статичные"""
+        if s._live_on:
+            s._live_on = False; s._live_clear(); s._gkey.pop('traj', None); print('[live] off', flush=True)
+            if s.snap is not None: s.draw(s.snap)
+            return
+        if s._traj is None: print('[live] no trajectories yet (wait for the calculation)', flush=True); return
+        from .liveplay import LivePlay
+        s._live = LivePlay(s.ax); s._live.add(s._traj[0]); s._live_on = True; s._live_t = time.perf_counter(); s._clear_traj(); s._live_table(); print('[live] playing %d trajectories' % len(s._traj[0]['paths']), flush=True)
+
+    def live_launch(s, xv):
+        """O: агент от точки взгляда xv=(x, v) — новый старт сразу (таблица Q / точный поиск), путь раскрывается вместе с остальными"""
+        G = s._live_G()
+        if G is None or s._vres is None: print('[live] no V yet', flush=True); return
+        from .liveplay import LivePlay
+        from . import vsurf as VS
+        s._live_table(); t0 = time.perf_counter(); res = VS.agent_paths(G, cl=s._vres[2], starts=np.array([[float(xv[0]), float(xv[1])]]))
+        if not s._live_on:
+            s._live = LivePlay(s.ax); s._live_on = True; s._live_t = time.perf_counter(); s._clear_traj()
+        s._live.add(res); print('[live] agent from (%.2f, %.2f): %s, %d points, %.0f ms' % (xv[0], xv[1], res['status'][0], len(res['paths'][0]), 1e3 * (time.perf_counter() - t0)), flush=True)
+
+    def live_update(s):
+        """каждый кадр (main.update): шаг проигрывания → новые сегменты в хвостовой слот пула слоёв + головы агентов"""
+        if not s._live_on or s._live is None: return
+        now = time.perf_counter(); dt = min(now - s._live_t, .1); s._live_t = now; o = s._live.step(dt); w = (1., 1., 1., 1.); k = o['slot']; t = o['tail']
+        from . import vsurf as VS
+        if o['new'] and t['floor'] is not None:
+            for nm, arr, col, th in (('lv_ff@%d' % k, t['floor'], t['fcol'], VS.TRAJ_FW), ('lv_sf@%d' % k, t['surf'], t['scol'], VS.TRAJ_SW)):
+                s._layer(nm, w).set_geometry(arr, kind='lines', thick=th, colors=col, depth_write=False, on_top=True); s._live_used.add(nm)
+        H, HC = o['heads']; R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.) * VS.TRAJ_PT * 1.6
+        if s._live_rail is None:                                                                         # «рельс»: реальная 1D-система (x по оси x, v — скорость точки) в мировой точке (0, 0, RAIL_Z); цель |x| ≤ ρ — отрезок; масштаб x как на плоскости
+            xl = float(os.environ.get('XL', 3)) + float(os.environ.get('GMX', 3)); rho = float(os.environ.get('RHO', .2)); z = VS.RAIL_Z
+            s._layer('lv_rail', w).set_geometry(np.array([[-xl, 0, z], [xl, 0, z]], float), kind='lines', thick=3, colors=np.tile((.75, .75, .8, .9), (2, 1)), depth_write=False); s._live_used.add('lv_rail')
+            s._layer('lv_goal', w).set_geometry(np.array([[-rho, 0, z], [rho, 0, z]], float), kind='lines', thick=8, colors=np.tile((1., 1., 1., 1.), (2, 1)), depth_write=False, on_top=True); s._live_used.add('lv_goal'); s._live_rail = True
+        RP = H.copy(); RP[:, 2] = VS.RAIL_Z; D2, i2 = _discs(RP, R); s._layer('lv_pts', w).set_geometry(D2, i2, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_pts')       # по точке на агента: x(t), цвет — текущее управление
+        D, ii = _discs(H, R); s._layer('lv_head', w).set_geometry(D, ii, kind='tris', colors=np.repeat(HC, 17, axis=0) if len(HC) else None, depth_write=False, on_top=True); s._live_used.add('lv_head')
+
     def _draw_traj(s):
         """итоговые траектории (клавиша T): TRAJ_N стартов, агент solve8 (look) на графе показанного атласа считается в ФОНОВОМ потоке (UI не стоит; подпись «computing…»); готовый путь — на полу и на поверхности V*, линии и точки в цвет управления (u>0 фиолетовый, u<0 красный, u=0 серый), поверх всего"""
         from . import vsurf as VS
-        if not s.tmode: s._clear_traj(); return
+        if not s.tmode or s._live_on: s._clear_traj(); return                                                  # идёт живое проигрывание (P) — статичные траектории скрыты
         if s._traj is None:
             s._clear_traj()
             if s._tfail == s._vsig: s._tstat = 'failed (see console)'; return
