@@ -196,7 +196,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), ('[MODE: only the first goal spore per layer (layers +1/-1); off: delete v8/ONLY_GOAL]' if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), ('[GRID: FINE ETOL .0025 (L = normal)]' if growview.fine else ''), ('[MODE: only the first goal spore per layer (layers +1/-1); off: delete v8/ONLY_GOAL]' if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():
@@ -231,6 +231,14 @@ input_manager.bind('g', _seed_here, description='seed at look point')
 for _i, _key in enumerate('789'): input_manager.bind(_key, lambda i=_i: growview.toggle_layer(i), description='show/hide layer %d' % (_i + 1))
 input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal / time')
 input_manager.bind('v', growview.toggle_vsurf, description='V surface per layer (height, colour = V)')
+def _dense():
+    """L: сетка обычная / мелкая (ETOL .01 ↔ .0025; с V8_FINE_RMAX=1 ещё RMAX .5 ↔ .25), рост и этапы заново (research-4 A2)"""
+    from src.algo import growN as _g
+    growview.fine = not growview.fine; fine = growview.fine; _g.ETOL = .0025 if fine else .01
+    if os.environ.get('V8_FINE_RMAX') == '1': _g.RMAX = _g.DSMAX = .25 if fine else float(os.environ.get('RMAX', .5))
+    print('[grid] %s: ETOL %g, RMAX %g -> regrow' % ('FINE' if fine else 'normal', _g.ETOL, _g.RMAX), flush=True); _restart()
+input_manager.bind('l', _dense, description='grid density: normal / fine (ETOL .01 <-> .0025), regrow')
+input_manager.bind('j', growview.toggle_errmap, description='Q error map (first-spore mode): floor colour, crosses = V=inf nodes')
 input_manager.bind('y', growview.cycle_vcalc, description='V calc: old / by Q lin / by Q quad')
 input_manager.bind('t', growview.toggle_traj, description='trajectories: off / floor+surface / floor / surface')
 input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers)')

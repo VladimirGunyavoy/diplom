@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.emode = False; s.fine = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -280,7 +280,7 @@ class GrowView:
         return ('computed: ' if s._tfresh else 'cached: ') + s._tstat
 
     def vlabel(s):
-        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories on %s (%s)' % (s.tview, s._tlabel()), s.tmode)) if f]
+        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('Q error map (J)', s.emode), ('trajectories on %s (%s)' % (s.tview, s._tlabel()), s.tmode)) if f]
         return ('%s [%s, V %s]: %s' % (' + '.join(on), dict(s.VCALC)[s.vcalc], 'computed' if s._vfresh else 'cached', s.vinfo or 'on')) if on else ''
 
     def _vcells(s, snap):
@@ -297,14 +297,14 @@ class GrowView:
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
         s._stinfo = s._stage_text(snap)
-        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode)
+        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode or s.emode)
         def clear(pre, ks):
             for k in ks:
                 s._gkey.pop(pre + '@%d' % k, None)
                 for n in s.VNAMES:
                     if pre + n + '@%d' % k in s.layers: s.layers[pre + n + '@%d' % k].set_geometry(z3)
         ks = range(max(getattr(s, '_nk', 0), 3)); s._vfresh = False; s._mh = s._mm = 0; s.dinfo = {}
-        if not on: clear('v', ks); clear('c', ks); s._clear_traj(); return                                        # кэши V и траекторий остаются: повторное включение того же атласа/режима — без пересчёта
+        if not on: clear('v', ks); clear('c', ks); s._clear_traj(); s._draw_errmap(); return                                        # кэши V и траекторий остаются: повторное включение того же атласа/режима — без пересчёта
         cl = s._vcells(snap); sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
         if sig != s._vsig or s._vres is None:
             s._vsig = sig; hit = s._tcache.get(sig); s._traj = None if hit is None else hit[:2]; s._tstat = '' if hit is None else hit[2]; s._tfresh = False
@@ -323,7 +323,7 @@ class GrowView:
                 except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = s.tmode = False
         if s._vres is None: clear('v', ks); clear('c', ks); s._clear_traj(); return
         s.dinfo.setdefault('vcalc', 'same')
-        s._draw_traj()
+        s._draw_traj(); s._draw_errmap()
         Vs, vmax, cl, info = s._vres; layers = snap.get('layers') or (); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.)
         for pre, flag in (('v', s.vmode), ('c', s.cmode)):                                                        # v — отдельные слои (видимость 7/8/9), c — общий слой V*: победители, видимость слоя тоже по 7/8/9
             for k, u in enumerate(layers):
@@ -345,6 +345,25 @@ class GrowView:
                     arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top, fixed=None if top else 32)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)
                 Di, ii = _discs(m['inf'], R); s._layer(nm('inf'), w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
 
+    def toggle_errmap(s):
+        """J (режим «только первая спора», A1): пол раскрашен ошибкой запроса Q_u(x) − точный вход своим u на мелкой сетке внутри клеток; крестики — узлы с V=∞; числа — в статусе"""
+        s.emode = not s.emode; print('[vsurf] Q error map %s%s' % ('on' if s.emode else 'off', '' if os.environ.get('V8_ONLY_GOAL') == '1' else ' (works only in the first-spore mode: v8/ONLY_GOAL)'), flush=True)
+        if s.snap is not None: s.draw(s.snap)
+
+    def _draw_errmap(s):
+        from . import vsurf as VS
+        z3, z4 = np.zeros((0, 3)), np.zeros((0, 4)); em = None if (not s.emode or s._vres is None) else s._vres[3].get('errmap')
+        if em is None:
+            s._gkey.pop('errmap', None)
+            for n in ('qerr_tris', 'qerr_x'):
+                if n in s.layers: s.layers[n].set_geometry(z3)
+            return
+        key = (s._vsig, tuple(s.ax))
+        if s._gkey.get('errmap') == key: return
+        s._gkey['errmap'] = key; m = VS.errmap_geom(em, s.ax); w = (1., 1., 1., 1.)
+        s._layer('qerr_tris', w).set_geometry(m['verts'], m['tris'], kind='tris', colors=m['colors'], depth_write=False, on_top=True)
+        s._layer('qerr_x', w).set_geometry(m['cross'], kind='lines', thick=3, colors=np.tile((0., 0., 0., 1.), (len(m['cross']), 1)), depth_write=False, on_top=True)
+
     def _clear_traj(s):
         s._gkey.pop('traj', None)
         for n in ('traj_floor', 'traj_surf', 'traj_pf', 'traj_ps', 'traj_mk'):
@@ -357,6 +376,7 @@ class GrowView:
         if s._traj is None:
             s._clear_traj()
             if s._tfail == s._vsig: s._tstat = 'failed (see console)'; return
+            if not any(len(c) for c in s._vres[2].values()): s._tstat = 'no cells'; return
             if s._stj is None or not s._stj['th'].is_alive():
                 s._tstat = 'computing...'; job = dict(items=[dict(kind='T', calc=s._vsig[0], sig=s._vsig, cl=s._vres[2])], q=[], err=None); job['th'] = threading.Thread(target=s._stage_run, args=(job,), daemon=True); s._stj = job; job['th'].start()
             return
@@ -373,15 +393,18 @@ class GrowView:
     def _sig(s, calc, cl): return (calc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
 
     def _traj_stat(s, res, secs):
-        st = np.asarray(res['status'], object); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
-        return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs)
+        st = np.asarray(res['status'], object); fl = np.flatnonzero(st == 'failed'); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
+        return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs) + ('' if not len(fl) else '; NOT REACHED: ' + '; '.join('#%d start (%.2f,%.2f) end (%.3f,%.3f) last u=%+g, V*(end) %s' % (i, *res['X0'][i][:2], *res['paths'][i][-1][:2], res['U'][i][-1], ('%.3f' % res['V'][i][-1]) if np.isfinite(res['V'][i][-1]) and res['V'][i][-1] < 1e8 else 'inf') for i in fl[:8]))
 
-    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes%s' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'], ('' if info.get('converged', True) else ' (NOT CONVERGED, capped; known defect of the old V)') + s._qerr_text(info))
+    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes%s' % (ncells, len(info.get('layers') or {}), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'], ('' if info.get('converged', True) else ' (NOT CONVERGED, capped; known defect of the old V)') + s._qerr_text(info))
 
     @staticmethod
     def _qerr_text(info):
         q = info.get('qerr') or {}
-        return ('; Q-exact entry |err| ' + ', '.join('u=%+g max %.3f med %.3f bias %+.3f (%d nodes)' % (u, d['max'], d['med'], d['bias'], d['n']) for u, d in q.items() if d['n'])) if q else ''
+        t = ('; Q-exact entry |err| at nodes ' + ', '.join('u=%+g max %.3f med %.3f bias %+.3f (%d nodes)' % (u, d['max'], d['med'], d['bias'], d['n']) for u, d in q.items() if d['n'])) if q else ''
+        em = info.get('errmap')
+        if em: t += '; QUERY error between nodes ' + ', '.join('u=%+g med %.3f p90 %.3f max %.3f bias %+.3f (%d points, %d without value; %d/%d nodes V=inf)' % (u, d['stats']['med'], d['stats']['p90'], d['stats']['max'], d['stats']['bias'], d['stats']['points'], d['stats']['noval'], d['stats']['inf_nodes'], d['stats']['nodes']) for u, d in em.items())
+        return t
 
     def _put_v(s, sig, entry):
         if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))
