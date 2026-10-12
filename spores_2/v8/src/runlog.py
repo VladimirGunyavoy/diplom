@@ -151,6 +151,11 @@ class RunLog:
             with open(os.path.join(s.dir, 'traj_%s.csv' % mode), 'w', encoding='utf-8') as f:
                 f.write('i,x0,v0,status,left_work_area,prephase,T,switches,share_u+1,share_u-1,share_u0,end_x,end_v,T_ref,T_over_Tref,V0,V0_minus_Tref,max_V_rise,V_end,end_span,last_u,n_pts,reason\n')
                 for r in rows: f.write('%d,%.6g,%.6g,%s,%d,%d,%.6g,%d,%s\n' % (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], ','.join('%.4f' % x for x in r[8:11]) + ',' + ','.join('%.6g' % x for x in r[11:13]) + ',' + ','.join('%.6g' % x for x in r[13:21]) + ',%d,%s' % (r[21], r[22])))
+            dec = res.get('decisions')
+            if dec is not None and len(dec):                                                          # журнал решений агента по траекториям (b2: run_agent(dlog=...)): одна строка на решение
+                with open(os.path.join(s.dir, 'traj_decisions.csv'), 'w', encoding='utf-8') as f:
+                    f.write(','.join(res.get('decisions_cols') or []) + '\n')
+                    for r in np.asarray(dec, object): f.write(','.join(('%.6g' % x) if isinstance(x, (float, np.floating)) else str(x) for x in r) + '\n')
             s._append('traj_summary.jsonl', json.dumps(summ, ensure_ascii=False)); s.summary['trajs'] = [t for t in s.summary['trajs'] if t['mode'] != mode] + [summ]; s._write_summary()
         s._put(run)
 
