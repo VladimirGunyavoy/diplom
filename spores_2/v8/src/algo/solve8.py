@@ -145,10 +145,10 @@ class Graph:
         s.calc = calc
         if (calc == 'qquad') != s.quad: s.quad = calc == 'qquad'; s.prepare()                                    # геометрия переходов (e3) другая
 
-    def solve(s, maxit=2000, tol=1e-10, verbose=True):
+    def solve(s, maxit=2000, tol=1e-10, verbose=True, progress=None):
         """V (calc='v') или Q (calc='q'/'qquad': s.V = Q — запросы Vlayers/Vstar/агент идут по Q; s.Vn — V узлов = min(Q, Q чужих слоёв))"""
         if s.calc != 'v' or s.quad: s.set_calc(s.calc)
-        if s.calc != 'v': return s._solve_q(maxit, tol, verbose)
+        if s.calc != 'v': return s._solve_q(maxit, tol, verbose, progress=progress)
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
         e1 = s.e1; lev = s.rowid[e1]; order = np.argsort(-lev, kind='stable'); e1 = e1[order]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[order]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
@@ -158,12 +158,13 @@ class Graph:
             for a, b in zip(cuts[:-1], cuts[1:]):                                                                    # E1 по уровням строк сверху вниз (последняя строка → первая)
                 nodes = e1[a:b]; V[nodes] = np.minimum(V[nodes], e1c[a:b] + V[e1n[a:b]])
             d = float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max())
+            if progress is not None: progress(passes, d, V)      # progress(проход, невязка, V) — для строки прогресса
             if d < tol: break
         s.passes = passes; s.converged = d < tol; s.t_solve = time.perf_counter() - t0; s.V = V; s.Vn = V
         if verbose: print('solve8: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
-    def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None):
+    def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None):
         """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
         pen = s.pen if pen is None else pen; t0 = time.perf_counter(); V = s.V0.copy(); Q = s.V0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
@@ -176,6 +177,7 @@ class Graph:
             for a, b in zip(cuts[:-1], cuts[1:]):
                 nd = e1[a:b]; Q[nd] = np.minimum(Q[nd], e1c[a:b] + V[e1n[a:b]]); V[nd] = np.minimum(V[nd], Q[nd])
             dd = max(float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max()), float(np.abs(np.minimum(Q, BIG) - np.minimum(Qo, BIG)).max()))
+            if progress is not None: progress(passes, dd, V)
             if dd < tol: break
         s.converged = dd < tol; s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
         if verbose: print('solve8[%s]: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.calc, s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
@@ -194,8 +196,8 @@ class Graph:
 
     COMMIT_JS = np.array([0, 1, 2, 5, 10, 20, 40])
 
-    def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5):
-        """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent"""
+    def run_commit(s, X0, tmax, dt=.01, eps=1e-3, path=None, rec=5, progress=None):
+        """агент «commit» (lr3/qagent.run_commit, v5chain): идёт своим управлением и переключается, только когда лучший момент переключения — сейчас. На шаге: вдоль СВОЕГО потока точки t_j ∈ {0,1,2,5,10,20,40}·dt, g_j = t_j + min по ДРУГИМ слоям Q_u2(x(t_j)); смена слоя на argmin, если минимум g достигается при j=0 и g_0 < Q своего − eps (или Q своего не определено). Нужен расчёт по Q (set_calc('q'|'qquad')). Выход и path — как у run_agent; progress(step, живых) — вызывается каждый шаг (для строки прогресса в консоли)"""
         n = len(X0); X = X0.copy(); t = np.zeros(n); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us); Vl = s.Vlayers(X); cur = Vl.argmin(1); alive = np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn; step = 0
         if path is not None: path.append((np.arange(n), X.copy(), cur.copy()))
         while alive.any():
@@ -211,11 +213,12 @@ class Graph:
             u = uvec[cur[a]]; x, v = X[a, 0], X[a, 1]; X[a, 0] = x + v * dt + u * dt * dt / 2; X[a, 1] = v + u * dt; t[a] += dt; step += 1
             hit = np.linalg.norm(X[a], axis=1) <= s.rho; T[a[hit]] = t[a[hit]]; alive[a[hit]] = False; alive[a[t[a] > tmax[a]]] = False
             if path is not None and (step % rec == 0 or hit.any()): path.append((a, X[a].copy(), cur[a].copy()) if step % rec == 0 else (a[hit], X[a[hit]].copy(), cur[a[hit]].copy()))
+            if progress is not None: progress(step, int(alive.sum()))
         return T, sw
 
-    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False, path=None, rec=5, commit=False):
+    def run_agent(s, X0, tmax, dt=.01, eps=1e-3, kappa=0., vdz=.5, vhold=0., look=False, path=None, rec=5, commit=False, progress=None):
         """агенты параллельно: точный поток ДИ шагом dt, смена слоя при выигрыше > порога eps + kappa·max(0, vdz − V*) (мёртвая зона растёт у цели); при V* < vhold слой держится (финиш), пока текущий слой имеет конечное V. → время дохода (nan — провал), число переключений. path — список (по умолчанию None, на счёт не влияет): дописывается (номера агентов, их положения, номер слоя = управление, действовавшее на последнем шаге) начальным состоянием, каждым rec-м шагом и финальным шагом попавших в цель"""
-        if commit: return s.run_commit(X0, tmax, dt=dt, eps=eps, path=path, rec=rec)
+        if commit: return s.run_commit(X0, tmax, dt=dt, eps=eps, path=path, rec=rec, progress=progress)
         n = len(X0); X = X0.copy(); t = np.zeros(n); alive = np.ones(n, bool); T = np.full(n, np.nan); sw = np.zeros(n, int); uvec = np.array(s.us)
         Vl = s.Vlayers(X); cur = Vl.argmin(1); alive &= np.isfinite(Vl.min(1)); inn = np.linalg.norm(X, axis=1) <= s.rho; T[inn] = 0; alive &= ~inn
         step = 0
@@ -229,9 +232,12 @@ class Graph:
             if look:                                                                                         # Беллман на один шаг: слой с min V*(x после шага под этим слоем); смена слоя при выигрыше > eps
                 sc_ = np.empty((len(a), s.L))
                 for li, u_ in enumerate(uvec): xn = np.stack([X[a, 0] + X[a, 1] * dt + u_ * dt * dt / 2, X[a, 1] + u_ * dt], 1); sc_[:, li] = s.Vlayers(xn).min(1)
-                best = sc_.argmin(1); vc = sc_[np.arange(len(a)), cur[a]]; vb = sc_[np.arange(len(a)), best]; chg = (vb < vc - eps * dt) | (~np.isfinite(vc) & np.isfinite(vb)); sw[a[chg]] += 1; cur[a[chg]] = best[chg]; alive[a[~np.isfinite(vb)]] = False; continue
+                best = sc_.argmin(1); vc = sc_[np.arange(len(a)), cur[a]]; vb = sc_[np.arange(len(a)), best]; chg = (vb < vc - eps * dt) | (~np.isfinite(vc) & np.isfinite(vb)); sw[a[chg]] += 1; cur[a[chg]] = best[chg]; alive[a[~np.isfinite(vb)]] = False
+                if progress is not None: progress(step, int(alive.sum()))
+                continue
             Vl = s.Vlayers(X[a]); best = Vl.argmin(1); vc = Vl[np.arange(len(a)), cur[a]]; vb = Vl[np.arange(len(a)), best]; thr = eps + kappa * np.maximum(0., vdz - vb); chg = ((vb < vc - thr) & ~((vb < vhold) & np.isfinite(vc))) | ~np.isfinite(vc) & np.isfinite(vb)
             sw[a[chg]] += 1; cur[a[chg]] = best[chg]; lost = ~np.isfinite(vb); alive[a[lost]] = False
+            if progress is not None: progress(step, int(alive.sum()))
         return T, sw
 
 

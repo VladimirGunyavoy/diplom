@@ -24,9 +24,10 @@ def _jsonable(x):
 
 class _Tee:
     """sys.stdout-обёртка: пишет и в исходный поток, и в grow.log (буфер, flush делает фоновый поток)"""
+    _lk = threading.Lock()                                  # print из потока расчёта и из кадра окна одновременно: без замка TextIOWrapper падал (io.UnsupportedOperation: not writable)
     def __init__(s, orig, rl): s._o, s._rl = orig, rl
     def write(s, t):
-        n = s._o.write(t); s._rl._grow_write(t); return n
+        with s._lk: n = s._o.write(t); s._rl._grow_write(t); return n
     def flush(s): s._o.flush()
     def __getattr__(s, k): return getattr(s._o, k)
 

@@ -31,14 +31,14 @@ def gradient(t, alpha=ALPHA):
     out[..., 3] = alpha; return out
 
 
-def solve_layers(cells_by_u, g=None, calc='v'):
+def solve_layers(cells_by_u, g=None, calc='v', progress=None):
     """cells_by_u: {u: [cell_dict, ...]} (порядок слоёв — порядок ключей) → ({u: [V (nt, M) на клетку]}, info); calc — 'v' (старый расчёт) | 'q' | 'qquad' (solve8.Graph.set_calc; узлы показывают V = min(Q…), запросы G.Vlayers — по Q). V ≥ BIG/2 — нет пути.
     info: n, t, calc, passes, finite, vmax, layers, wins {u: [bool (nt, M)]} — узел выигрывает у остальных слоёв, goalcols {u: [bool (M,)]} — столбец входит в цель."""
     from ..algo import solve8
     g = g or solve8.load_growN()
     atlas = {u: [SimpleNamespace(G=np.asarray(c['G']), tau=np.asarray(c['tau']), r=np.asarray(c['r']), hb=int(c['hb']), nb=int(c['nb']), nf=int(c['nf'])) for c in cl] for u, cl in cells_by_u.items() if len(cl)}
     if not atlas: return {}, dict(n=0, t=0., passes=0, wins={}, goalcols={})
-    t0 = time.perf_counter(); G = solve8.make_graph(g, atlas); G.set_calc(calc); G.solve(verbose=False); t = time.perf_counter() - t0; V = G.Vn; out = {}; off = 0
+    t0 = time.perf_counter(); G = solve8.make_graph(g, atlas); G.set_calc(calc); G.solve(verbose=False, progress=progress); t = time.perf_counter() - t0; V = G.Vn; out = {}; off = 0
     Vl = G.Vlayers(G.P); Vl[np.arange(G.n), G.layer] = np.where(V < BIG / 2, V, np.inf); best = Vl.min(1)                  # свой слой — V узла (не интерполяция); победитель — первый слой в пределах eps от минимума
     wall = (np.argmax(Vl <= best[:, None] + WIN_EPS, axis=1) == G.layer) & np.isfinite(best); wins = {}; gcols = {}; rho = G.rho
     for u, cl in atlas.items():
@@ -94,7 +94,7 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
     return out_l
 
 
-def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None):
+def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, progress=None):
     """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → путь агента solve8 на графе G (политика: policy; по умолчанию commit при расчёте по Q, иначе look) для каждого старта.
     У старта без V* путь начинается с _prephase (поток слоя до V* или до выхода за область ±(XL+GM)); вышел — status 'out_of_area' (конец — mark на границе), нашёл V* — дальше обычный агент (может дойти).
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
@@ -105,7 +105,7 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None):
     src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
     for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
     if src:
-        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES[policy])
+        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, progress=progress, **solve8.POLICIES[policy])
         ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
         Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
         for k, i in enumerate(src):

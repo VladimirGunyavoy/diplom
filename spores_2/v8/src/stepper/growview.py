@@ -10,7 +10,7 @@ GrowView — рисует снимок паузы алгоритма роста 
 Рисование — по одному Scalable-объекту на слой геометрии (точки/отрезки одним мешем), поэтому
 тысячи узлов не создают тысячи Entity.
 """
-import time, threading
+import sys, time, threading
 import numpy as np
 
 HALO = .1
@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -260,7 +260,8 @@ class GrowView:
 
     def cycle_vcalc(s):
         """расчёт V для поверхностей V/B и траекторий: старый → по Q (lin) → по Q (quad); solve8.Graph.set_calc (v_kink_q.md)"""
-        ks = [k for k, _ in s.VCALC]; s.vcalc = ks[(ks.index(s.vcalc) + 1) % len(ks)]; print('[vsurf] V calc: %s' % dict(s.VCALC)[s.vcalc], flush=True)
+        ks = [k for k, _ in s.VCALC if k != 'qquad' or s._cellM() == 3]; s.vcalc = ks[(ks.index(s.vcalc) + 1) % len(ks)] if s.vcalc in ks else ks[0];      # Q quad только при M=3
+        print('[vsurf] V calc: %s' % dict(s.VCALC)[s.vcalc], flush=True)
         if s.snap is not None: s.draw(s.snap)
 
     TVIEWS = ('both', 'floor', 'surface')
@@ -295,6 +296,7 @@ class GrowView:
 
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
+        s._stinfo = s._stage_text(snap)
         z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode)
         def clear(pre, ks):
             for k in ks:
@@ -373,16 +375,111 @@ class GrowView:
             D, ii = _discs(pts if on else z3, R); s._layer(nm, w).set_geometry(D, ii, kind='tris', colors=np.repeat(col if on else z4, 17, axis=0), depth_write=False, on_top=True)
         mk = m['mk'] if (fl or sf) else z3; D, ii = _discs(mk, R * 2.4); s._layer('traj_mk', w).set_geometry(D, ii, kind='tris', colors=np.tile((1., 1., 1., 1.), (len(D), 1)), depth_write=False, on_top=True)       # белые маркеры на границе области: траектория вышла за выращенную область
 
+    def _sig(s, calc, cl): return (calc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
+
+    def _traj_stat(s, res, secs):
+        st = np.asarray(res['status'], object); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
+        return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs)
+
+    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
+
+    def _put_v(s, sig, entry):
+        if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))
+        s._vcache[sig] = entry
+
+    def _put_t(s, sig, entry):
+        if len(s._tcache) >= 8: s._tcache.pop(next(iter(s._tcache)))
+        s._tcache[sig] = entry
+
+    # ---- этапы после роста (слово пользователя 2026-10-12 ~16:35): расчёты V всех вариантов и траектории каждого; ЛКМ — следующий этап (пауза между ними, видно промежуточное), ПКМ — все оставшиеся подряд ----
+    def _cellM(s):
+        cl = s._vcells(s.snap) if s.snap is not None else {}
+        return int(np.shape(next(iter(cl.values()))[0]['G'])[1]) if cl else 0
+
+    def stage_todo(s, snap):
+        """список ещё не посчитанных этапов (dict kind 'V'|'T', calc, sig, cl) — только когда рост закончен (phase done); готовое лежит в кэшах _vcache/_tcache; Q quad — только при M=3"""
+        if snap is None or snap.get('phase') != 'done': return []
+        cl = s._vcells(snap)
+        if not cl: return []
+        M = int(np.shape(next(iter(cl.values()))[0]['G'])[1]); out = []
+        for calc, _ in s.VCALC:
+            if calc == 'qquad' and M != 3: continue
+            sig = s._sig(calc, cl)
+            if sig not in s._vcache: out.append(dict(kind='V', calc=calc, sig=sig, cl=cl))
+            if sig not in s._tcache: out.append(dict(kind='T', calc=calc, sig=sig, cl=cl))
+        return out
+
+    def stage_next(s, snap, all_=False):
+        """запустить следующий этап (all_ — все оставшиеся подряд) в фоновом потоке; → True, если что-то было запущено/идёт"""
+        if s._stj is not None and s._stj['th'].is_alive(): print('[calc] a stage is still running: %s' % s._prog, flush=True); return True
+        todo = s.stage_todo(snap)
+        if not todo: print('[calc] all stages done', flush=True); s._stinfo = ''; return False
+        items = todo if all_ else todo[:1]; job = dict(items=items, q=[], err=None, left=len(todo)); job['th'] = threading.Thread(target=s._stage_run, args=(job,), daemon=True); s._stj = job; job['th'].start(); return True
+
+    def _stage_run(s, job):
+        from . import vsurf as VS
+        names = dict(s.VCALC); n = len(job['items']); Gby = {}
+        sys.setswitchinterval(5e-4)      # поток счёта чаще получает GIL у кадров окна (иначе траектории ~2 мин)
+        try:
+            for i, it in enumerate(job['items']):
+                kind, calc = it['kind'], it['calc']; tag = '[calc] %d/%d %s %s' % (i + 1, n, names[calc], 'V' if kind == 'V' else 'trajectories'); t0 = time.perf_counter(); last = [t0]
+                def say(msg, force=False):
+                    now = time.perf_counter()
+                    if force or now - last[0] >= 1.:
+                        last[0] = now; s._prog = '%s: %s, %.1f s' % (tag, msg, now - t0); print(s._prog, flush=True)
+                say('start', True)
+                if kind == 'V':
+                    Vs, info = VS.solve_layers(it['cl'], calc=calc, progress=lambda p, d, V: say('pass %d, residual %.1e, finite nodes %.0f%%' % (p, d, 100 * float((V < VS.BIG / 2).mean()))))
+                    secs = time.perf_counter() - t0; Gby[it['sig']] = info['G']; job['q'].append(('V', it, (Vs, VS.vscale(Vs), it['cl'], info), secs))
+                    say('done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s' % (info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t']), True)
+                else:
+                    G = Gby.get(it['sig']) or s._vcache[it['sig']][0][3]['G']
+                    res = VS.agent_paths(G, progress=lambda step, alive: say('agents in flight %d of %d, step %d (t=%.2f)' % (alive, VS.TRAJ_N, step, step * .01)))
+                    secs = time.perf_counter() - t0; job['q'].append(('T', it, res, secs)); say('done: ' + s._traj_stat(res, secs), True)
+        except Exception as e:
+            job['err'] = repr(e); print('[calc] stage failed: %s' % job['err'], flush=True)
+
+    def _stage_adopt(s, ev):
+        from . import vsurf as VS
+        kind, it, payload, secs = ev; sig = it['sig']
+        if kind == 'V':
+            vinfo = s._vstat(payload[3], sum(len(c) for c in it['cl'].values())); s._put_v(sig, (payload, vinfo))
+            if s.runlog is not None: s.runlog.vcalc(it['calc'], payload[3], sum(len(c) for c in it['cl'].values()), secs)
+        else:
+            stat = s._traj_stat(payload, secs); s._put_t(sig, (payload, VS.traj_geom(payload, s.ax), stat))
+            if s.runlog is not None: s.runlog.traj(it['calc'], payload, secs)
+            if sig == s._vsig: s._traj = s._tcache[sig][:2]; s._tstat = stat; s._tfresh = True
+
+    def stage_label(s):
+        """строка статуса окна про этапы: идёт (прогресс) / что дальше"""
+        j = s._stj
+        if j is not None and j['th'].is_alive(): return s._prog
+        return s._stinfo
+
+    def _stage_text(s, snap):
+        todo = s.stage_todo(snap)
+        if not todo: return ''
+        names = dict(s.VCALC); t = todo[0]
+        return 'calc stages left %d: next %s %s - LMB one stage, RMB all' % (len(todo), names[t['calc']], 'V' if t['kind'] == 'V' else 'trajectories')
+
     def poll(s):
-        """каждый кадр (main.update): готов ли фоновый расчёт траекторий → нарисовать"""
+        """каждый кадр (main.update): готов ли фоновый расчёт (траектории по T или этапы) → в кэш и нарисовать"""
+        sj = s._stj
+        if sj is not None:
+            ev = sj['q'][:]; del sj['q'][:len(ev)]
+            for e in ev: s._stage_adopt(e)
+            if not sj['th'].is_alive():
+                s._stj = None; s._prog = ''; ev2 = sj['q'][:]; del sj['q'][:]
+                for e in ev2: s._stage_adopt(e)
+                ev = ev + ev2
+            if ev or s._stj is None: s._stinfo = s._stage_text(s.snap); s.draw(s.snap)
         j = s._tjob
         if j is None or j['th'].is_alive(): return
         s._tjob = None
         if j['err']: s._tstat = 'failed: ' + j['err']; print('[vsurf] trajectories ' + s._tstat, flush=True); s.draw(s.snap); return
         from . import vsurf as VS
-        res = j['res']; st = np.asarray(res['status'], object); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']; stat = '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., time.perf_counter() - j['t0'])
-        if len(s._tcache) >= 8: s._tcache.pop(next(iter(s._tcache)))
-        s._tcache[j['sig']] = (res, VS.traj_geom(res, s.ax), stat); print('[vsurf] trajectories computed: ' + stat, flush=True)
+        res = j['res']; stat = s._traj_stat(res, time.perf_counter() - j['t0'])
+        s._put_t(j['sig'], (res, VS.traj_geom(res, s.ax), stat)); print('[vsurf] trajectories computed: ' + stat, flush=True)
         if s.runlog is not None: s.runlog.traj(j['sig'][0], res, time.perf_counter() - j['t0'])       # в кэш — даже если атлас/режим уже сменились (вернётся — не пересчитывать)
         if j['sig'] == s._vsig: s._traj = s._tcache[j['sig']][:2]; s._tstat = stat; s._tfresh = True
         s.draw(s.snap)

@@ -159,6 +159,7 @@ if runlog is not None: runlog.params(extra=dict(layers=list(getattr(stepper, 'la
 growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first seed) is visible right at start
 
 def _step(k):
+    if k in ('N', 'M', 'C') and getattr(stepper, 'done', False) and growview.stage_todo(stepper.snapshot): growview.stage_next(stepper.snapshot); return      # рост закончен: ЛКМ/N — следующий этап расчётов (V всех вариантов, траектории)
     t0 = time.perf_counter(); stepper.key(k); growview.draw(stepper.snapshot)
     print(f"[stepper] {k}: {stepper.snapshot and stepper.snapshot.get('phase')}  {1e3 * (time.perf_counter() - t0):.1f} ms")
 
@@ -182,6 +183,7 @@ def _finer():
     else: _step('N')
 
 def _up():
+    if getattr(stepper, 'done', False) and growview.stage_todo(stepper.snapshot): growview.stage_next(stepper.snapshot, all_=True); return      # ПКМ после роста — все оставшиеся этапы подряд
     if hasattr(stepper, 'up'): t0 = time.perf_counter(); stepper.up(); growview.draw(stepper.snapshot); print('[stepper] up: step=%s  %s  %.1f ms' % (stepper.depth_name, stepper.snapshot and stepper.snapshot.get('phase'), 1e3 * (time.perf_counter() - t0)))
     else: _step('C')
 
@@ -194,7 +196,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():
