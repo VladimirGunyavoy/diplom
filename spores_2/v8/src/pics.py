@@ -6,7 +6,7 @@
 import os, glob, shutil, datetime
 import numpy as np
 
-UCOL = {1: '#b04dff', -1: '#e63030', 0: '#1aa82a'}            # управление: +1 фиолетовый, −1 красный, 0 зелёный (как в окне)
+UCOL = {1: '#e63030', -1: '#b04dff', 0: '#1aa82a'}            # управление: +1 красный, −1 фиолетовый, 0 зелёный (как в окне)
 
 
 def new_experiment(root):
@@ -76,7 +76,7 @@ def error_map(G, dirs, calc):
 
 
 def traj_png(G, res, dirs, calc, stat=''):
-    """V* фоном + пути агента, цвет по управлению (+1 фиолетовый, −1 красный, 0 зелёный), старты точками"""
+    """V* фоном + пути агента, цвет по управлению (+1 красный, −1 фиолетовый, 0 зелёный), старты точками"""
     from matplotlib.collections import LineCollection
     plt = _plt(); xs, vs, X, V = _grid(G); fig, ax = plt.subplots(figsize=(8.8, 5.8)); p = ax.pcolormesh(xs, vs, V, cmap='YlGnBu_r', shading='auto', alpha=.8); plt.colorbar(p, ax=ax, label='V*, s'); segs, cols = [], []
     for P, U in zip(res['paths'], res['U']):
