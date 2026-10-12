@@ -335,3 +335,4 @@ hub-v5chain-worker-b9 | started | acc2 | sonnet | 22:52:22
 hub-v5chain-worker-c2 | done | ctx 27% | bench: таблицы 4 сред + CA1 ddobst/car + план CA4 | next=hub-v5chain-worker-c3 | 22:53:29
 hub-v5chain-worker-c3 | started | acc1 | sonnet | 22:54:15
 laptop-v5chain-worker-8 | started | acc3 | sonnet | 22:41:36
+hub-v5chain-worker-b9 | order | SPD1→FORB→RACE→SPD2/3 (слово пользователя через research-25) | 23:17:21
