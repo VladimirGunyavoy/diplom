@@ -15,3 +15,7 @@
 - Токены ноута не доходили до хаба: cron-синк смотрел в старый repo colab; починен, залито 2139 строк; statusLine в .claude-romaha/.claude-vladimirgun26 указывал на /home/rl.
 - Дека: после переноса сессии между аккаунтами две копии транскрипта → дека читала старую; `move_session.py` убирает старую в `~/.claude-migrated-backup/`.
 - Сторож токенов — по слову пользователя НЕ делаем (пульс/диспатчер); снят.
+
+## fixer-2 (2026-10-12 ~17:00, acc gun.vladimir26)
+- A: pulse.py печатает «АВТОНОМНЫЙ РЕЖИМ…» при journals/_sentinel/AUTONOMOUS; account_watchdog — argparse (--help безопасен); pick_account.role_rate: конфиг → пересчёт из логов (медиана $/ч роли × %5ч/$ аккаунта) → таблица, + dispatcher/explainer (по логу сейчас worker≈12, research≈24 %/ч — проверить адекватность).
+- B: yoga_usage_sync (fixer-1) уже в git; move_session сам добавляет неизвестные hop-* в agents.json. Дубль папки: .claude и .claude-vladimirgun26 — один email, но РАЗНЫЕ копии .credentials.json (риск рассинхрона refresh-токенов) — предложено пользователю оставить одну; не удалял.
