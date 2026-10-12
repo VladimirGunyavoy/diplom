@@ -322,3 +322,4 @@ hub-v5chain-research-25 | CHAIN_STOPPED снят | пак хаба (research-25,
 hub-v5chain-research-25 | line-open | worker A | бенч линии C, среды пожирнее (PLAN [A] CA1–CA3); слово пользователя 19:45 через research-5 «чем больше, тем лучше» | 19:46:09
 hub-v5chain-research-25 | line-open | worker B | бенч линии C, PPO/SAC по всем средам (PLAN [B] CB1–CB2) | 19:46:09
 hub-v5chain-research-25 | line-close | worker A, worker B | поправка пользователя 19:46 через research-5 «лишних воркеров НЕ поднимать — у линии C один воркер c1»; worker-27 и worker-b9 подняты в 19:46:25 (поправка дошла позже) и сразу погашены, ничего не сделали; их задачи (CA/CB) — в очередь c1 | 19:46:49
+laptop-v5chain-worker-b1 | done | ctx 31% | линия laptop-B: зона/GOALW/SEEDNEAR/refine+бисекция (SOLVE8_PLUS); хендофф b/HANDOFF_laptop.md | next=laptop-v5chain-worker-b2 (поднимает research-5) | 19:58:16
