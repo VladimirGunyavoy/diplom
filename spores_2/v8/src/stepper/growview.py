@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s._traj = None; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -253,8 +253,12 @@ class GrowView:
         s.cmode = not s.cmode; print('[vsurf] common V* layer %s' % ('on' if s.cmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
+    def toggle_traj(s):
+        s.tmode = not s.tmode; print('[vsurf] final trajectories %s' % ('on' if s.tmode else 'off'), flush=True)
+        if s.snap is not None: s.draw(s.snap)
+
     def vlabel(s):
-        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode)) if f]
+        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories', s.tmode)) if f]
         return ('%s: %s' % (' + '.join(on), s.vinfo or 'on')) if on else ''
 
     def _vcells(s, snap):
@@ -270,22 +274,23 @@ class GrowView:
 
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
-        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode)
+        z3 = np.zeros((0, 3)); on = snap is not None and (s.vmode or s.cmode or s.tmode)
         def clear(pre, ks):
             for k in ks:
                 for n in s.VNAMES:
                     if pre + n + '@%d' % k in s.layers: s.layers[pre + n + '@%d' % k].set_geometry(z3)
         ks = range(max(getattr(s, '_nk', 0), 3))
-        if not on: clear('v', ks); clear('c', ks); s._vsig = None; return
+        if not on: clear('v', ks); clear('c', ks); s._clear_traj(); s._vsig = None; s._traj = None; return
         cl = s._vcells(snap); sig = tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
         if sig != s._vsig:
-            s._vsig = sig; s._vres = None
+            s._vsig = sig; s._vres = None; s._traj = None
             try:
                 t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl); s._vres = (Vs, VS.vscale(Vs), cl, info)
                 s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'])
                 print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
-            except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = False
-        if s._vres is None: clear('v', ks); clear('c', ks); return
+            except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = s.tmode = False
+        if s._vres is None: clear('v', ks); clear('c', ks); s._clear_traj(); return
+        s._draw_traj()
         Vs, vmax, cl, info = s._vres; layers = snap.get('layers') or (); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.)
         for pre, flag in (('v', s.vmode), ('c', s.cmode)):                                                        # v — отдельные слои (видимость 7/8/9), c — общий слой V*: победители, видимость слоя тоже по 7/8/9
             for k, u in enumerate(layers):
@@ -299,6 +304,21 @@ class GrowView:
                 for t, a_, th, col, top in (('long', VS.LONG_A, VS.LONG_W, lc, False), ('cross', VS.CROSS_A, VS.CROSS_W, lc, False), ('cen', VS.CENTER_A, VS.CENTER_W, lc, False), ('goal', VS.GOAL_A, VS.GOAL_SIDE_W, (1., 1., 1.), True), ('gcen', VS.GOAL_A, VS.GOAL_W, (1., 1., 1.), True)):
                     arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top, fixed=None if top else 32)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)
                 Di, ii = _discs(m['inf'], R); s._layer(nm('inf'), w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
+
+    def _clear_traj(s):
+        for n in ('traj_floor', 'traj_surf'):
+            if n in s.layers: s.layers[n].set_geometry(np.zeros((0, 3)))
+
+    def _draw_traj(s):
+        """итоговые траектории (клавиша T): TRAJ_N стартов, агент solve8 (политика look) на графе показанного атласа; путь на полу и на поверхности V* (считается один раз на атлас)"""
+        from . import vsurf as VS
+        if not s.tmode: s._clear_traj(); return
+        if s._traj is None:
+            t0 = time.perf_counter(); res = VS.agent_paths(s._vres[3]['G']); ok = np.isfinite(res['T']); s._traj = (res, VS.traj_geom(res, s.ax))
+            print('[vsurf] trajectories: %d starts, reached %d, T median %.2f, switches mean %.1f, %.1f s' % (len(res['paths']), int(ok.sum()), float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'].mean()), time.perf_counter() - t0), flush=True)
+        (fl, sf) = s._traj[1]; w = (1., 1., 1., 1.)
+        s._layer('traj_floor', w).set_geometry(fl, kind='lines', thick=VS.TRAJ_FW, colors=np.tile((.55, .95, 1., VS.TRAJ_A), (len(fl), 1)), depth_write=False)
+        s._layer('traj_surf', w).set_geometry(sf, kind='lines', thick=VS.TRAJ_SW, colors=np.tile((1., .9, .2, 1.), (len(sf), 1)), depth_write=False, on_top=True)
 
     def _box(s, extra):
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""

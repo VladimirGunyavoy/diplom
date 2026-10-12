@@ -50,7 +50,30 @@ def solve_layers(cells_by_u, g=None):
             gcols[u].append(inn.any(0) | np.isfinite(te.reshape(nt - 1, M)).any(0))
     assert off == G.n
     fin = V < BIG / 2
-    return out, dict(n=int(G.n), t=t, passes=int(G.passes), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
+    return out, dict(G=G, n=int(G.n), t=t, passes=int(G.passes), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
+
+
+TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 100)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 5))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
+TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', .85)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 2)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 2))
+
+
+def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC):
+    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → агент solve8 по политике look (POLICIES['look']) на графе G → dict: paths [(K, N) положения], V [(K,) V*(x) = min по слоям], T (n,) время до цели (nan — провал), sw (n,) переключения"""
+    from ..algo import solve8
+    g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); Tr, _ = solve8.t_ref(X0); path = []; T, sw = G.run_agent(X0, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES['look'])
+    ids = np.concatenate([a for a, _ in path]); P = np.concatenate([x for _, x in path]); order = np.argsort(ids, kind='stable'); ids, P = ids[order], P[order]       # внутри агента порядок записи сохранён (stable)
+    Vst = G.Vlayers(P).min(1); cut = np.flatnonzero(np.diff(ids)) + 1
+    return dict(paths=np.split(P, cut), V=np.split(Vst, cut), T=T, sw=sw, X0=X0)
+
+
+def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
+    """траектории → (floor (2E, 3), surf (2E', 3)) пары вершин для линий: на полу (y = y0) и на поверхности V* (y = V*·h + lift; сегмент с V* = ∞ — нет)"""
+    F, S = [], []
+    for P, V in zip(res['paths'], res['V']):
+        if len(P) < 2: continue
+        f = np.zeros((len(P), 3)); f[:, 0] = P[:, ax[0]]; f[:, 2] = P[:, ax[1]]; f[:, 1] = y0; F.append(np.stack([f[:-1], f[1:]], 1).reshape(-1, 3))
+        ok = np.isfinite(V) & (V < BIG / 2); q = f.copy(); q[:, 1] = np.where(ok, V, 0.) * h + lift; e = ok[:-1] & ok[1:]; S.append(np.stack([q[:-1][e], q[1:][e]], 1).reshape(-1, 3))
+    z = np.zeros((0, 3)); return (np.concatenate(F) if F else z), (np.concatenate(S) if S else z)
 
 
 def vscale(Vs_u, q=99.):

@@ -93,3 +93,15 @@ def test_time_skeleton():
         assert np.array_equal(m0['verts'], m1['verts']) and np.array_equal(m0['pts'], m1['pts']) and len(m1['long']) > 0 and len(m1['cross']) > 0 and len(m1['center']) > 0
         assert (m1['long'][:, 1] <= vmax * 100 * VS.VH + 1).all() and not np.array_equal(m0['long'], m1['long']); nl += len(m1['long'])
     assert nhit > 0 and nl > 0
+
+
+def test_agent_paths():
+    """100 стартов, агент look: путь записан, начинается в старте, V* на пути конечно и убывает к цели; run_agent с path и без — те же T"""
+    import time; from src.algo import solve8, growN as g
+    A = _atlas(); Vs, info = VS.solve_layers(A); G = info['G']; t0 = time.perf_counter(); res = VS.agent_paths(G, n=100); dt = time.perf_counter() - t0
+    assert len(res['paths']) == 100 and np.isfinite(res['T']).mean() > .8, np.isfinite(res['T']).mean()
+    assert all(np.allclose(P[0], x0) for P, x0 in zip(res['paths'], res['X0'])) and all(len(P) == len(V) for P, V in zip(res['paths'], res['V']))
+    ok = np.isfinite(res['T']); assert all(np.linalg.norm(P[-1]) <= G.rho + .02 for P, o in zip(res['paths'], ok) if o), 'reached ends in goal'
+    Vf = [V[np.isfinite(V)] for V in res['V']]; assert np.mean([v[0] >= v[-1] - 1e-6 for v in Vf if len(v)]) > .95
+    Tr, _ = solve8.t_ref(res['X0']); T2, sw2 = G.run_agent(res['X0'], 3 * Tr + 2, **solve8.POLICIES['look']); assert np.array_equal(np.nan_to_num(T2, nan=-1), np.nan_to_num(res['T'], nan=-1)) and (sw2 == res['sw']).all()
+    fl, sf = VS.traj_geom(res); assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01); print('agent_paths %.1f s, reached %.2f, floor %d, surf %d' % (dt, ok.mean(), len(fl), len(sf)))

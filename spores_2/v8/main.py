@@ -222,6 +222,7 @@ input_manager.bind('g', _seed_here, description='seed at look point')
 for _i, _key in enumerate('789'): input_manager.bind(_key, lambda i=_i: growview.toggle_layer(i), description='show/hide layer %d' % (_i + 1))
 input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal / time')
 input_manager.bind('v', growview.toggle_vsurf, description='V surface (solve8 on the current atlas): height and colour = V; 7/8/9 layers')
+input_manager.bind('t', growview.toggle_traj, description='final trajectories: 100 random starts, solve8 agent (look); path on the floor and on the V* surface')
 input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers; skeleton in the winner layer colour)')
 def _toggle_floor(): floor.visible_self = not floor.visible_self
 input_manager.bind('f', _toggle_floor, description='toggle floor')
