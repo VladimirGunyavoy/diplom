@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -430,7 +430,7 @@ class GrowView:
         names = dict(s.VCALC); items = job['items']; n = len(items); tag = lambda i: '[calc] %d/%d %s %s' % (i + 1, n, names[items[i]['calc']], 'V' if items[i]['kind'] == 'V' else 'trajectories')
         try:
             p = subprocess.Popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'calc_worker.py')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=os.environ.copy()); job['proc'] = p
-            pickle.dump([(it['kind'], it['calc'], it['cl']) for it in items], p.stdin, protocol=4); p.stdin.close()
+            pickle.dump(dict(items=[(it['kind'], it['calc'], it['cl']) for it in items], pics=list(s.pics_dirs)), p.stdin, protocol=4); p.stdin.close()
             while True:
                 try: m = pickle.load(p.stdout)
                 except EOFError: break
@@ -439,6 +439,8 @@ class GrowView:
                     it = items[m[1]]; info = m[2][1]; job['q'].append(('V', it, (m[2][0], VS.vscale(m[2][0]), it['cl'], info), m[3]))
                     print('%s: done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s, %.1f s%s' % (tag(m[1]), info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t'], m[3], s._qerr_text(info)), flush=True)
                 elif m[0] == 'T': job['q'].append(('T', items[m[1]], m[2], m[3])); print('%s: done: %s' % (tag(m[1]), s._traj_stat(m[2], m[3])), flush=True)
+                elif m[0] == 'pics':
+                    s._pics_note = '%s (%s)' % (s.pics_dirs[0] if s.pics_dirs else '?', time.strftime('%H:%M:%S')); print('[pics] %s -> %s  (%.1f s)' % (m[2], ', '.join(s.pics_dirs), m[3]), flush=True)
                 elif m[0] == 'err': job['err'] = m[2]; print('[calc] stage failed: %s' % m[2], flush=True); break
             p.wait()
             if p.returncode and not job['err']: job['err'] = 'worker exit code %s' % p.returncode; print('[calc] stage failed: ' + job['err'], flush=True)
@@ -515,6 +517,10 @@ class GrowView:
 
     def retransform(s):
         """после зума/сдвига камеры ZoomManager сам вызывает apply_transform у зарегистрированных объектов — отдельно не нужно."""
+
+    def pics_label(s):
+        """строка статуса: куда пишутся картинки прогона (и когда обновлены)"""
+        return ('pics: ' + (s._pics_note or ('%s (waiting for the first stage)' % s.pics_dirs[0]))) if s.pics_dirs else ''
 
     def field_text(s):
         """размеры поля в статусе: рабочая зона ±XLV и граница роста ±(XLV+GM) по осям x, v"""

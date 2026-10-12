@@ -155,6 +155,12 @@ except ImportError as e_:
     from src.stepper.demo import DemoStepper
     stepper = DemoStepper(seed=(0., 0.))
 growview = GrowView(zoom_manager, ax=(0, 1), spore_manager=spore_manager); growview.runlog = runlog
+try:                                                                  # картинки прогона: папка эксперимента этого запуска (projects/spore/img/<дата>/expNNN + last_exp), печать пути
+    from src import pics as _pics
+    _exp, growview.pics_dirs = _pics.new_experiment(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'img')))
+    open(os.path.join(_exp, 'run.txt'), 'w', encoding='utf-8').write('started %s\nenv: %s\n' % (time.strftime('%F %T'), {k: v for k, v in sorted(os.environ.items()) if k in ('SYS', 'M', 'MAXC', 'V8_MAXCELLS', 'V8_ONLY_GOAL', 'XL', 'VL', 'GMX', 'KF', 'DELTA', 'RMAX', 'ETOL', 'COMMIT_EVERY')}))
+    print('[pics] experiment folder: %s ; pictures are redrawn here after every finished stage: %s' % (_exp, ', '.join(growview.pics_dirs)), flush=True)
+except Exception as _e: print('[pics] disabled: %r' % (_e,), flush=True)
 if runlog is not None: runlog.params(extra=dict(layers=list(getattr(stepper, 'layers', ())), stepper=type(stepper).__name__))
 growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first seed) is visible right at start
 
@@ -208,7 +214,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), growview.field_text(), ('[MODE: first %s spores per layer (layers +1/-1); LMB after the stages adds one more spore per layer; off: delete v8/ONLY_GOAL]' % os.environ.get('V8_MAXCELLS', '1') if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), growview.field_text(), growview.pics_label(), ('[MODE: first %s spores per layer (layers +1/-1); LMB after the stages adds one more spore per layer; off: delete v8/ONLY_GOAL]' % os.environ.get('V8_MAXCELLS', '1') if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():

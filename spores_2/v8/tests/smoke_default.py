@@ -16,4 +16,5 @@ while (G._traj is None) and time.time() - t0 < 200: M.app.step(); G.poll(); time
 print('VLABEL', G.vlabel()[:200], '| vres', G._vres is not None, 'traj', G._traj is not None)
 for _ in range(3): M.app.step(); G.poll()
 print('shot', ursina.application.base.win.save_screenshot(Filename.from_os_specific(r'C:\GitHub\claude-work\projects\spore\spores_2\v8\reports\default_on.png')))
+time.sleep(25)
 print('SMOKE OK')
