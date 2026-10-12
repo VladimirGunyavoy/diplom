@@ -11,7 +11,7 @@ import os, sys, time, json, argparse
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..')
-ENV = dict(SYS='di', M='3', KF='21', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2')     # как live.py (без MAXC: слой растёт до покрытия)
+ENV = dict(SYS='di', M='3', XL='3', VL='2.5', GMX='3', KF='21', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2')     # как live.py (без MAXC: слой растёт до покрытия)
 BIG = 1e9
 
 
@@ -319,7 +319,7 @@ def scenario(a):
 def one_mode(a, g, G, atlas, X0, Tr, mx, src, tg, t_grow, q):
     layers = [float(x) for x in a.layers.split(',')]
     t1 = time.perf_counter(); Vs, us = G.Vstar(X0); t_q = (time.perf_counter() - t1) / len(X0) * 1e3
-    inside = {'xl': mx <= float(g.XLV[0]), 'xl+gm': mx <= float(g.XLV[0]) + g.GM}; vm = np.isfinite(Vs); vr = Vs[vm] / Tr[vm]
+    inside = {'xl': mx <= float(g.XLV[0]), 'xl+gm': mx <= float(g.XLV[0]) + float(g.GMV[0])}; vm = np.isfinite(Vs); vr = Vs[vm] / Tr[vm]
     pols = {}; pol_names = list(POLICIES)
     for pn in pol_names:
         t1 = time.perf_counter(); T, sw = G.run_agent(X0, 3 * Tr + 2, **POLICIES[pn]); ms = (time.perf_counter() - t1) / len(X0) * 1e3; ok = np.isfinite(T); r = T[ok] / Tr[ok]

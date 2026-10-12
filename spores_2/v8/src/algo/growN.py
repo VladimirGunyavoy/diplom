@@ -39,7 +39,7 @@ elif SYS == 'manip':
     def Bq(y):
         c = np.cos(y[1]); m11, m12, m22 = AA + 2 * BB * c, DD + BB * c, DD; det = m11 * m22 - m12 ** 2; Mi = np.array([[m22, -m12], [-m12, m11]]) / det; Bm = np.zeros((4, 2)); Bm[2:] = Mi; return Bm @ Bm.T
 elif SYS == 'di':                                                                                           # v8 (п.49): двойной интегратор 2D, ẋ = v, v̇ = u, |u| ≤ 1; слои u = ±1
-    N = 2; PERIOD = np.zeros(2); RHO = float(E('RHO', .05)); RHOV = np.full(2, RHO); XL = float(E('XL', 2.5)); XLV = np.full(2, XL); US = (-1., 1.)
+    N = 2; PERIOD = np.zeros(2); RHO = float(E('RHO', .05)); RHOV = np.full(2, RHO); XL = float(E('XL', 2.5)); VL = float(E('VL', XL)); XLV = np.array([XL, VL]); US = (-1., 1.)     # рабочая зона по x и по v раздельно (VL по умолч. = XL)
     def f(y, u): r = np.empty(np.shape(y)); r[..., 0] = y[..., 1]; r[..., 1] = u; return r
     def Bq(y): return np.array([[0, 0], [0, 1.]])
 elif SYS == 'di4':                                                                                          # w22 (PLAN п.24): двойной интегратор по двум осям, ẍ₁ = u₁, ẍ₂ = u₂, |uᵢ| ≤ 1; состояние (x₁, x₂, v₁, v₂)
@@ -138,8 +138,8 @@ LAZYR = int(E('LAZYR', 1)); NFPAD = int(E('NFPAD', 4)); NFROWS = int(E('NFROWS',
 ADAPT = int(E('ADAPT', 1 if (SYS == 'di' and NORMFRONT != 2) else 0)); ETOL = float(E('ETOL', .01)); HMIN = float(E('HMIN', DTN)); HMAX = float(E('HMAX', 1.)); DSMAX = float(E('DSMAX', RMAX))      # адаптивный шаг строки: h = sqrt(8·ETOL·RMAX/|a|) (a = J·f — ускорение вдоль траектории), ≤ DSMAX/|f|, в [HMIN, HMAX]
 ZSOFT = float(E('ZSOFT', 0.)); ZSOFTLA = int(E('ZSOFTLA', 0))                                                                       # softmin-нахлёст (слово пользователя 2026-10-12): >0 — сторона при st==2 растёт дальше, пока заход в ядро соседа от первого касания < ZSOFT·h, h = 2·w1·w2/(w1+w2) (w1 — ширина ядра своей клетки, w2 — задетого соседа; несколько — min); ветка ZOVMAX тогда выключена. ZSOFTLA=1 — смотреть на шаг вперёд: растём, только если заход ПОСЛЕ шага ≤ ZSOFT·h (без: минимум один шаг сетки после касания)
 TAUMIN = float(E('TAUMIN', .3)); ZOVMAX = float(E('ZOVMAX', .3)); ZFRAC = float(E('ZFRAC', .5)); ZSEED = float(E('ZSEED', 1 + HALO + .02))        # зацеп: затравки соседям — сразу за гало клетки (ZSEED·r от центра по бокам, hf+2 строк за торцем)
-GM = float(E('GM', 1. if SYS == 'di' else 0.)); RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
-def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
+GM = float(E('GM', 1. if SYS == 'di' else 0.)); GMV = np.full(N, GM); GMV[0] = float(E('GMX', GM)) if SYS == 'di' else GM; RMINZ = float(E('RMINZ', .1)); ROWSMIN = int(E('ROWSMIN', 5)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', .003 if SYS == 'di' else 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 1000 if SYS == 'di' else 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
+def inbox_g(y): return (np.abs(y[..., _FL]) <= XLV[_FL] + GMV[_FL]).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
     A = sg * A; Ph = np.eye(N) + h * A + h * h / 2 * A @ A

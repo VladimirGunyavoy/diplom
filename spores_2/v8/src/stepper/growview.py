@@ -511,7 +511,7 @@ class GrowView:
     def _box(s, extra):
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
         from ..algo import growN as G
-        a, b = G.XLV[s.ax[0]] + extra, G.XLV[s.ax[1]] + extra
+        ex = np.broadcast_to(np.asarray(extra, float), (len(G.XLV),)); a, b = G.XLV[s.ax[0]] + ex[s.ax[0]], G.XLV[s.ax[1]] + ex[s.ax[1]]      # extra — число или вектор по осям (GM покомпонентно: рабочая зона ±(3, 2.5), буфер ±(6, 3.5))
         if G.XLV[s.ax[0]] == 0: a = np.pi                                # периодическая ось: рамка по периоду
         if G.XLV[s.ax[1]] == 0: b = np.pi
         C = np.array([(-a, -b), (a, -b), (a, b), (-a, b), (-a, -b)]); P = np.zeros((5, 3)); P[:, 0] = C[:, 0]; P[:, 1] = Y0; P[:, 2] = C[:, 1]; return P
@@ -531,5 +531,10 @@ class GrowView:
 
     def retransform(s):
         """после зума/сдвига камеры ZoomManager сам вызывает apply_transform у зарегистрированных объектов — отдельно не нужно."""
+
+    def field_text(s):
+        """размеры поля в статусе: рабочая зона ±XLV и граница роста ±(XLV+GM) по осям x, v"""
+        from ..algo import growN as G
+        xl = np.asarray(G.XLV, float); gm = np.broadcast_to(np.asarray(getattr(G, 'GM', 0.), float), xl.shape); return 'field: work zone x +-%g, v +-%g; growth limit x +-%g, v +-%g' % (xl[0], xl[1], xl[0] + gm[0], xl[1] + gm[1])
 
     def caption(s): return caption(s.snap)

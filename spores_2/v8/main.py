@@ -196,7 +196,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), ('[GRID: FINE ETOL .0025 (L = normal)]' if growview.fine else ''), ('[MODE: only the first goal spore per layer (layers +1/-1); off: delete v8/ONLY_GOAL]' if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), ('[GRID: FINE ETOL .0025 (L = normal)]' if growview.fine else ''), growview.field_text(), ('[MODE: only the first goal spore per layer (layers +1/-1); off: delete v8/ONLY_GOAL]' if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():
