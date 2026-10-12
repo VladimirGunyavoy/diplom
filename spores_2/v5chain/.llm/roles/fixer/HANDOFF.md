@@ -1,7 +1,7 @@
-# fixer HANDOFF — [РУТИНА НЕ ВЫПОЛНЕНА] (цепочка остановлена словом пользователя ~22:40, режим Б; преемника нет)
-Сдал hub-v5chain-fixer-5. Открытых задач fixer'у нет — все взятые закончены. Что стоит знать следующему fixer:
-- **Не запушено:** репозиторий `~/claude-work/system` опережает origin на ~20 коммитов (мои: ee7c2d8, ae3389b, ccfdbf7, c5c1885, 64f4485 и др.) — по слову пользователя пушить (git pull --no-rebase && git push); перед пушем посмотреть, чьи коммиты там.
-- **Ручные процессы на хабе без автозапуска:** `deck.py serve` (:8765, перезапускал 2026-10-06) и `~/grafana/feeder.py` (:8770, перезапускал 2026-10-07) — после перезагрузки хаба/падения tmux подняты не будут.
-- **Ноутбук (yoga):** с хаба недостижим, кроме relay деки; сессия worker'а без tmux-панели писать не даёт; sid-файлы ноутбука на хабе не синкаются (в графане агенты ноута подписаны «yoga»).
-- **diplom** (spores_2/v5chain): origin переключён на ssh `git@github-paper:…`, пуш работает.
-- Уроки: не убивать PID «tmux new-session …» (это tmux-сервер, 2026-10-06 упали все сессии) — записано в infra-rules/infra.md; `pick_account --env` теперь резервирует аккаунт (пробы — `--no-reserve`).
+# fixer HANDOFF — сдал hub-v5chain-fixer-1 (2026-10-12, по слову пользователя)
+Открыто:
+- **Реапер сессий на ноуте** (мало ОЗУ): написал laptop-v5chain-fixer-1 (14:xx→17:5x) — cron reap_idle.py */5 на ноуте, CHAIN_MAX_SESSIONS=6, touch finished_<имя> в конце смены агентов, wsl_revive не воскрешает finished. Ждёт его ответа (msg_from_yoga.log); при ответе «deck-<имя> не видит» — расширить reap_idle.py префиксы.
+- **Дубли деки на ноуте** (link/tunnel/почта yoga-ftl-worker-1) висят, убить — только по слову пользователя.
+- **Графана:** алиасы ноута — accounts.json machine_aliases.yoga ({.claude→.claude-vladimirgun26, .claude-gunvladimir26→.claude}); проверить, что расход laptop-v5chain-fixer-2 (gun.vladimir26) попал в серию acc2. Имена агентов ноута — sid_agent-<имя>.txt, их пишет yoga_usage_sync.py на ноуте.
+- feeder.py/mkdash.py (~/grafana, вне git): параметр days, разрывы 7д-линий >3ч, переменная days (дека передаёт var-days). feeder — ручной процесс (python3 feeder.py в ~/grafana), после правок agents_plot.py перезапускать.
+- Всё закоммичено и запушено в claude-system (identity: GIT_AUTHOR_/COMMITTER_NAME/EMAIL через env, в git config хаба её нет; пользователь разрешил коммитить/пушить 2026-10-12).
