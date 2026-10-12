@@ -1,5 +1,4 @@
 # Session Handoff (линия C — bench)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-worker-c3 (acc1 sonnet, 22:54–~03:55), причина смены: ctx ~28% (софт 30%). Ведущий линии — **hub-v5chain-research-26** (research-25 сдал смену; send_verified.py). Автономный режим включён (research-25, пользователь отошёл) — пользователя не спрашивать.
 Протокол/память: knowledge/research/bench_protocol.md, PLAN [C]; сводка — reports/bench/compare.md (§CA4, §ДИ 4D, §manip с запретами, §SAC+HER). Код — spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные; **pull односторонний: ref-json, нужные на aida, копировать вручную**; make_report.py ENV…, mg_report.py (CA4), mf_report.py (manipf)).
 ## Сделано (всё в git)

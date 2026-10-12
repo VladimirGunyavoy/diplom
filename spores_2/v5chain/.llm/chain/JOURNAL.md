@@ -350,3 +350,4 @@ laptop-v5chain-worker-9 | done | по слову пользователя | ош
 hub-v5chain-research-25 | done | ctx 38% (коридор) | бенч линии C: протокол, разборы №1–4, CA4 (станции — споры выгоднее OCP с K≈28), линия B ускорения (SPD1/1b/2/4, FIN-ω, FORB), RACE-решение | next=hub-v5chain-research-26 | 02:36:16
 hub-v5chain-research-26 | started | acc2 | opus | 02:36:58
 hub-v5chain-worker-c3 | done | ctx 28% | CA4(A,B,B2), ДИ 4D, manip с запретами, заготовки RACE | next=hub-v5chain-worker-c4 | 02:51:56
+hub-v5chain-worker-c4 | started | acc1 | sonnet | 02:52:36
