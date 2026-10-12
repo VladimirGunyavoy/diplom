@@ -15,7 +15,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSEED', 1 if SYS == 'di' else 0))   # цель: 'box' | 'ball' (эллипсоид по RHOV); GSEED: первая спора — центр цели
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+SEEDNEAR = int(E('SEEDNEAR', 1 if SYS == 'di' else 0)); GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -570,10 +570,17 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
         if ZACEP: yf = adv(yf, u, (HALOT + .25) * c.hlf); yb = adv(yb, u, -(HALOT + .25) * c.hlb)    # сразу за гало-строкой
         else:
             for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
-        queue += [yf, yb]
+        if not SEEDNEAR: queue += [yf, yb]
+        sd = []
         if SIDE:
             for e0 in (c.c, g0[ctr], g1[ctr]):
-                for k in range(m_): queue += [e0 + (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k], e0 - (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k]]
+                for k in range(m_): sd += [e0 + (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k], e0 - (ZSEED if ZACEP else 1.9) * c.r[k] * c.e[k]]
+            if SEEDNEAR and gfirst and m_ == 1:                                                              # SEEDNEAR: центральная строка споры цели лежит в цели — боковые затравки берём на строках вне цели, ближние к цели первыми
+                rows = [k for k in range(c.G.shape[0]) if not ingoal(c.G[k][ctr])]; rows.sort(key=lambda k: abs(float(c.tau[k][ctr])))
+                for k in rows[::3][:8]:
+                    d_ = c.G[k, -1] - c.G[k, 0]; d_ = d_ / max(np.linalg.norm(d_), 1e-12); sd += [c.G[k][ctr] + ZSEED * c.r[0] * d_, c.G[k][ctr] - ZSEED * c.r[0] * d_]
+        queue += sd
+        if SEEDNEAR: queue += [yf, yb]                                                                       # соседи (боковые затравки) — раньше торцевых и случайных проб
         for q_ in c.chain[::-1]: queue.insert(0, q_)                                                          # цепочка зацепа — первой
         pause('cell', 1, u=u, seed=p, cell=lambda: cell_dict(c), cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N))
         if COVTOL > 0 and not ZACEP and len(cells) % COVN == 0 and covdone(): break
