@@ -16,7 +16,12 @@ for i, x0 in enumerate(e.X0):
     us = np.diff(X[:, 1]) / .01 if len(X) > 1 else np.zeros(0); dts = np.full(len(us), .01)
     Tv, why = common.verify(e, x0, us[:, None], dts); tq.append(dtq); Ts.append(Tv)
     res.append(dict(i=i, T_agent=None if not np.isfinite(T[0]) else float(T[0]), T_verify=Tv, why=why, t_query=dtq, switches=int(sw[0])))
-s = common.summarize(e, Ts); s.update(env='di', method='spores v8 commit Q-lin M5 layers 1,-1,0', t_grow=t_grow, t_solve_V=t_v, t_solve_Q=t_q, t_build=t_grow + t_v + t_q, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)),
+t1 = time.perf_counter(); G.run_agent(e.X0.copy(), tmax, dt=.01, commit=True); t_batch = time.perf_counter() - t1                     # пакет 20 стартов одним вызовом (пропускная способность)
+tq5 = []; Ts5 = []
+for i, x0 in enumerate(e.X0):                                                                                                           # агент с dt .05 (= шаг решений PPO)
+    path = []; t1 = time.perf_counter(); G.run_agent(x0[None].copy(), tmax[i:i + 1], dt=.05, path=path, rec=1, commit=True); tq5.append(time.perf_counter() - t1)
+    X = np.array([p[1][0] for p in path if len(p[0]) == 1]); us = np.diff(X[:, 1]) / .05; Ts5.append(common.verify(e, x0, us[:, None], np.full(len(us), .05))[0])
+s5 = common.summarize(e, Ts5); s = common.summarize(e, Ts); s.update(t_batch20=t_batch, dt05=dict(s5, t_query_med=float(np.median(tq5)), t_query_sum=float(np.sum(tq5)))); s.update(env='di', method='spores v8 commit Q-lin M5 layers 1,-1,0', t_grow=t_grow, t_solve_V=t_v, t_solve_Q=t_q, t_build=t_grow + t_v + t_q, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)),
                                        hw='CPU 1 proc', cells={str(u): G.layer_counts[u] for u in G.us}, per_start=res, Tref=e.Tref.tolist())
 os.makedirs(common.DATA, exist_ok=True); json.dump(s, open(os.path.join(common.DATA, 'di_spores.json'), 'w'), indent=1, default=float)
 print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

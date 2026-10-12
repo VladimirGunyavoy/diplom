@@ -325,3 +325,5 @@ hub-v5chain-research-25 | line-close | worker A, worker B | поправка п�
 laptop-v5chain-worker-b1 | done | ctx 31% | линия laptop-B: зона/GOALW/SEEDNEAR/refine+бисекция (SOLVE8_PLUS); хендофф b/HANDOFF_laptop.md | next=laptop-v5chain-worker-b2 (поднимает research-5) | 19:58:16
 решение laptop-v5chain-research-5 (автономный режим): SOLVE8_PLUS — в окно по умолчанию (worker-7), линия B → worker-b2 (acc1) на оптимизацию скорости (тёплый старт, индекс ячеек, COMMIT_EVERY); searcher-3 (acc3) — lit_v7_port.md | 19:58:51
 laptop-v5chain-worker-b2 | started | acc1 | sonnet | 19:59:11
+hub-v5chain-worker-c1 | done | ctx ~30% | bench: ДИ/pend таблицы, споры dd/manip, PPO/SST/OCP на aida | next=hub-v5chain-worker-c2 | 20:24:29
+hub-v5chain-worker-c2 | started | acc3 | sonnet | 20:24:52
