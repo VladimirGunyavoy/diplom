@@ -11,7 +11,7 @@ def f(x, n=4): return '—' if x is None or (isinstance(x, float) and not np.isf
 class S(str): pass
 def stat(s):
     x = S(f"{s['reached']*100:.0f}% | {f(s['ratio_med'])} / {f(s['ratio_mean'])} / {f(s['ratio_p90'])} / {f(s['ratio_max'])}"); x.reached = s['reached']; x.med = s['ratio_med'] or 9.; return x
-def fb(b): return '—' if not b else ('%.3g МБ' % (b / 1e6) if b >= 1e6 else '%.3g КБ' % (b / 1e3))
+def fb(b): return '—' if not b else ('%.3g ГБ' % (b / 1e9) if b >= 1e9 else '%.3g МБ' % (b / 1e6) if b >= 1e6 else '%.3g КБ' % (b / 1e3))
 def wtxt(n, b): return '—' if not b else f'{n:,} шт., {fb(b)}'.replace(',', ' ') if n else fb(b)
 WP = L(f'{D}/ppo_weight.json') or {}
 def w_spores(sp):
@@ -33,7 +33,7 @@ def rows(env):
     R = []; sps = [(L(f'{D}/{env}_spores.json'), ''), (L(f'{D}/{env}_spores_T.json'), '')]; sp0 = None
     for sp, _ in sps:
         if not sp: continue
-        b = sp['t_build']; R.append(dict(m='**споры**: ' + sp['method'], par='клеток ' + str(sp['cells']) + ('; запрос по одному, dt агента .01' if env == 'di' else ''), build=b, qm=sp['t_query_med'], qp=sp['t_query_p90'], tot=b + sp['t_query_sum'], st=stat(sp), nf='не считали', batch=sp.get('t_batch20'), hw=sp['hw'], sp=True, w=w_spores(sp)))
+        b = sp['t_build']; R.append(dict(m='**споры**: ' + sp['method'], par='клеток ' + str(sp['cells']) + ('; запрос по одному, dt агента .01' if env == 'di' else '') + ('; 2/20 (старты 3, 10) — финиш нарушает |ω|≤3 (физический предел), неуспех верный' if env == 'manip' else ''), build=b, qm=sp['t_query_med'], qp=sp['t_query_p90'], tot=b + sp['t_query_sum'], st=stat(sp), nf='не считали', batch=sp.get('t_batch20'), hw=sp['hw'], sp=True, w=w_spores(sp)))
         if sp0 is None: sp0 = R[-1]
         if sp.get('dt05'): d = sp['dt05']; R.append(dict(m='споры, агент с dt .05 (= шаг PPO)', par='', build=b, qm=d['t_query_med'], qp=None, tot=b + d['t_query_sum'], st=stat(d), nf='—', batch=None, hw=sp['hw'], sp=True, w=w_spores(sp)))
     spq = sp0['qm'] if sp0 else None

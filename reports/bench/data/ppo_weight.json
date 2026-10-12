@@ -1,0 +1,26 @@
+{
+ "di": {
+  "params": 8835,
+  "bytes": 35340,
+  "vecnorm_bytes": 2062,
+  "zip_bytes": 135334
+ },
+ "pend": {
+  "params": 8963,
+  "bytes": 35852,
+  "vecnorm_bytes": 2152,
+  "zip_bytes": 137075
+ },
+ "dd": {
+  "params": 9157,
+  "bytes": 36628,
+  "vecnorm_bytes": 2257,
+  "zip_bytes": 139619
+ },
+ "manip": {
+  "params": 9413,
+  "bytes": 37652,
+  "vecnorm_bytes": 2437,
+  "zip_bytes": 143097
+ }
+}
