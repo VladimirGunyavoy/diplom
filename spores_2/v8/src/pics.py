@@ -10,11 +10,10 @@ UCOL = {1: '#e63030', -1: '#b04dff', 0: '#1aa82a'}            # управлен
 
 
 def new_experiment(root):
-    """папка запуска окна: <root>/<дата>/exp<NNN> (номер — счётчик запусков за день) и <root>/<дата>/last_exp — копия последнего запуска (при новом запуске очищается). root = claude-work/projects/spore/img (слово пользователя 2026-10-12). → (exp_dir, [exp, last_exp])"""
+    """папка запуска окна: <root>/<дата>/exp<NNN> (номер — счётчик запусков за день) и <root>/<дата>/last_exp — копия последнего запуска (НЕ очищается: файлы перезаписываются на месте; было: очищается). root = claude-work/projects/spore/img (слово пользователя 2026-10-12). → (exp_dir, [exp, last_exp])"""
     day = os.path.join(root, datetime.date.today().isoformat()); os.makedirs(day, exist_ok=True)
     k = 1 + max([int(os.path.basename(p)[3:]) for p in glob.glob(os.path.join(day, 'exp[0-9][0-9][0-9]'))] or [0]); exp = os.path.join(day, 'exp%03d' % k); last = os.path.join(day, 'last_exp')
     os.makedirs(exp, exist_ok=True)
-    if os.path.isdir(last): shutil.rmtree(last, ignore_errors=True)                       # last_exp = последний запуск: прошлый стирается (он остался в своей expNNN)
     os.makedirs(last, exist_ok=True); return exp, [exp, last]
 
 
@@ -23,8 +22,11 @@ def _plt():
 
 
 def _save(fig, name, dirs):
-    for d in dirs:
-        os.makedirs(d, exist_ok=True); fig.savefig(os.path.join(d, name), dpi=110)
+    import io
+    buf = io.BytesIO(); fig.savefig(buf, format='png', dpi=110); data = buf.getvalue()
+    for d in dirs:                                                                          # перезапись НА МЕСТЕ (тот же файл/inode): не удалять и не переименовывать — открытая в просмотрщике картинка не закрывается
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, name), 'r+b' if os.path.exists(os.path.join(d, name)) else 'wb') as f: f.write(data); f.truncate()
     _plt().close(fig)
 
 
