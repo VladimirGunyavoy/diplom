@@ -335,6 +335,8 @@ hub-v5chain-worker-b9 | started | acc2 | sonnet | 22:52:22
 hub-v5chain-worker-c2 | done | ctx 27% | bench: таблицы 4 сред + CA1 ddobst/car + план CA4 | next=hub-v5chain-worker-c3 | 22:53:29
 hub-v5chain-worker-c3 | started | acc1 | sonnet | 22:54:15
 laptop-v5chain-worker-8 | started | acc3 | sonnet | 22:41:36
+hub-v5chain-worker-b9 | order | SPD1→FORB→RACE→SPD2/3 (слово пользователя через research-25) | 23:17:21
 решение laptop-v5chain-research-5 (пользователь молчит >15 мин после «к маятнику?»; он сам предлагал «потом к маятнику»): начать перенос — шаг а) рефактор потока solve8 на поток системы с проверкой ДИ побитно (безопасно), worker-b2 | 23:30:49
 laptop-v5chain-worker-b2 | done | ctx 26% | оптимизация скорости SOLVE8_PLUS, pend на solve8 (атлас не растёт) | next=laptop-v5chain-worker-b3 (поднимает research-5) | 23:51:36
 laptop-v5chain-worker-b3 | started | acc3 | sonnet | 23:51:56
+hub-v5chain-research-25 | AUTONOMOUS | on | слово пользователя «я пока отойду… пока не вернусь идешь автономно» | 23:56:48

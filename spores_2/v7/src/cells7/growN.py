@@ -84,7 +84,9 @@ def nf_rows(P0, p, u, sg, nmax):
         out.append((Xw[kk, j] * (1 - w)[:, None] + Xw[kk + 1, j] * w[:, None]).reshape(sh))
         if not inbox_g(c): break
     return out
-def ingoal(y): return (np.abs(wrapy(y)) <= RHOV + 1e-9).all(-1)
+GC = np.zeros(N)                                                                                       # SPD1 (b9): центр цели (0 = как раньше); смена цели без пересборки слоёв/рёбер — spd.py
+def wrapg(y): return wrapy(np.asarray(y, float) - GC)
+def ingoal(y): return (np.abs(wrapg(y)) <= RHOV + 1e-9).all(-1)
 _FL = ~PER
 def inbox(y): return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
 GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200)); SEEDW = int(E('SEEDW', 0)); QMIX = float(E('QMIX', 0.)); SEEDSTOP = float(E('SEEDSTOP', 0.))
@@ -289,7 +291,7 @@ def goal_seeds(rng):
     """GS точек на поверхности коробки цели (чуть снаружи): очередь FIFO растит клетки от цели назад по потоку (BFS), а не случайно по всему полю (4D: цель ≈ 3e-4 объёма)."""
     ar = np.array([np.prod(np.delete(RHOV, k)) for k in range(N)]); ar = ar / ar.sum(); out = []
     for _ in range(GS):
-        k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(y)
+        k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(wrapy(y + GC))
     return out
 def build_layer(u, rng, log=None):
     cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
@@ -503,7 +505,7 @@ class Atlas:
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1)); k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
-                    tried[i] = True; Ts, tp = (FG.shoot_pol if int(E('FINGRID', 0)) == 2 else FG.shoot_grid if int(E('FINGRID', 0)) else FG.shoot)(Y[i], f, US, RHOV, wrapy, FTMAX, NA=int(E('NA', 3)))
+                    tried[i] = True; Ts, tp = (FG.shoot_pol if int(E('FINGRID', 0)) == 2 else FG.shoot_grid if int(E('FINGRID', 0)) else FG.shoot)(Y[i], f, US, RHOV, wrapg, FTMAX, NA=int(E('NA', 3)))
                     if np.isfinite(Ts): T[i] += Ts; done[i] = True; fin[i] = True; sw[i] += len(tp) - 1
             stuck = J.min(1) >= BIG / 2; act = ~done & ~stuck; Yn = Y.copy()
             for ki, ui in enumerate(US):
