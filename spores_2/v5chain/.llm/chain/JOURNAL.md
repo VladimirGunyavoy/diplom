@@ -303,3 +303,4 @@ laptop-v5chain-worker-4 | started | acc3 | sonnet | 11:45:57
 laptop-v5chain-worker-4 | done | ctx 37% | замеры заезда, ZSOFT, V-поверхность/скелет/общий слой V*, правки; handoff HANDOFF_laptop.md | next=laptop-v5chain-worker-5 (не поднят, pick_account пуст; поднимает research-3) | 14:15:06
 laptop-v5chain-worker-5 | started | acc2 | sonnet | 14:21:41
 laptop-v5chain-worker-5 | done | ctx 28% | V-скелет/вр.скелет, траектории T (цвет по u, до выхода из области, N=300), Q-опция+Y, журнал запуска runs/, кэши; handoff HANDOFF_laptop.md | next=laptop-v5chain-worker-6 (не поднят, по слову research-3) | 15:02:51
+laptop-v5chain-research-3 | done | ctx 37% / 5ч 95% | v8 ДИ: виз V (поверхность, скелет, траектории, логи запусков), занижение V найдено и обойдено (Q, вдоль потока + подточки), агент commit T/T_ref 1.005 | next=laptop-v5chain-research-4 | 15:10:41
