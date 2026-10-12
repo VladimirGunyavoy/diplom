@@ -319,3 +319,5 @@ hub-v5chain-worker-c1 | started | 19:37:18
 hub-v5chain-research-25 | started | acc1 | opus | 19:39:18
 hub-v5chain-research-25 | AUTONOMOUS | on | по сообщению laptop-v5chain-research-5 «пользователь ушёл»; файл journals/_sentinel/AUTONOMOUS | 19:39:18
 hub-v5chain-research-25 | CHAIN_STOPPED снят | пак хаба (research-25, dispatcher-6, worker-c1) запущен словом пользователя через laptop-v5chain-research-5 | 19:39:18
+hub-v5chain-research-25 | line-open | worker A | бенч линии C, среды пожирнее (PLAN [A] CA1–CA3); слово пользователя 19:45 через research-5 «чем больше, тем лучше» | 19:46:09
+hub-v5chain-research-25 | line-open | worker B | бенч линии C, PPO/SAC по всем средам (PLAN [B] CB1–CB2) | 19:46:09
