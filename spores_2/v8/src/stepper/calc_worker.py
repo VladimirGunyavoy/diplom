@@ -36,6 +36,7 @@ def main():
                 if kind == 'V': send('V', i, (Vs, info), time.perf_counter() - t0)
                 if dirs: draw(i, lambda: ([] if done_cells[0] else PX.cells_png(Gby[calc], cl, dirs, title='(%s)' % os.environ.get('SYS', 'di'))) or PX.error_map(Gby[calc], dirs, calc), 'cells.png, error_%s.png' % calc); done_cells[0] = True
             if kind == 'T':
+                if getattr(Gby[calc], 'tab', 1) is None and hasattr(Gby[calc], 'build_table'): say('building the lookup table', True); Gby[calc].build_table(); say('lookup table %.1f s' % Gby[calc].t_table, True)     # таблица Q по слоям (b2): агенты берут lookup вместо поиска ячейки
                 state = [0]
                 def onb(part, done, total): state[0] = done; send('Tp', i, part, time.perf_counter() - t0); say('trajectories %d/%d' % (done, total), True)            # пачка готова — окно сразу дорисовывает
                 res = VS.agent_paths(Gby[calc], cl=cl, batch=VS.TRAJ_BATCH, on_batch=onb, progress=lambda step, alive: say('trajectories %d/%d: agents in flight %d, step %d (t=%.2f)' % (state[0], VS.TRAJ_N, alive, step, step * .01)))

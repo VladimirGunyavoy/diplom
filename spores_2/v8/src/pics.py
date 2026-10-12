@@ -56,6 +56,7 @@ def cells_png(G, cl, dirs, title=''):
     axs[0][0].legend(fontsize=7, loc='lower left'); fig.suptitle('cells (spores) per layer  ' + title, fontsize=11); fig.tight_layout(); _save(fig, 'cells.png', dirs)
 
 
+TREF_SMALL = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'runs', '_tref_cache')
 TREF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tref_cache')      # кэш T_ref на диске (в git): T_ref зависит только от точек и RHO, не от графа
 
 
@@ -63,13 +64,12 @@ def t_ref_cached(X):
     """solve8.t_ref(X)[0] с кэшем по хэшу (X, RHO, константы ref_di_disk): сетка карты ошибки фиксирована — T_ref (~6 мин на 16 тыс. точек) считается один раз; значения те же побитно"""
     import hashlib
     from .algo import solve8, ref_di_disk as R
-    X = np.ascontiguousarray(X, float); rho = float(os.environ.get('RHO', .2)); key = hashlib.md5(X.tobytes() + repr((X.shape, rho, R.TMAX1, R.GRID0, R.ZOOM_N, R.ZOOM_ROUNDS)).encode()).hexdigest()[:20]; f = os.path.join(TREF_DIR, '%d_%s.npy' % (len(X), key))
+    X = np.ascontiguousarray(X, float); rho = float(os.environ.get('RHO', .2)); key = hashlib.md5(X.tobytes() + repr((X.shape, rho, R.TMAX1, R.GRID0, R.ZOOM_N, R.ZOOM_ROUNDS)).encode()).hexdigest()[:20]; f = os.path.join(TREF_DIR if len(X) >= 1000 else TREF_SMALL, '%d_%s.npy' % (len(X), key))                # большие (сетка карты ошибки) — в git; малые (старты траекторий) — runs/ (не в git)
     try: return np.load(f)
     except Exception: pass
     T = np.asarray(solve8.t_ref(X)[0], float)
-    if len(X) >= 1000:                                                                      # маленькие наборы (старты траекторий) не кэшируем: каждый раз другие
-        try: os.makedirs(TREF_DIR, exist_ok=True); np.save(f, T)
-        except Exception: pass
+    try: os.makedirs(os.path.dirname(f), exist_ok=True); np.save(f, T)
+    except Exception: pass
     return T
 
 

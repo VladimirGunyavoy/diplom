@@ -12,5 +12,7 @@ t = time.perf_counter(); r2 = VS.agent_paths(G, cl=cl, batch=B, on_batch=lambda 
 def eq(a, b):
     a, b = np.asarray(a), np.asarray(b)
     return a.shape == b.shape and (np.array_equal(a, b) if a.dtype == object or a.dtype.kind in 'US' else np.array_equal(a, b, equal_nan=True))
-bad = [k for k in r1 if not (all(eq(a, b) for a, b in zip(r1[k], r2[k])) if isinstance(r1[k], list) else eq(r1[k], r2[k]))]
+bad = [k for k in r1 if k != 'decisions' and not (all(eq(a, b) for a, b in zip(r1[k], r2[k])) if isinstance(r1[k], list) else eq(r1[k], r2[k]))]
+dec_ok = sorted(r1['decisions']) == sorted(r2['decisions'])
+print('decisions same set', dec_ok)
 print('batch', B, 'batches', got[:3], '...', got[-1], 'one-shot %.1fs batched %.1fs' % (t1, t2), 'DIFF keys:', bad or 'none (bit-identical)')

@@ -60,6 +60,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
 
 
 TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 300)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
+DLOG = os.environ.get('VSURF_DLOG', '1') != '0'                                              # журнал решений агента (traj_decisions.csv); VSURF_DLOG=0 — выкл.
 TRAJ_BATCH = int(os.environ.get('VSURF_TRAJ_BATCH', 25))                               # траектории считаются пачками по BATCH стартов; после каждой окно дорисовывает пути (0 — одним пакетом)
 TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 3)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 3))
 
@@ -121,10 +122,10 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
     policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed)
-    if not batch or batch >= len(X0): return _agent_core(G, g, X0, rec, policy, progress)
+    if not batch or batch >= len(X0): return _agent_core(G, g, X0, rec, policy, progress, 0)
     parts = []                                                                                      # пачками (агенты независимы): after each batch on_batch(part, done, total) — окно дорисовывает путь сразу
     for lo in range(0, len(X0), batch):
-        part = _agent_core(G, g, X0[lo:lo + batch], rec, policy, progress); parts.append(part)
+        part = _agent_core(G, g, X0[lo:lo + batch], rec, policy, progress, lo); parts.append(part)
         if on_batch is not None: on_batch(part, min(lo + batch, len(X0)), len(X0))
     return merge_paths(parts)
 
@@ -133,11 +134,12 @@ def merge_paths(parts):
     """склейка результатов agent_paths по пачкам (порядок стартов сохраняется)"""
     out = {}
     for k in parts[0]:
+        if k == 'decisions_cols': out[k] = parts[0][k]; continue
         out[k] = [x for p in parts for x in p[k]] if isinstance(parts[0][k], list) else np.concatenate([p[k] for p in parts])
     return out
 
 
-def _agent_core(G, g, X0, rec, policy, progress):
+def _agent_core(G, g, X0, rec, policy, progress, base=0):
     """агенты для заданных стартов X0 (то, что раньше было телом agent_paths)"""
     from ..algo import solve8
     n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GMV, np.inf)
@@ -145,7 +147,10 @@ def _agent_core(G, g, X0, rec, policy, progress):
     src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
     for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
     if src:
-        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, progress=progress, **solve8.POLICIES[policy])
+        from .. import pics as _px; Tref0 = _px.t_ref_cached(X0)                                  # T_ref по стартам — с диском-кэшем (старты детерминированы: seed): повторный прогон без eigvals (~6 с на 300)
+        Tr = np.array([Tref0[i] for i in src], float); mpre = np.array([i in pre for i in src], bool)
+        if mpre.any(): Tr[mpre] = _px.t_ref_cached(Xa[mpre])                                         # у предфазы старт агента другой (X1)
+        path = []; dl = [] if (DLOG and hasattr(G, 'DLOG_COLS')) else None; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, progress=progress, **({} if dl is None else dict(dlog=dl)), **solve8.POLICIES[policy])
         ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
         Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
         for k, i in enumerate(src):
@@ -156,8 +161,9 @@ def _agent_core(G, g, X0, rec, policy, progress):
     allP = np.concatenate(paths); Vst = G.Vlayers(allP).min(1); cut = np.cumsum([len(p) for p in paths])[:-1]; Vl_ = np.split(Vst, cut)
     status = np.where(np.isfinite(T), 'reached', np.where(np.array([i in pre and pre[i]['X1'] is None for i in range(n)]), 'out_of_area', 'failed')).astype(object)
     xlv = np.asarray(g.XLV, float); left = np.array([bool(((np.abs(p) > xlv + 1e-12) & (xlv > 0)).any()) for p in paths])                  # хоть раз вышла за рабочее поле ±XL (без GM)
-    Tref = np.asarray(solve8.t_ref(X0)[0], float)                                                    # эталон по каждому старту (для лога траекторий: T/T_ref, занижение V*(x0)−T_ref)
-    return dict(paths=paths, V=Vl_, U=Us, T=T, sw=sw, X0=X0, status=status, prephase=~has, mark=mark, left_work=left, Tref=Tref)
+    from .. import pics as _px; Tref = _px.t_ref_cached(X0)                                         # эталон по каждому старту (для лога траекторий: T/T_ref, занижение V*(x0)−T_ref)
+    dec = [(src[r[0]] + base,) + tuple(r[1:]) for r in dl] if (src and dl) else []                      # журнал решений агента: i — номер траектории (в порядке X0 всего прогона)
+    return dict(paths=paths, V=Vl_, U=Us, T=T, sw=sw, X0=X0, status=status, prephase=~has, mark=mark, left_work=left, Tref=Tref, decisions=dec, decisions_cols=tuple(getattr(G, 'DLOG_COLS', ())))
 
 
 def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
