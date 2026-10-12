@@ -96,7 +96,7 @@ def t_ref_cached(X):
 
 
 def _grid(G, n=140):
-    xl = np.asarray(G.g.XLV, float); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
+    xl = np.asarray(G.g.XLV, float); xl = np.where(xl > 0, xl, np.pi); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
     Vs = G.Vlayers(X).min(1); Vs = np.where(np.isfinite(Vs), Vs, np.nan); return xs, vs, X, Vs.reshape(XX.shape)
 
 

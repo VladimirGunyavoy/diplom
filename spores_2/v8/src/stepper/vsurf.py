@@ -105,6 +105,28 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
 
 def only_goal(): return os.environ.get('V8_ONLY_GOAL') == '1'
 
+def starts_grid_cells(cl, k, xlv=None):
+    """сетка k×k точек (центры k×k подъячеек, билинейно по узлам) внутри КАЖДОЙ выросшей клетки — траектории ложатся по всей клетке; точки в цели и вне рабочей зоны отбрасываются (θ маятника периодичен)"""
+    rho = float(os.environ.get('RHO', .2)); pend = os.environ.get('SYS') == 'pend'; ball = os.environ.get('GOALSHAPE', 'ball' if not pend else 'box') == 'ball'; c_ = (np.arange(k) + .5) / k; out = []
+    for cs in cl.values():
+        for c in cs:
+            Gc = np.asarray(c['G'], float); ni, nj = Gc.shape[0] - 1, Gc.shape[1] - 1
+            if ni < 1 or nj < 1: continue
+            for s_ in c_:
+                for t_ in c_:
+                    x = s_ * ni; y = t_ * nj; i = min(int(x), ni - 1); j = min(int(y), nj - 1); a_, b_ = x - i, y - j
+                    p = (1 - a_) * (1 - b_) * Gc[i, j] + (1 - a_) * b_ * Gc[i, j + 1] + a_ * (1 - b_) * Gc[i + 1, j] + a_ * b_ * Gc[i + 1, j + 1]
+                    q = p.copy()
+                    if pend: q[0] = (q[0] + np.pi) % (2 * np.pi) - np.pi
+                    in_goal = (np.linalg.norm(q) <= rho + 1e-12) if (ball or not pend) else bool((np.abs(q) <= rho + 1e-12).all())
+                    zone = xlv is None or bool(((np.abs(q) <= xlv + 1e-12) | (xlv == 0)).all())
+                    if not in_goal and zone: out.append(p)
+    return np.array(out).reshape(-1, 2)
+
+
+GRID_K = int(os.environ.get('V8_GRID', 0))            # >0: старты траекторий — сетка k×k в каждой выросшей клетке (вместо случайных по полю); 0 — как раньше
+
+
 def starts_in_cells(cl, n, seed, xlv=None):
     """режим «только первая спора» (V8_ONLY_GOAL): n стартов ВНУТРИ готовых клеток (билинейно по четырём узлам случайной ячейки), вне круга цели; клетки по очереди поровну; только в рабочей зоне |p| ≤ xlv (слово пользователя 2026-10-12 ~19:05: вне рабочей зоны не спавнить)"""
     rng = np.random.default_rng(seed); rho = float(os.environ.get('RHO', .2)); tries = 0; cells = [np.asarray(c['G'], float) for cs in cl.values() for c in cs]; out = []
@@ -124,7 +146,7 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); from .. import pics as _pp; X0 = np.asarray(starts, float).reshape(-1, 2) if starts is not None else (_pp.pend_starts() if os.environ.get('SYS', 'di') == 'pend' else None)
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); from .. import pics as _pp; X0 = np.asarray(starts, float).reshape(-1, 2) if starts is not None else (starts_grid_cells(cl, GRID_K, np.asarray(g.XLV, float)) if (cl and GRID_K > 0) else (_pp.pend_starts() if os.environ.get('SYS', 'di') == 'pend' else None))
     if X0 is None: X0 = (starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed))
     if not batch or batch >= len(X0): return _agent_core(G, g, X0, rec, policy, progress, 0)
     parts = []                                                                                      # пачками (агенты независимы): after each batch on_batch(part, done, total) — окно дорисовывает путь сразу

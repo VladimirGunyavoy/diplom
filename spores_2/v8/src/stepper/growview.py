@@ -157,6 +157,46 @@ def wrap_lines(V, colors=None):
     return out, C
 
 
+SHOW_X = 0.                                                                                       # показывать периодические копии (±WRAP_X) на x ∈ [−SHOW_X, SHOW_X] (θ маятника: 8); 0 — только один период. Задаёт main_pend.
+
+
+def clone_lines(V, colors=None):
+    """отрезки-пары → копии со сдвигами k·WRAP_X, обрезанные по |x| ≤ SHOW_X (после wrap_lines: ни один отрезок не пересекает шов)"""
+    P, X = WRAP_X, SHOW_X; V = np.asarray(V, float).reshape(-1, 3)
+    if P <= 0 or X <= 0 or len(V) < 2: return V, colors
+    pc = colors is not None and np.ndim(colors) == 2 and len(colors) == len(V); outV, outC = [], []
+    for k in range(-int(np.ceil((X + P / 2) / P)), int(np.ceil((X + P / 2) / P)) + 1):
+        W = V.copy(); W[:, 0] += k * P; A, B = W[0::2].copy(), W[1::2].copy(); ca = np.asarray(colors)[0::2].copy() if pc else None; cb = np.asarray(colors)[1::2].copy() if pc else None
+        dx = B[:, 0] - A[:, 0]; t0 = np.zeros(len(A)); t1 = np.ones(len(A)); ok = np.ones(len(A), bool)
+        for lim, sg in ((-X, 1.), (X, -1.)):                                              # x ≥ −X и x ≤ X
+            num = sg * (A[:, 0] - lim); den = sg * dx                                  # inside: num + t·den ≥ 0
+            with np.errstate(divide='ignore', invalid='ignore'):
+                t = -num / den
+            par = np.abs(den) < 1e-15; ok &= ~(par & (num < 0))
+            ent = (~par) & (den > 0); lea = (~par) & (den < 0); t0 = np.where(ent, np.maximum(t0, t), t0); t1 = np.where(lea, np.minimum(t1, t), t1)
+        ok &= t0 < t1
+        if not ok.any(): continue
+        a2 = A[ok] + t0[ok, None] * (B[ok] - A[ok]); b2 = A[ok] + t1[ok, None] * (B[ok] - A[ok]); n = len(a2); o = np.empty((2 * n, 3)); o[0::2], o[1::2] = a2, b2; outV.append(o)
+        if pc:
+            c2 = np.empty((2 * n, colors.shape[1])); c2[0::2] = ca[ok] + t0[ok, None] * (cb[ok] - ca[ok]); c2[1::2] = ca[ok] + t1[ok, None] * (cb[ok] - ca[ok]); outC.append(c2)
+    if not outV: return np.zeros((0, 3)), (np.zeros((0, np.shape(colors)[1])) if pc else colors)
+    return np.vstack(outV), (np.vstack(outC) if pc else colors)
+
+
+def clone_tris(V, idx, colors=None):
+    """треугольники → копии со сдвигами k·WRAP_X; оставляем те, что хоть одной вершиной попадают в |x| ≤ SHOW_X"""
+    P, X = WRAP_X, SHOW_X; V = np.asarray(V, float).reshape(-1, 3); idx0 = np.asarray(idx); T = idx0.reshape(-1, 3)
+    if P <= 0 or X <= 0 or len(T) == 0: return V, idx0, colors
+    pc = colors is not None and np.ndim(colors) == 2 and len(colors) == len(V); outV, outI, outC = [], [], []; nv = 0; K = int(np.ceil((X + P / 2) / P))
+    for k in range(-K, K + 1):
+        x = V[T, 0] + k * P; keep = ((x >= -X) & (x <= X)).any(1) | ((x.min(1) <= -X) & (x.max(1) >= X))
+        if not keep.any(): continue
+        u, inv = np.unique(T[keep], return_inverse=True); W = V[u].copy(); W[:, 0] += k * P; outV.append(W); outI.append(inv.reshape(-1, 3) + nv); nv += len(u)
+        if pc: outC.append(np.asarray(colors)[u])
+    if not outV: return np.zeros((0, 3)), np.zeros(0, np.uint32), (np.zeros((0, np.shape(colors)[1])) if pc else colors)
+    return np.vstack(outV), np.vstack(outI).ravel(), (np.vstack(outC) if pc else colors)
+
+
 def wrap_tris(V, idx, colors=None):
     """треугольники с разбросом по x > P/2 — дублируем в периодические копии (вершины с x<0 сдвигаем на +P в одной копии, с x>0 на −P в другой), без растяжки через поле"""
     P = WRAP_X; V = np.asarray(V, float).reshape(-1, 3); idx0 = idx; idx = np.asarray(idx).reshape(-1, 3)
@@ -166,7 +206,7 @@ def wrap_tris(V, idx, colors=None):
     x = V[idx, 0]; far = (x.max(1) - x.min(1)) > P / 2
     if not far.any(): return V, idx0, colors
     T = idx[far]; nv = len(V); newV, newC, newI = [V], ([np.asarray(colors)] if pervert else None), [idx[~far]]
-    for sgn in (1., -1.):
+    for sgn in ((1.,) if SHOW_X > 0 else (1., -1.)):                                       # при показе копий достаточно одной (остальные дадут clone_tris — без двойного наложения)
         u, inv = np.unique(T, return_inverse=True); W = V[u].copy(); W[(W[:, 0] < 0) if sgn > 0 else (W[:, 0] > 0), 0] += sgn * P
         newI.append(inv.reshape(-1, 3) + nv); newV.append(W); nv += len(u)
         if newC is not None: newC.append(np.asarray(colors)[u])
@@ -208,6 +248,10 @@ def _make_batch():
             if WRAP_X > 0:
                 if kind == 'lines': V, colors = wrap_lines(V, colors)
                 elif kind == 'tris' and idx is not None: V, idx, colors = wrap_tris(V, idx, colors)
+                if SHOW_X > 0:
+                    if kind == 'lines': V, colors = clone_lines(V, colors)
+                    elif kind == 'tris' and idx is not None: V, idx, colors = clone_tris(V, idx, colors)
+                    if len(V) == 0: return
             self._gn = self.attach_new_node(_geom_node(V, kind, idx, self.col if colors is None else colors)); self._gn.set_transparency(TransparencyAttrib.M_alpha)
             if not depth_write: self._gn.set_depth_write(False)
             if fixed is not None: self._gn.set_bin('fixed', fixed)                                        # порядок отрисовки: подложка (31) → линии скелета (32) → траектории в цель (60)
@@ -651,7 +695,7 @@ class GrowView:
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""
         from ..algo import growN as G
         ex = np.broadcast_to(np.asarray(extra, float), (len(G.XLV),)); a, b = G.XLV[s.ax[0]] + ex[s.ax[0]], G.XLV[s.ax[1]] + ex[s.ax[1]]      # extra — число или вектор по осям (GM покомпонентно: рабочая зона ±(3, 2.5), буфер ±(6, 3.5))
-        if G.XLV[s.ax[0]] == 0: a = np.pi                                # периодическая ось: рамка по периоду
+        if G.XLV[s.ax[0]] == 0: a = SHOW_X if SHOW_X > 0 else np.pi                                # периодическая ось: рамка по периоду
         if G.XLV[s.ax[1]] == 0: b = np.pi
         C = np.array([(-a, -b), (a, -b), (a, b), (-a, b), (-a, -b)]); P = np.zeros((5, 3)); P[:, 0] = C[:, 0]; P[:, 1] = Y0; P[:, 2] = C[:, 1]; return P
 

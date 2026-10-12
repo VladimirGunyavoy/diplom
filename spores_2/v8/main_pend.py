@@ -4,7 +4,7 @@ main_pend.py — МАЯТНИК в окне (отдельный скрипт, Д
 Картинки: projects/spore/img/pend/<дата>/expNNN + last_exp; логи: v8/runs_pend/<время>/. Первый запуск: по одной споре от цели на слой u=±UM (V8_MAXCELLS=1; слой 0 не растим; ЛКМ после этапов +1 спора; V8_MAXCELLS=0 — полный атлас). Запуск: python main_pend.py (offscreen: V8_WINDOW=offscreen).
 """
 import os as _os
-for _k, _v in dict(SYS='pend', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='1', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
+for _k, _v in dict(SYS='pend', V8_GRID='4', M='5', KF='11', NFAIL='400', DELTA='.2', RMAX='.3', TMAX='8', TQDM_MI='1000', GS='0', GLIM='0', GOALB='0', GOALSHAPE='ball', GSEED='1', RHO='.1', UM='.3', COVTOL='.003', OVL='.05', GROW='2', OVH='.5', FRAC='.5', DTN='.06', NORM='gram', SEL='stop', STOPS='0', SOLVE8_PLUS='1', NORMFRONT='2', ACTIVE='1', MAXIT='8000', V8_PEND='1', V8_MAXCELLS='1', V8_WAIT='600').items(): _os.environ[_k] = _v if _k in ('SYS', 'V8_PEND', 'V8_WAIT') else _os.environ.get(_k, _v)
 _os.environ['SYS'] = 'pend'
 
 import sys
@@ -139,6 +139,7 @@ shared_context.bind('model', lambda: model, default=model)
 # (или клик мыши по полю); 1 — размер маркеров. Пока нет алгоритма b6 (src/algo/growN.py + src/stepper/stepper.py) — DemoStepper (синтетические снимки).
 from src.stepper.growview import GrowView
 import src.stepper.growview as _gvmod; _gvmod.WRAP_X = 2 * 3.141592653589793 if _os.environ.get("V8_WRAP", "1") != "0" else 0.    # шов θ=±π: отрезки/треугольники режутся и клонируются периодически
+_gvmod.SHOW_X = float(_os.environ.get('V8_THETA', '8')) if _gvmod.WRAP_X > 0 else 0.    # периодические копии на θ ∈ [−8, 8] (расчёт по одному периоду)
 try:
     from src.stepper.live import LiveStepper                 # настоящий алгоритм (b6, src/algo/growN.py SYS=di) под Stepper
     stepper = LiveStepper(seed=None)
