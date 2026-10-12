@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -115,6 +115,9 @@ class Graph:
     def evalpairs(s, V, n, pairs):
         """V в точках по лучшей (самой центральной) из ≤K ячеек, у которой все вершины определены; inf — нет такой"""
         out = np.full(n, np.inf); done = np.zeros(n, bool); pi, verts, w, rank = pairs
+        if s.spsel and s.mode == 'lin':                                                                      # SPSEL: из перекрывающихся ячеек берём ту, у которой меньше разброс значений по вершинам (разброс = ячейка режет излом/дыру), а не самую центральную
+            Vv = V[verts]; fin = (Vv < BIG / 2).all(1); sp = np.where(fin, Vv.max(1) - Vv.min(1), np.inf); val = (w * Vv).sum(1)
+            o = np.lexsort((rank, sp, pi)); pi_, val_, sp_ = pi[o], val[o], sp[o]; first = np.r_[True, pi_[1:] != pi_[:-1]]; ok = first & np.isfinite(sp_); out[pi_[ok]] = val_[ok]; return out
         for r in range(s.K):
             m = rank == r
             if not m.any(): continue
