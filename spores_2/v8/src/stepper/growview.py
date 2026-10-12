@@ -265,7 +265,7 @@ class GrowView:
             if cl: out[u] = cl
         return out
 
-    VNAMES = ('surf', 'pts', 'inf', 'long', 'cross', 'cen', 'goal')
+    VNAMES = ('surf', 'pts', 'inf', 'long', 'cross', 'cen', 'goal', 'gcen')
 
     def _draw_vsurf(s, snap):
         from . import vsurf as VS
@@ -293,8 +293,8 @@ class GrowView:
                 lc = s.tinted(s.COL['segs_core_done'], k)[:3]                                                      # скелет — в цвет группы слоя (как контур ядра клеток слоя)
                 s._layer(nm('surf'), w).set_geometry(m['verts'], m['tris'], kind='tris', colors=m['colors'], depth_write=False)
                 Dp, ip = _discs(m['pts'], R); s._layer(nm('pts'), w).set_geometry(Dp, ip, kind='tris', colors=np.repeat(m['pcol'], 17, axis=0))
-                for t, a_, th, col, top in (('long', VS.LONG_A, VS.LONG_W, lc, False), ('cross', VS.CROSS_A, VS.CROSS_W, lc, False), ('cen', VS.CENTER_A, VS.CENTER_W, lc, False), ('goal', VS.GOAL_A, VS.GOAL_W, (1., 1., 1.), True)):
-                    arr = m['center' if t == 'cen' else t]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top)       # goal — белые, поверх всего
+                for t, a_, th, col, top in (('long', VS.LONG_A, VS.LONG_W, lc, False), ('cross', VS.CROSS_A, VS.CROSS_W, lc, False), ('cen', VS.CENTER_A, VS.CENTER_W, lc, False), ('goal', VS.GOAL_A, VS.GOAL_SIDE_W, (1., 1., 1.), True), ('gcen', VS.GOAL_A, VS.GOAL_W, (1., 1., 1.), True)):
+                    arr = m[{'cen': 'center', 'gcen': 'goalc'}.get(t, t)]; s._layer(nm(t), w).set_geometry(arr, kind='lines', thick=th, colors=np.tile((*col, a_), (len(arr), 1)), depth_write=False, on_top=top)       # goal/gcen — белые, поверх всего (центральный столбец жирнее боковых)
                 Di, ii = _discs(m['inf'], R); s._layer(nm('inf'), w).set_geometry(Di, ii, kind='tris', colors=np.tile((.55, .55, .58, .9), (len(Di), 1)))
 
     def _box(s, extra):

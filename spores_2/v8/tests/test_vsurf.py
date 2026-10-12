@@ -68,7 +68,7 @@ def test_common_layer_and_goal_columns():
         for V, w in zip(Vs[u], info['wins'][u]): assert not (w & (V >= VS.BIG / 2)).any(); nw += int(w.sum()); nn += w.size
         m = VS.build_mesh(cl, Vs[u], vmax=vmax, win=info['wins'][u], goalcols=info['goalcols'][u]); mf = VS.build_mesh(cl, Vs[u], vmax=vmax, goalcols=info['goalcols'][u])
         assert len(m['pts']) == sum(int(w.sum()) for w in info['wins'][u]) and len(m['pts']) <= len(mf['pts']) and len(m['inf']) == 0 and len(m['tris']) <= len(mf['tris'])
-        ng += len(mf['goal']); assert len(mf['goal']) > 0 and len(m['goal']) <= len(mf['goal'])
+        ng += len(mf['goal']); assert len(mf['goal']) + len(mf['goalc']) > 0 and len(mf['goalc']) > 0 and len(m['goal']) <= len(mf['goal']) and len(m['goalc']) <= len(mf['goalc'])
     assert 0 < nw < nn          # общий слой — часть узлов (оба слоя что-то выигрывают, но не всё)
 
 
