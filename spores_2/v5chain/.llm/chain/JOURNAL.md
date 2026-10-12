@@ -312,3 +312,5 @@ laptop-v5chain-research-4 | line-open | worker [laptop-B] | слово поль�
 laptop-v5chain-worker-b1 | started | acc2 | sonnet | 17:05:01
 laptop-v5chain-research-4 | done | ctx 38% / 5ч 56% | v8 ДИ: причины застревания/горба/ошибки у цели разобраны (lr4), поле x±3/буфер ±6, GOALW/GOALFRONT/SEEDNEAR, режим N спор, картинки прогона, две линии воркеров | next=laptop-v5chain-research-5 | 18:30:41
 laptop-v5chain-research-5 | started | acc2 | opus | 18:32:16
+laptop-v5chain-worker-7 | started | acc1 | sonnet | 19:13:35
+laptop-v5chain-research-5 | AUTONOMOUS | слово пользователя 19:40 «я отхожу… автономный режим»; файл journals/_sentinel/AUTONOMOUS | 19:38:54
