@@ -72,7 +72,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 1 if pl else 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -170,7 +170,7 @@ class Graph:
         if s.calc != 'v':
             V = s._solve_q(maxit, tol, verbose, progress=progress)
             if s.bis > 0 and not s.subk:                                                                      # BISECT: подточки — моменты переключения, найденные бисекцией по времени на рёбрах, где «продолжать» и «переключиться» меняются местами
-                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, tol, False, progress=progress)
+                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol) if s.warm else tol, False, progress=progress, warm=bool(s.warm))
                 s.subk = 0; s._subc = None
             return V
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
@@ -226,9 +226,11 @@ class Graph:
             t = c * j / (s.subk + 1); x, v = s.P[n, 0], s.P[n, 1]; PP.append(np.stack([x + v * t + u * t * t / 2, v + u * t], 1)); own.append(n); tt.append(t)
         P = np.concatenate(PP); r = (np.concatenate(own), np.concatenate(tt), [s.locate(u2, P) for u2 in s.us], len(P)); s._subc = (s.subk, r); return r
 
-    def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None):
+    def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None, warm=False):
         """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
-        pen = s.pen if pen is None else pen; t0 = time.perf_counter(); Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); V = V0.copy(); Q = Q0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
+        pen = s.pen if pen is None else pen; t0 = time.perf_counter(); Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); V = V0.copy(); Q = Q0.copy()
+        if warm and getattr(s, 'V', None) is not None and getattr(s, 'Vn', None) is not None and len(s.V) == s.n: Q = np.minimum(Q, s.V); V = np.minimum(V, s.Vn)                  # тёплый старт: Q/V прошлого решения — верхняя оценка (подточки бисекции только добавляют опции)
+        e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
         for passes in range(1, maxit + 1):
             Vo = V.copy(); Qo = Q.copy()
