@@ -312,3 +312,5 @@ laptop-v5chain-research-4 | line-open | worker [laptop-B] | слово поль�
 laptop-v5chain-worker-b1 | started | acc2 | sonnet | 17:05:01
 laptop-v5chain-research-4 | done | ctx 38% / 5ч 56% | v8 ДИ: причины застревания/горба/ошибки у цели разобраны (lr4), поле x±3/буфер ±6, GOALW/GOALFRONT/SEEDNEAR, режим N спор, картинки прогона, две линии воркеров | next=laptop-v5chain-research-5 | 18:30:41
 laptop-v5chain-research-5 | started | acc2 | opus | 18:32:16
+laptop-v5chain-research-5 | line-open | worker C | слово пользователя: бенч спор vs RRT/RRT*/PPO по всем средам, spores_2/bench/, хаб+aida | 19:37:18
+hub-v5chain-worker-c1 | started | 19:37:18
