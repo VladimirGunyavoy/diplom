@@ -15,6 +15,5 @@ G = M.growview; M._step('C'); print('done:', M.stepper.done, 'todo', [(t['kind']
 M._up(); wait(); M.app.step(); G.poll(); print('after RMB todo', G.stage_todo(M.stepper.snapshot), 'LABEL', repr(G.stage_label()))
 G.toggle_common(); G.toggle_traj(); M.app.step(); G.poll(); print(G.vlabel(), 'tfresh', G._tfresh); shot('og_all.png')
 for i in range(2): G.cycle_vcalc(); M.app.step(); G.poll(); print(G.vlabel()[:140], G.dinfo)
-G.toggle_traj(); G.toggle_traj(); G.toggle_common(); G.toggle_errmap(); M.app.step(); G.poll(); print('VLABEL', G.vlabel()); shot('og_errmap.png'); P.position = (0.0, 4.0, -3.0); P.camera_pivot.rotation_x = 55; shot('og_errmap_close.png')
-M._dense(); M.app.step(); print('FINE', G.fine); M._step('C'); print('fine done', M.stepper.done)
+G.toggle_common(); M.app.step(); G.poll(); print('VLABEL', G.vlabel()[:300])
 print('SMOKE OK')

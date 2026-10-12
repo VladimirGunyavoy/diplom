@@ -56,7 +56,7 @@ def solve_layers(cells_by_u, g=None, calc='v', progress=None):
     for li, u in enumerate(G.us):                                                      # ошибка Q_u против ТОЧНОГО входа в круг своим u (entry_time, аналитика) — в спорах без решений (первые споры слоёв ±1) она должна быть ≈ 0
         m = (G.layer == li) & (np.linalg.norm(G.P, axis=1) > G.rho); te = solve8.entry_time(G.P[m], u, np.full(int(m.sum()), 10.), G.rho); ok = np.isfinite(te) & (G.V[m] < BIG / 2); e = G.V[m][ok] - te[ok]
         qerr[u] = dict(n=int(ok.sum()), of=int(m.sum()), max=float(np.abs(e).max()) if len(e) else 0., med=float(np.median(np.abs(e))) if len(e) else 0., bias=float(np.median(e)) if len(e) else 0.)
-    return out, dict(qerr=qerr, errmap=errmap(G, cells_by_u) if only_goal() else None, G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), converged=bool(getattr(G, 'converged', False)), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
+    return out, dict(qerr=qerr, G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), converged=bool(getattr(G, 'converged', False)), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
 
 
 TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 300)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
@@ -102,52 +102,14 @@ def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
 
 def only_goal(): return os.environ.get('V8_ONLY_GOAL') == '1'
 
-ERR_SCALE = float(os.environ.get('VSURF_ERR_SCALE', .1)); ERR_SUB = int(os.environ.get('VSURF_ERR_SUB', 4)); ERR_H = 10.      # карта ошибки Q: шкала цвета ±ERR_SCALE, подразбиение ячейки ERR_SUB×ERR_SUB, горизонт точного входа
-
-
-def errmap(G, cells_by_u, sub=ERR_SUB):
-    """режим «только первая спора» (A1, research-4): ошибка ЗАПРОСА Q_u(x) − точное время входа в круг своим u (solve8.entry_time) на мелкой сетке ВНУТРИ клеток (не в узлах). → {u: dict(cells=[dict(P (nr, nc, 2), err (nr, nc), noval (nr, nc))], inf (k, 2) — узлы слоя с V=∞, stats)}; err = nan там, где точного входа нет (поток не входит в круг) или Q не определено (noval)"""
-    from ..algo import solve8
-    out = {}
-    for li, u in enumerate(G.us):
-        cells = []; allerr = []; noval = 0; tot = 0
-        for c in cells_by_u.get(u, []):
-            Gc = np.asarray(c['G'], float); nt, M = Gc.shape[:2]; ri = np.linspace(0, nt - 1, (nt - 1) * sub + 1); cj = np.linspace(0, M - 1, (M - 1) * sub + 1); i0 = np.minimum(ri.astype(int), nt - 2)[:, None]; j0 = np.minimum(cj.astype(int), M - 2)[None, :]; a = (ri[:, None] - i0); b = (cj[None, :] - j0)
-            P = ((1 - a)[..., None] * (1 - b)[..., None] * Gc[i0, j0] + (1 - a)[..., None] * b[..., None] * Gc[i0, j0 + 1] + a[..., None] * (1 - b)[..., None] * Gc[i0 + 1, j0] + a[..., None] * b[..., None] * Gc[i0 + 1, j0 + 1]); sh = P.shape[:2]; X = P.reshape(-1, 2)
-            Q = G.Vlayers(X)[:, li]; inb = np.linalg.norm(X, axis=1) <= G.rho; te = solve8.entry_time(X, u, np.full(len(X), ERR_H), G.rho); te[inb] = 0.; ex = np.isfinite(te); nv = ex & ~(Q < solve8.BIG / 2); err = np.full(len(X), np.nan); k_ = ex & ~nv; err[k_] = Q[k_] - te[k_]
-            cells.append(dict(P=P.astype(np.float32), err=err.reshape(sh).astype(np.float32), noval=nv.reshape(sh))); allerr.append(err[np.isfinite(err) & ~inb]); noval += int((nv & ~inb).sum()); tot += int((ex & ~inb).sum())
-        e = np.concatenate(allerr) if allerr else np.zeros(0); ae = np.abs(e); m = (G.layer == li) & (G.V >= solve8.BIG / 2)
-        out[u] = dict(cells=cells, inf=G.P[m].astype(np.float32), stats=dict(points=int(len(e)), of=int(tot), noval=int(noval), med=float(np.median(ae)) if len(e) else 0., p90=float(np.percentile(ae, 90)) if len(e) else 0., max=float(ae.max()) if len(e) else 0., bias=float(np.median(e)) if len(e) else 0., inf_nodes=int(m.sum()), nodes=int((G.layer == li).sum())))
-    return out
-
-
-def err_color(e, scale=ERR_SCALE):
-    """ошибка → RGBA: 0 — белый, + красный, − синий; |e| ≥ scale — насыщенный"""
-    t = np.clip(np.asarray(e, float) / scale, -1, 1); w = 1 - np.abs(t); out = np.ones(t.shape + (4,)); pos = t > 0; out[..., 0] = np.where(pos, 1., w); out[..., 1] = w; out[..., 2] = np.where(pos, w, 1.); return out
-
-
-def errmap_geom(em, ax=(0, 1), y0=.012, cross=.025):
-    """errmap → dict: verts (K, 3), colors (K, 4), tris (T,) индексы (четырёхугольники сетки, у которых все 4 вершины с ошибкой), cross (2·2k, 3) — крестики узлов с V=∞"""
-    Vv, Cc, Tt, off = [], [], [], 0; X = []
-    for u, d in em.items():
-        for c in d['cells']:
-            P, e = c['P'], c['err']; nr, nc = e.shape; v = np.zeros((nr * nc, 3)); v[:, 0] = P[..., ax[0]].ravel(); v[:, 2] = P[..., ax[1]].ravel(); v[:, 1] = y0; ok = np.isfinite(e); idx = off + np.arange(nr * nc).reshape(nr, nc)
-            q = ok[:-1, :-1] & ok[1:, :-1] & ok[:-1, 1:] & ok[1:, 1:]; a, b, c_, d_ = idx[:-1, :-1][q], idx[1:, :-1][q], idx[:-1, 1:][q], idx[1:, 1:][q]; Tt.append(np.stack([a, b, c_, b, d_, c_], 1).ravel()); Vv.append(v); Cc.append(err_color(np.where(ok, e, 0.))); off += nr * nc
-        for p in d['inf']: X.append(p)
-    X = np.array(X, float).reshape(-1, 2); cr = np.zeros((len(X) * 4, 3)); cr[:, 1] = y0 + .002
-    if len(X):
-        for k, (dx, dz) in enumerate(((-1, -1), (1, 1), (-1, 1), (1, -1))): cr[k::4, 0] = X[:, ax[0]] + dx * cross; cr[k::4, 2] = X[:, ax[1]] + dz * cross
-    z3, z4 = np.zeros((0, 3)), np.zeros((0, 4))
-    return dict(verts=np.concatenate(Vv) if Vv else z3, colors=np.concatenate(Cc).reshape(-1, 4) if Cc else z4, tris=np.concatenate(Tt).astype(int) if Tt else np.zeros(0, int), cross=cr)
-
-
-def starts_in_cells(cl, n, seed):
-    """режим «только первая спора» (V8_ONLY_GOAL): n стартов ВНУТРИ готовых клеток (билинейно по четырём узлам случайной ячейки), вне круга цели; клетки по очереди поровну"""
-    rng = np.random.default_rng(seed); rho = float(os.environ.get('RHO', .2)); cells = [np.asarray(c['G'], float) for cs in cl.values() for c in cs]; out = []
+def starts_in_cells(cl, n, seed, xlv=None):
+    """режим «только первая спора» (V8_ONLY_GOAL): n стартов ВНУТРИ готовых клеток (билинейно по четырём узлам случайной ячейки), вне круга цели; клетки по очереди поровну; только в рабочей зоне |p| ≤ xlv (слово пользователя 2026-10-12 ~19:05: вне рабочей зоны не спавнить)"""
+    rng = np.random.default_rng(seed); rho = float(os.environ.get('RHO', .2)); tries = 0; cells = [np.asarray(c['G'], float) for cs in cl.values() for c in cs]; out = []
     while len(out) < n:
         Gc = cells[len(out) % len(cells)]; i = rng.integers(0, len(Gc) - 1); j = rng.integers(0, Gc.shape[1] - 1); s_, t_ = rng.random(2)
-        p = (1 - s_) * (1 - t_) * Gc[i, j] + (1 - s_) * t_ * Gc[i, j + 1] + s_ * (1 - t_) * Gc[i + 1, j] + s_ * t_ * Gc[i + 1, j + 1]
-        if np.linalg.norm(p) > rho: out.append(p)
+        p = (1 - s_) * (1 - t_) * Gc[i, j] + (1 - s_) * t_ * Gc[i, j + 1] + s_ * (1 - t_) * Gc[i + 1, j] + s_ * t_ * Gc[i + 1, j + 1]; tries += 1
+        if tries > 200000: raise RuntimeError('starts_in_cells: no points of the cells inside the work zone')
+        if np.linalg.norm(p) > rho and (xlv is None or (np.abs(p) <= xlv + 1e-12).all()): out.append(p)
     return np.array(out)
 
 
@@ -157,7 +119,7 @@ def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC, policy=None, 
     → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
     paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed) if (cl and only_goal()) else solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GMV, np.inf)
+    policy = policy or ('commit' if G.calc in ('q', 'qquad') else 'look'); g = g or solve8.load_growN(); X0 = starts_in_cells(cl, n, seed, np.asarray(g.XLV, float)) if (cl and only_goal()) else solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GMV, np.inf)
     pre = {int(i): r for i, r in zip(np.flatnonzero(~has), _prephase(G, X0[~has], box, rec=rec) if (~has).any() else [])}
     src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
     for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
