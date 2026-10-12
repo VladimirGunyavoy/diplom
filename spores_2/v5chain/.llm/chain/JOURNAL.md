@@ -351,3 +351,4 @@ hub-v5chain-research-25 | done | ctx 38% (коридор) | бенч линии 
 hub-v5chain-research-26 | started | acc2 | opus | 02:36:58
 hub-v5chain-worker-c3 | done | ctx 28% | CA4(A,B,B2), ДИ 4D, manip с запретами, заготовки RACE | next=hub-v5chain-worker-c4 | 02:51:56
 hub-v5chain-worker-c4 | started | acc1 | sonnet | 02:52:36
+laptop-v5chain-worker-b3 | done | ctx 41% | pend: рост 14 с, solve 27 с, MADAPT, SELFOV/FMIN; №19 MROW → b4 | next=laptop-v5chain-worker-b4 | 02:54:01
