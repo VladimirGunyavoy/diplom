@@ -5,7 +5,7 @@ from multiprocessing import Pool
 import common, sst_own, rrtstar_di, rrtstar_dd
 ENV = None; ALGO = 'sst'
 def work(a):
-    i, budgets, sel, prune = a; e = common.make(ENV); snaps = sst_own.sst(e, e.X0[i], budgets, sel=sel, prune=prune, seed=1000 + i) if ALGO == 'sst' else sst_own.rrt(e, e.X0[i], budgets, seed=1000 + i) if ALGO == 'rrt' else (rrtstar_dd if ENV == 'dd' else rrtstar_di).rrtstar(e, e.X0[i], budgets, seed=1000 + i); out = []
+    i, budgets, sel, prune = a; e = common.make(ENV); snaps = sst_own.sst(e, e.X0[i], budgets, sel=sel, prune=prune, seed=1000 + i) if ALGO == 'sst' else sst_own.rrt(e, e.X0[i], budgets, seed=1000 + i) if ALGO == 'rrt' else (rrtstar_dd if ENV in ('dd', 'ddobst') else rrtstar_di).rrtstar(e, e.X0[i], budgets, seed=1000 + i); out = []
     for s in snaps:
         r = dict(budget=s['budget'], t=s['t'], has=s['has'], nodes=s['nodes'], nf=s['nf'], hist=s.get('hist'))
         if s['has']: T, why = common.verify(e, e.X0[i], s['us'], s['dts']); r.update(T=T, why=why)
