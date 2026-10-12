@@ -30,6 +30,23 @@ class GoalSolver:
         s.vo = torch.as_tensor(G.VOFF, device=dev); s.off = torch.as_tensor(G.VOFF @ np.array([G.M ** (G.m_ - k) for k in range(G.N)]), device=dev)
         s.P = A.P; s.fmax = None
 
+    def save_compact(s, out):
+        """SPD4 (b10): компакт-кэш рёбер на диск — части parts как есть (cmp: I int32, base int32, sc; full: столбцовые рёбра) → <out>_C<k>_<имя>.npy (~0.9 ГБ против 4 ГБ у E_*_{I,IDX,W})."""
+        assert s.compact, 'save_compact только для compact=True'
+        for k, p in enumerate(s.parts):
+            for nm, t in zip(('I', 'B', 'S'), p[1:]): np.save('%s_C%d_%s.npy' % (out, k, nm), t.cpu().numpy())
+        np.save(out + '_Ckinds.npy', np.array([p[0] for p in s.parts])); np.save(out + '_Cne.npy', np.array([s.ne]))
+    @classmethod
+    def load_compact(cls, A, out, dev='cuda'):
+        """GoalSolver из компакт-кэша (save_compact): исходные E_*_{I,IDX,W} не читаются."""
+        s = cls.__new__(cls); s.A, s.dev, s.compact = A, dev, True; s.ne = int(np.load(out + '_Cne.npy')[0]); kinds = np.load(out + '_Ckinds.npy'); s.parts = []
+        for k, kd in enumerate(kinds):
+            I, B, S = [torch.as_tensor(np.load('%s_C%d_%s.npy' % (out, k, nm)), device=dev) for nm in ('I', 'B', 'S')]; s.parts.append((str(kd), I, B, S))
+        s.hasE = torch.zeros(A.N, dtype=torch.bool, device=dev)
+        for p in s.parts: s.hasE[p[1].long()] = True
+        s.vo = torch.as_tensor(G.VOFF, device=dev); s.off = torch.as_tensor(G.VOFF @ np.array([G.M ** (G.m_ - k) for k in range(G.N)]), device=dev); s.P = A.P; s.fmax = None
+        return s
+
     def nbytes(s): return sum(t.numel() * t.element_size() for p in s.parts for t in p[1:])
 
     def tgoal_min(s, gc):
