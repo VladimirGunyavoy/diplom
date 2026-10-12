@@ -97,7 +97,7 @@ def freeze_idx(g, s):
     s.query = query
 
 
-FATE = int(os.environ.get('FATE', 0)); ACTIVE = int(os.environ.get('ACTIVE', 0)); ACTEPS = float(os.environ.get('ACTEPS', 1e-7))
+SOLVEB = int(os.environ.get('SOLVEB', 0)); FATE = int(os.environ.get('FATE', 0)); ACTIVE = int(os.environ.get('ACTIVE', 0)); ACTEPS = float(os.environ.get('ACTEPS', 1e-7))
 class _Active:
     """список активных узлов (b3): E_li(точка) пересчитывается только для точек, у которых изменилась вершина ячейки хотя бы в одной из пар; остальное — из кэша. Q монотонно убывает, значит кэш согласован"""
     def __init__(a, s, pairs, npts=None, fate=None):
@@ -310,8 +310,49 @@ class Graph:
             t = c * j / (s.subk + 1); PP.append(s.flow(s.P[n], u, t)); own.append(n); tt.append(t)
         P = np.concatenate(PP); r = (np.concatenate(own), np.concatenate(tt), [s.locate(u2, P) for u2 in s.us], len(P)); s._subc = (s.subk, r); return r
 
+    def _solve_qb(s, tol, pen, verbose=True):
+        """b3: Q по вёдрам (метки по возрастанию Q, Гаусс–Зейдель на месте, коррекция меток): узлы ведра [θ, θ+D) рассылаются зависимым (E по ячейкам через _Active, E1 — вверх по столбцу к предшественнику); улучшение < tol не рассылается. Та же неподвижная точка, что у Якоби, до tol"""
+        t0 = time.perf_counter(); n = s.n; Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); Q = Q0.copy(); V = np.minimum(V0, Q0); pen = s.pen if pen is None else pen
+        acts = [_Active(s, pr) for pr in s.e3]; sub = s._sub() if s.subk else None; actS = [_Active(s, pr, sub[3]) for pr in sub[2]] if sub else None; pred = np.where(s.rowid > 0, np.arange(n) - s.M, -1); cost = s.cost; lay = s.layer; D = float(os.environ.get('BD', .06)); TOL = float(os.environ.get('SBSEND', max(tol, 1e-9)))
+        def e1(u):                                                                                  # V улучшился в узлах u → Q предшественников (вверх по столбцу, пока V[p] улучшается); возвращает узлы с улучшенным Q
+            out = []
+            while len(u):
+                p = pred[u]; m = p >= 0; p, uu = p[m], u[m]
+                if not len(p): break
+                c = cost[p] + V[uu]; im = c < Q[p] - TOL; p, c = p[im], c[im]
+                if not len(p): break
+                Q[p] = c; out.append(p); vo = V[p].copy(); V[p] = np.minimum(V[p], c); u = p[V[p] < vo]
+            return np.concatenate(out) if out else np.zeros(0, np.int64)
+        newq = e1(np.flatnonzero(V < BIG / 2)); pend = Q < BIG / 2; pend[newq] = True; nrd = 0; nb = 0; first = True
+        while pend.any():
+            th = Q[pend].min(); thr = th + D; B = np.flatnonzero(pend & (Q < thr)); pend[B] = False; nb += 1
+            while len(B):
+                nrd += 1; nq = []; nv = []
+                for li, a in enumerate(acts):
+                    E_ = a.update(Q, B); pts = a.last if a.last is not None else np.arange(n)
+                    if not len(pts): continue
+                    own = pts[lay[pts] == li]; oth = pts[lay[pts] != li]
+                    if len(own): c = E_[own]; im = (c < Q[own] - TOL) & np.isfinite(c); o = own[im]; Q[o] = c[im]; nq.append(o)
+                    if len(oth): c = E_[oth] + pen; im = (c < V[oth] - TOL) & np.isfinite(c); o = oth[im]; V[o] = c[im]; nv.append(o)
+                if actS is not None:                                                                  # SUBK: переключение внутри ребра столбца — Q(владелец) ≤ t_j + Q_чужого слоя в подточке j
+                    own_s, tt_s = sub[0], sub[1]
+                    for li, a in enumerate(actS):
+                        Es = a.update(Q, B); pts = a.last if a.last is not None else np.arange(sub[3])
+                        if not len(pts): continue
+                        pts = pts[lay[own_s[pts]] != li]; c = tt_s[pts] + Es[pts] + pen; ok = np.isfinite(c) & (c < Q[own_s[pts]] - TOL); pts, c = pts[ok], c[ok]
+                        if len(pts): ow = own_s[pts]; o = np.unique(ow); q0 = Q[o].copy(); np.minimum.at(Q, ow, c); nq.append(o[Q[o] < q0])
+                nqa = np.concatenate(nq) if nq else np.zeros(0, np.int64); nva = np.concatenate(nv) if nv else np.zeros(0, np.int64)
+                if len(nqa): vo = V[nqa].copy(); V[nqa] = np.minimum(V[nqa], Q[nqa]); nva = np.concatenate([nva, nqa[V[nqa] < vo]])
+                ne = e1(np.unique(nva)) if len(nva) else np.zeros(0, np.int64); allq = np.unique(np.concatenate([nqa, ne]))
+                if len(allq): inb = Q[allq] < thr; B = allq[inb]; pend[allq[~inb]] = True
+                else: B = allq
+        s.converged = True; s.passes = nrd; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
+        if os.environ.get('ACTDBG'): print('SOLVEQB n=%d вёдер %d раундов %d %.1f с' % (n, nb, nrd, s.t_solve), flush=True)
+        return V
+
     def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None, progress=None, warm=False):
         """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
+        if SOLVEB: return s._solve_qb(max(tol, s.wtol), pen)
         pen = s.pen if pen is None else pen; t0 = time.perf_counter(); Q0, V0 = s._xentry_init() if s.xentry > 0 else (s.V0, s.V0); V = V0.copy(); Q = Q0.copy()
         if warm and getattr(s, 'V', None) is not None and getattr(s, 'Vn', None) is not None and len(s.V) == s.n: Q = np.minimum(Q, s.V); V = np.minimum(V, s.Vn)                  # тёплый старт: Q/V прошлого решения — верхняя оценка (подточки бисекции только добавляют опции)
         e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
