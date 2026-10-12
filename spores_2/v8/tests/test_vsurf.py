@@ -107,5 +107,9 @@ def test_agent_paths():
     m = VS.traj_geom(res); fl, sf = m['floor'], m['surf']; assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01) and len(m['fcol']) == len(fl) and len(m['scol']) == len(sf) and len(m['pf']) == len(m['pfc']) and len(m['ps']) == len(m['psc'])
     assert all(len(U) == len(P) for P, U in zip(res['paths'], res['U'])) and set(np.unique(np.concatenate(res['U']))) <= {-1., 0., 1.}
     c = VS.ctrl_color(np.array([1., -1., 0.])); assert np.allclose(c[0, :3], VS.CTRL_COL[1]) and np.allclose(c[1, :3], VS.CTRL_COL[-1]) and np.allclose(c[2, :3], VS.CTRL_COL[0]) and (c[:, 3] == 1).all()
+    n_seg = sum(len(P) - 1 for P in res['paths'] if len(P) >= 2); assert len(fl) == 2 * n_seg, (len(fl), n_seg)      # отрезок только между соседними по времени точками ОДНОЙ траектории
+    d = np.linalg.norm(fl[1::2] - fl[0::2], axis=1); vmax = max(np.abs(P[:, 1]).max() for P in res['paths']); assert d.max() <= VS.TRAJ_REC * .01 * np.hypot(vmax, 1.) * 1.3, d.max()       # нет перемычек: длина ≤ шаг записи · |f| с запасом
+    assert np.allclose(fl[1::2][:-1][np.diff(np.repeat(np.arange(len(res['paths'])), [max(len(P) - 1, 0) for P in res['paths']])) == 0], fl[2::2][np.diff(np.repeat(np.arange(len(res['paths'])), [max(len(P) - 1, 0) for P in res['paths']])) == 0]), 'стык: конец отрезка = начало следующего в той же траектории'
+    import colorsys; sat = lambda c: colorsys.rgb_to_hsv(*c)[1]; assert sat(VS.CTRL_COL[1]) < sat((.72, .25, 1.)) and sat(VS.CTRL_COL[-1]) < sat((1., .12, .12)) and abs(colorsys.rgb_to_hsv(*VS.CTRL_COL[1])[2] - 1.) < 1e-9      # приглушены, яркость осталась
     uu = np.concatenate(res['U'][:20]); assert (uu > 0).any() and (uu < 0).any()      # оба управления встречаются
     print('agent_paths %.1f s, reached %.2f, floor %d, surf %d' % (dt, ok.mean(), len(fl), len(sf)))

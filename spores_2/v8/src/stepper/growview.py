@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s.vcalc = 'v'; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s.vcalc = 'v'; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -267,11 +267,16 @@ class GrowView:
         if not s.tmode: s.tmode = True; s.tview = 'both'
         elif s.tview == 'surface': s.tmode = False
         else: s.tview = s.TVIEWS[s.TVIEWS.index(s.tview) + 1]
-        print('[vsurf] final trajectories: %s' % (s.tview if s.tmode else 'off'), flush=True)
+        s._tfresh = False; print('[vsurf] final trajectories: %s' % (s.tview if s.tmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
+    def _tlabel(s):
+        """подпись траекторий: computing… / computed (только что) / cached (из кэша: T только переключает видимость)"""
+        if s._traj is None: return s._tstat or 'computing...'
+        return ('computed: ' if s._tfresh else 'cached: ') + s._tstat
+
     def vlabel(s):
-        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories on %s (%s)' % (s.tview, s._tstat or '...'), s.tmode)) if f]
+        on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories on %s (%s)' % (s.tview, s._tlabel()), s.tmode)) if f]
         return ('%s [%s]: %s' % (' + '.join(on), dict(s.VCALC)[s.vcalc], s.vinfo or 'on')) if on else ''
 
     def _vcells(s, snap):
@@ -293,15 +298,20 @@ class GrowView:
                 for n in s.VNAMES:
                     if pre + n + '@%d' % k in s.layers: s.layers[pre + n + '@%d' % k].set_geometry(z3)
         ks = range(max(getattr(s, '_nk', 0), 3))
-        if not on: clear('v', ks); clear('c', ks); s._clear_traj(); s._vsig = None; s._traj = None; return
+        if not on: clear('v', ks); clear('c', ks); s._clear_traj(); return                                        # кэши V и траекторий остаются: повторное включение того же атласа/режима — без пересчёта
         cl = s._vcells(snap); sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
-        if sig != s._vsig:
-            s._vsig = sig; s._vres = None; s._traj = None
-            try:
-                t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl, calc=s.vcalc); s._vres = (Vs, VS.vscale(Vs), cl, info)
-                s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
-                print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
-            except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = s.tmode = False
+        if sig != s._vsig or s._vres is None:
+            s._vsig = sig; hit = s._tcache.get(sig); s._traj = None if hit is None else hit[:2]; s._tstat = '' if hit is None else hit[2]; s._tfresh = False
+            if sig in s._vcache: s._vres, s.vinfo = s._vcache[sig]
+            else:
+                s._vres = None
+                try:
+                    t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl, calc=s.vcalc); s._vres = (Vs, VS.vscale(Vs), cl, info)
+                    s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
+                    print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
+                    if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))                                  # кэш по (атлас, режим): возврат к прежнему режиму — из кэша
+                    s._vcache[sig] = (s._vres, s.vinfo)
+                except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = s.tmode = False
         if s._vres is None: clear('v', ks); clear('c', ks); s._clear_traj(); return
         s._draw_traj()
         Vs, vmax, cl, info = s._vres; layers = snap.get('layers') or (); R = .5 * SPORE_SCALE * (s.sm.size if s.sm is not None else 1.)
@@ -342,7 +352,7 @@ class GrowView:
         for nm, arr, col, th, on in (('traj_floor', m['floor'], m['fcol'], VS.TRAJ_FW, fl), ('traj_surf', m['surf'], m['scol'], VS.TRAJ_SW, sf)):
             s._layer(nm, w).set_geometry(arr if on else z3, kind='lines', thick=th, colors=col if on else z4, depth_write=False, on_top=True)
         for nm, pts, col, on in (('traj_pf', m['pf'], m['pfc'], fl), ('traj_ps', m['ps'], m['psc'], sf)):
-            D, ii = _discs(pts if on else z3, R); s._layer(nm, w).set_geometry(D, ii, colors=np.repeat(col if on else z4, 17, axis=0), depth_write=False, on_top=True)
+            D, ii = _discs(pts if on else z3, R); s._layer(nm, w).set_geometry(D, ii, kind='tris', colors=np.repeat(col if on else z4, 17, axis=0), depth_write=False, on_top=True)
 
     def poll(s):
         """каждый кадр (main.update): готов ли фоновый расчёт траекторий → нарисовать"""
@@ -350,10 +360,12 @@ class GrowView:
         if j is None or j['th'].is_alive(): return
         s._tjob = None
         if j['err']: s._tstat = 'failed: ' + j['err']; print('[vsurf] trajectories ' + s._tstat, flush=True); s.draw(s.snap); return
-        if j['sig'] != s._vsig or not s.tmode: s.draw(s.snap); return                                                 # атлас/расчёт поменялись — результат устарел
         from . import vsurf as VS
-        res = j['res']; ok = np.isfinite(res['T']); s._traj = (res, VS.traj_geom(res, s.ax)); s._tstat = 'done: %d/%d reached, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), len(ok), float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'].mean()), time.perf_counter() - j['t0'])
-        print('[vsurf] trajectories ' + s._tstat, flush=True); s.draw(s.snap)
+        res = j['res']; ok = np.isfinite(res['T']); stat = '%d/%d reached, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), len(ok), float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'].mean()), time.perf_counter() - j['t0'])
+        if len(s._tcache) >= 8: s._tcache.pop(next(iter(s._tcache)))
+        s._tcache[j['sig']] = (res, VS.traj_geom(res, s.ax), stat); print('[vsurf] trajectories computed: ' + stat, flush=True)       # в кэш — даже если атлас/режим уже сменились (вернётся — не пересчитывать)
+        if j['sig'] == s._vsig: s._traj = s._tcache[j['sig']][:2]; s._tstat = stat; s._tfresh = True
+        s.draw(s.snap)
 
     def _box(s, extra):
         """граница поля ±(XLV + extra) по показанным осям — замкнутая ломаная (5, 3); для периодических осей (XLV = 0) — не рисуется стороной"""

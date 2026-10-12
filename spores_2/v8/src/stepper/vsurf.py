@@ -57,7 +57,10 @@ TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 100)); TRAJ_SEED = int(os.environ.ge
 TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 3)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 3))
 
 
-CTRL_COL = {1: (.72, .25, 1.), -1: (1., .12, .12), 0: (.82, .82, .86)}             # цвет управления (слово пользователя 2026-10-12): u>0 фиолетовый, u<0 красный, u=0 серо-белый; эти два цвета зарезервированы под управление
+TRAJ_SAT = float(os.environ.get('VSURF_TRAJ_SAT', .62))                              # доля насыщенности цветов траекторий (слово пользователя 2026-10-12: «менее насыщенные»; .62 = −38%, яркость V из HSV остаётся)
+def _desat(c, k=TRAJ_SAT):
+    import colorsys; h, sa, v = colorsys.rgb_to_hsv(*c); return tuple(float(x) for x in colorsys.hsv_to_rgb(h, sa * k, v))
+CTRL_COL = {1: _desat((.72, .25, 1.)), -1: _desat((1., .12, .12)), 0: (.82, .82, .86)}             # цвет управления (слово пользователя 2026-10-12): u>0 фиолетовый, u<0 красный, u=0 серо-белый; эти два цвета зарезервированы под управление
 TRAJ_PT = float(os.environ.get('VSURF_TRAJ_PT', .5))                               # радиус точек траектории — доля радиуса точки споры
 
 
