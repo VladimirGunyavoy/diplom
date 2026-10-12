@@ -190,10 +190,12 @@ def _back():
     else: print('[stepper] back: no earlier snapshot')
 
 def _caption():
+    """строка статуса: каждый фрагмент — отдельная строка (дальше — перенос по словам в Message)"""
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
-    lay = ('   layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    return growview.caption() + lay + (('   step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '') + '   ' + growview.skeleton_label() + (('   ' + growview.vlabel()) if growview.vlabel() else '') + (('   [history %d/%d]' % h) if h else '')
+    lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
+    parts = [growview.caption(), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), ('[history %d/%d]' % h) if h else '']
+    return '\n'.join(p for p in parts if p)
 
 def _restart():
     """X: drop everything built so far (and a hand-placed seed) and start over with the algorithm's own seeds (from the goal)."""
@@ -201,7 +203,7 @@ def _restart():
     _last_seed[0] = None; stepper.seed_at(None); growview.draw(None); _step('N')
 
 floor.collider = 'box'
-screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.40 + my), getter=_caption))
+screen_manager.add_message(Message(name='growview', position=(-0.79 + mx, -0.46 + my), getter=_caption, bottom=True))
 screen_manager.add_message(Message(name='timetable', position=(0.30 + mx, 0.48 - my), getter=lambda: growview.times.text(getattr(stepper, 'times', {}))))
 
 # ===== BINDINGS =====
@@ -226,10 +228,10 @@ input_manager.bind('x', _restart, description='restart: algorithm seeds (drop cl
 input_manager.bind('g', _seed_here, description='seed at look point')
 for _i, _key in enumerate('789'): input_manager.bind(_key, lambda i=_i: growview.toggle_layer(i), description='show/hide layer %d' % (_i + 1))
 input_manager.bind('k', growview.toggle_skeleton, description='skeleton: normal / time')
-input_manager.bind('v', growview.toggle_vsurf, description='V surface (solve8 on the current atlas): height and colour = V; 7/8/9 layers')
-input_manager.bind('y', growview.cycle_vcalc, description='V calculation for V/B surfaces and trajectories: old V / by Q (lin) / by Q (quad)')
-input_manager.bind('t', growview.toggle_traj, description='final trajectories (100 random starts, solve8 agent look; colour = control: u>0 purple, u<0 red): off / floor+surface / floor only / surface only')
-input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers; skeleton in the winner layer colour)')
+input_manager.bind('v', growview.toggle_vsurf, description='V surface per layer (height, colour = V)')
+input_manager.bind('y', growview.cycle_vcalc, description='V calc: old / by Q lin / by Q quad')
+input_manager.bind('t', growview.toggle_traj, description='trajectories: off / floor+surface / floor / surface')
+input_manager.bind('b', growview.toggle_common, description='common V* layer (min over layers)')
 def _toggle_floor(): floor.visible_self = not floor.visible_self
 input_manager.bind('f', _toggle_floor, description='toggle floor')
 
