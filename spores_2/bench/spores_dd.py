@@ -1,7 +1,7 @@
 """C2 дифдрайв-ромб 3D: v7 grow3 (w21: RMIN .04 MINROWS 5 NFAIL 60 PAR 1 VF 5 NA 4 VFR 1) + агент с финишем стрельбой. Реплика rollout() с записью (u,dt)-сегментов (оригинал не меняем). Запуск (aida, из bench/): python3 spores_dd.py"""
 import os, sys, time, json
 BENV = os.environ.get('BENCH_ENV', 'dd')
-if BENV == 'ddobst': os.environ.setdefault('OBST', '1')
+if BENV.startswith('ddobst'): os.environ.setdefault('OBST', '1')
 for k, v in dict(RMIN='.04', MINROWS='5', NFAIL='60', PAR='1', VF='5', NA='4', VFR='1', TQDM_MI='1000', OMP_NUM_THREADS='1').items(): os.environ.setdefault(k, v)
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, '..', 'v7', 'src', 'cells7'))
 import numpy as np, itertools, common
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         t1 = time.perf_counter(); T, seg = rollout_rec(A, Q[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
         Tv, why = common.verify(e, Q[i], [list(u) for u, d in sg], [d for u, d in sg]); Ts.append(Tv); res.append(dict(i=i, T_agent=float(T[0]) if np.isfinite(T[0]) else None, T_verify=Tv, why=why, t_query=dtq, nseg=len(sg))); print(i, res[-1], flush=True)
     t1 = time.perf_counter(); rollout_rec(A, Q); t_batch = time.perf_counter() - t1
-    s = common.summarize(e, Ts); s.update(env=BENV, method='spores v7 grow3 (VF 5 NA 4 VFR 1)' + (' OBST=1 RMAX .3' if BENV == 'ddobst' else ''), t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
+    s = common.summarize(e, Ts); s.update(env=BENV, method='spores v7 grow3 (VF 5 NA 4 VFR 1)' + (' OBST=1 RMAX .3' if BENV.startswith('ddobst') else ''), t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (PAR=1: 4 процесса на рост; solve 1 proc)', per_start=res, Tref=e.Tref.tolist())
     s['weight'] = common.deep_weight(A)
     json.dump(s, open(os.path.join(common.DATA, BENV + '_spores.json'), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

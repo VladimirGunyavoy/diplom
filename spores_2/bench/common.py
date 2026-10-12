@@ -112,6 +112,12 @@ class DDObst(DD):
             y = rng.uniform(s.fl_lo, s.fl_hi)
             if not s.out_of_box(y): return y
 
+class DDObst7(DDObst):
+    """подмножество DDObst по правилу конкурента: отрезок старт→цель (прямая часть BM-TGT в свободном пространстве, цель в начале координат) пересекает диск; из 60 стартов KB60 — 7 (индексы 10, 24, 26, 27, 47, 51, 59); эталон dd_obst_refbox"""
+    name = 'ddobst7'; IDX = [10, 24, 26, 27, 47, 51, 59]
+    def __init__(s, nst=None):
+        o = np.load(os.path.join(REF, 'dd_obst_ref_KB60_NG21.npy')); rb = np.load(os.path.join(REF, 'dd_obst_refbox.npy')); s.X0 = o[s.IDX, :3].copy(); s.Tref = rb[s.IDX].copy(); s.keep = np.ones(len(s.IDX), bool)
+
 class Car(Env):
     """статик кар (static_car.md): (x, y, θ, v), u = (a, ω), |a| ≤ 1.5, |ω| ≤ 1.8, v̇ = a − .625 v, поле |x|,|y| ≤ 5, v ∈ [−1, 2], 3 диска r .7, цель круг (4, 3.6) r .45 (θ, v любые); 20 стартов research-21 (r21/ref_car.starts), эталон OCP IPOPT r21/car_ref20.npy; касание диска ≥ −1e-3 допускается как у эталона"""
     name = 'car'; n = 4; m = 2; period = np.array([0., 0., 2 * PI, 0.]); lo = np.array([-5., -5., -PI, -1.]); hi = np.array([5., 5., PI, 2.]); umin = np.array([-1.5, -1.8]); umax = np.array([1.5, 1.8]); fl_lo = np.array([-4.25, -4.25, -PI, 0.]); fl_hi = np.array([0., .3, PI, 0.])
@@ -145,7 +151,7 @@ class Manip(Env):
         return np.stack([w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det], -1)
 
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, car=Car, manip=Manip)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""

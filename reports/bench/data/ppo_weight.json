@@ -22,5 +22,17 @@
   "bytes": 37652,
   "vecnorm_bytes": 2437,
   "zip_bytes": 143097
+ },
+ "ddobst": {
+  "params": 9157,
+  "bytes": 36628,
+  "vecnorm_bytes": 2257,
+  "zip_bytes": 139619
+ },
+ "car": {
+  "params": 9285,
+  "bytes": 37140,
+  "vecnorm_bytes": 2347,
+  "zip_bytes": 141356
  }
 }
