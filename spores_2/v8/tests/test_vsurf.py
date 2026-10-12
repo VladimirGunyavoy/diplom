@@ -47,3 +47,13 @@ def test_inf_nodes_are_holes():
     A = _atlas(); Vs, _ = VS.solve_layers({1.: A[1.][:1]})    # один слой, одна клетка: часть узлов без пути
     cl = A[1.][:1]; m = VS.build_mesh(cl, Vs[1.], vmax=VS.vscale(Vs)); nt, M = Vs[1.][0].shape; fin = Vs[1.][0] < VS.BIG / 2
     assert len(m['inf']) == int((~fin).sum()) and len(m['pts']) == int(fin.sum())
+
+
+def test_skeleton_edges():
+    """рёбра скелета: вдоль (k,j)–(k+1,j) и поперёк (k,j)–(k,j+1) только между конечными узлами; число = числу конечных пар; концы лежат на узлах поверхности"""
+    A = _atlas(); Vs, _ = VS.solve_layers(A); vmax = VS.vscale(Vs)
+    for u, cl in A.items():
+        m = VS.build_mesh(cl, Vs[u], vmax=vmax); nl = nc = 0
+        for V in Vs[u]: f = V < VS.BIG / 2; nl += int((f[:-1] & f[1:]).sum()); nc += int((f[:, :-1] & f[:, 1:]).sum())
+        assert len(m['long']) == 2 * nl and len(m['cross']) == 2 * nc and nl > 0 and nc > 0
+        pts = {tuple(np.round(p, 6)) for p in m['pts']}; assert all(tuple(np.round(p, 6)) in pts for p in m['long'][:200]) and all(tuple(np.round(p, 6)) in pts for p in m['cross'][:200])
