@@ -79,3 +79,4 @@
 - research/pend_v8_plan.md — маятник на механике v8: что DI-специфично в solve8, порядок переноса (research-5)
 - race_track — гоночная трасса Картленд: 5D (руль по скорости, педаль — доля сцепления), gfree, 9 слоёв, бенч → `research/race_track.md`
 - [research/lit_pend_insights.md](research/lit_pend_insights.md) — маятник v5–v7: сепаратриса (CUTR 1.050→1.028), стоп торца по расширению фронта (SMAX 2: 1.026→1.016), NF2+DELTA, MADAPT, LOOK, exact_switch, LQR, FMIN; таблица файл:строка, замеры, топ-5 к переносу в v8
+- [research/lit_clones.md](research/lit_clones.md) — клоны/копии ±2π через шов θ в v4…v8: SH в growN, wrap_lines/tris в v8

@@ -9,7 +9,7 @@ import sys
 
 # Path to player_zoom root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-MAIN_SCRIPT = os.path.join(PROJECT_ROOT, 'main.py')
+MAIN_SCRIPT = os.path.join(PROJECT_ROOT, os.environ.get('V8_MAIN', 'main.py'))   # V8_MAIN=main_pend.py — окно маятника (run_pend.py)
 
 
 def main():
