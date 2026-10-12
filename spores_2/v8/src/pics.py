@@ -110,8 +110,9 @@ def traj_png(G, res, dirs, calc, stat=''):
 def hist_png(G, res, dirs, calc):
     """распределение T/T_ref по стартам + мед/p90/max, доля дошедших"""
     from .algo import solve8
-    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = solve8.t_ref(X0)[0]; ok = np.isfinite(T); r = T[ok] / Tr[ok]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    plt = _plt(); X0 = np.asarray(res['X0'], float); T = np.asarray(res['T'], float); Tr = np.asarray(res['Tref'], float) if 'Tref' in res else t_ref_cached(X0); ok = np.isfinite(T); r = T[ok] / Tr[ok]; fig, ax = plt.subplots(figsize=(7.5, 4.6))
     if len(r):
-        ax.hist(np.clip(r, 0, 2.5), bins=np.linspace(.95, 2.5, 63), color='#4a90c8'); [ax.axvline(v, color=c, ls=l, label='%s %.3f' % (n, v)) for v, c, l, n in ((np.mean(r), '#d62728', '-', 'mean'), (np.median(r), '#2ca02c', '--', 'median'), (np.percentile(r, 90), '#ff7f0e', ':', 'p90'), (r.max(), 'k', ':', 'max'))]
-    ax.set_xlabel('T / T_ref (starts)'); ax.set_ylabel('starts'); ax.legend(fontsize=8); ax.grid(alpha=.2)
+        lo, hi = min(float(r.min()), 1.) - .02, float(r.max()) + .02; ax.hist(r, bins=np.linspace(lo, hi, 63), color='#4a90c8', density=True); ax.set_yscale('log'); ax.set_xlim(lo, hi);       # шкала X по данным (слово пользователя 2026-10-12), Y логарифмическая
+        [ax.axvline(v, color=c, ls=l, label='%s %.3f' % (n, v)) for v, c, l, n in ((np.mean(r), '#d62728', '-', 'mean'), (np.median(r), '#2ca02c', '--', 'median'), (np.percentile(r, 90), '#ff7f0e', ':', 'p90'), (r.max(), 'k', ':', 'max'))]
+    ax.set_xlabel('T / T_ref (starts)'); ax.set_ylabel('density (log)'); ax.legend(fontsize=8); ax.grid(alpha=.2)
     ax.set_title('%s: reached %d / %d (%.1f%%), switches mean %.1f' % (_name(calc), int(ok.sum()), len(T), 100 * ok.mean() if len(T) else 0, float(np.mean(res['sw'])) if len(T) else 0), fontsize=10); fig.tight_layout(); _save(fig, 'hist_%s.png' % calc, dirs)
