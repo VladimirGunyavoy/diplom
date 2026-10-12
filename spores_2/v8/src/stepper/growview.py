@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = True; s.cmode = False; s.tmode = True; s._auto = True; s.tview = 'both'; s._traj = None; s._tjob = None; s._tstat = ''; s._tfresh = False; s._vcache = {}; s._tcache = {}; s._mcache = {}; s._gkey = {}; s._vfresh = False; s.dinfo = {}; s.runlog = None; s.vcalc = 'q'; s._stj = None; s._tfail = None; s.pics_dirs = []; s._pics_note = ''; s._prog = ''; s._stinfo = ''; s._vsig = None; s._vres = None; s.vinfo = ''; s._tpart = {}; s._tprog = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -277,6 +277,7 @@ class GrowView:
 
     def _tlabel(s):
         """подпись траекторий: computing… / computed (только что) / cached (из кэша: T только переключает видимость)"""
+        if s._tprog: return 'computing ' + s._tprog + ' (shown as they arrive)'
         if s._traj is None: return s._tstat or 'computing...'
         return ('computed: ' if s._tfresh else 'cached: ') + s._tstat
 
@@ -312,7 +313,7 @@ class GrowView:
             s.vinfo = 'waiting: first-spore mode needs BOTH layers grown (N / LMB until layer -1 is finished)'; s._vres = None; clear('v', ks); clear('c', ks); s._clear_traj(); return
         sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
         if sig != s._vsig or s._vres is None:
-            s._vsig = sig; hit = s._tcache.get(sig); s._traj = None if hit is None else hit[:2]; s._tstat = '' if hit is None else hit[2]; s._tfresh = False
+            s._vsig = sig; s._tprog = ''; hit = s._tcache.get(sig); s._traj = None if hit is None else hit[:2]; s._tstat = '' if hit is None else hit[2]; s._tfresh = False
             if sig in s._vcache:
                 s._vres, s.vinfo = s._vcache[sig]; s.dinfo['vcalc'] = 'hit'
                 if s.runlog is not None: s.runlog.vcalc(s.vcalc, s._vres[3], sum(len(c) for c in cl.values()), 0., cache='hit')
@@ -439,6 +440,7 @@ class GrowView:
                 elif m[0] == 'V':
                     it = items[m[1]]; info = m[2][1]; job['q'].append(('V', it, (m[2][0], VS.vscale(m[2][0]), it['cl'], info), m[3]))
                     print('%s: done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s, %.1f s%s' % (tag(m[1]), info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t'], m[3], s._qerr_text(info)), flush=True)
+                elif m[0] == 'Tp': job['q'].append(('Tp', items[m[1]], m[2], m[3]))                  # пачка траекторий готова — окно дорисовывает сразу
                 elif m[0] == 'T': job['q'].append(('T', items[m[1]], m[2], m[3])); print('%s: done: %s' % (tag(m[1]), s._traj_stat(m[2], m[3])), flush=True)
                 elif m[0] == 'pics':
                     s._pics_note = '%s (%s)' % (s.pics_dirs[0] if s.pics_dirs else '?', time.strftime('%H:%M:%S')); print('[pics] %s -> %s  (%.1f s)' % (m[2], ', '.join(s.pics_dirs), m[3]), flush=True)
@@ -451,10 +453,15 @@ class GrowView:
     def _stage_adopt(s, ev):
         from . import vsurf as VS
         kind, it, payload, secs = ev; sig = it['sig']
+        if kind == 'Tp':
+            g_ = VS.traj_geom(payload, s.ax); acc = s._tpart.setdefault(sig, dict(parts=[], m=None)); acc['parts'].append(payload); acc['m'] = g_ if acc['m'] is None else {k: np.concatenate([acc['m'][k], g_[k]]) for k in g_}
+            if sig == s._vsig: s._traj = (VS.merge_paths(acc['parts']), acc['m']); s._tprog = '%d/%d' % (sum(len(p['T']) for p in acc['parts']), VS.TRAJ_N); s._tfresh = True
+            return
         if kind == 'V':
             vinfo = s._vstat(payload[3], sum(len(c) for c in it['cl'].values())); s._put_v(sig, (payload, vinfo))
             if s.runlog is not None: s.runlog.vcalc(it['calc'], payload[3], sum(len(c) for c in it['cl'].values()), secs)
         else:
+            s._tpart.pop(sig, None); s._tprog = ''
             stat = s._traj_stat(payload, secs); s._put_t(sig, (payload, VS.traj_geom(payload, s.ax), stat))
             if s.runlog is not None: s.runlog.traj(it['calc'], payload, secs)
             if sig == s._vsig: s._traj = s._tcache[sig][:2]; s._tstat = stat; s._tfresh = True

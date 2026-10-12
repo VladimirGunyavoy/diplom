@@ -36,7 +36,9 @@ def main():
                 if kind == 'V': send('V', i, (Vs, info), time.perf_counter() - t0)
                 if dirs: draw(i, lambda: ([] if done_cells[0] else PX.cells_png(Gby[calc], cl, dirs, title='(%s)' % os.environ.get('SYS', 'di'))) or PX.error_map(Gby[calc], dirs, calc), 'cells.png, error_%s.png' % calc); done_cells[0] = True
             if kind == 'T':
-                res = VS.agent_paths(Gby[calc], cl=cl, progress=lambda step, alive: say('agents in flight %d of %d, step %d (t=%.2f)' % (alive, VS.TRAJ_N, step, step * .01)))
+                state = [0]
+                def onb(part, done, total): state[0] = done; send('Tp', i, part, time.perf_counter() - t0); say('trajectories %d/%d' % (done, total), True)            # пачка готова — окно сразу дорисовывает
+                res = VS.agent_paths(Gby[calc], cl=cl, batch=VS.TRAJ_BATCH, on_batch=onb, progress=lambda step, alive: say('trajectories %d/%d: agents in flight %d, step %d (t=%.2f)' % (state[0], VS.TRAJ_N, alive, step, step * .01)))
                 send('T', i, res, time.perf_counter() - t0)
                 if dirs: draw(i, lambda: (PX.traj_png(Gby[calc], res, dirs, calc), PX.hist_png(Gby[calc], res, dirs, calc)), 'traj_%s.png, hist_%s.png' % (calc, calc))
         except Exception as e:
