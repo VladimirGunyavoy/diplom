@@ -36,14 +36,17 @@ def t_ref(P):
     except Exception: return t_point(P[:, 0], P[:, 1]), 't_point'
 
 
-def entry_time(X, u, dt, rho, n=32):
-    """первое t ∈ (0, dt] от x0 по u (ДИ аналитика), при котором |(x,v)| ≤ rho; inf, если нет. X (n,2), dt (n,)"""
-    ts = np.linspace(0, 1, n + 1)[None, :] * dt[:, None]; x = X[:, :1] + X[:, 1:] * ts + u * ts ** 2 / 2; v = X[:, 1:] + u * ts; q = x ** 2 + v ** 2 - rho ** 2
-    inn = q <= 0; first = np.where(inn.any(1), inn.argmax(1), -1); out = np.full(len(X), np.inf); ok = first > 0
-    k = np.flatnonzero(ok); lo = ts[k, first[k] - 1].copy(); hi = ts[k, first[k]].copy(); xx, vv = X[k, 0], X[k, 1]
-    for _ in range(40):
-        mid = (lo + hi) / 2; qm = (xx + vv * mid + u * mid ** 2 / 2) ** 2 + (vv + u * mid) ** 2 - rho ** 2; c = qm <= 0; hi = np.where(c, mid, hi); lo = np.where(c, lo, mid)
-    out[k] = hi; return out
+def entry_time(X, u, dt, rho, n=32, sub=2):
+    """первое t ∈ (0, dt] от x0 по u, при котором |y| ≤ rho; inf, если нет. Поток СИСТЕМЫ (growN._rkv, rk4 по сэмплам n×sub подшагов) + бисекция по времени внутри найденного шага — не формула ДИ, подходит и маятнику. X (n,N), dt (n,)"""
+    g = load_growN(); X = np.asarray(X, float); dt = np.asarray(dt, float); h = dt / n; ys = [X]; y = X
+    for _ in range(n): y = g._rkv(y, u, h, sub); ys.append(y)
+    Y = np.stack(ys, 1); inn = np.linalg.norm(Y, axis=2) <= rho; first = np.where(inn.any(1), inn.argmax(1), -1); out = np.full(len(X), np.inf); k = np.flatnonzero(first > 0)
+    if len(k):
+        y0 = Y[k, first[k] - 1]; lo = np.zeros(len(k)); hi = h[k].copy()
+        for _ in range(30):
+            mid = (lo + hi) / 2; c = np.linalg.norm(g._rkv(y0, u, mid, sub), axis=1) <= rho; hi = np.where(c, mid, hi); lo = np.where(c, lo, mid)
+        out[k] = (first[k] - 1) * h[k] + hi
+    return out
 
 
 # ---------- атлас и граф ----------
@@ -88,7 +91,7 @@ def freeze_idx(g, s):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.tab = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 3 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 0)); s.refthr = float(os.environ.get('REFINE_THR', 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.tab = None; s.table_h = float(os.environ.get('TABLE_H', .02 if int(os.environ.get('SOLVE8_PLUS', 0)) else 0)); s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -205,6 +208,8 @@ class Graph:
                     if s.bstab > 0 and prev is not None and abs(npt - prev) <= s.bstab * max(prev, 1): break                   # раунды до стабилизации числа подточек
                     prev = npt
                 s.subk = 0; s._subc = None
+            s.tab = None
+            if s.table_h > 0: s.build_table(s.table_h)                                                        # таблица Q для агента (lookup вместо поиска ячейки и потока входа в цель на каждом запросе); TABLE_H=0 — выкл.
             return V
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
         e1 = s.e1; lev = s.rowid[e1]; order = np.argsort(-lev, kind='stable'); e1 = e1[order]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[order]
