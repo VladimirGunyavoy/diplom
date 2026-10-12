@@ -2,7 +2,7 @@
 Гипотеза research-3: (v≈0, u=0) — равновесие слоя 0, Q_0 ≈ V*, агент выбирает слой 0 и стоит до tmax.
 Проверка: слои из LAYERS (нужен 0), расчёты Q lin (qsolve) и «вдоль потока» K=3 (qsolve4); агенты look и commit (свои копии с записью конца и пути);
 лечения — запрет ВЫБОРА слоя агентом: none / no0 (слой 0 запрещён всегда) / fthr (слой 0 запрещён при |f| = |v| < FTHR).
-Запуск из папки v8: python3 stuck0.py; env M, LAYERS (1,-1,0), N (1000), FTHR (.05), OUT."""
+Запуск из папки v8: python3 stuck0.py; env M, LAYERS (1,-1,0), SEED (0), N (1000), FTHR (.05), OUT."""
 import os, sys, time, json
 import numpy as np
 sys.path.insert(0, os.path.abspath('.')); sys.path.insert(0, os.path.join(os.path.abspath('.'), 'src', 'algo'))
@@ -65,7 +65,7 @@ def lines(path, ids):
 
 
 if __name__ == '__main__':
-    g = S.load_growN(); layers = [float(x) for x in os.environ.get('LAYERS', '1,-1,0').split(',')]; atlas, _ = S.build_atlas(layers, 0, par=False); G = S.make_graph(g, atlas, 'N'); rho = G.rho
+    g = S.load_growN(); layers = [float(x) for x in os.environ.get('LAYERS', '1,-1,0').split(',')]; atlas, _ = S.build_atlas(layers, int(os.environ.get('SEED', '0')), par=False); G = S.make_graph(g, atlas, 'N'); rho = G.rho
     uvec = np.array(G.us); i0 = int(np.flatnonzero(uvec == 0)[0]) if (uvec == 0).any() else None
     X0 = S.starts(g, int(os.environ.get('N', '1000')), 1); Tr = R.T_ref(X0, rho); mx = S.path_extent(X0, rho); ins = mx <= float(g.XLV[0]) + g.GM; inw = mx <= float(g.XLV[0]); tmax = 3 * Tr + 2
     print('RES слои %s (us %s, слой 0 = %s) M=%d узлов %d стартов %d, в росте %d, в поле %d, FTHR %g' % (layers, G.us, i0, G.M, G.n, len(X0), ins.sum(), inw.sum(), FTHR), flush=True)
@@ -97,13 +97,13 @@ if __name__ == '__main__':
         import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
         keys = [k for k in pics if len(k) == 2]
         if keys:
-            name, pn = keys[0]; kinds = [k for k in ('none', 'no0', 'fthr') if (name, pn, k) in pics]; fig, ax = plt.subplots(1, len(kinds), figsize=(6 * len(kinds), 5.5), squeeze=False); col = {1.: 'tab:red', -1.: 'tab:purple', 0.: 'gray'}
+            name, pn = keys[0]; kinds = [k for k in ('none', 'no0', 'fthr') if (name, pn, k) in pics]; fig, ax = plt.subplots(1, len(kinds), figsize=(6 * len(kinds), 5.5), squeeze=False); col = {1.: 'tab:red', -1.: 'tab:purple', 0.: 'tab:green'}
             for axi, kind in zip(ax[0], kinds):
                 for i, (p, c) in pics[(name, pn, kind)].items():
                     cut = np.flatnonzero(np.r_[True, c[1:] != c[:-1], True])
                     for a, b in zip(cut[:-1], cut[1:]): axi.plot(p[a:b + 1, 0], p[a:b + 1, 1], color=col.get(float(uvec[c[a]]), 'k'), lw=1.2, ls='--' if uvec[c[a]] == 0 else '-')
                     axi.plot(*X0[i], 'k.', ms=4); axi.plot(*p[-1], 'kx', ms=6)
                 th = np.linspace(0, 2 * np.pi, 100); axi.plot(rho * np.cos(th), rho * np.sin(th), 'g-'); axi.axhline(0, color='k', lw=.4); axi.set_title('%s, агент %s, лечение: %s (%d стартов, × — конец)' % (name, pn, kind, len(pics[(name, pn)]))); axi.set_xlabel('x'); axi.set_ylabel('v'); axi.grid(alpha=.3)
-            fig.suptitle('Старты, застрявшие в слое u=0 на v≈0 (красный u=+1, фиолетовый u=−1, серый штрих u=0), M=%d' % G.M); fig.tight_layout(); fig.savefig(OUT + '.png', dpi=110); print('RES картинка', OUT + '.png', flush=True)
+            fig.suptitle('Старты, застрявшие в слое u=0 на v≈0 (красный u=+1, фиолетовый u=−1, зелёный штрих u=0), M=%d' % G.M); fig.tight_layout(); fig.savefig(OUT + '.png', dpi=110); print('RES картинка', OUT + '.png', flush=True)
     except Exception as e:
         print('RES картинки нет:', repr(e), flush=True)
