@@ -4,8 +4,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 D = common.DATA; OUT = os.path.join(D, '..')
 def L(p):
-    try: return json.load(open(p))
+    try: d = json.load(open(p))
     except Exception: return None
+    return d
 def f(x, n=4): return '—' if x is None or (isinstance(x, float) and not np.isfinite(x)) else (('%.' + str(n) + 'g') % x)
 def stat(s): return f"{s['reached']*100:.0f}% | {f(s['ratio_med'])} / {f(s['ratio_mean'])} / {f(s['ratio_p90'])} / {f(s['ratio_max'])}"
 def cross(o, s):
@@ -36,6 +37,10 @@ def rows(env):
                     if c['reached'] >= 1.0 and c['ratio_med'] and c['ratio_med'] <= 1.01: tgt = c['t_train'] if tgt is None else min(tgt, c['t_train'])
             tq = tgt
         R.append(dict(m=f'PPO {st//10**6}M шагов ({len(P)} сида: показан лучший; ср. дошли {np.mean([s["reached"] for s in P])*100:.0f}%, мед {f(np.mean([s["ratio_med"] or np.nan for s in P]))})', par='до качества мед ≤1.01 и 100%: ' + (f(tq, 3) + ' с' if tq else 'не достиг'), build=tr, qm=ti, qp=ti, tot=tr + 20 * ti, st=stat(best), nf=f'обучение {best.get("nf_train", 0):.2g}', batch=tb, hw=best['hw'], sp=False))
+    for gm in ('0.995', '0.999'):
+        for x in sorted(glob.glob(f'{D}/{env}_ppo_5000000_g{gm}_s*.json')):
+            s = L(x)
+            if s: R.append(dict(m=f'PPO 5M, γ={gm}, сид {s["seed"]} (1 прогон, по просьбе research-25)', par='до 95%: ' + ('не достиг' if not s.get('t_train_95') else f(s['t_train_95'], 3) + ' с'), build=s['t_train'], qm=s['t_infer_per_start'], qp=s['t_infer_per_start'], tot=s['t_train'] + 20 * s['t_infer_per_start'], st=stat(s), nf=f'обучение {s.get("nf_train", 0):.2g}', batch=s.get('t_infer_batch20'), hw=s['hw'], sp=False))
     for algo, nm in (('rrt', 'RRT (свой)'), ('rrtstar', 'kRRT* (точный краевой, ДИ)'), ('sst', 'SST (свой; prune ' )):
         d = L(f'{D}/{env}_{algo}.json')
         if not d: continue
@@ -48,6 +53,8 @@ def rows(env):
             R.append(dict(m=(nm + (str(d.get('prune')) + ')' if algo == 'sst' else '')) + f', бюджет {f(b["budget"],3)} с', par=par, build=0., qm=b['t_wall_sum'] / n, qp=None, tot=b['t_wall_sum'], st=stat(b), nf=f'на запрос {f(b["nf_med"],3)}', batch=None, hw=d['hw'], sp=False))
     oc = L(f'{D}/{env}_ocp.json')
     if oc: R.append(dict(m='OCP SLSQP (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False))
+    oc = L(f'{D}/{env}_ocpc.json')
+    if oc: R.append(dict(m='OCP CasADi+IPOPT (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'IPOPT-запусков на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False))
     return R, sp0
 def table(env):
     R, sp0 = rows(env); lines = [f'### {env}', '', '| метод | примечание | t_build, с | t_query мед / p90, с | пакет 20, с | t_total(N=20), с | дошли | T/T_ref мед / mean / p90 / max | вызовов f | N* относительно спор | железо |', '|---|---|---|---|---|---|---|---|---|---|---|']
