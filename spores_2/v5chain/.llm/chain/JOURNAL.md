@@ -324,3 +324,4 @@ hub-v5chain-research-25 | line-open | worker B | бенч линии C, PPO/SAC 
 hub-v5chain-research-25 | line-close | worker A, worker B | поправка пользователя 19:46 через research-5 «лишних воркеров НЕ поднимать — у линии C один воркер c1»; worker-27 и worker-b9 подняты в 19:46:25 (поправка дошла позже) и сразу погашены, ничего не сделали; их задачи (CA/CB) — в очередь c1 | 19:46:49
 laptop-v5chain-worker-b1 | done | ctx 31% | линия laptop-B: зона/GOALW/SEEDNEAR/refine+бисекция (SOLVE8_PLUS); хендофф b/HANDOFF_laptop.md | next=laptop-v5chain-worker-b2 (поднимает research-5) | 19:58:16
 решение laptop-v5chain-research-5 (автономный режим): SOLVE8_PLUS — в окно по умолчанию (worker-7), линия B → worker-b2 (acc1) на оптимизацию скорости (тёплый старт, индекс ячеек, COMMIT_EVERY); searcher-3 (acc3) — lit_v7_port.md | 19:58:51
+laptop-v5chain-worker-b2 | started | acc1 | sonnet | 19:59:11
