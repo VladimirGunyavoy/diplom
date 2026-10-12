@@ -99,7 +99,7 @@ def test_agent_paths():
     """300 стартов, агент look: у каждого старта путь; старты без V* — предфаза (поток слоя) до V* или до выхода за ±(XL+GM): out_of_area с маркером на границе; остальные — как раньше"""
     import time; from src.algo import solve8, growN as g
     A = _atlas(); Vs, info = VS.solve_layers(A); G = info['G']; t0 = time.perf_counter(); res = VS.agent_paths(G, n=100); dt = time.perf_counter() - t0
-    n = 100; st = res['status']; ok = st == 'reached'; box = g.XLV + g.GM; pre = res['prephase']; out = st == 'out_of_area'
+    n = 100; st = res['status']; ok = st == 'reached'; box = g.XLV + g.GMV; pre = res['prephase']; out = st == 'out_of_area'
     assert len(res['paths']) == n and all(len(P) >= 1 for P in res['paths']) and set(st) <= {'reached', 'failed', 'out_of_area'} and (ok.mean() > .75), (ok.mean(), set(st))
     assert np.array_equal(ok, np.isfinite(res['T'])) and (out <= pre).all() and not (out & ~pre).any()      # out_of_area только среди стартов без V*
     assert all(np.allclose(P[0], x0) for P, x0 in zip(res['paths'], res['X0'])) and all(len(P) == len(V) == len(U) for P, V, U in zip(res['paths'], res['V'], res['U']))

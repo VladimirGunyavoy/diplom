@@ -29,5 +29,5 @@ if __name__ == '__main__':
         t1_ = tot if t1 is None else t1; xs = []
         for tt in np.linspace(0, tot, 300): a = min(tt, t1_); b = tt - a; x1 = x[0] + x[1] * a + s * a * a / 2; v1 = x[1] + s * a; xs.append(x1 + v1 * b - s * b * b / 2)
         mx.append(np.abs(xs).max())
-    mx = np.array(mx); lim = float(g.XLV[0]) + g.GM; print('оптимум выходит за поле+GM (%g): %d стартов; без V*: %d, из них с выходом: %d' % (lim, (mx > lim).sum(), len(bad), (mx[bad] > lim).sum()))
+    mx = np.array(mx); lim = float(g.XLV[0]) + float(g.GMV[0]); print('оптимум выходит за поле+GM (%g): %d стартов; без V*: %d, из них с выходом: %d' % (lim, (mx > lim).sum(), len(bad), (mx[bad] > lim).sum()))
     print('max|x| по оптимуму у стартов без V*: мин %.2f' % mx[bad].min() if len(bad) else '')
