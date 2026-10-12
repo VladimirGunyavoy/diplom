@@ -1,0 +1,233 @@
+{
+ "n": 13,
+ "excluded": 7,
+ "reached": 0.0,
+ "ratio_med": null,
+ "ratio_mean": null,
+ "ratio_p90": null,
+ "ratio_max": null,
+ "env": "manipf",
+ "method": "spores growN g300 SONE VF2 PESS1 4x3000 (load)",
+ "t_grow": null,
+ "t_solve": null,
+ "t_build": null,
+ "t_query_med": 0.06837291648844257,
+ "t_query_p90": 1.2459014327381746,
+ "t_query_sum": 48.26984451082535,
+ "cells": [
+  3000,
+  3000,
+  3000,
+  3000
+ ],
+ "nodes": 1709019,
+ "hw": "CPU (\u0437\u0430\u043f\u0440\u043e\u0441\u044b)",
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 42.878721722983755,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 1,
+   "T_agent": 2.481916245197967,
+   "T_verify": 2.462988631551559,
+   "why": "ok",
+   "t_query": 1.698268988984637,
+   "nseg": 10,
+   "finish_no_durations": false
+  },
+  {
+   "i": 2,
+   "T_agent": 6.880843705487475,
+   "T_verify": 6.850996620904148,
+   "why": "ok",
+   "t_query": 0.6602853169897571,
+   "nseg": 52,
+   "finish_no_durations": false
+  },
+  {
+   "i": 3,
+   "T_agent": 3.084245453537828,
+   "T_verify": 3.014436513695804,
+   "why": "ok",
+   "t_query": 1.1956383709330112,
+   "nseg": 13,
+   "finish_no_durations": false
+  },
+  {
+   "i": 4,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.003623954951763153,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 5,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.003907916019670665,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 6,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.003544145030900836,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 7,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.005203741951845586,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 8,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.0035073240287601948,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 9,
+   "T_agent": 2.033881966106523,
+   "T_verify": 2.015956441433133,
+   "why": "ok",
+   "t_query": 0.27010967198293656,
+   "nseg": 6,
+   "finish_no_durations": false
+  },
+  {
+   "i": 10,
+   "T_agent": 3.9975463106393194,
+   "T_verify": 3.9675981285067654,
+   "why": "ok",
+   "t_query": 0.4279111110372469,
+   "nseg": 27,
+   "finish_no_durations": false
+  },
+  {
+   "i": 11,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.0035940849920734763,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 12,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.003532935050316155,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 13,
+   "T_agent": 1.798568530200846,
+   "T_verify": 1.7787588915791772,
+   "why": "ok",
+   "t_query": 0.24306266999337822,
+   "nseg": 5,
+   "finish_no_durations": false
+  },
+  {
+   "i": 14,
+   "T_agent": 1.3758623671869916,
+   "T_verify": 1.365957940701499,
+   "why": "ok",
+   "t_query": 0.299894563970156,
+   "nseg": 3,
+   "finish_no_durations": false
+  },
+  {
+   "i": 15,
+   "T_agent": 0.4473049052177266,
+   "T_verify": 0.417832357352177,
+   "why": "ok",
+   "t_query": 0.13154209102503955,
+   "nseg": 3,
+   "finish_no_durations": false
+  },
+  {
+   "i": 16,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.003509353962726891,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 17,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.0034639249788597226,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 18,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.0034548440016806126,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 19,
+   "T_agent": 4.383967330009413,
+   "T_verify": 4.364340089085292,
+   "why": "ok",
+   "t_query": 0.4270677779568359,
+   "nseg": 29,
+   "finish_no_durations": false
+  }
+ ],
+ "Tref": [
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN,
+  NaN
+ ],
+ "weight": {
+  "elems": 114339400,
+  "bytes": 892266307
+ }
+}
