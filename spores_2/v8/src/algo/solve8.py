@@ -70,19 +70,38 @@ def build_atlas(layers, seed=0, par=True):
     return {u: c for u, c, _ in res}, {u: t for u, _, t in res}
 
 
+def freeze_idx(g, s):
+    """CSR-заморозка HexIdx (searcher-3, lit_v7_port п.2): бины → отсортированные ключи + searchsorted, без питон-цикла по бинам; пары те же, query подменяется на экземпляре. Индекс после этого не пополнять."""
+    if not s.bins: return
+    ks = list(s.bins); fk = np.array(ks, np.int64); o = np.argsort(fk); fk = fk[o]; L = [np.concatenate(s.bins[ks[i]]) for i in o]; ln = np.array([len(l) for l in L], np.int64)
+    s.fk = fk; s.fst = np.r_[0, np.cumsum(ln)]; s.fv = np.concatenate(L); N = g.N
+    def query(Y):
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if s.n == 0 or not len(Y): return z
+        kk = s._key(np.floor(Y / g.QB).astype(np.int64)); pos = np.minimum(np.searchsorted(s.fk, kk), len(s.fk) - 1); pts = np.flatnonzero(s.fk[pos] == kk)
+        if not len(pts): return z
+        st = s.fst[pos[pts]]; cn = s.fst[pos[pts] + 1] - st; tot = int(cn.sum()); pi = np.repeat(pts, cn); ix = np.repeat(st, cn) + np.arange(tot) - np.repeat(np.cumsum(cn) - cn, cn); out = []; CH = 1 << 20
+        for a in range(0, tot, CH): out.append(s._test(Y, pi[a:a + CH], s.fv[ix[a:a + CH]]))
+        return [np.concatenate(a) for a in zip(*out)]
+    s.query = query
+
+
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
         s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 1 if pl else 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
-        prio = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
+        prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
         for li, u, c in order:
             if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], M, 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
             else: G, tau, hb, nb, nf = c.G, c.tau, c.hb, c.nb, c.nf
-            prio.append(float(getattr(c, 'prio', 0))); lc = Light(G, tau, c.r, hb, nb, nf); hid[u].add(lc); nt = len(G); bs[u].append(n0); gl[u].append(gc); ids = n0 + np.arange(nt * M).reshape(nt, M)
+            prio.append(float(getattr(c, 'prio', 0))); lc = Light(G, tau, c.r, hb, nb, nf); hid[u].add(lc); hidA.add(lc); cb.append(n0); cl.append(li); nt = len(G); bs[u].append(n0); gl[u].append(gc); ids = n0 + np.arange(nt * M).reshape(nt, M)
             P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * M, gc)); layer.append(np.full(nt * M, li)); rowid.append(np.repeat(np.arange(nt), M))
             nx = np.full((nt, M), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, M)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * M; gc += 1
         for u in s.us: s.idx[u] = hid[u]; s.base[u] = np.array(bs[u])
+        s.idxA = hidA; s.cbase = np.array(cb); s.clayer = np.array(cl)
+        if int(os.environ.get('CSR', 1)):
+            for ix in list(hid.values()) + [hidA]: freeze_idx(g, ix)
         s.prio = np.array(prio); s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
         s.gcell = {u: np.array(gl[u]) for u in s.us}; s._atlas, s._interp = atlas, interp
         s.layer_counts = {u: (len(atlas[u]), int(sum(len(c.G) * M for c in atlas[u]))) for u in s.us}
@@ -102,6 +121,16 @@ class Graph:
         row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]; vo = s.g.VOFF; M = s.M
         verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in vo], 1)
         w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in vo], 1); return pi, verts, w, rank
+
+    def locate_all(s, Y):
+        """locate сразу для всех слоёв одним запросом к общему индексу (агент: в L раз меньше вызовов) → список по слоям (pi, вершины, веса, ранг), как locate"""
+        idx = s.idxA; pi, hid, sc = idx.query(Y); L = s.L; z = (np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int))
+        if not len(pi): return [z] * L
+        cid = idx.I[hid, 0]; lay = s.clayer[cid]; cen = np.minimum(sc, 1 - sc).min(1) + s.prio[cid]; grp = pi * L + lay; o = np.lexsort((-cen, grp)); pi, hid, sc, cid, lay, grp = pi[o], hid[o], sc[o], cid[o], lay[o], grp[o]
+        st = np.r_[True, grp[1:] != grp[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0)); k = rank < s.K; pi, hid, sc, cid, lay, rank = pi[k], hid[k], sc[k], cid[k], lay[k], rank[k]
+        row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.cbase[cid]; M = s.M; verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in s.g.VOFF], 1); w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in s.g.VOFF], 1); res = []
+        for li in range(L): m = lay == li; res.append((pi[m], verts[m], w[m], rank[m]))
+        return res
 
     def _locate_quad(s, u2, Y, excl=None):
         """calc='qquad' (только M=3): вершины 2 строки × 3 столбца (вся ширина клетки), веса — линейно по времени × Лагранж 2-й степени поперёк потока (прототип lr3/qsolve2.patch_quad)"""
@@ -168,7 +197,7 @@ class Graph:
         if s.calc == 'q' and s.refthr > 0 and not s._refined:                                                # SOLVE8_PLUS / REFINE_THR: адаптивные полосы по скачку Q (refine_atlas), затем бисекция переключений; граф усыновляет уточнённый
             _, G2, ins = refine_atlas(s.g, s._atlas, s.refthr, s.rdepth, 'q', verbose=False); G2._refined = True; G2.refined = ins; keep = (s.bis, s.bisr, s.bnd, s.refthr, s.rdepth); s.__dict__.update(G2.__dict__); s.bis, s.bisr, s.bnd, s.refthr, s.rdepth = keep; s._refined = True; s.refined = ins
         if s.calc != 'v':
-            V = s._solve_q(maxit, tol, verbose, progress=progress)
+            V = s._solve_q(maxit, max(tol, s.wtol) if s.warm else tol, verbose, progress=progress)
             if s.bis > 0 and not s.subk:                                                                      # BISECT: подточки — моменты переключения, найденные бисекцией по времени на рёбрах, где «продолжать» и «переключиться» меняются местами
                 for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol) if s.warm else tol, False, progress=progress, warm=bool(s.warm))
                 s.subk = 0; s._subc = None
@@ -255,8 +284,9 @@ class Graph:
     def Vlayers(s, X):
         """V_u(x) по слоям (n, L); inf — не покрыто / V не определено"""
         out = np.full((len(X), s.L), np.inf); inb = np.linalg.norm(X, axis=1) <= s.rho
+        PA = s.locate_all(X) if (not s.quad and int(os.environ.get('LOC_ALL', 1))) else None
         for li, u in enumerate(s.us):
-            out[:, li] = s.evalpairs(s.V, len(X), s.locate(u, X))
+            out[:, li] = s.evalpairs(s.V, len(X), PA[li] if PA is not None else s.locate(u, X))
             if s.xentry > 0 and s.calc != 'v': out[:, li] = np.minimum(out[:, li], entry_time(X, u, np.full(len(X), s.xentry), s.rho))       # точный вход по своему потоку — верхняя оценка Q_u (W2)
         out[inb] = 0.; return out
 
