@@ -112,7 +112,9 @@ def starts_in_cells(cl, n, seed, xlv=None):
         Gc = cells[len(out) % len(cells)]; i = rng.integers(0, len(Gc) - 1); j = rng.integers(0, Gc.shape[1] - 1); s_, t_ = rng.random(2)
         p = (1 - s_) * (1 - t_) * Gc[i, j] + (1 - s_) * t_ * Gc[i, j + 1] + s_ * (1 - t_) * Gc[i + 1, j] + s_ * t_ * Gc[i + 1, j + 1]; tries += 1
         if tries > 200000: raise RuntimeError('starts_in_cells: no points of the cells inside the work zone')
-        if np.linalg.norm(p) > rho and (xlv is None or (np.abs(p) <= xlv + 1e-12).all()): out.append(p)
+        if os.environ.get('SYS') == 'pend': q = p.copy(); q[0] = (q[0] + np.pi) % (2 * np.pi) - np.pi; in_goal = bool(np.linalg.norm(q) <= rho + 1e-12); zone = xlv is None or bool(((np.abs(q) <= xlv + 1e-12) | (xlv == 0)).all())     # маятник: θ периодично (XLV[0]=0 — без границы), цель — круг RHO как в ДИ
+        else: in_goal = bool(np.linalg.norm(p) <= rho); zone = xlv is None or bool((np.abs(p) <= xlv + 1e-12).all())
+        if not in_goal and zone: out.append(p)
     return np.array(out)
 
 

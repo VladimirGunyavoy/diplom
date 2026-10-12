@@ -340,3 +340,4 @@ hub-v5chain-worker-b9 | order | SPD1→FORB→RACE→SPD2/3 (слово поль
 laptop-v5chain-worker-b2 | done | ctx 26% | оптимизация скорости SOLVE8_PLUS, pend на solve8 (атлас не растёт) | next=laptop-v5chain-worker-b3 (поднимает research-5) | 23:51:36
 laptop-v5chain-worker-b3 | started | acc3 | sonnet | 23:51:56
 hub-v5chain-research-25 | AUTONOMOUS | on | слово пользователя «я пока отойду… пока не вернусь идешь автономно» | 23:56:48
+laptop-v5chain-worker-8 | done | по слову пользователя | main_pend.py (маятник отдельным скриптом), рельс/пачки P; тайминг pend | next=laptop-v5chain-worker-9 | 00:54:26
