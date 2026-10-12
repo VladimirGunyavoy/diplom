@@ -54,6 +54,23 @@ def cells_png(G, cl, dirs, title=''):
     axs[0][0].legend(fontsize=7, loc='lower left'); fig.suptitle('cells (spores) per layer  ' + title, fontsize=11); fig.tight_layout(); _save(fig, 'cells.png', dirs)
 
 
+TREF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tref_cache')      # кэш T_ref на диске (в git): T_ref зависит только от точек и RHO, не от графа
+
+
+def t_ref_cached(X):
+    """solve8.t_ref(X)[0] с кэшем по хэшу (X, RHO, константы ref_di_disk): сетка карты ошибки фиксирована — T_ref (~6 мин на 16 тыс. точек) считается один раз; значения те же побитно"""
+    import hashlib
+    from .algo import solve8, ref_di_disk as R
+    X = np.ascontiguousarray(X, float); rho = float(os.environ.get('RHO', .2)); key = hashlib.md5(X.tobytes() + repr((X.shape, rho, R.TMAX1, R.GRID0, R.ZOOM_N, R.ZOOM_ROUNDS)).encode()).hexdigest()[:20]; f = os.path.join(TREF_DIR, '%d_%s.npy' % (len(X), key))
+    try: return np.load(f)
+    except Exception: pass
+    T = np.asarray(solve8.t_ref(X)[0], float)
+    if len(X) >= 1000:                                                                      # маленькие наборы (старты траекторий) не кэшируем: каждый раз другие
+        try: os.makedirs(TREF_DIR, exist_ok=True); np.save(f, T)
+        except Exception: pass
+    return T
+
+
 def _grid(G, n=140):
     xl = np.asarray(G.g.XLV, float); xs = np.linspace(-xl[0], xl[0], n); vs = np.linspace(-xl[1], xl[1], int(n * xl[1] / xl[0]) + 1); XX, VV = np.meshgrid(xs, vs); X = np.stack([XX.ravel(), VV.ravel()], 1)
     Vs = G.Vlayers(X).min(1); Vs = np.where(np.isfinite(Vs), Vs, np.nan); return xs, vs, X, Vs.reshape(XX.shape)
@@ -62,7 +79,7 @@ def _grid(G, n=140):
 def error_png(G, dirs, calc_name, extra=''):
     """карта V*−T_ref по рабочей зоне"""
     from . algo import solve8
-    plt = _plt(); xs, vs, X, V = _grid(G); Tr = solve8.t_ref(X)[0].reshape(V.shape); e = V - Tr; fin = np.isfinite(e) & (np.linalg.norm(X, axis=1).reshape(V.shape) > G.rho)
+    plt = _plt(); xs, vs, X, V = _grid(G); Tr = t_ref_cached(X).reshape(V.shape); e = V - Tr; fin = np.isfinite(e) & (np.linalg.norm(X, axis=1).reshape(V.shape) > G.rho)
     fig, ax = plt.subplots(figsize=(8.5, 5.6)); p = ax.pcolormesh(xs, vs, e, cmap='RdBu_r', vmin=-.3, vmax=.3, shading='auto'); plt.colorbar(p, ax=ax, label='V* − T_ref, s (blue: under, red: over)'); _frames(ax, G)
     ax.set_title('%s: V* − T_ref; covered %.0f%%, under (<-.03) %.1f%%, over (>+.03) %.1f%%, median %.3f %s' % (calc_name, 100 * fin.sum() / max((np.linalg.norm(X, axis=1) > G.rho).sum(), 1), 100 * (e[fin] < -.03).mean() if fin.any() else 0, 100 * (e[fin] > .03).mean() if fin.any() else 0, np.nanmedian(e[fin]) if fin.any() else 0, extra), fontsize=9); ax.set_aspect('equal'); fig.tight_layout()
     return fig, ax
