@@ -158,7 +158,19 @@ growview = GrowView(zoom_manager, ax=(0, 1), spore_manager=spore_manager); growv
 if runlog is not None: runlog.params(extra=dict(layers=list(getattr(stepper, 'layers', ())), stepper=type(stepper).__name__))
 growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first seed) is visible right at start
 
+def _add_spore():
+    """режим первых N спор: ЛКМ после всех этапов — +1 спора каждому слою (рост заново до N+1, этапы заново; первые N спор те же: rng и очередь затравок детерминированы)"""
+    from src.stepper import live as _live; from src.algo import growN as _g
+    n0 = sum(len(c) for c in getattr(stepper, 'cells_by_layer', {}).values()); n = int(os.environ.get('V8_MAXCELLS', 1)) + 1
+    os.environ['V8_MAXCELLS'] = str(n); os.environ['MAXC'] = str(n); _g.MAXC = n; print('[spores] +1 spore per layer: N = %d, regrow' % n, flush=True)
+    growview.draw(None); growview.times = type(growview.times)(); _last_seed[0] = None; stepper.seed_at(None); growview.draw(None); stepper.key('C'); growview.draw(stepper.snapshot)
+    n1 = sum(len(c) for c in stepper.cells_by_layer.values()); print('[spores] cells per layer now: %s (total %d, was %d)%s' % ({u: len(c) for u, c in stepper.cells_by_layer.items()}, n1, n0, '' if n1 > n0 else ' - no more spores can grow'), flush=True)
+    for u, cs in stepper.cells_by_layer.items():
+        for i, c in enumerate(cs): print('[spores]   u=%+g spore %d: centre (%.3f, %.3f), rows %d' % (u, i + 1, c['c'][0], c['c'][1], len(c['G'])), flush=True)
+
+
 def _step(k):
+    if k == 'N' and os.environ.get('V8_ONLY_GOAL') == '1' and getattr(stepper, 'done', False) and not growview.stage_todo(stepper.snapshot) and not (growview._stj is not None and growview._stj['th'].is_alive()): _add_spore(); return
     if k in ('N', 'M', 'C') and getattr(stepper, 'done', False) and growview.stage_todo(stepper.snapshot): growview.stage_next(stepper.snapshot); return      # рост закончен: ЛКМ/N — следующий этап расчётов (V всех вариантов, траектории)
     t0 = time.perf_counter(); stepper.key(k); growview.draw(stepper.snapshot)
     print(f"[stepper] {k}: {stepper.snapshot and stepper.snapshot.get('phase')}  {1e3 * (time.perf_counter() - t0):.1f} ms")
@@ -196,7 +208,7 @@ def _caption():
     h = getattr(stepper, 'hist_info', None)
     sn = stepper.snapshot or {}
     lay = ('layer %d/%d  show[%s]' % (sn['layer_k'] + 1, sn['layers_n'], ''.join(('+' if growview.vis[i] else '-') for i in range(sn['layers_n'])))) if sn.get('layers_n') else ''
-    parts = [growview.caption(), growview.field_text(), ('[MODE: only the first goal spore per layer (layers +1/-1); off: delete v8/ONLY_GOAL]' if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
+    parts = [growview.caption(), growview.field_text(), ('[MODE: first %s spores per layer (layers +1/-1); LMB after the stages adds one more spore per layer; off: delete v8/ONLY_GOAL]' % os.environ.get('V8_MAXCELLS', '1') if os.environ.get('V8_ONLY_GOAL') == '1' else ''), lay, ('step: %s' % stepper.depth_name) if hasattr(stepper, 'depth_name') else '', growview.skeleton_label(), growview.vlabel(), growview.stage_label(), ('[history %d/%d]' % h) if h else '']
     return '\n'.join(p for p in parts if p)
 
 def _restart():

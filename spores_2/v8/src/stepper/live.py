@@ -8,8 +8,19 @@ for _s in (sys.stdout, sys.stderr):                           # growN печат
 import numpy as np
 for k, v in dict(SYS='di', M='5', KF='21', MAXC='60', NFAIL='400', DELTA='.03', RMAX='.5', TMAX='3', TQDM_MI='1000', GS='0', GLIM='0', GSEED='1', GOALB='0', GOALSHAPE='ball', RHO='.2', ZSOFT='.05', COMMIT_EVERY='2', XL='3', VL='2.5', GMX='3').items(): os.environ.setdefault(k, v)   # настройки показа; свои — переменными окружения (ZSOFT=.05 — softmin-нахлёст, решение пользователя 2026-10-12; ZSOFT=0 — как раньше)
 V8_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-ONLY_GOAL = os.environ.get('V8_ONLY_GOAL') == '1' or os.path.exists(os.path.join(V8_ROOT, 'ONLY_GOAL'))      # режим «только первая спора каждого слоя» (слово пользователя 2026-10-12 ~17:15): включить — переменная V8_ONLY_GOAL=1 или пустой файл v8/ONLY_GOAL; выключить — убрать
-if ONLY_GOAL: os.environ['MAXC'] = '1'; os.environ['V8_ONLY_GOAL'] = '1'                   # по одной клетке на слой (спора на цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL
+def _first_n():
+    """режим «первые N спор на слой» (слово пользователя 2026-10-12 ~17:15 и ~19:35): число спор — V8_MAXCELLS, иначе число внутри файла v8/ONLY_GOAL (пусто = 1), иначе V8_ONLY_GOAL=1 (= 1); 0 — режим выключен"""
+    if os.environ.get('V8_MAXCELLS', '').strip().isdigit(): return int(os.environ['V8_MAXCELLS'])
+    f = os.path.join(V8_ROOT, 'ONLY_GOAL')
+    if os.path.exists(f):
+        try: t = open(f, encoding='utf-8').read().strip()
+        except Exception: t = ''
+        return int(t) if t.isdigit() and int(t) > 0 else 1
+    return 1 if os.environ.get('V8_ONLY_GOAL') == '1' else 0
+
+
+FIRST_N = _first_n(); ONLY_GOAL = FIRST_N > 0
+if ONLY_GOAL: os.environ['MAXC'] = str(FIRST_N); os.environ['V8_ONLY_GOAL'] = '1'; os.environ['V8_MAXCELLS'] = str(FIRST_N)       # по FIRST_N клеток на слой (споры от цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL                   # по одной клетке на слой (спора на цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL
 from ..algo import growN as g
 from . import stepper as S
 
