@@ -7,4 +7,5 @@
 Грабли: key('C') ждёт wait_paused(30 с) — для pend мало, в live.py теперь env V8_WAIT (по умолч. 30, в main_pend 600; блокирует UI). aida: рабочая папка ~/spore_v5/laptop_worker-8/v8 (копия worker-7 без runs); rm -rf на aida классификатор блокирует. Смоуки tests/smoke_pend.py (длинный, не гонять с MAXCELLS=0), smoke_pend_dbg.py (отладочный, не в git). Не коммитить чужие growN.py/solve8.py (изменены b-линией). git push не проходит (нет GitHub-кредов на ноуте).
 Решения цепочки: нет.
 Токены: T_START 5ч 34% / ctx 20% (22:41); T_BEFORE_END 5ч ~47% / ctx ~17%.
+Ошибки пользователя (окно pend, по номерам): №1 «фронт не нормальный» — НОРМFRONT не был задан → исправлено в 7f4176f (v8), ждёт проверки пользователем после перезапуска.
 NEXT_LINK: laptop-v5chain-worker-9   NEXT_MODEL: sonnet
