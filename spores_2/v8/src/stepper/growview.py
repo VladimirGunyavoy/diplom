@@ -250,11 +250,18 @@ class GrowView:
     # ---- поверхность V (src/stepper/vsurf.py): V — по слоям (7/8/9), B — общий слой V* (победители по слоям); один меш на слой и тип ----
     def toggle_vsurf(s):
         s._auto = False; s.vmode = not s.vmode; print('[vsurf] per-layer surfaces %s' % ('on' if s.vmode else 'off'), flush=True)
+        s._unhide_layers(s.vmode)
         if s.snap is not None: s.draw(s.snap)
 
     def toggle_common(s):
         s._auto = False; s.cmode = not s.cmode; print('[vsurf] common V* layer %s' % ('on' if s.cmode else 'off'), flush=True)
+        s._unhide_layers(s.cmode)
         if s.snap is not None: s.draw(s.snap)
+
+    def _unhide_layers(s, turned_on):
+        """V/B включили, а все слои скрыты клавишами 7/8/9 (поверхность слоя показывается только у видимого слоя) — вернуть видимость слоёв, иначе поверхности «не появляются»"""
+        n = len((s.snap or {}).get('layers') or ())
+        if turned_on and n and not any(s.vis[:n]): s.vis[:n] = [True] * n; print('[vsurf] all layers were hidden (7/8/9): shown again, surfaces are drawn only on visible layers', flush=True)
 
     VCALC = (('v', 'V old'), ('q', 'V by Q (lin)'), ('qquad', 'V by Q (quad)'))
 
