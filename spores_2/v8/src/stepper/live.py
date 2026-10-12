@@ -93,7 +93,7 @@ class LiveStepper:
         if k == 'n':                                                   # N / LMB: next pause with lvl <= depth (3 rows, 2 stages, 1 spores, 0 to the end of the layer)
             if s.depth <= 0: k, ref = 'm', 0
             elif s.depth < 3: k, ref = 'm', s.depth
-        if s._st.cmd(k, ref): s._st.wait_paused(30.); s._pull(); s._final()
+        if s._st.cmd(k, ref): s._st.wait_paused(float(os.environ.get('V8_WAIT', 30))); s._pull(); s._final()
 
     def _final(s):
         """алгоритм закончил все слои (C или конец последнего) — финальный снимок: клетки последнего слоя в 'cells', остальные в cells_by_layer."""
@@ -122,4 +122,4 @@ class LiveStepper:
         s.depth = min(3, s.depth + 1); s.key('n')
 
     def _go(s, k, ref=None):
-        if s._st.cmd(k, ref): s._st.wait_paused(30.); s._pull(); s._final()
+        if s._st.cmd(k, ref): s._st.wait_paused(float(os.environ.get('V8_WAIT', 30))); s._pull(); s._final()
