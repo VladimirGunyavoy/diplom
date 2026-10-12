@@ -1,8 +1,8 @@
-# HANDOFF fixer (2026-10-12, от yoga-v5chain-fixer-1)
+# HANDOFF fixer (2026-10-12 ~14:35, от laptop-v5chain-fixer-1)
 Открыто:
-1. **Графана/хаб:** передал hop-hub-v5chain-fixer-5 проверить, что usage_log_yoga.jsonl ноута (spores_2/v5chain, метки .claude/.claude-romaha, агенты laptop-*) попадает в analytics/графану. Ответа не было — спросить/проверить самому.
-2. **Почему /mnt/c падает** (9p EIO, 3 раза за вечер 07.10): причина не найдена (в dmesg лавина «FS-Cache: Duplicate cookie» 9p.inode, ядро 5.15.167.4; Windows-журнал не читался — powershell.exe тоже на C:). Лекарство — авто-ремоунт в wsl_revive (проверен вручную, автоматически вживую не срабатывал). Варианты дальше: wsl --update, перенос рабочего на Linux-ФС.
-3. **Реестр ревайва:** сейчас research-3 (romaha), worker-2/3 (/root/.claude), «hop-yoga-v5chain-fixer-1» (это я). Новый fixer на другом аккаунте → заменить мою запись в `~/.wsl_revive/agents.json` (+копию в system/…/wsl_revive_agents.json) на его (sid, config_dir, имя; call_fixer ищет hop-laptop-v5chain-fixer-N).
-4. Аккаунты: /root/.claude 7д ~96%, romaha свежий. worker-2/3 при необходимости: `python3 ~/.wsl_revive/move_session.py laptop-v5chain-worker-2 romaha`.
-5. searcher-1 (процесс claude) мог остаться запущенным — не в реестре, не поднимается.
-Пульса у меня не было.
+1. **Графана (владелец — хабовый fixer, `~/grafana/feeder.py` на хабе; ему отправлено):** (а) «Недельный лимит (7д)»: между 10-08 и 10-12 нет точек, линия идёт к 0 — в серии есть фальшивые нули/1% (hub-лог: сотни записей romaha/.claude с seven_day_pct 0–1 и five_hour 0–8 в 10-12 00:00 и 07:30–09:30 — похоже, statusline пишет 0 при rate_limits=null); acc2 прыгает 96→1→96 (11:29, 12:22→14:21). Нужно отбрасывать записи с нулём без resets_at / не рисовать через пропуск. (б) «Скорость роста контекста»: отрицательный рост (оранжевая пунктирная до −10 %/ч около 12:45–13:30) — контекст падает после compact/нового сессии; клипать ≥0 или помечать сброс.
+2. **Дубли деки после рестарта 11:33**: два link/tunnel/watch-yoga yoga-ftl-worker-1 (пары процессов ppid=1 и ppid=15). Нужно слово пользователя убить лишние. wsl_boot.sh исправлен (на следующий рестарт), не проверен рестартом.
+3. **pick_account**: не сделано — пересчёт role_rate из лога; в рутинах (spawn-шаблоны worker/research/searcher/dispatcher/explainer) добавить `--role <роль>` — дело meta-1 по DOC_CHANGES. Ждёт повторной проверки на живых вызовах.
+4. Реестр ревайва: research-3, worker-2/3, hop-laptop-v5chain-fixer-1 (мой sid 69e1a3fb); новый fixer — заменить запись (sid, config_dir).
+5. Старые пункты: usage хаба в графане ноутбука (проверено — имена laptop-* видны), падения /mnt/c (9p EIO) — причина не найдена.
+Пульс выключен до задачи.
