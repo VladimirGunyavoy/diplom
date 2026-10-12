@@ -27,6 +27,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 import numpy as np
 
 import time
+try:
+    from src.runlog import RunLog; runlog = RunLog()      # журнал запуска: runs/<время>/ (grow.log — дубль консоли, params/atlas/vcalc/traj/keys); запись в фоне
+except Exception as e_:
+    runlog = None; print('[runlog] off: %r' % (e_,))
 from ursina import held_keys, Ursina, Entity, mouse
 from ursina.models.procedural.circle import Circle
 
@@ -150,7 +154,8 @@ except ImportError as e_:
     print('[v8] live algorithm unavailable (%s) - DemoStepper' % e_)
     from src.stepper.demo import DemoStepper
     stepper = DemoStepper(seed=(0., 0.))
-growview = GrowView(zoom_manager, ax=(0, 1), spore_manager=spore_manager)
+growview = GrowView(zoom_manager, ax=(0, 1), spore_manager=spore_manager); growview.runlog = runlog
+if runlog is not None: runlog.params(extra=dict(layers=list(getattr(stepper, 'layers', ())), stepper=type(stepper).__name__))
 growview.draw(stepper.snapshot)    # the first pause (the algorithm's own first seed) is visible right at start
 
 def _step(k):
@@ -256,7 +261,8 @@ def update():
     growview.refresh()    # spore size ('1') changed -> rebuild the point discs
 
 def input(key):
-    input_manager.handle_input(key)
+    t0 = time.perf_counter(); input_manager.handle_input(key)
+    if runlog is not None: runlog.key(key, dict(v=growview.vmode, b=growview.cmode, traj=growview.tview if growview.tmode else 'off', calc=growview.vcalc, skel=growview.skel, vis=''.join('+' if x else '-' for x in growview.vis[:3])), dict(ms=round(1e3 * (time.perf_counter() - t0), 1), **growview.dinfo))      # состояние ПОСЛЕ нажатия + время отклика и cache hit/miss последней отрисовки
 
 print("Ready. WASD to move, Q/E zoom, Alt cursor, Esc exit.")
 print("=" * 50)

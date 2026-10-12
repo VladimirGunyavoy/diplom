@@ -50,10 +50,10 @@ def solve_layers(cells_by_u, g=None, calc='v'):
             gcols[u].append(inn.any(0) | np.isfinite(te.reshape(nt - 1, M)).any(0))
     assert off == G.n
     fin = V < BIG / 2
-    return out, dict(G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
+    return out, dict(G=G, calc=calc, n=int(G.n), t=t, passes=int(G.passes), converged=bool(getattr(G, 'converged', False)), finite=float(fin.mean()), vmax=float(V[fin].max()) if fin.any() else 0., layers={u: len(c) for u, c in atlas.items()}, wins=wins, goalcols=gcols)
 
 
-TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 100)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
+TRAJ_N = int(os.environ.get('VSURF_TRAJ_N', 300)); TRAJ_SEED = int(os.environ.get('VSURF_TRAJ_SEED', 1)); TRAJ_REC = int(os.environ.get('VSURF_TRAJ_REC', 3))       # итоговые траектории: число стартов, сид, запись каждого REC-го шага (dt=.01)
 TRAJ_A = float(os.environ.get('VSURF_TRAJ_ALPHA', 1.)); TRAJ_FW = int(os.environ.get('VSURF_TRAJ_FLOOR_W', 3)); TRAJ_SW = int(os.environ.get('VSURF_TRAJ_SURF_W', 3))
 
 
@@ -69,13 +69,54 @@ def ctrl_color(U, alpha=1.):
     U = np.asarray(U, float); out = np.empty(U.shape + (4,)); out[..., :3] = np.array(CTRL_COL[0]); out[..., :3][U > 1e-9] = CTRL_COL[1]; out[..., :3][U < -1e-9] = CTRL_COL[-1]; out[..., 3] = alpha; return out
 
 
+def _prephase(G, X, box, dt=.01, rec=TRAJ_REC, maxsteps=3000):
+    """старты без V* (решение пользователя 2026-10-12: траектории считать до выхода из области): для каждого слоя u поток из точки шагом dt до первого события «V* определено» (в т.ч. попали в цель) / «вышли за область |x| > box».
+    Слой выбирается так: из тех, что приводят в область с V*, — приводящий раньше; если ни один — тот, что дольше остаётся в области. → список dict на старт: P (K, 2), U (K,), t1 (время до V*), X1 (точка, где V* определено, или None), mark (точка выхода на границе или None)"""
+    n = len(X); L = G.L; us = np.asarray(G.us, float); S = np.repeat(np.asarray(X, float)[:, None, :], L, 1).copy(); kind = np.zeros((n, L), int); tstop = np.full((n, L), maxsteps); traj = [S.copy()]; box = np.asarray(box, float)
+    for step in range(1, maxsteps + 1):
+        ii, ll = np.nonzero(kind == 0)
+        if not len(ii): break
+        x, v, u = S[ii, ll, 0], S[ii, ll, 1], us[ll]; S[ii, ll, 0] = x + v * dt + u * dt * dt / 2; S[ii, ll, 1] = v + u * dt; Y = S[ii, ll]
+        out = (np.abs(Y) > box).any(1); kind[ii[out], ll[out]] = 2; tstop[ii[out], ll[out]] = step; k = ~out
+        if k.any():
+            Vs = G.Vlayers(Y[k]).min(1); d = np.isfinite(Vs) & (Vs < BIG / 2); jj, mm = ii[k][d], ll[k][d]; kind[jj, mm] = 1; tstop[jj, mm] = step
+        traj.append(S.copy())
+    traj = np.asarray(traj); out_l = []
+    for i in range(n):
+        dl = np.flatnonzero(kind[i] == 1); l = int(dl[np.argmin(tstop[i, dl])]) if len(dl) else int(np.argmax(tstop[i])); ts = int(tstop[i, l]); P = traj[:ts + 1, i, l]; mark = None; X1 = None
+        if kind[i, l] == 1: X1 = P[-1].copy()
+        elif kind[i, l] == 2:                                                                    # последняя точка — на границе области (пересечение отрезка последнего шага с рамкой)
+            a_, b_ = P[-2], P[-1]; tt = 1.
+            for ax in range(2):
+                if abs(b_[ax]) > box[ax] and b_[ax] != a_[ax]: tt = min(tt, (np.sign(b_[ax]) * box[ax] - a_[ax]) / (b_[ax] - a_[ax]))
+            mark = a_ + max(tt, 0.) * (b_ - a_); P = np.concatenate([P[:-1], mark[None]])
+        keep = np.unique(np.r_[np.arange(0, len(P), rec), len(P) - 1]); out_l.append(dict(P=P[keep], U=np.full(len(keep), us[l]), t1=ts * dt if X1 is not None else None, X1=X1, mark=mark))
+    return out_l
+
+
 def agent_paths(G, g=None, n=TRAJ_N, seed=TRAJ_SEED, rec=TRAJ_REC):
-    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → агент solve8 по политике look (POLICIES['look']) на графе G → dict: paths [(K, N) положения], V [(K,) V*(x) = min по слоям], U [(K,) управление на последнем шаге перед точкой], T (n,) время до цели (nan — провал), sw (n,) переключения"""
+    """n случайных стартов в поле (|x| ≤ XLV, вне цели, seed фиксирован) → путь агента solve8 (политика look) на графе G для каждого старта.
+    У старта без V* путь начинается с _prephase (поток слоя до V* или до выхода за область ±(XL+GM)); вышел — status 'out_of_area' (конец — mark на границе), нашёл V* — дальше обычный агент (может дойти).
+    → dict: X0 (n, 2); status (n,) 'reached' | 'failed' | 'out_of_area'; prephase (n,) bool — старт был без V*; left_work (n,) bool — путь хоть раз вышел за ±XL; T (n,) время до цели (с предфазой; nan — не дошёл); sw (n,) переключения агента; mark (n, 2) точка выхода (nan — нет);
+    paths [(K, 2)], V [(K,) V*(x) = min по слоям, ∞ вне области V], U [(K,) управление на последнем шаге перед точкой] — по каждому старту (в порядке X0)"""
     from ..algo import solve8
-    g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); Tr, _ = solve8.t_ref(X0); path = []; T, sw = G.run_agent(X0, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES['look'])
-    ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
-    Vst = G.Vlayers(P).min(1); Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1
-    return dict(paths=np.split(P, cut), V=np.split(Vst, cut), U=np.split(Ul, cut), T=T, sw=sw, X0=X0)
+    g = g or solve8.load_growN(); X0 = solve8.starts(g, n, seed); n = len(X0); Vs0 = G.Vstar(X0)[0]; has = np.isfinite(Vs0) & (Vs0 < BIG / 2); box = np.where(g.XLV > 0, g.XLV + g.GM, np.inf)
+    pre = {int(i): r for i, r in zip(np.flatnonzero(~has), _prephase(G, X0[~has], box, rec=rec) if (~has).any() else [])}
+    src = [i for i in range(n) if has[i] or pre[i]['X1'] is not None]; Xa = np.array([X0[i] if has[i] else pre[i]['X1'] for i in src]); T = np.full(n, np.nan); sw = np.zeros(n, int); P_ = {i: [] for i in range(n)}; U_ = {i: [] for i in range(n)}; mark = np.full((n, 2), np.nan)
+    for i, r in pre.items(): P_[i].append(r['P']); U_[i].append(r['U']); mark[i] = r['mark'] if r['mark'] is not None else np.nan
+    if src:
+        Tr, _ = solve8.t_ref(Xa); path = []; Ta, swa = G.run_agent(Xa, 3 * Tr + 2, rec=rec, path=path, **solve8.POLICIES['look'])
+        ids = np.concatenate([a for a, _, _ in path]); P = np.concatenate([x for _, x, _ in path]); Lr = np.concatenate([c for _, _, c in path]); order = np.argsort(ids, kind='stable'); ids, P, Lr = ids[order], P[order], Lr[order]       # внутри агента порядок записи сохранён (stable)
+        Ul = np.asarray(G.us, float)[Lr]; cut = np.flatnonzero(np.diff(ids)) + 1; Pp, Up = np.split(P, cut), np.split(Ul, cut)
+        for k, i in enumerate(src):
+            t1 = pre[i]['t1'] if i in pre else 0.; T[i] = Ta[k] + t1; sw[i] = swa[k]
+            if i in pre: P_[i].append(Pp[k][1:]); U_[i].append(Up[k][1:])                      # первая точка агента = конец предфазы
+            else: P_[i].append(Pp[k]); U_[i].append(Up[k])
+    paths = [np.concatenate(P_[i]) if P_[i] else X0[i][None] for i in range(n)]; Us = [np.concatenate(U_[i]) if U_[i] else np.zeros(1) for i in range(n)]
+    allP = np.concatenate(paths); Vst = G.Vlayers(allP).min(1); cut = np.cumsum([len(p) for p in paths])[:-1]; Vl_ = np.split(Vst, cut)
+    status = np.where(np.isfinite(T), 'reached', np.where(np.array([i in pre and pre[i]['X1'] is None for i in range(n)]), 'out_of_area', 'failed')).astype(object)
+    xlv = np.asarray(g.XLV, float); left = np.array([bool(((np.abs(p) > xlv + 1e-12) & (xlv > 0)).any()) for p in paths])                  # хоть раз вышла за рабочее поле ±XL (без GM)
+    return dict(paths=paths, V=Vl_, U=Us, T=T, sw=sw, X0=X0, status=status, prephase=~has, mark=mark, left_work=left)
 
 
 def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
@@ -89,7 +130,8 @@ def traj_geom(res, ax=(0, 1), h=VH, lift=LIFT, y0=.01):
         ok = np.isfinite(V) & (V < BIG / 2); q = f.copy(); q[:, 1] = np.where(ok, V, 0.) * h + lift; e = ok[:-1] & ok[1:]
         S.append(np.stack([q[:-1][e], q[1:][e]], 1).reshape(-1, 3)); SC.append(np.repeat(col[1:][e], 2, axis=0)); PS.append(q[ok]); PSC.append(col[ok])
     z3, z4 = np.zeros((0, 3)), np.zeros((0, 4)); cat = lambda L, z: np.concatenate(L) if L else z
-    return dict(floor=cat(F, z3), fcol=cat(FC, z4), surf=cat(S, z3), scol=cat(SC, z4), pf=cat(PF, z3), pfc=cat(PFC, z4), ps=cat(PS, z3), psc=cat(PSC, z4))
+    mk = np.asarray(res.get('mark', np.zeros((0, 2)))); mk = mk[np.isfinite(mk).all(1)] if len(mk) else mk; M_ = np.zeros((len(mk), 3)); M_[:, 0] = mk[:, ax[0]] if len(mk) else []; M_[:, 2] = mk[:, ax[1]] if len(mk) else []; M_[:, 1] = y0
+    return dict(mk=M_, floor=cat(F, z3), fcol=cat(FC, z4), surf=cat(S, z3), scol=cat(SC, z4), pf=cat(PF, z3), pfc=cat(PFC, z4), ps=cat(PS, z3), psc=cat(PSC, z4))
 
 
 def vscale(Vs_u, q=99.):

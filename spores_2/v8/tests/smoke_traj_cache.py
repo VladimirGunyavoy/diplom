@@ -1,5 +1,5 @@
 import os, sys
-os.environ['V8_WINDOW'] = 'offscreen'; os.environ['VSURF_TRAJ_N'] = '20'; os.chdir(r'C:\GitHub\claude-work\projects\spore\spores_2\v8'); sys.path.insert(0, os.getcwd())
+os.environ['V8_WINDOW'] = 'offscreen'; os.environ['VSURF_TRAJ_N'] = '100'; os.chdir(r'C:\GitHub\claude-work\projects\spore\spores_2\v8'); sys.path.insert(0, os.getcwd())
 import ursina; _M = type(ursina.mouse); _M.locked = property(lambda s: False, lambda s, v: None); _M.visible = property(lambda s: True, lambda s, v: None)
 import time, main as M
 from src.stepper import vsurf as VS
@@ -12,8 +12,8 @@ G = M.growview; M.stepper.key('C'); G.draw(M.stepper.snapshot)
 def wait():
     t0 = time.time()
     while (G._traj is None or G._tjob is not None) and time.time() - t0 < 200: M.app.step(); G.poll(); time.sleep(.05)
-G.toggle_traj(); print('1', G.vlabel()[:90]); wait(); print('after compute', cnt[0], ns[0], G.vlabel()[:110])
-for i in range(8): G.toggle_traj(); M.app.step(); G.poll()      # off, both, floor, surface, off, both, floor, surface
+M.input('v'); M.input('t'); print('1', G.vlabel()[:90]); wait(); print('after compute', cnt[0], ns[0], G.vlabel()[:110])
+for i in range(8): M.input('t'); M.app.step(); G.poll()      # off, both, floor, surface, off, both, floor, surface
 print('after T x8: agent_paths calls', cnt[0], 'solve calls', ns[0], G.vlabel()[:110])
 G.toggle_traj(); G.cycle_vcalc(); print('mode q', G.vlabel()[:90]); wait(); print('computed q', cnt[0], ns[0])
 G.cycle_vcalc(); G.cycle_vcalc(); wait(); print('back to v: calls', cnt[0], ns[0], G.vlabel()[:110])      # из кэша

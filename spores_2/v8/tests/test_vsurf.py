@@ -96,20 +96,24 @@ def test_time_skeleton():
 
 
 def test_agent_paths():
-    """100 стартов, агент look: путь записан, начинается в старте, V* на пути конечно и убывает к цели; run_agent с path и без — те же T"""
+    """300 стартов, агент look: у каждого старта путь; старты без V* — предфаза (поток слоя) до V* или до выхода за ±(XL+GM): out_of_area с маркером на границе; остальные — как раньше"""
     import time; from src.algo import solve8, growN as g
     A = _atlas(); Vs, info = VS.solve_layers(A); G = info['G']; t0 = time.perf_counter(); res = VS.agent_paths(G, n=100); dt = time.perf_counter() - t0
-    assert len(res['paths']) == 100 and np.isfinite(res['T']).mean() > .8, np.isfinite(res['T']).mean()
-    assert all(np.allclose(P[0], x0) for P, x0 in zip(res['paths'], res['X0'])) and all(len(P) == len(V) for P, V in zip(res['paths'], res['V']))
-    ok = np.isfinite(res['T']); assert all(np.linalg.norm(P[-1]) <= G.rho + .02 for P, o in zip(res['paths'], ok) if o), 'reached ends in goal'
+    n = 100; st = res['status']; ok = st == 'reached'; box = g.XLV + g.GM; pre = res['prephase']; out = st == 'out_of_area'
+    assert len(res['paths']) == n and all(len(P) >= 1 for P in res['paths']) and set(st) <= {'reached', 'failed', 'out_of_area'} and (ok.mean() > .75), (ok.mean(), set(st))
+    assert np.array_equal(ok, np.isfinite(res['T'])) and (out <= pre).all() and not (out & ~pre).any()      # out_of_area только среди стартов без V*
+    assert all(np.allclose(P[0], x0) for P, x0 in zip(res['paths'], res['X0'])) and all(len(P) == len(V) == len(U) for P, V, U in zip(res['paths'], res['V'], res['U']))
+    assert all(np.linalg.norm(res['paths'][i][-1]) <= G.rho + .02 for i in np.flatnonzero(ok)), 'reached ends in goal'
+    for i in np.flatnonzero(out): P = res['paths'][i]; assert (np.abs(P) <= box + 1e-9).all() and np.allclose(res['mark'][i], P[-1]) and (np.abs(P[-1]) >= box - 1e-9).any(), (i, P[-1])      # путь до выхода, конец — на границе области
+    assert np.isnan(res['mark'][~out]).all() and res['left_work'][out].all()
     Vf = [V[np.isfinite(V)] for V in res['V']]; assert np.mean([v[0] >= v[-1] - 1e-6 for v in Vf if len(v)]) > .95
-    Tr, _ = solve8.t_ref(res['X0']); T2, sw2 = G.run_agent(res['X0'], 3 * Tr + 2, **solve8.POLICIES['look']); assert np.array_equal(np.nan_to_num(T2, nan=-1), np.nan_to_num(res['T'], nan=-1)) and (sw2 == res['sw']).all()
-    m = VS.traj_geom(res); fl, sf = m['floor'], m['surf']; assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01) and len(m['fcol']) == len(fl) and len(m['scol']) == len(sf) and len(m['pf']) == len(m['pfc']) and len(m['ps']) == len(m['psc'])
-    assert all(len(U) == len(P) for P, U in zip(res['paths'], res['U'])) and set(np.unique(np.concatenate(res['U']))) <= {-1., 0., 1.}
+    Tr, _ = solve8.t_ref(res['X0']); T2, sw2 = G.run_agent(res['X0'], 3 * Tr + 2, **solve8.POLICIES['look']); same = ~pre; assert np.array_equal(np.nan_to_num(T2[same], nan=-1), np.nan_to_num(res['T'][same], nan=-1)) and (sw2[same] == res['sw'][same]).all()      # старты с V* — без изменений
+    m = VS.traj_geom(res); fl, sf = m['floor'], m['surf']; assert len(fl) > 0 and len(sf) > 0 and len(sf) <= len(fl) and np.allclose(fl[:, 1], .01) and len(m['fcol']) == len(fl) and len(m['scol']) == len(sf) and len(m['pf']) == len(m['pfc']) and len(m['ps']) == len(m['psc']) and len(m['mk']) == int(out.sum())
+    assert set(np.unique(np.concatenate(res['U']))) <= {-1., 0., 1.}
     c = VS.ctrl_color(np.array([1., -1., 0.])); assert np.allclose(c[0, :3], VS.CTRL_COL[1]) and np.allclose(c[1, :3], VS.CTRL_COL[-1]) and np.allclose(c[2, :3], VS.CTRL_COL[0]) and (c[:, 3] == 1).all()
+    import colorsys; sat = lambda c: colorsys.rgb_to_hsv(*c)[1]; assert sat(VS.CTRL_COL[1]) < sat((.72, .25, 1.)) and sat(VS.CTRL_COL[-1]) < sat((1., .12, .12)) and abs(colorsys.rgb_to_hsv(*VS.CTRL_COL[1])[2] - 1.) < 1e-9      # приглушены, яркость осталась
     n_seg = sum(len(P) - 1 for P in res['paths'] if len(P) >= 2); assert len(fl) == 2 * n_seg, (len(fl), n_seg)      # отрезок только между соседними по времени точками ОДНОЙ траектории
     d = np.linalg.norm(fl[1::2] - fl[0::2], axis=1); vmax = max(np.abs(P[:, 1]).max() for P in res['paths']); assert d.max() <= VS.TRAJ_REC * .01 * np.hypot(vmax, 1.) * 1.3, d.max()       # нет перемычек: длина ≤ шаг записи · |f| с запасом
-    assert np.allclose(fl[1::2][:-1][np.diff(np.repeat(np.arange(len(res['paths'])), [max(len(P) - 1, 0) for P in res['paths']])) == 0], fl[2::2][np.diff(np.repeat(np.arange(len(res['paths'])), [max(len(P) - 1, 0) for P in res['paths']])) == 0]), 'стык: конец отрезка = начало следующего в той же траектории'
-    import colorsys; sat = lambda c: colorsys.rgb_to_hsv(*c)[1]; assert sat(VS.CTRL_COL[1]) < sat((.72, .25, 1.)) and sat(VS.CTRL_COL[-1]) < sat((1., .12, .12)) and abs(colorsys.rgb_to_hsv(*VS.CTRL_COL[1])[2] - 1.) < 1e-9      # приглушены, яркость осталась
-    uu = np.concatenate(res['U'][:20]); assert (uu > 0).any() and (uu < 0).any()      # оба управления встречаются
-    print('agent_paths %.1f s, reached %.2f, floor %d, surf %d' % (dt, ok.mean(), len(fl), len(sf)))
+    sg = np.repeat(np.arange(n), [max(len(P) - 1, 0) for P in res['paths']]); same_tr = np.diff(sg) == 0; assert np.allclose(fl[1::2][:-1][same_tr], fl[2::2][same_tr]), 'стык: конец отрезка = начало следующего в той же траектории'
+    uu = np.concatenate(res['U'][:20]); assert (uu > 0).any() and (uu < 0).any()
+    print('agent_paths %.1f s, reached %d, out_of_area %d, prephase %d, left_work %d, floor %d, surf %d' % (dt, ok.sum(), out.sum(), pre.sum(), res['left_work'].sum(), len(fl), len(sf)))

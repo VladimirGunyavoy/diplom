@@ -159,7 +159,7 @@ class Graph:
                 nodes = e1[a:b]; V[nodes] = np.minimum(V[nodes], e1c[a:b] + V[e1n[a:b]])
             d = float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max())
             if d < tol: break
-        s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = V; s.Vn = V
+        s.passes = passes; s.converged = d < tol; s.t_solve = time.perf_counter() - t0; s.V = V; s.Vn = V
         if verbose: print('solve8: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
@@ -175,8 +175,9 @@ class Graph:
             V = np.minimum(V, Q)
             for a, b in zip(cuts[:-1], cuts[1:]):
                 nd = e1[a:b]; Q[nd] = np.minimum(Q[nd], e1c[a:b] + V[e1n[a:b]]); V[nd] = np.minimum(V[nd], Q[nd])
-            if max(float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max()), float(np.abs(np.minimum(Q, BIG) - np.minimum(Qo, BIG)).max())) < tol: break
-        s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
+            dd = max(float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max()), float(np.abs(np.minimum(Q, BIG) - np.minimum(Qo, BIG)).max()))
+            if dd < tol: break
+        s.converged = dd < tol; s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
         if verbose: print('solve8[%s]: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.calc, s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
