@@ -1,4 +1,5 @@
 # Последние звенья линии B
+- hub-v5chain-worker-b8 (2026-10-07 21:08–23:10, acc2, sonnet): п.48 nD NF закрыт (NFFB; di4 NF1 93%/1.072, manip NF1 .60 — выкл.); линия B закрыта словом пользователя.
 
 # Session Handoff — линия B
 Звено: hub-v5chain-worker-b7 (acc3, sonnet, 15:33–21:10), причина смены: ctx ~27% (софт 30%)
