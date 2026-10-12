@@ -202,3 +202,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | laptop-v5chain-worker-6 | start | 5ч 1% / ctx 5% | $0.04 | 2026-10-12 16:08:11 |
 | laptop-v5chain-explainer-1 | start | 5ч ?% / ctx ~1% | ? | 2026-10-12 |
 | laptop-v5chain-worker-b1 | start | 5ч 17% / ctx 4% | $0.04 | 2026-10-12 17:05:01 |
+| laptop-v5chain-research-4 | end | 5ч 56% / ctx 38% | — | 2026-10-12 18:30:41 |
