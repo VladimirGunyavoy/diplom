@@ -49,11 +49,10 @@ def rows(env):
                     if c['reached'] >= 1.0 and c['ratio_med'] and c['ratio_med'] <= 1.01: tgt = c['t_train'] if tgt is None else min(tgt, c['t_train'])
             tq = tgt
         R.append(dict(m=f'PPO {st//10**6}M шагов ({len(P)} сида: показан лучший; ср. дошли {np.mean([s["reached"] for s in P])*100:.0f}%, мед {f(np.mean([s["ratio_med"] or np.nan for s in P]))})', par='до качества мед ≤1.01 и 100%: ' + (f(tq, 3) + ' с' if tq else 'не достиг'), build=tr, qm=ti, qp=ti, tot=tr + 20 * ti, st=stat(best), nf=f'обучение {best.get("nf_train", 0):.2g}', batch=tb, hw=best['hw'], sp=False, w=(WP.get(env, {}).get('params', 0), WP.get(env, {}).get('bytes', 0) + WP.get(env, {}).get('vecnorm_bytes', 0))))
-    for gm in ('0.995', '0.999'):
-        for x in sorted(glob.glob(f'{D}/{env}_ppo_5000000_g{gm}_s*.json')):
-            s = L(x)
-            if s: R.append(dict(m=f'PPO 5M, γ={gm}, сид {s["seed"]} (1 прогон, по просьбе research-25)', par='до 95%: ' + ('не достиг' if not s.get('t_train_95') else f(s['t_train_95'], 3) + ' с'), build=s['t_train'], qm=s['t_infer_per_start'], qp=s['t_infer_per_start'], tot=s['t_train'] + 20 * s['t_infer_per_start'], st=stat(s), nf=f'обучение {s.get("nf_train", 0):.2g}', batch=s.get('t_infer_batch20'), hw=s['hw'], sp=False, w=(WP.get(env, {}).get('params', 0), WP.get(env, {}).get('bytes', 0) + WP.get(env, {}).get('vecnorm_bytes', 0))))
-    for algo, nm in (('rrt', 'RRT (свой)'), ('rrtstar', 'kRRT* (точный краевой, ДИ)'), ('sst', 'SST (свой; prune ' )):
+    for x in sorted(glob.glob(f'{D}/{env}_ppo_5000000_*_s*.json')):
+        s = L(x); tag = os.path.basename(x).split('5000000_')[1].rsplit('_s', 1)[0]
+        if s: R.append(dict(m=f'PPO 5M, {tag.replace("g0.", "γ .").replace("_pen", " штраф выхода −(T_ep+5)")}, сид {s["seed"]} (1 прогон)', par='до 95%: ' + ('не достиг' if not s.get('t_train_95') else f(s['t_train_95'], 3) + ' с'), build=s['t_train'], qm=s['t_infer_per_start'], qp=s['t_infer_per_start'], tot=s['t_train'] + 20 * s['t_infer_per_start'], st=stat(s), nf=f'обучение {s.get("nf_train", 0):.2g}', batch=s.get('t_infer_batch20'), hw=s['hw'], sp=False, w=(WP.get(env, {}).get('params', 0), WP.get(env, {}).get('bytes', 0) + WP.get(env, {}).get('vecnorm_bytes', 0))))
+    for algo, nm in (('rrt', 'RRT (свой)'), ('rrtstar', 'kRRT* (точный локальный планировщик: ДИ — bang-bang, дд — Balkcom–Mason TGT)'), ('sst', 'SST (свой; prune ' )):
         d = L(f'{D}/{env}_{algo}.json')
         if not d: continue
         for b in d['budgets']:
@@ -67,7 +66,18 @@ def rows(env):
     if oc: R.append(dict(m='OCP SLSQP (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False, w=(0, 0)))
     oc = L(f'{D}/{env}_ocpc.json')
     if oc: R.append(dict(m='OCP CasADi+IPOPT (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'IPOPT-запусков на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False, w=(0, 0)))
+    if env == 'dd': R += rows_dd2()
     return R, sp0
+def rows_dd2():
+    R = []
+    for algo, nm in (('sst', 'SST'), ('rrt', 'RRT')):
+        d = L(f'{D}/dd2_{algo}.json')
+        if not d: continue
+        b = d['budgets'][-1]; n = len(d['starts']); R.append(dict(m=f'[цель ±.2] {nm}, бюджет {f(b["budget"],3)} с (T/T_ref к эталону ±.05)', par='чувствительность к размеру цели', build=0., qm=b['t_wall_sum'] / n, qp=None, tot=b['t_wall_sum'], st=stat(b), nf=f'на запрос {f(b["nf_med"],3)}', batch=None, hw=d['hw'], sp=False, w=w_tree(d, 'dd', -1)))
+    for x in sorted(glob.glob(f'{D}/dd2_ppo_5000000_s*.json')):
+        s = L(x)
+        if s: R.append(dict(m=f'[цель ±.2] PPO 5M, сид {s["seed"]} (T/T_ref к эталону ±.05)', par='чувствительность к размеру цели', build=s['t_train'], qm=s['t_infer_per_start'], qp=s['t_infer_per_start'], tot=s['t_train'] + 20 * s['t_infer_per_start'], st=stat(s), nf='', batch=None, hw=s['hw'], sp=False, w=(0, 0)))
+    return R
 def breakeven(o, s):
     """с какого N споры выгоднее по полному времени (заготовка + N·запрос); без учёта качества — оно в соседних столбцах"""
     if o is s: return '—'
@@ -79,6 +89,11 @@ def table(env):
     R, sp0 = rows(env); lines = [f'### {env}', '', '| метод | примечание | заготовка, с | t_query мед / p90, с | пакет 20, с | t_total(N=20), с | дошли | T/T_ref мед / mean / p90 / max | вызовов f | вес (данные для запроса) | споры выгоднее при N в … | железо |', '|---|---|---|---|---|---|---|---|---|---|---|---|']
     for r in R:
         ns = '—' if r['sp'] or not sp0 else breakeven(r, sp0)
+        if ns != '—' and r['st'].med < 9 and sp0['st'].med < 9:
+            dm = (r['st'].med / sp0['st'].med - 1) * 100
+            if dm > 1: ns += f' (T хуже: мед +{dm:.0f}%)'
+            elif dm < -1: ns += f' (T лучше: мед {dm:.0f}%)'
+        if ns != '—' and r['st'].reached < sp0['st'].reached - 1e-9: ns += f' (дошли {r["st"].reached*100:.0f}% против {sp0["st"].reached*100:.0f}%)'
         lines.append(f"| {r['m']} | {r['par']} | {f(r['build'])} | {f(r['qm'])} / {f(r['qp'])} | {f(r['batch'])} | {f(r['tot'])} | {r['st']} | {r['nf']} | {wtxt(*r['w']) if r.get('w') else '—'} | {ns} | {r['hw']} |")
     lines += ['', 'Заготовка: споры = рост+solve, PPO = обучение, RRT/SST/kRRT*/OCP = 0 (дерево/решение строится внутри запроса и входит в t_query). Вес: споры — сумма nbytes массивов атласа (узлы, рёбра, V, геометрия клеток); PPO — параметры/байты state_dict + VecNormalize; SST/RRT — узлы дерева на конец запроса (мед.) × (n+m+3)·8 байт; OCP — нет постоянных данных. «Споры выгоднее при N»: по полному времени заготовка+N·запрос, качество в соседних столбцах.']
     return '\n'.join(lines)
@@ -86,7 +101,7 @@ def total_plot(env):
     import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
     R, sp0 = rows(env); N = np.logspace(0, 5, 100); fig, ax = plt.subplots(figsize=(9, 6)); fam = {}
     for r in R:
-        if r['qm'] is None: continue
+        if r['qm'] is None or r['m'].startswith('[цель'): continue
         k = r['m'].replace('**', '').split(' (')[0].split(',')[0].split(' шаг')[0].split(' бюджет')[0]
         k = 'споры' if k.startswith('споры') else ('PPO' if k.startswith('PPO') else ('SST' if k.startswith('SST') else k))
         fam.setdefault(k, []).append(r)
