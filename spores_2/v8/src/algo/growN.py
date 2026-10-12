@@ -515,16 +515,31 @@ def goal_seeds(rng):
     for _ in range(GS):
         k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(y)
     return out
+SEEDELL = int(E('SEEDELL', 0)); SEEDELLD = float(E('SEEDELLD', .5)); SEEDELL0 = float(E('SEEDELL0', .1)); ELLS = {}      # №14: посев по эллипсам с фокусами цель (0) и низ (θ=π, ω=0); S_0 = |F1F2|+SEEDELL0, шаг ступени SEEDELLD; суммы расстояний в сырых координатах (θ, ω), вес осей 1:1, θ — с периодом. ELLS[u] = список S ступеней (последняя — текущая)
+def ell_sum(Y):
+    """|x−F1|+|x−F2| (θ по кратчайшему пути вокруг периода); F1 = цель (0), F2 = (PERIOD[0]/2, 0)"""
+    Y = np.asarray(Y, float); F2 = np.zeros(N); F2[0] = PERIOD[0] / 2
+    return np.linalg.norm(wrapy(Y), axis=-1) + np.linalg.norm(wrapy(Y - F2), axis=-1)
+def ell_smax():
+    hi = np.array([PERIOD[k] / 2 if PER[k] else XLV[k] for k in range(N)]); g = np.stack(np.meshgrid(*[np.linspace(-h, h, 161) for h in hi], indexing='ij'), -1).reshape(-1, N); return float(ell_sum(g).max())
+def ell_lines(S, lo=-8., hi=8.):
+    """линия уровня ell_sum = S на θ∈[lo,hi] (копии периода входят сами), ω по полю: список ломаных (K, 2)"""
+    from contourpy import contour_generator
+    w = XLV[1] * 1.05; xs = np.linspace(lo, hi, 321); ys = np.linspace(-w, w, 161); X, Y = np.meshgrid(xs, ys); Z = ell_sum(np.stack([X, Y], -1))
+    return [np.asarray(l) for l in contour_generator(xs, ys, Z).lines(S)]
+SEEDLINE = float(E('SEEDLINE', 0)); SEEDLINEK = int(E('SEEDLINEK', 8))                                      # >0: следующие споры после первой (центр цели) — затравки на линии ω=0 (вторая ось = 0) с шагом SEEDLINE по оси 0, попеременно +/−: ±d, ±2d, ... (слово пользователя 2026-10-13, «как для ДИ»)
 def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []
     gseed0 = None
     if seeds is None and GSEED and not slowf(np.zeros(N), u): gseed0 = np.zeros(N); queue.insert(0, gseed0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
-SEEDLINE = float(E('SEEDLINE', 0)); SEEDLINEK = int(E('SEEDLINEK', 8))                                      # >0: следующие споры после первой (центр цели) — затравки на линии ω=0 (вторая ось = 0) с шагом SEEDLINE по оси 0, попеременно +/−: ±d, ±2d, ... (слово пользователя 2026-10-13, «как для ДИ»)
     bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; ncov = 0
     dead = []; streak = [0]; passes = [0]                                                                # ZACEP: dead — затравки, не давшие клетку (reject по размеру): окрестность RMINZ считаем закрытой гало соседей
     def covcheck():
         """посев в непокрытое: COVP проб по полю; вне ядро∪гало (и не в окрестности dead) кладём в начало очереди; слой кончается, когда непокрытых ≤ COVTOL два раза подряд"""
-    if seeds is None and SEEDLINE > 0:
+    ellS = []
+    if seeds is None and SEEDELL and N == 2:
+        F2_ = np.zeros(N); F2_[0] = PERIOD[0] / 2; ellS.append(float(np.linalg.norm(F2_)) + SEEDELL0); ELLS[u] = ellS; ESMAX = ell_smax()
+    elif seeds is None and SEEDLINE > 0:
         for k_ in range(1, SEEDLINEK + 1):
             for sg_ in (1., -1.): q0 = np.zeros(N); q0[0] = sg_ * k_ * SEEDLINE; queue.append(q0)
         passes[0] += 1; pr = rand_seeds(rng, COVP); pr = pr[inbox(pr) & ~ingoal(pr) & ~slowf(pr, u)]
@@ -546,12 +561,28 @@ SEEDLINE = float(E('SEEDLINE', 0)); SEEDLINEK = int(E('SEEDLINEK', 8))          
         if E('COVDBG'): print('cov', len(cells), 'непокрыто', round(unc, 4), 'проб', len(pr), flush=True)
         if unc < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(unc, 4), flush=True); return True
         return False
+    def ellcheck():
+        """№14: пока в текущем эллипсе S есть непокрытое (>COVTOL) — сеем туда (ближние к фокусам первыми); покрыт — следующая ступень (кольцо) до ESMAX"""
+        for _ in range(60):
+            pr = rand_seeds(rng, 20000); S = ellS[-1]; pr = pr[inbox(pr) & ~ingoal(pr) & ~slowf(pr, u)]; pr = pr[ell_sum(pr) <= S]
+            if len(pr):
+                cand = pr[~idx.covered(wrapy(pr))] if idx.n else pr
+                if len(cand) and dead: cand = cand[np.linalg.norm(cand[:, None] - np.array(dead)[None], axis=2).min(1) >= RMINZ]
+                unc = len(cand) / len(pr)
+            else: cand = pr; unc = 0.
+            if unc > COVTOL: passes[0] += 1; queue[:0] = list(cand[np.argsort(ell_sum(cand))][:50]); return passes[0] > 400
+            print('layer', u, 'эллипс S=%.2f покрыт: %d клеток, непокрыто %.4f' % (S, len(cells), unc), flush=True)
+            if S >= ESMAX: return True
+            ellS.append(S + SEEDELLD)
+        return False
     while fails < NFAIL and len(cells) < MAXC and (queue or not only_queue):     # v8: seeds — свои затравки (клик/конфиг); only_queue — расти только от них и их потомков
+        if ellS and not only_queue and not queue and ellcheck(): break
         if ZACEP and COVTOL > 0 and not only_queue and not queue and covcheck(): break
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p): pause('reject', 2, u=u, seed=p, reason='seed outside field', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         gfirst = p is gseed0; p = wrapy(p)
+        if ellS and not gfirst and ell_sum(p) > ellS[-1] + 1e-9: continue                                    # №14: затравки вне текущего эллипса выбрасываем (позже их найдёт ellcheck)
         if FMIN > 0 and slowf(p, u):
             pause('reject', 2, u=u, seed=p, reason='slow flow', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
         if ingoal(p) and not gfirst: pause('reject', 2, u=u, seed=p, reason='seed in goal', cells=lambda: [cell_dict(c_) for c_ in cells], queue=lambda: np.array(queue).reshape(-1, N)); continue
