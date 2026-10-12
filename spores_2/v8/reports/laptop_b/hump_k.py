@@ -15,14 +15,14 @@ X0 = S.starts(g, int(os.environ.get('N', '600')), 1); mx = S.path_extent(X0, rho
 ids = np.flatnonzero(np.isfinite(T1) & (T1 >= .8) & (TT - T1 >= .3)); PTS = np.zeros((len(ids), len(TG), 2)); TRF = np.zeros((len(ids), len(TG)))
 for r, i in enumerate(ids):
     t = T1[i] + TG; a = np.minimum(t, T1[i]); b = np.maximum(t - T1[i], 0.); u = U0[i]; x1 = Xz[i, 0] + Xz[i, 1] * a + u * a * a / 2; v1 = Xz[i, 1] + u * a; PTS[r, :, 0] = x1 + v1 * b - u * b * b / 2; PTS[r, :, 1] = v1 - u * b; TRF[r] = TT[i] - t
-Tr = R.T_ref(X0, rho); tmax = 3 * Tr + 2; out = np.linalg.norm(G.P, axis=1) > rho; Tn = R.T_ref(G.P, rho); prof = {}
+Tr = R.T_ref(X0, rho); tmax = 3 * Tr + 2; prof = {}
 for K in [int(k) for k in os.environ.get('KS', '0,1,3').split(',')]:
     G.subk = K; t0 = time.perf_counter(); G.solve(verbose=False); ts = time.perf_counter() - t0
     E = np.full((len(ids), len(TG)), np.nan)
     for r in range(len(ids)): E[r] = G.Vlayers(PTS[r]).min(1) - TRF[r]
     E[~np.isfinite(E)] = np.nan; win = (TG >= -.5) & (TG <= 0); full = np.isfinite(E[:, 0]) & np.isfinite(E[:, win]).all(1); Ef = E[full]
     if len(Ef): hump = Ef[:, win].max(1) - Ef[:, 0]; dV = np.diff(Ef + (-TG)[None, :], axis=1); up = (dV[:, (TG[1:] >= -.5) & (TG[1:] <= 0)] > 0).any(1)
-    fin = G.Vn < S.BIG / 2; e = (G.Vn - Tn)[out & fin]
+    out = np.linalg.norm(G.P, axis=1) > rho; Tn = R.T_ref(G.P, rho); fin = G.Vn < S.BIG / 2; e = (G.Vn - Tn)[out & fin]
     line = 'RES K=%d solve %.1f с проходов %d | трасс %d из %d: ' % (K, ts, G.passes, len(Ef), len(ids))
     if len(Ef): line += 'горб мед %.3f p90 %.3f max %.3f, V* растёт у %.0f%% | ' % (np.median(hump), np.percentile(hump, 90), hump.max(), 100 * up.mean()); prof[K] = np.nanmedian(Ef, 0)
     line += 'узлы V<T_ref−.05: %.1f%% (мед ош %.3f)' % (100 * (e < -.05).mean(), np.median(e)); print(line, flush=True)

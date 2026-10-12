@@ -47,6 +47,11 @@ def entry_time(X, u, dt, rho, n=32):
 
 
 # ---------- атлас и граф ----------
+class Refined:
+    """уточнённая клетка-полоса между соседними столбцами j, j+1 родителя: M столбцов (концы — столбцы родителя, внутри — выращенные как обычные столбцы потоком от интерполированной затравки), те же строки; prio выше родителя"""
+    def __init__(s, G, tau, r, hb, nb, nf, prio, depth): s.G, s.tau, s.r, s.hb, s.nb, s.nf, s.prio, s.depth = G, tau, r, hb, nb, nf, prio, depth
+
+
 class Light:
     """клетка-обёртка для HexIdx: G (nt,M,N), tau (nt,M)"""
     def __init__(s, G, tau, r, hb, nb, nf): s.G, s.tau, s.r, s.hb, s.nb, s.nf, s.m = G, tau, r, hb, nb, nf, G.shape[1]
@@ -67,21 +72,19 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
-        prio = []
-        for li, u in enumerate(s.us):
-            idx = g.HexIdx(); base = []
-            for c in atlas[u]:
-                if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], M, 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
-                else: G, tau, hb, nb, nf = c.G, c.tau, c.hb, c.nb, c.nf
-                prio.append(float(getattr(c, 'prio', 0)));                 lc = Light(G, tau, c.r, hb, nb, nf); idx.add(lc); nt = len(G); base.append(n0); ids = n0 + np.arange(nt * M).reshape(nt, M)
-                P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * M, gc)); layer.append(np.full(nt * M, li)); rowid.append(np.repeat(np.arange(nt), M))
-                nx = np.full((nt, M), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, M)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * M; gc += 1
-            s.idx[u] = idx; s.base[u] = np.array(base)
-        s.prio = np.array(prio);         s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
-        off = 0; s.gcell = {}
-        for u in s.us: s.gcell[u] = off + np.arange(len(atlas[u])); off += len(atlas[u])
+        prio = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
+        order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
+        for li, u, c in order:
+            if interp == 'T': G = c.Gt; tau = np.repeat(np.asarray(c.tt)[:, None], M, 1); hb, nb, nf = 0, len(c.tt) - 1, 0                  # весь скелет — «ядро» (для query это не важно)
+            else: G, tau, hb, nb, nf = c.G, c.tau, c.hb, c.nb, c.nf
+            prio.append(float(getattr(c, 'prio', 0))); lc = Light(G, tau, c.r, hb, nb, nf); hid[u].add(lc); nt = len(G); bs[u].append(n0); gl[u].append(gc); ids = n0 + np.arange(nt * M).reshape(nt, M)
+            P.append(G.reshape(-1, N)); T.append(tau.reshape(-1)); nodecell.append(np.full(nt * M, gc)); layer.append(np.full(nt * M, li)); rowid.append(np.repeat(np.arange(nt), M))
+            nx = np.full((nt, M), -1); nx[:-1] = ids[1:]; cs = np.zeros((nt, M)); cs[:-1] = tau[1:] - tau[:-1]; nxt.append(nx.reshape(-1)); cost.append(cs.reshape(-1)); n0 += nt * M; gc += 1
+        for u in s.us: s.idx[u] = hid[u]; s.base[u] = np.array(bs[u])
+        s.prio = np.array(prio); s.P = np.concatenate(P); s.tau = np.concatenate(T); s.nxt = np.concatenate(nxt); s.cost = np.concatenate(cost); s.nodecell = np.concatenate(nodecell); s.layer = np.concatenate(layer); s.rowid = np.concatenate(rowid); s.n = n0
+        s.gcell = {u: np.array(gl[u]) for u in s.us}; s._atlas, s._interp = atlas, interp
         s.layer_counts = {u: (len(atlas[u]), int(sum(len(c.G) * M for c in atlas[u]))) for u in s.us}
 
     # --- интерполяция слоя u2 в точках Y: V-вершины и веса (лучшая по центральности ячейка) ---
@@ -162,7 +165,14 @@ class Graph:
     def solve(s, maxit=2000, tol=1e-10, verbose=True, progress=None):
         """V (calc='v') или Q (calc='q'/'qquad': s.V = Q — запросы Vlayers/Vstar/агент идут по Q; s.Vn — V узлов = min(Q, Q чужих слоёв))"""
         if s.calc != 'v' or s.quad: s.set_calc(s.calc)
-        if s.calc != 'v': return s._solve_q(maxit, tol, verbose, progress=progress)
+        if s.calc == 'q' and s.refthr > 0 and not s._refined:                                                # SOLVE8_PLUS / REFINE_THR: адаптивные полосы по скачку Q (refine_atlas), затем бисекция переключений; граф усыновляет уточнённый
+            _, G2, ins = refine_atlas(s.g, s._atlas, s.refthr, s.rdepth, 'q', verbose=False); G2._refined = True; G2.refined = ins; keep = (s.bis, s.bisr, s.bnd, s.refthr, s.rdepth); s.__dict__.update(G2.__dict__); s.bis, s.bisr, s.bnd, s.refthr, s.rdepth = keep; s._refined = True; s.refined = ins
+        if s.calc != 'v':
+            V = s._solve_q(maxit, tol, verbose, progress=progress)
+            if s.bis > 0 and not s.subk:                                                                      # BISECT: подточки — моменты переключения, найденные бисекцией по времени на рёбрах, где «продолжать» и «переключиться» меняются местами
+                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, tol, False, progress=progress)
+                s.subk = 0; s._subc = None
+            return V
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
         e1 = s.e1; lev = s.rowid[e1]; order = np.argsort(-lev, kind='stable'); e1 = e1[order]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[order]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
@@ -177,6 +187,36 @@ class Graph:
         s.passes = passes; s.converged = d < tol; s.t_solve = time.perf_counter() - t0; s.V = V; s.Vn = V
         if verbose: print('solve8: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
+
+    def _bisect_pass(s):
+        """по текущему Q: на ребре k→k+1 своего слоя и чужом u2 стоимость переключения в момент t: g(t) = t + Q_u2(x(t)), точный поток; минимум по t ∈ [0, h] — бисекция по знаку g(t+δ) − g(t) до bis (δ = bis); подточка в найденном t, если g(t) < min(g(0), g(h)) − 1e-4. Подточки → кэш _sub, s.subk = −1"""
+        Q = s.V; n = s.e1; h = s.cost[n]; us = np.array(s.us); u = us[s.layer[n]]
+        def X(idx, t, uu): x, v = s.P[idx, 0], s.P[idx, 1]; return np.stack([x + v * t + uu * t * t / 2, v + uu * t], 1)
+        def Q2(li2, Y): return np.where(np.isfinite(o := s.evalpairs(Q, len(Y), s.locate(s.us[li2], Y))), o, BIG)
+        own, tt, PP = [], [], []; d = s.bis
+        for li2 in range(s.L):
+            m = np.flatnonzero((s.layer[n] != li2) & (s.nxt[n] >= 0))
+            if not len(m): continue
+            idx = n[m]; hh = h[m]; uu = u[m]; g0 = Q2(li2, s.P[idx]); gh = hh + Q2(li2, X(idx, hh, uu)); ok = (g0 < BIG / 2) & (gh < BIG / 2) & (hh > 2 * d)
+            if not ok.any(): continue
+            idx, hh, uu, g0, gh = idx[ok], hh[ok], uu[ok], g0[ok], gh[ok]; lo = np.zeros(len(idx)); hi = hh.copy()
+            for _ in range(int(np.ceil(np.log2(max(float(hh.max()), 1e-9) / d))) + 1):
+                mid = (lo + hi) / 2; a_ = mid + Q2(li2, X(idx, mid, uu)); b_ = mid + d + Q2(li2, X(idx, np.minimum(mid + d, hh), uu)); right = b_ < a_; lo = np.where(right, mid, lo); hi = np.where(right, hi, mid)
+            t = (lo + hi) / 2; gt = t + Q2(li2, X(idx, t, uu)); good = gt < np.minimum(g0, gh) - 1e-4
+            if good.any(): own.append(idx[good]); tt.append(t[good]); PP.append(X(idx[good], t[good], uu[good]))
+        if s.bnd:                                                                                            # граница клетки чужого слоя: узел-клон ровно по обе стороны границы (t_b−ε и t_b+ε), t_b — бисекция по времени вдоль столбца (слово пользователя)
+            def cid(li2, Y):
+                pi, verts, w, rank = s.locate(s.us[li2], Y); out = np.full(len(Y), -1); r0 = rank == 0; out[pi[r0]] = s.nodecell[verts[r0, 0]]; return out
+            for li2 in range(s.L):
+                m = np.flatnonzero((s.layer[n] != li2) & (s.nxt[n] >= 0)); idn = cid(li2, s.P); idx = n[m]; c0 = idn[idx]; c1 = idn[s.nxt[idx]]; sel = c0 != c1
+                if not sel.any(): continue
+                idx = idx[sel]; hh = h[m][sel]; uu = u[m][sel]; c0 = c0[sel]; lo = np.zeros(len(idx)); hi = hh.copy()
+                for _ in range(int(np.ceil(np.log2(max(float(hh.max()), 1e-9) / (s.bis / 8)))) + 1):
+                    mid = (lo + hi) / 2; same = cid(li2, X(idx, mid, uu)) == c0; lo = np.where(same, mid, lo); hi = np.where(same, hi, mid)
+                eps = s.bis / 8
+                for tb in (np.maximum(lo - 0., 0.), np.minimum(hi + eps, hh)): own.append(idx); tt.append(tb); PP.append(X(idx, tb, uu))
+        if not own: s.subk = -1; s._subc = (-1, (np.zeros(0, int), np.zeros(0), [(np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int)) for _ in s.us], 0)); return 0
+        P = np.concatenate(PP); r = (np.concatenate(own), np.concatenate(tt), [s.locate(u2, P) for u2 in s.us], len(P)); s.subk = -1; s._subc = (-1, r); return len(P)
 
     def _sub(s):
         """подточки рёбер E1 (K на ребро, равные доли шага по времени; точный поток ДИ): (узел-владелец, время t_j, пары locate по слоям, число точек); кэш по K"""
@@ -276,17 +316,12 @@ def make_graph(g, atlas, interp='N'):
     G = Graph(g, atlas, interp); G.prepare(); return G
 
 
-class Refined:
-    """уточнённая клетка-полоса между соседними столбцами j, j+1 родителя: M столбцов (концы — столбцы родителя, внутри — выращенные как обычные столбцы потоком от интерполированной затравки), те же строки; prio выше родителя"""
-    def __init__(s, G, tau, r, hb, nb, nf, prio, depth): s.G, s.tau, s.r, s.hb, s.nb, s.nf, s.prio, s.depth = G, tau, r, hb, nb, nf, prio, depth
-
-
 def refine_atlas(g, atlas, thr=.15, maxdepth=2, calc='q', verbose=True):
     """адаптивные столбцы по скачку V (слово пользователя «бисекция»): после solve у соседних столбцов клетки в строке |ΔQ| > thr ⇒ полоса между ними пересеивается M столбцами (новые — потоком от затравки на опорной строке, время строки — интерполяция времён соседей); повтор, пока скачок < thr или глубина maxdepth (ширина < r/16 при M=5, maxdepth 2). Запрос — ячейки полосы (prio). → (новый атлас, граф, число вставленных клеток-полос)"""
     from copy import copy
     M = g.M; US = {u: u for u in atlas}; cur = {u: list(atlas[u]) for u in atlas}; ins = 0
     for d in range(maxdepth + 1):
-        G = make_graph(g, cur, 'N'); G.set_calc(calc); G.solve(verbose=False)
+        G = make_graph(g, cur, 'N'); G.set_calc(calc); b0 = G.bis; G.bis = 0.; G._refined = True; G.solve(verbose=False)
         if d == maxdepth: break
         new = {u: [] for u in cur}; added = 0
         for u in cur:
@@ -308,6 +343,7 @@ def refine_atlas(g, atlas, thr=.15, maxdepth=2, calc='q', verbose=True):
         if not added: break
         for u in cur: cur[u] += new[u]
         ins += added
+    G.bis = b0
     return cur, G, ins
 
 
