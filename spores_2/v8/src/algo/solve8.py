@@ -88,7 +88,7 @@ def freeze_idx(g, s):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.xentry = float(os.environ.get('XENTRY', 0)); s.extin = float(os.environ.get('EXTIN', 0)); s.subk = int(os.environ.get('SUBK', 0)); s.spsel = int(os.environ.get('SPSEL', 0)); pl = int(os.environ.get('SOLVE8_PLUS', 0)); s.bis = float(os.environ.get('BISECT', .005 if pl else 0)); s.bisr = int(os.environ.get('BISECT_ROUNDS', 3)); s.bnd = int(os.environ.get('BISECT_BOUND', 1 if pl else 0)); s.refthr = float(os.environ.get('REFINE_THR', .15 if pl else 0)); s.rdepth = int(os.environ.get('REFINE_DEPTH', 2)); s.warm = int(os.environ.get('WARM', 0)); s.wtol = float(os.environ.get('WARM_TOL', 1e-6 if pl else 0)); s._bc = None; s.bpre = int(os.environ.get('BISECT_PRE', 1 if pl else 0)); s.bpre_f = (.2, .4, .6, .8); s.bfilt = int(os.environ.get('BISECT_BFILTER', 1 if pl else 0)); s.bthr = float(os.environ.get('BISECT_BTHR', 1e-4)); s.bstab = float(os.environ.get('BISECT_STAB', .05 if pl else 0)); s.bstat = (0, 0); s._refined = False; s.refined = 0; s._subc = None; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         prio = []; hidA = g.HexIdx(); cb = []; cl = []; hid = {u: g.HexIdx() for u in s.us}; bs = {u: [] for u in s.us}; gl = {u: [] for u in s.us}
         order = [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if not isinstance(c, Refined)] + [(li, u, c) for li, u in enumerate(s.us) for c in atlas[u] if isinstance(c, Refined)]      # узлы: сначала клетки атласа слой за слоем (как раньше — окно собирает сетку по этому порядку), затем уточнённые полосы
@@ -199,7 +199,11 @@ class Graph:
         if s.calc != 'v':
             V = s._solve_q(maxit, max(tol, s.wtol), verbose, progress=progress)
             if s.bis > 0 and not s.subk:                                                                      # BISECT: подточки — моменты переключения, найденные бисекцией по времени на рёбрах, где «продолжать» и «переключиться» меняются местами
-                for _ in range(s.bisr): s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol), False, progress=progress, warm=bool(s.warm))
+                prev = None; s.nrounds = 0; s.npts = []
+                for _ in range(s.bisr):
+                    npt = s._bisect_pass(); V = s._solve_q(maxit, max(tol, s.wtol), False, progress=progress, warm=bool(s.warm)); s.nrounds += 1; s.npts.append(int(npt))
+                    if s.bstab > 0 and prev is not None and abs(npt - prev) <= s.bstab * max(prev, 1): break                   # раунды до стабилизации числа подточек
+                    prev = npt
                 s.subk = 0; s._subc = None
             return V
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
@@ -227,6 +231,10 @@ class Graph:
             m = np.flatnonzero((s.layer[n] != li2) & (s.nxt[n] >= 0))
             if not len(m): continue
             idx = n[m]; hh = h[m]; uu = u[m]; g0 = Q2(li2, s.P[idx]); gh = hh + Q2(li2, X(idx, hh, uu)); ok = (g0 < BIG / 2) & (gh < BIG / 2) & (hh > 2 * d)
+            if s.bpre and ok.any():                                                                          # предотбор: бисекцию по времени гоняем только на рёбрах, где g в нескольких внутренних точках уже ниже обоих концов (иначе полезного минимума внутри нет)
+                oi = np.flatnonzero(ok); gm = np.full(len(oi), np.inf)
+                for fr in s.bpre_f: gm = np.minimum(gm, fr * hh[oi] + Q2(li2, X(idx[oi], fr * hh[oi], uu[oi])))
+                ok[oi[~(gm < np.minimum(g0[oi], gh[oi]) - 1e-4)]] = False
             if not ok.any(): continue
             idx, hh, uu, g0, gh = idx[ok], hh[ok], uu[ok], g0[ok], gh[ok]; lo = np.zeros(len(idx)); hi = hh.copy()
             for _ in range(int(np.ceil(np.log2(max(float(hh.max()), 1e-9) / d))) + 1):
@@ -236,14 +244,27 @@ class Graph:
         if s.bnd:                                                                                            # граница клетки чужого слоя: узел-клон ровно по обе стороны границы (t_b−ε и t_b+ε), t_b — бисекция по времени вдоль столбца (слово пользователя)
             def cid(li2, Y):
                 pi, verts, w, rank = s.locate(s.us[li2], Y); out = np.full(len(Y), -1); r0 = rank == 0; out[pi[r0]] = s.nodecell[verts[r0, 0]]; return out
+            if s._bc is None: s._bc = {}                                                                     # геометрия границ (рёбра, пересекающие границу клетки чужого слоя, и t_b) не зависит от Q — считаем один раз, дальше только фильтр по выгоде
+            eps = s.bis / 8; st = [0, 0]
             for li2 in range(s.L):
-                m = np.flatnonzero((s.layer[n] != li2) & (s.nxt[n] >= 0)); idn = cid(li2, s.P); idx = n[m]; c0 = idn[idx]; c1 = idn[s.nxt[idx]]; sel = c0 != c1
-                if not sel.any(): continue
-                idx = idx[sel]; hh = h[m][sel]; uu = u[m][sel]; c0 = c0[sel]; lo = np.zeros(len(idx)); hi = hh.copy()
-                for _ in range(int(np.ceil(np.log2(max(float(hh.max()), 1e-9) / (s.bis / 8)))) + 1):
-                    mid = (lo + hi) / 2; same = cid(li2, X(idx, mid, uu)) == c0; lo = np.where(same, mid, lo); hi = np.where(same, hi, mid)
-                eps = s.bis / 8
-                for tb in (np.maximum(lo - 0., 0.), np.minimum(hi + eps, hh)): own.append(idx); tt.append(tb); PP.append(X(idx, tb, uu))
+                if li2 not in s._bc:
+                    m = np.flatnonzero((s.layer[n] != li2) & (s.nxt[n] >= 0)); idn = cid(li2, s.P); idx = n[m]; c0 = idn[idx]; c1 = idn[s.nxt[idx]]; sel = c0 != c1; ne = len(idx)
+                    if not sel.any(): s._bc[li2] = None
+                    else:
+                        idx = idx[sel]; hh = h[m][sel]; uu = u[m][sel]; c0 = c0[sel]; lo = np.zeros(len(idx)); hi = hh.copy()
+                        for _ in range(int(np.ceil(np.log2(max(float(hh.max()), 1e-9) / (s.bis / 8)))) + 1):
+                            mid = (lo + hi) / 2; same = cid(li2, X(idx, mid, uu)) == c0; lo = np.where(same, mid, lo); hi = np.where(same, hi, mid)
+                        s._bc[li2] = (idx, uu, lo, np.minimum(hi + eps, hh), ne)
+                bc = s._bc[li2]
+                if bc is None: continue
+                idx, uu, t1, t2, ne = bc; st[0] += len(idx)
+                if s.bfilt:                                                                                  # только рёбра, где переключение у границы реально выгодно: t_b + Q_чужого(x(t_b)) < Q узла (иначе подточка ничего не меняет)
+                    keep = np.zeros(len(idx), bool)
+                    for tb in (t1, t2): keep |= (tb + Q2(li2, X(idx, tb, uu))) < Q[idx] - s.bthr
+                    idx, uu, t1, t2 = idx[keep], uu[keep], t1[keep], t2[keep]
+                st[1] += len(idx)
+                for tb in (t1, t2): own.append(idx); tt.append(tb); PP.append(X(idx, tb, uu))
+            s.bstat = tuple(st)
         if not own: s.subk = -1; s._subc = (-1, (np.zeros(0, int), np.zeros(0), [(np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int)) for _ in s.us], 0)); return 0
         P = np.concatenate(PP); r = (np.concatenate(own), np.concatenate(tt), [s.locate(u2, P) for u2 in s.us], len(P)); s.subk = -1; s._subc = (-1, r); return len(P)
 

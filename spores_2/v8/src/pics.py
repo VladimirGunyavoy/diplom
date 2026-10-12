@@ -45,8 +45,8 @@ def contour(Gc):
 
 def cells_png(G, cl, dirs, title=''):
     """клетки каждого слоя на фазовой плоскости: контур, строки, узлы, затравка (центр), цель, рамки"""
-    plt = _plt(); us = [u for u in cl if len(cl[u])]; fig, axs = plt.subplots(1, max(len(us), 1), figsize=(7.2 * max(len(us), 1), 5.6), squeeze=False)
-    for ax, u in zip(axs[0], us):
+    plt = _plt(); us = [u for u in cl if len(cl[u])]; fig, axs = plt.subplots(max(len(us), 1), 1, figsize=(8.5, 5.0 * max(len(us), 1)), squeeze=False)
+    for ax, u in zip(axs[:, 0], us):                                   # слои столбиком: ширина 8.5" = 935 px (было в одну строку 7.2"×n, 1584 px)
         n_nodes = 0
         for k, c in enumerate(cl[u]):
             Gc = np.asarray(c['G'], float); n_nodes += Gc.shape[0] * Gc.shape[1]; ct = contour(Gc); ax.fill(ct[:, 0], ct[:, 1], color=plt.cm.tab10(k % 10), alpha=.22, lw=0); ax.plot(ct[:, 0], ct[:, 1], color=plt.cm.tab10(k % 10), lw=1.2)

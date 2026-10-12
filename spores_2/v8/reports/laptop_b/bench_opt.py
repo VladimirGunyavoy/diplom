@@ -22,7 +22,7 @@ E = np.full((len(ids), len(TG)), np.nan)
 for r in range(len(ids)): E[r] = G.Vlayers(PTS[r]).min(1) - TRF[r]
 E[~np.isfinite(E)] = np.nan; win = (TG >= -.5) & (TG <= 0); full = np.isfinite(E[:, 0]) & np.isfinite(E[:, win]).all(1); Ef = E[full]
 hump = Ef[:, win].max(1) - Ef[:, 0]; out = np.linalg.norm(G.P, axis=1) > rho; Tn = R.T_ref(G.P, rho); fin = G.Vn < S.BIG / 2; e = (G.Vn - Tn)[out & fin]
-print('RES[%s] build %.2f solve %.2f (_solve_q %.2f x%d, bisect_pass %.2f x%d, locate %.2f x%d) узлов %d проходов(посл) %d | горб мед %.3f p90 %.3f | занижение<-.05: %.1f%% | Vsum %.4f' % (tag, tb, ts, TM['_solve_q'], TM['_solve_q#'], TM.get('_bisect_pass', 0), TM.get('_bisect_pass#', 0), TM['locate'], TM['locate#'], G.n, G.passes, np.median(hump), np.percentile(hump, 90), 100 * (e < -.05).mean(), np.minimum(G.Vn, 1e3).sum()), flush=True)
+print('load', os.getloadavg()[0], flush=True); print('RES[%s] build %.2f solve %.2f (_solve_q %.2f x%d, bisect_pass %.2f x%d, locate %.2f x%d) узлов %d проходов(посл) %d раундов %d подточек %s (границ рёбер %d→%d) | горб мед %.3f p90 %.3f | занижение<-.05: %.1f%% | Vsum %.4f' % (tag, tb, ts, TM['_solve_q'], TM['_solve_q#'], TM.get('_bisect_pass', 0), TM.get('_bisect_pass#', 0), TM['locate'], TM['locate#'], G.n, G.passes, getattr(G, 'nrounds', 0), str(getattr(G, 'npts', [])), G.bstat[0], G.bstat[1], np.median(hump), np.percentile(hump, 90), 100 * (e < -.05).mean(), np.minimum(G.Vn, 1e3).sum()), flush=True)
 X2 = S.starts(g, 200, 1); Tr = R.T_ref(X2, rho); TM.clear()
 for pol in ('commit', 'look'):
     t0 = time.perf_counter(); T, sw = G.run_agent(X2, 3 * Tr + 2, **S.POLICIES[pol]); ta = time.perf_counter() - t0; ok = np.isfinite(T); r = T[ok] / Tr[ok]

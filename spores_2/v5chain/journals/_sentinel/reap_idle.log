@@ -27,3 +27,4 @@
 2026-10-07 23:25:02 | reaped hop-hub-v5chain-meta-2 (idle 15m, finished-marker present, 26 hop-* sessions > limit 20)
 2026-10-08 00:15:01 | reaped hop-hub-v5chain-research-24 (idle 65m, finished-marker present, 22 hop-* sessions > limit 20)
 2026-10-08 00:15:01 | reaped hop-hub-v5chain-searcher-2 (idle 65m, finished-marker present, 22 hop-* sessions > limit 20)
+2026-10-12 20:20:02 | reaped hop-laptop-v5chain-worker-b1 (idle 20m, finished-marker present, 7 hop-* sessions > limit 6)

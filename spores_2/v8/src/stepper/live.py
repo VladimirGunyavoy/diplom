@@ -15,14 +15,13 @@ def _first_n():
     if os.path.exists(f):
         try: t = open(f, encoding='utf-8').read().strip()
         except Exception: t = ''
-        return int(t) if t.isdigit() else 1                                    # число > 0 — N спор; 0 — режим выключен (полный атлас); пусто — 1
+        return int(t) if t.isdigit() and int(t) > 0 else 1
     return 1 if os.environ.get('V8_ONLY_GOAL') == '1' else 0
 
 
 FIRST_N = _first_n(); ONLY_GOAL = FIRST_N > 0
 if ONLY_GOAL: os.environ['MAXC'] = str(FIRST_N); os.environ['V8_ONLY_GOAL'] = '1'; os.environ['V8_MAXCELLS'] = str(FIRST_N)       # по FIRST_N клеток на слой (споры от цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL                   # по одной клетке на слой (спора на цели), слой u=0 не растим; calc_worker/vsurf видят V8_ONLY_GOAL
 os.environ.setdefault('SOLVE8_PLUS', '1')                                                  # окно: бисекция по времени + полосы (b1, горб p90 .246→.037); SOLVE8_PLUS=0 — как раньше
-os.environ.setdefault('REFINE_THR', '0'); os.environ.setdefault('BISECT_BOUND', '0')          # решение research-5 2026-10-12: PLUS = только бисекция по времени (полосы и граница дают занижение 12–40%; флаги REFINE_THR/BISECT_BOUND включают их)
 from ..algo import growN as g
 from . import stepper as S
 

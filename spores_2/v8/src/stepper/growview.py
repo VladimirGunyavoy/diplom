@@ -410,6 +410,7 @@ class GrowView:
         if not cl: return []
         M = int(np.shape(next(iter(cl.values()))[0]['G'])[1]); out = []
         for calc, _ in s.VCALC:
+            if calc != s.vcalc: continue                                                                 # только выбранный расчёт (Y переключает; его V и траектории считаются сами при показе): ПКМ не тянет чужие долгие этапы (старый V не сходится), траектории приходят сразу после V без клавиши T
             if calc == 'qquad' and M != 3: continue
             sig = s._sig(calc, cl)
             if sig not in s._vcache: out.append(dict(kind='V', calc=calc, sig=sig, cl=cl))
