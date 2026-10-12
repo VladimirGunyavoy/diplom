@@ -15,7 +15,7 @@ SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2
 GOALSHAPE = E('GOALSHAPE', 'ball' if SYS == 'di' else 'box'); GSEED = int(E('GSEED', 1 if SYS == 'di' else 0))   # цель: 'box' | 'ball' (эллипсоид по RHOV); GSEED: первая спора — центр цели
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+GOALFRONT = int(E('GOALFRONT', 0)); GOALW = float(E('GOALW', .9 if SYS == 'di' else 1.)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 0 if (SYS == 'di' and GSEED) else 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
 if SYS == 'dd':
@@ -169,10 +169,26 @@ class Cell:
         """сетка узлов G (nt, M×m, n): заплатка с гало, пронесённая потоком на nb шагов назад и nf вперёд."""
         ax = [np.linspace(-(1 + HALO) * r, (1 + HALO) * r, M) for r in s.r]; seg = np.broadcast_to(s.c, (M,) * m_ + (N,)).copy()
         for k in range(m_): sh = [1] * m_ + [1]; sh[k] = M; seg = seg + ax[k].reshape(sh) * s.e[k]
+        gf_ = bool(getattr(s, 'goalfront', False))
+        if gf_:                                                                                              # GOALFRONT: у споры цели row 0 — дуга входа в круг (для каждого столбца свой сдвиг назад по потоку), строки назад — равное время до входа ⇒ V = τ точно; вперёд (внутрь круга) строк нет
+            yy = seg.reshape(-1, N)
+            for j in range(len(yy)):
+                if np.linalg.norm(yy[j] / RHOV) >= 1: continue
+                lo, hi = 0., None
+                for t in np.linspace(RHOV.min() / 20, 3 * RHOV.min() * 20, 400):
+                    if np.linalg.norm(adv(yy[j], s.u, -t) / RHOV) >= 1: hi = t; break
+                    lo = t
+                if hi is None: continue
+                for _ in range(50):
+                    mid = (lo + hi) / 2
+                    if np.linalg.norm(adv(yy[j], s.u, -mid) / RHOV) >= 1: hi = mid
+                    else: lo = mid
+                yy[j] = adv(yy[j], s.u, -hi)
+            seg = yy.reshape(seg.shape); s.nf = 0
         nfc, nbc = s.nf, s.nb
         Tf = s.Tf if s.Tf is not None else np.arange(0, nfc + 3) * DTN; Tb = s.Tb if s.Tb is not None else np.arange(0, nbc + 3) * DTN        # накопленные времена строк от зерна (шаг строки адаптивный, равный у всех клонов строки)
         fw = [seg]; bw = []; y = seg; tf = [np.zeros(seg.shape[:-1])]; tb = []
-        if NORMFRONT and getattr(s, 'p', None) is not None:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
+        if NORMFRONT and getattr(s, 'p', None) is not None and not gf_:                                                  # lr1 V2: строки со своими временами клонов, ⟂ потоку
             rf, tfw = NFR(seg, s.p, s.u, 1., nfc, np.diff(Tf)) if nfc > 0 else ([], []); rb, tbw = NFR(seg, s.p, s.u, -1., nbc, np.diff(Tb)) if nbc > 0 else ([], []); fw += rf; bw = rb; tf += tfw; tb = tbw
             s.nf, s.nb = min(nfc, len(rf)), min(nbc, len(rb))
         else:
@@ -544,7 +560,7 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
             if ZACEP: dead.append(p)
             fails += 0 if queue else 1; continue
         if E('STOPS') and len(cells) % 50 == 0: print('stops', len(cells), dict(STOP), flush=True)
-        fails = 0; c.build()
+        fails = 0; c.goalfront = bool(gfirst and GOALFRONT and GOALSHAPE == 'ball'); c.build()
         if SEEDW:                                                                                              # п.44а (b6): доля узлов новой клетки, уже покрытых своим слоем (наложение); стоп, когда среднее по окну > SEEDSTOP
             Gf = c.G.reshape(-1, N); Gs = wrapy(Gf[rng.choice(len(Gf), min(400, len(Gf)), replace=False)]); ovl.append(float(idx.covered(Gs).mean()))
             if len(cells) % SEEDW == SEEDW - 1:
