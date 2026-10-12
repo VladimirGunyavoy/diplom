@@ -169,7 +169,7 @@ class GrowView:
            'segs_field': (.50, .75, 1.0, .6), 'segs_growlim': (.50, .75, 1.0, .25)}   # граница поля (посев) и граница роста (XLV+GM): бледно-голубые
 
     def __init__(s, zoom_manager, ax=(0, 1), halo=HALO, spore_manager=None):
-        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s._traj = None; s._vsig = None; s._vres = None; s.vinfo = ''
+        s.sm = spore_manager; s._pts = {}; s._built_size = None; s.vis = [True] * 8; s.skel = 'normal'; s.zm = zoom_manager; s.ax = ax; s.halo = halo; s.layers = {}; s.last = None; s.times = TimeTable(); s.snap = None; s.vmode = False; s.cmode = False; s.tmode = False; s._traj = None; s.vcalc = 'v'; s._vsig = None; s._vres = None; s.vinfo = ''
 
     TINT = ('points_done', 'points_cur', 'segs_rows_done', 'segs_center_done', 'segs_core_done', 'segs_halo_done', 'segs_rows_cur', 'segs_center_cur', 'segs_core_cur', 'segs_halo_cur')
 
@@ -253,13 +253,20 @@ class GrowView:
         s.cmode = not s.cmode; print('[vsurf] common V* layer %s' % ('on' if s.cmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
+    VCALC = (('v', 'V old'), ('q', 'V by Q (lin)'), ('qquad', 'V by Q (quad)'))
+
+    def cycle_vcalc(s):
+        """расчёт V для поверхностей V/B и траекторий: старый → по Q (lin) → по Q (quad); solve8.Graph.set_calc (v_kink_q.md)"""
+        ks = [k for k, _ in s.VCALC]; s.vcalc = ks[(ks.index(s.vcalc) + 1) % len(ks)]; print('[vsurf] V calc: %s' % dict(s.VCALC)[s.vcalc], flush=True)
+        if s.snap is not None: s.draw(s.snap)
+
     def toggle_traj(s):
         s.tmode = not s.tmode; print('[vsurf] final trajectories %s' % ('on' if s.tmode else 'off'), flush=True)
         if s.snap is not None: s.draw(s.snap)
 
     def vlabel(s):
         on = [n for n, f in (('V per layer', s.vmode), ('V* common', s.cmode), ('trajectories', s.tmode)) if f]
-        return ('%s: %s' % (' + '.join(on), s.vinfo or 'on')) if on else ''
+        return ('%s [%s]: %s' % (' + '.join(on), dict(s.VCALC)[s.vcalc], s.vinfo or 'on')) if on else ''
 
     def _vcells(s, snap):
         """{u: [cell_dict]} — готовые клетки показанных слоёв (до текущего включительно); скрытые 7/8/9 слои в расчёте участвуют (E3 — переходы между слоями)"""
@@ -281,12 +288,12 @@ class GrowView:
                     if pre + n + '@%d' % k in s.layers: s.layers[pre + n + '@%d' % k].set_geometry(z3)
         ks = range(max(getattr(s, '_nk', 0), 3))
         if not on: clear('v', ks); clear('c', ks); s._clear_traj(); s._vsig = None; s._traj = None; return
-        cl = s._vcells(snap); sig = tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
+        cl = s._vcells(snap); sig = (s.vcalc,) + tuple((u, len(c), id(c[0]['G']), id(c[-1]['G'])) for u, c in cl.items())
         if sig != s._vsig:
             s._vsig = sig; s._vres = None; s._traj = None
             try:
-                t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl); s._vres = (Vs, VS.vscale(Vs), cl, info)
-                s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'])
+                t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl, calc=s.vcalc); s._vres = (Vs, VS.vscale(Vs), cl, info)
+                s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
                 print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
             except Exception as e: s.vinfo = 'solve failed: %r' % (e,); print('[vsurf] ' + s.vinfo, flush=True); s.vmode = s.cmode = s.tmode = False
         if s._vres is None: clear('v', ks); clear('c', ks); s._clear_traj(); return

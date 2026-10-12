@@ -67,7 +67,7 @@ def build_atlas(layers, seed=0, par=True):
 
 class Graph:
     def __init__(s, g, atlas, interp='N', K=3):
-        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
+        s.mode, s.thr, s.pen = 'lin', .2, 0.; s.calc, s.quad, s.Vn = 'v', False, None; s.g, s.interp, s.K = g, interp, K; s.us = list(atlas); s.L = len(s.us); N = g.N; assert N == 2 and g.m_ == 1; M = g.M; s.M = M; s.rho = float(g.RHOV[0])
         s.cells = []; s.idx = {}; s.base = {}; P, T, nxt, cost, nodecell, layer, rowid = [], [], [], [], [], [], []; n0 = 0; gc = 0
         for li, u in enumerate(s.us):
             idx = g.HexIdx(); base = []
@@ -86,6 +86,7 @@ class Graph:
     # --- интерполяция слоя u2 в точках Y: V-вершины и веса (лучшая по центральности ячейка) ---
     def locate(s, u2, Y, excl=None):
         """→ (индексы точек, вершины (k,4), веса (k,4)); excl[i] — глобальный номер клетки, ячейки которой для точки i запрещены"""
+        if s.quad: return s._locate_quad(u2, Y, excl)
         N = 2; idx = s.idx[u2]; pi, hid, sc = idx.query(Y)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 4), int), np.zeros((0, 4)), np.zeros(0, int)
         cid = idx.I[hid, 0]; gcid = s.gcell[u2][cid]
@@ -97,6 +98,19 @@ class Graph:
         row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]; vo = s.g.VOFF; M = s.M
         verts = np.stack([b + (row + o_[0]) * M + (col + o_[1]) for o_ in vo], 1)
         w = np.stack([np.prod(np.where(o_[None, :] == 1, sc, 1 - sc), 1) for o_ in vo], 1); return pi, verts, w, rank
+
+    def _locate_quad(s, u2, Y, excl=None):
+        """calc='qquad' (только M=3): вершины 2 строки × 3 столбца (вся ширина клетки), веса — линейно по времени × Лагранж 2-й степени поперёк потока (прототип lr3/qsolve2.patch_quad)"""
+        idx = s.idx[u2]; pi, hid, sc = idx.query(Y); z = (np.zeros(0, int), np.zeros((0, 6), int), np.zeros((0, 6)), np.zeros(0, int))
+        if not len(pi): return z
+        cid = idx.I[hid, 0]; gcid = s.gcell[u2][cid]
+        if excl is not None:
+            k = gcid != excl[pi]; pi, hid, sc, cid = pi[k], hid[k], sc[k], cid[k]
+            if not len(pi): return z
+        cen = np.minimum(sc, 1 - sc).min(1); o = np.lexsort((-cen, pi)); pi, hid, sc, cid = pi[o], hid[o], sc[o], cid[o]; st = np.r_[True, pi[1:] != pi[:-1]]; rank = np.arange(len(pi)) - np.maximum.accumulate(np.where(st, np.arange(len(pi)), 0))
+        k = rank < s.K; pi, hid, sc, cid, rank = pi[k], hid[k], sc[k], cid[k], rank[k]; row, col = idx.I[hid, 1], idx.I[hid, 2]; b = s.base[u2][cid]
+        xi = col + sc[:, 1]; L = np.stack([(xi - 1) * (xi - 2) / 2, -xi * (xi - 2), xi * (xi - 1) / 2], 1); wt = np.stack([1 - sc[:, 0], sc[:, 0]], 1)
+        verts = np.stack([b + (row + r) * 3 + c for r in (0, 1) for c in (0, 1, 2)], 1); w = np.stack([wt[:, r] * L[:, c] for r in (0, 1) for c in (0, 1, 2)], 1); return pi, verts, w, rank
 
     def evalpairs(s, V, n, pairs):
         """V в точках по лучшей (самой центральной) из ≤K ячеек, у которой все вершины определены; inf — нет такой"""
@@ -124,7 +138,17 @@ class Graph:
         s.t_prep = time.perf_counter() - t0
         has = np.flatnonzero((s.nxt >= 0) & (s.cost > 1e-12)); s.e1 = has
 
+    def set_calc(s, calc):
+        """расчёт V: 'v' (по умолчанию, как было) | 'q' — переходы по Q (цена «продолжать своё u», минимум ПОСЛЕ интерполяции) | 'qquad' — то же + квадратичная интерполяция поперёк потока (только M=3). Обоснование: knowledge/research/v_kink_q.md (v5chain)"""
+        assert calc in ('v', 'q', 'qquad'), calc
+        if calc == 'qquad': assert s.M == 3, 'qquad только для M=3'
+        s.calc = calc
+        if (calc == 'qquad') != s.quad: s.quad = calc == 'qquad'; s.prepare()                                    # геометрия переходов (e3) другая
+
     def solve(s, maxit=2000, tol=1e-10, verbose=True):
+        """V (calc='v') или Q (calc='q'/'qquad': s.V = Q — запросы Vlayers/Vstar/агент идут по Q; s.Vn — V узлов = min(Q, Q чужих слоёв))"""
+        if s.calc != 'v' or s.quad: s.set_calc(s.calc)
+        if s.calc != 'v': return s._solve_q(maxit, tol, verbose)
         t0 = time.perf_counter(); V = s.V0.copy(); passes = 0
         e1 = s.e1; lev = s.rowid[e1]; order = np.argsort(-lev, kind='stable'); e1 = e1[order]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[order]
         cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
@@ -135,8 +159,25 @@ class Graph:
                 nodes = e1[a:b]; V[nodes] = np.minimum(V[nodes], e1c[a:b] + V[e1n[a:b]])
             d = float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max())
             if d < tol: break
-        s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = V
+        s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = V; s.Vn = V
         if verbose: print('solve8: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
+        return V
+
+    def _solve_q(s, maxit=3000, tol=1e-10, verbose=True, pen=None):
+        """Q_u(узел) = вход в цель / шаг вдоль потока + V(следующего) / стык с клеткой СВОЕГО слоя (интерполяция Q); V(узел) = min(Q, интерполяция Q других слоёв) (прототип lr3/qsolve.solve_q)"""
+        pen = s.pen if pen is None else pen; t0 = time.perf_counter(); V = s.V0.copy(); Q = s.V0.copy(); e1 = s.e1; lev = s.rowid[e1]; o = np.argsort(-lev, kind='stable'); e1 = e1[o]; e1n = s.nxt[e1]; e1c = s.cost[e1]; lev = lev[o]
+        cuts = np.flatnonzero(np.r_[True, lev[1:] != lev[:-1]]); cuts = np.r_[cuts, len(e1)]
+        for passes in range(1, maxit + 1):
+            Vo = V.copy(); Qo = Q.copy()
+            for li2, pairs in enumerate(s.e3):
+                Ei = s.evalpairs(Qo, s.n, pairs); Ei = np.where(np.isfinite(Ei), Ei, BIG); same = s.layer == li2
+                Q[same] = np.minimum(Q[same], Ei[same]); V[~same] = np.minimum(V[~same], Ei[~same] + pen)
+            V = np.minimum(V, Q)
+            for a, b in zip(cuts[:-1], cuts[1:]):
+                nd = e1[a:b]; Q[nd] = np.minimum(Q[nd], e1c[a:b] + V[e1n[a:b]]); V[nd] = np.minimum(V[nd], Q[nd])
+            if max(float(np.abs(np.minimum(V, BIG) - np.minimum(Vo, BIG)).max()), float(np.abs(np.minimum(Q, BIG) - np.minimum(Qo, BIG)).max())) < tol: break
+        s.passes = passes; s.t_solve = time.perf_counter() - t0; s.V = Q; s.Vn = V
+        if verbose: print('solve8[%s]: узлов %d, проходов %d, %.1f с, достижимо %.1f%% узлов' % (s.calc, s.n, passes, s.t_solve, 100 * (V < BIG / 2).mean()), flush=True)
         return V
 
     # --- запросы ---
