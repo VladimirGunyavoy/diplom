@@ -347,3 +347,4 @@ hub-v5chain-worker-b9 | done | ctx 28% + 5ч 68% | SPD1/1b/FIN-ω/FORB/SPD2(mani
 hub-v5chain-worker-b10 | started | acc3 | sonnet | 01:32:05
 laptop-v5chain-research-6 | started | acc3 | opus | 01:49:32
 laptop-v5chain-worker-9 | done | по слову пользователя | ошибки №1–№12 окна pend закрыты, N=3+SEEDLINE | next=laptop-v5chain-worker-10 | 02:17:04
+hub-v5chain-research-25 | done | ctx 38% (коридор) | бенч линии C: протокол, разборы №1–4, CA4 (станции — споры выгоднее OCP с K≈28), линия B ускорения (SPD1/1b/2/4, FIN-ω, FORB), RACE-решение | next=hub-v5chain-research-26 | 02:36:16
