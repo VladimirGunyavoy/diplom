@@ -2,7 +2,7 @@
 import os, sys, json, argparse, time, numpy as np
 os.environ.setdefault('OMP_NUM_THREADS', '1'); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from multiprocessing import Pool
-import common, sst_own, rrtstar_di
+import common, sst_own, rrtstar_di, rrtstar_dd
 ENV = None; ALGO = 'sst'
 def work(a):
     i, budgets, sel, prune = a; e = common.make(ENV); snaps = sst_own.sst(e, e.X0[i], budgets, sel=sel, prune=prune, seed=1000 + i) if ALGO == 'sst' else sst_own.rrt(e, e.X0[i], budgets, seed=1000 + i) if ALGO == 'rrt' else (rrtstar_dd if ENV == 'dd' else rrtstar_di).rrtstar(e, e.X0[i], budgets, seed=1000 + i); out = []

@@ -64,6 +64,9 @@ def rows(env):
             R.append(dict(m=(nm + (str(d.get('prune')) + ')' if algo == 'sst' else '')) + f', бюджет {f(b["budget"],3)} с', par=par, build=0., qm=b['t_wall_sum'] / n, qp=None, tot=b['t_wall_sum'], st=stat(b), nf=f'на запрос {f(b["nf_med"],3)}', batch=None, hw=d['hw'], sp=False, w=w_tree(d, env, d['budgets'].index(b))))
     oc = L(f'{D}/{env}_ocp.json')
     if oc: R.append(dict(m='OCP SLSQP (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False, w=(0, 0)))
+    pp = L(f'{D}/{env}_spores_pareto.json') if env == 'pend' else None
+    if pp:
+        for pt in pp['points']: R.append(dict(m=f'споры: тот же атлас 56, агент LOOK {pt["look"]} (Парето по запросу)', par='клеток ' + str(pp['cells']), build=pp['t_build'], qm=pt['t_query_med'], qp=pt['t_query_p90'], tot=pp['t_build'] + pt['t_query_sum'], st=stat(pt), nf='не считали', batch=None, hw=pp['hw'], sp=True, w=(pp['weight']['elems'], pp['weight']['bytes'])))
     oc = L(f'{D}/{env}_ocpc.json')
     if oc: R.append(dict(m='OCP CasADi+IPOPT (' + oc['method'] + ')', par='', build=0., qm=oc['t_query_med'], qp=oc['t_query_p90'], tot=oc['t_query_sum'], st=stat(oc), nf=f'IPOPT-запусков на запрос {f(oc["nf_med"],3)}', batch=None, hw=oc['hw'], sp=False, w=(0, 0)))
     if env == 'dd': R += rows_dd2()
