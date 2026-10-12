@@ -192,3 +192,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | laptop-v5chain-research-2 | end | 5ч 6% / ctx 12% / 7д 95% | $2.48 | 2026-10-12 10:43:38 |
 | laptop-v5chain-research-3 | start | 5ч 0% / ctx 5% | $0.19 | 2026-10-12 10:46:36 |
 | laptop-v5chain-fixer-1 | start | 5ч 3% / ctx 4% | $0.05 | 2026-10-12 11:30:02 |
+| laptop-v5chain-worker-4 | start | 5ч 9% / ctx 5% | $0.08 | 2026-10-12 11:45:57 |
