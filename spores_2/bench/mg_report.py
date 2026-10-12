@@ -22,9 +22,9 @@ for j, kind in enumerate('AB'):
         for bi, B in enumerate([.3, 1., 3., 10., 60.]):
             ok2, m2, p2 = stat([r['runs'][bi].get('T') if r['runs'][bi]['has'] else None for r in sst], Tr); rows.append((kind, 'SST %g с/переход' % B, ok2, m2, p2, 0., 0., B, n * B))
         ax[j].plot(K, K * 60, label='SST 60 с/переход'); ax[j].plot(K, K * 10, '--', label='SST 10 с')
-    for f in ppo:
-        d = json.load(open(f)); r = d['res'][kind]; ok3, m3, p3 = stat([x['T_verify'] for x in r['per']], Tr); tq3 = float(np.median([x['t_query'] for x in r['per']]))
-        rows.append((kind, 'PPO %.0fM шагов s%d (одна тренировка на все цели)' % (d['steps'] / 1e6, d['seed']), ok3, m3, p3, d['t_train'], 0., tq3, d['t_train'] + n * tq3))
+    for f in ppo + sorted(glob.glob(os.path.join(D, 'mg_sac_*_s*.json'))):
+        d = json.load(open(f)); nm = 'SAC+HER' if 'mg_sac' in f else 'PPO'; r = d['res'][kind]; ok3, m3, p3 = stat([x['T_verify'] for x in r['per']], Tr); tq3 = float(np.median([x['t_query'] for x in r['per']]))
+        rows.append((kind, '%s %.1fM шагов s%d (одна тренировка на все цели)' % (nm, d['steps'] / 1e6, d['seed']), ok3, m3, p3, d['t_train'], 0., tq3, d['t_train'] + n * tq3))
     ax[j].set_xlabel('K переходов'); ax[j].set_ylabel('суммарное время, с'); ax[j].set_title({'A': 'A: 4 станции', 'B': 'B: новые цели'}[kind]); ax[j].legend(fontsize=8); ax[j].grid(alpha=.3)
 fig.tight_layout(); fig.savefig(os.path.join(os.path.dirname(D), 'total_mg.png'), dpi=110)
 with open(os.path.join(os.path.dirname(D), 'table_mg.md'), 'w') as f:
