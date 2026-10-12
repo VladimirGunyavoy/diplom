@@ -4,7 +4,7 @@ MODE=load (по умолч.): атлас с V из ~/spore_v5/wb5/m45/A_g300so.p
 import os, sys, time, json, pickle
 ENV = dict(SYS='manip', KF='11', M='3', FRAC='.5', OVH='.5', MINROWS='3', GLIM='0', RMAX='.6', TMAX='3', SBCAUS='1', SBLAY='0', NOLATCH='1', FINGRID='2', VF='2', PESS='1', GPUMAX='1000000', GS='300', DELTA='.3', MAXC='3000', SONE='1', TQDM_MI='1000', OMP_NUM_THREADS='2')
 for k, v in ENV.items(): os.environ.setdefault(k, v)
-HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser('~/spore_v5/c1/manip_src'); sys.path.insert(0, HERE); sys.path.insert(0, SRC)
+HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser(os.environ.get('SRC_DIR', '~/spore_v5/c1/manip_src')); sys.path.insert(0, HERE); sys.path.insert(0, SRC)
 import numpy as np, common
 import growN as G, finish_gen as FG
 import __main__; [setattr(__main__, k_, v_) for k_, v_ in vars(G).items() if isinstance(v_, type)]
@@ -18,14 +18,24 @@ def shoot_pol_rec(y, tmax, NA, inits=2, H=.1):
         z = np.array(y, float)
         for k, dt in zip(tp, d): z = FG.flow(z, G.US[k], max(dt, 0.), G.f)
         return G.wrapy(z)
+    def path_free(d):                                                  # FIN-ω (b9)
+        if FG.FREE is None: return True
+        z = np.array(y, float)
+        for k, dt in zip(tp, d):
+            ns = max(1, int(np.ceil(max(dt, 0.) / FG.HS)))
+            for _ in range(ns):
+                z = FG.flow(z, G.US[k], max(dt, 0.) / ns, G.f)
+                if not FG.FREE(z): return False
+        return True
     cons = [{"type": "ineq", "fun": lambda d: R - np.abs(end(d))}]
     for d0 in (np.full(n, T0 / n), np.r_[T0 * .6, np.full(n - 1, T0 * .4 / max(n - 1, 1))][:n]):
         r = minimize(lambda d: d.sum(), d0, method="SLSQP", bounds=[(0, tmax)] * n, constraints=cons, options=dict(maxiter=60, ftol=1e-7))
-        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(G.RHOV)) and r.x.sum() < best[0]: best = (float(r.x.sum()), tp, r.x.copy())
+        if r.success and np.all(np.abs(end(r.x)) <= np.asarray(G.RHOV)) and r.x.sum() < best[0] and path_free(r.x): best = (float(r.x.sum()), tp, r.x.copy())
     if best[2] is None: return best[0], tp, None                       # сетка без доводки: длительности = шаг сетки (нет в API) → отметим
     return best
 
 def rollout_rec(A, Q, tmax=40.):
+    FG.FREE = (lambda y: G.inbox(y)) if int(os.environ.get('FINBOX', 0)) else None
     E = os.environ.get; DTN = G.DTN; US = G.US; VF = G.VF
     Y = G.wrapy(Q); n = len(Y); T = np.zeros(n); done = G.ingoal(Y); tried = np.zeros(n, bool); fin = np.zeros(n, bool); seg = [[] for _ in range(n)]; nodur = np.zeros(n, bool)
     for _ in range(int(tmax / DTN)):
