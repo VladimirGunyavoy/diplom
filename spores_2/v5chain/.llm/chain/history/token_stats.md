@@ -209,3 +209,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | hub-v5chain-research-25 | start | 5ч 38% / ctx 5% / 7д 5% | $0.18 | 2026-10-12 19:39:18 |
 | laptop-v5chain-worker-b1 | T_END | 5ч 48% / ctx 31% | $9 | 2026-10-12 19:58:16 |
 | hub-v5chain-worker-c1 | T_END | 5ч ~8% / ctx 30% | - | 2026-10-12 20:24:29 |
+| hub-v5chain-worker-c2 | start | 5ч 79% / ctx 5% | $0.10 | 2026-10-12 20:24:52 |
