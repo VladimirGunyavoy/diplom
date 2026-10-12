@@ -26,7 +26,7 @@ def main():
                 Gby[calc] = info.pop('G')
                 if kind == 'V': send('V', i, (Vs, info), time.perf_counter() - t0)
             if kind == 'T':
-                res = VS.agent_paths(Gby[calc], progress=lambda step, alive: say('agents in flight %d of %d, step %d (t=%.2f)' % (alive, VS.TRAJ_N, step, step * .01)))
+                res = VS.agent_paths(Gby[calc], cl=cl, progress=lambda step, alive: say('agents in flight %d of %d, step %d (t=%.2f)' % (alive, VS.TRAJ_N, step, step * .01)))
                 send('T', i, res, time.perf_counter() - t0)
         except Exception as e:
             import traceback; traceback.print_exc(); send('err', i, repr(e), time.perf_counter() - t0); return

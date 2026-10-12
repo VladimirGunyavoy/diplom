@@ -315,7 +315,7 @@ class GrowView:
                 s._vres = None
                 try:
                     t0 = time.perf_counter(); Vs, info = VS.solve_layers(cl, calc=s.vcalc); s._vres = (Vs, VS.vscale(Vs), cl, info)
-                    s.vinfo = '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes' % (sum(len(c) for c in cl.values()), len(cl), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'])
+                    s.vinfo = s._vstat(info, sum(len(c) for c in cl.values()))
                     print('[vsurf] ' + s.vinfo + ' (total %.0f ms)' % (1e3 * (time.perf_counter() - t0)), flush=True)
                     if s.runlog is not None: s.runlog.vcalc(s.vcalc, info, sum(len(c) for c in cl.values()), time.perf_counter() - t0)
                     if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))                                  # кэш по (атлас, режим): возврат к прежнему режиму — из кэша
@@ -376,7 +376,12 @@ class GrowView:
         st = np.asarray(res['status'], object); ok = st == 'reached'; nout = int((st == 'out_of_area').sum()); nin = len(st) - nout; w = (st != 'out_of_area') & ~res['left_work']
         return '%d/%d reached (work zone %d/%d), %d out of area, T median %.2f, switches %.1f, %.1f s' % (int(ok.sum()), nin, int((ok & ~res['left_work']).sum()), int(w.sum()), nout, float(np.median(res['T'][ok])) if ok.any() else float('nan'), float(res['sw'][st != 'out_of_area'].mean()) if nin else 0., secs)
 
-    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes%s' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'], '' if info.get('converged', True) else ' (NOT CONVERGED, capped; known defect of the old V)')
+    def _vstat(s, info, ncells): return '%d cells in %d layers, %d nodes (V finite %.0f%%), V max %.2f, solve8 %.2f s / %d passes%s' % (ncells, len(info['layers']), info['n'], 100 * info.get('finite', 0.), info.get('vmax', 0.), info['t'], info['passes'], ('' if info.get('converged', True) else ' (NOT CONVERGED, capped; known defect of the old V)') + s._qerr_text(info))
+
+    @staticmethod
+    def _qerr_text(info):
+        q = info.get('qerr') or {}
+        return ('; Q-exact entry |err| ' + ', '.join('u=%+g max %.3f med %.3f bias %+.3f (%d nodes)' % (u, d['max'], d['med'], d['bias'], d['n']) for u, d in q.items() if d['n'])) if q else ''
 
     def _put_v(s, sig, entry):
         if len(s._vcache) >= 8: s._tcache.pop(next(iter(s._vcache)), None); s._vcache.pop(next(iter(s._vcache)))
@@ -425,7 +430,7 @@ class GrowView:
                 if m[0] == 'prog': s._prog = '%s: %s, %.1f s' % (tag(m[1]), m[2], m[3]); print(s._prog, flush=True)
                 elif m[0] == 'V':
                     it = items[m[1]]; info = m[2][1]; job['q'].append(('V', it, (m[2][0], VS.vscale(m[2][0]), it['cl'], info), m[3]))
-                    print('%s: done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s, %.1f s' % (tag(m[1]), info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t'], m[3]), flush=True)
+                    print('%s: done: %d passes, converged %s, finite %.0f%%, solve8 %.2f s, %.1f s%s' % (tag(m[1]), info['passes'], info.get('converged'), 100 * info.get('finite', 0.), info['t'], m[3], s._qerr_text(info)), flush=True)
                 elif m[0] == 'T': job['q'].append(('T', items[m[1]], m[2], m[3])); print('%s: done: %s' % (tag(m[1]), s._traj_stat(m[2], m[3])), flush=True)
                 elif m[0] == 'err': job['err'] = m[2]; print('[calc] stage failed: %s' % m[2], flush=True); break
             p.wait()
