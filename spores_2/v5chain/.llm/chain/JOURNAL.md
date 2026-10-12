@@ -306,3 +306,5 @@ laptop-v5chain-worker-5 | done | ctx 28% | V-скелет/вр.скелет, т�
 laptop-v5chain-research-3 | done | ctx 37% / 5ч 95% | v8 ДИ: виз V (поверхность, скелет, траектории, логи запусков), занижение V найдено и обойдено (Q, вдоль потока + подточки), агент commit T/T_ref 1.005 | next=laptop-v5chain-research-4 | 15:10:41
 laptop-v5chain-research-4 | started | acc3 | opus | 15:13:03
 AUTONOMOUS | on | слово пользователя «я ушёл, все решения за тобой» | поставил laptop-v5chain-research-4 | 16:06:51
+AUTONOMOUS | off | пользователь вернулся ~16:05 (спросил отчёт); пометку ставил и снял laptop-v5chain-research-4; слово «все решения за тобой» остаётся в силе | 16:07:53
+laptop-v5chain-worker-6 | started | acc2 | sonnet | 16:08:11
