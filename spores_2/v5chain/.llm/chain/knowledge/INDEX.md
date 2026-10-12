@@ -70,4 +70,5 @@
 - [research/past_subcells.md](research/past_subcells.md) — прошлые версии: дробление клетки на под-клетки и адаптивные узлы (refine ДИ, REFINE, MADAPT/MROW, п.46, faces) — что, индикатор, числа, судьба + слова пользователя (searcher-2, research-3)
 - [research/versions_compare.md](research/versions_compare.md) — сравнение v8 с v5chain/v6/v7 по 7 осям (клетка, посев, граф/V, агент, числа на ДИ, что потеряно, излом) + 10 идей «было, нет в v8» с числами (searcher-2, research-3)
 - [research/lit_spatial_index.md](research/lit_spatial_index.md) — пространственный индекс клеток: иерархический хэш/BVH/k-d, walking, пересечения клеток, вход в клетку, инверсия полилинейной карты (HexIdx = конвейер findpts)
+- [research/lit_v8_regress.md](research/lit_v8_regress.md) — почему в v5–v7 ДИ «летало», а в v8 дефекты V: метрика/цель/старты, плотность атласа (≈22×), полу-лагранжев шаг DTN vs граф E3 за 0 с, шаг агента .06 vs .01
 - research/v_kink_q.md — v8 ДИ: V в узлах занижена до −.5 из-за билинейного перехода через излом; переходы по Q (min после интерполяции) убирают занижение, агенту пока не помогают; квадратичная — только поверх Q
