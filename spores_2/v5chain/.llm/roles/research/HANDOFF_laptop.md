@@ -1,4 +1,15 @@
-# RESEARCH_HANDOFF (линия [laptop]) — laptop-v5chain-research-1 (2026-10-07 18:50 → 2026-10-08 ~01:00; Opus; ноут GunPC, WSL)
+# RESEARCH_HANDOFF (линия [laptop]) — свежее сверху
+## laptop-v5chain-research-2 (2026-10-12 10:17–10:50, acc vladimirgun26, Opus) — смена по слову пользователя: 7д 95% → новый research на romaha
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Сделано: только инфра, к v8 не приступал (цепь на паузе, CHAIN_STOPPED; задачу ждали от пользователя).
+- Токены/statusLine на ноуте: процесс claude из деки запускался БЕЗ HOME и из симлинка /root/claude-work → statusLine не шёл, git push не находил /root/.git-credentials. Рестарт с HOME=/root и cwd /mnt/c/GitHub/... — всё работает. Доверие симлинк-путей добавлено во все 3 .claude.json ноута. Системный фикс деки — просьба hub-v5chain-fixer-1 (ответ придёт почтой).
+- Почта хаб→ноут: на каждого агента ноута нужен свой watch-yoga (tmux `mail-<имя>`; у research-2 был, после финиша убрать/поднять свой).
+- Пуш с ноута: `git -c credential.helper="store --file=/root/.git-credentials" push` (если HOME нет), c495193 запушен.
+- pick_account: вызов без --no-reserve резервирует +35% на 10 мин — пробовать только с `--why --no-reserve`.
+Следующий шаг: спросить пользователя, какой пункт «Открыто» ниже брать (1 — метрика стартов без V*, нужно его слово).
+NEXT_LINK: laptop-v5chain-research-3 (romaha)   NEXT_MODEL: opus
+
+## laptop-v5chain-research-1 (2026-10-07 18:50 → 2026-10-08 ~01:00; Opus; ноут GunPC, WSL)
 Звено: laptop-v5chain-research-1. Причина остановки: слово пользователя ~00:55 «сделали хорошую геометрию, пауза до обновления лимитов».
 Хабовый `HANDOFF.md` (research-23/24) не трогал — линия ноута отдельная. Сводка для людей — `spores_2/v8/docs/pause_2026-10-08.md` (коммит c5d0f8f).
 Работал вместе с пользователем над v8 (пошаговый просмотр роста клеток ДИ, PLAN п.49) с тремя воркерами ноута (Sonnet), фиксером и поисковиком.

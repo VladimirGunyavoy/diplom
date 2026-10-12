@@ -297,3 +297,4 @@ hub-v5chain-research-24 | done | human | слово польз. «заканчи
 hub-v5chain-meta-2 | done | слово пользователя: цепь закрыта | линии любой роли, launch_bg, результаты сразу; открыто — аккаунты по сроку сброса 7д | next=— | 23:07:42
 hub-v5chain-dispatcher-5 | done | слово пользователя: цепь остановлена (режим Б) | next=нет | 23:08:48
 laptop-v5chain-research-2 | started | acc1 | opus | 10:19:23
+laptop-v5chain-research-2 | done | human: 7д acc1 95% → смена на romaha | инфра ноута: HOME/доверие → statusLine и push работают; почта хаб→ноут | next=laptop-v5chain-research-3 | 10:43:38
