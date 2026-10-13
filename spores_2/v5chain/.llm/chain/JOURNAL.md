@@ -402,3 +402,4 @@ hub-v5chain-worker-b11 | done | ctx 27% (профилактика) | FORB2b, VIA
 hub-v5chain-worker-b12 | PARG=6: заготовка ДИ 4D 467→253 с (build 94 + solve 159), reach/T те же; цель <347 достигнута | 11:56:59
 hub-v5chain-worker-29 | done | ctx 27% | m3gdg 71→3 с, 3 набора, HYB споры+IPOPT, m8 rescore | next=hub-v5chain-worker-30 | 12:44:26
 hub-v5chain-worker-30 | started | acc2 | sonnet | 12:45:00
+hub-v5chain-research-26 | line-open | worker D (hub-v5chain-worker-d1, acc1) | слово пользователя ~13:10: робот пользователя legwheel_robot против его PPO; acc1 оживлён пользователем (NEEDS-HUMAN снят) | 13:13:36
