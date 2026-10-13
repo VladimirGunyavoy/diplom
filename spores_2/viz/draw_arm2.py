@@ -23,9 +23,9 @@ def arm_draw(surf, cam, p, x, u, t):
         f = p['fold']; R = cam.len(.5); c0 = a1 + math.pi; pts = [e] + [(e[0] + R * math.cos(c0 + f * (2 * k / 12 - 1)), e[1] - R * math.sin(c0 + f * (2 * k / 12 - 1))) for k in range(13)]
         bad = abs((x[1] + math.pi) % (2 * math.pi) - math.pi) > math.pi - f
         pygame.draw.polygon(surf, (240, 150, 150) if bad else (248, 218, 218), pts)
-    aaline(surf, RODC, b, e, 11); aaline(surf, RODC, e, tp, 9)
+    rc = p.get('_col_dk', RODC); aaline(surf, rc, b, e, 11); aaline(surf, rc, e, tp, 9)                 # --present: цвет метода
     pygame.draw.circle(surf, (240, 242, 248), e, cam.len(.07)); pygame.draw.circle(surf, INK, e, cam.len(.07), 2)
-    pygame.draw.circle(surf, (214, 76, 38), tp, cam.len(.1)); pygame.draw.circle(surf, INK, tp, cam.len(.1), 2)
+    pygame.draw.circle(surf, p.get('_col', (214, 76, 38)), tp, cam.len(.1)); pygame.draw.circle(surf, INK, tp, cam.len(.1), 2)
     pygame.draw.circle(surf, (200, 204, 214), b, cam.len(.13)); pygame.draw.circle(surf, INK, b, cam.len(.13), 3)
     um = p.get('umax', [1., 1.]); r = [float(np.clip(u[k] / um[min(k, len(um) - 1)], -1, 1)) if len(u) > k else 0. for k in (0, 1)]
     torque_arc(surf, cam, b, a1, r[0]); torque_arc(surf, cam, e, a2, r[1], .22)
