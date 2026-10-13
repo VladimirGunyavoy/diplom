@@ -20,12 +20,6 @@
 - `anim_dp1_backup_s3.mp4`/`.gif` → dp1 → старт 3 → 5.0 с (play 5.0 с)
   - SPORE: T 4.10, T/T_ref 1.146
   - OCP: T 3.58, T/T_ref 1.000
-- `anim_m3d_backup_s13.mp4`/`.gif` → m3d → старт 13 → 5.0 с (play 5.0 с)
-  - SPORE: T 3.74, T/T_ref 1.075
-  - OCP: T 3.48, T/T_ref 1.000
-- `anim_m3gu_backup_s7.mp4`/`.gif` → m3gu → старт 7 → 5.0 с (play 5.0 с)
-  - SPORE: T 3.72, T/T_ref 1.090
-  - OCP: T 3.41, T/T_ref 1.000
 - `anim_ddobst_compare_s10.mp4`/`.gif` → ddobst → старт 10 → 8.9 с (play 8.9 с)
   - SPORE: T 3.93, T/T_ref 0.983
   - reference (arcs): T 4.00, T/T_ref 1.000
@@ -42,7 +36,16 @@
 - `anim_carfree_backup_s5.mp4`/`.gif` → carfree → старт 5 → 5.3 с (play 5.3 с)
   - SPORE: T 5.34, T/T_ref 1.026
   - OCP: T 5.21, T/T_ref 1.000
-- `anim_m8_backup_s3.mp4`/`.gif` → m8 → старт 3 → 5.0 с (play 5.0 с)
-  - SPORE: T 3.47, T/T_ref 1.153
-  - OCP: T 3.01, T/T_ref 1.000
-  - (m8: метод в данных «споры» (_tf3), а не SPORE+IPOPT; пометки preliminary в данных нет — в кадре её нет. Окно m8 --present: подписи латиницей, 4 звена рисуются, но два манипулятора (споры/OCP) одним тёмным цветом накладываются, цель внизу кадра обрезана легендой — косметика не правилась.)
+- `anim_m8_s15.mp4`/`.gif` → m8 → старт 15 → 5.0 с (play 5.0 с)
+  - SPORE: T 3.20, T/T_ref 1.051
+- `anim_m3gdg_goals_s8.mp4`/`.gif` → m3gdg → старт 8 → 11.0 с (play 11.0 с)
+  - SPORE: T 18.78, T/T_ref 1.076
+- `anim_manipf_s3.mp4`/`.gif` → manipf → старт 3 → 9.0 с (play 9.0 с)
+  - SPORE: T 3.07, T/T_ref 1.019
+  - OCP: T failed, T/T_ref — (провал)
+- `anim_m3gu_backup_s9.mp4`/`.gif` → m3gu → старт 9 → 5.0 с (play 5.0 с)
+  - SPORE: T 2.07, T/T_ref 1.028
+  - OCP: T 2.02, T/T_ref 1.000
+- `anim_m3d_backup_s18.mp4`/`.gif` → m3d → старт 18 → 5.4 с (play 5.4 с)
+  - SPORE: T 2.77, T/T_ref 1.011
+  - OCP: T 2.74, T/T_ref 1.000

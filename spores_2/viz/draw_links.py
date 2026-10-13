@@ -32,9 +32,9 @@ def chain_pts(p, x):
     for l, a in zip(ln, th): pts.append((pts[-1][0] + l * math.cos(a), pts[-1][1] + l * math.sin(a)))
     return pts
 def chain_draw(surf, cam, p, x, u, t):
-    pts = chain_pts(p, x); sc = [cam.pt(q) for q in pts]; n = len(sc) - 1
-    for k in range(n): aaline(surf, RODC, sc[k], sc[k + 1], 9 - k)
-    for k in range(n + 1): pygame.draw.circle(surf, (214, 76, 38) if k == n else (240, 242, 248), sc[k], cam.len(.06 if k < n else .09)); pygame.draw.circle(surf, INK, sc[k], cam.len(.06 if k < n else .09), 2)
+    pts = chain_pts(p, x); sc = [cam.pt(q) for q in pts]; n = len(sc) - 1; rc = p.get('_col_dk', RODC)           # --present: цвет метода (SPORE янтарь, эталон зелёный)
+    for k in range(n): aaline(surf, rc, sc[k], sc[k + 1], 9 - k)
+    for k in range(n + 1): pygame.draw.circle(surf, p.get('_col', (214, 76, 38)) if k == n else (240, 242, 248), sc[k], cam.len(.06 if k < n else .09)); pygame.draw.circle(surf, INK, sc[k], cam.len(.06 if k < n else .09), 2)
     pygame.draw.circle(surf, INK, sc[0], cam.len(.12), 3)
 def chain_static(surf, cam, p, data):
     g = data.get('goal', {}); q = p.get('goal_q') or g.get('q')
@@ -49,11 +49,11 @@ SYSTEMS.update({k: dict(draw=chain_draw, static=chain_static, trail=lambda p, x:
 def m3d_geom(p, x):
     l1, l2 = p.get('links', [.5, 1.]); q0, q1, q2 = x[0], x[1], x[2]; r1 = l1 * math.cos(q1); z1 = l1 * math.sin(q1); r2 = r1 + l2 * math.cos(q1 + q2); z2 = z1 + l2 * math.sin(q1 + q2); return q0, (r1, z1), (r2, z2)
 def m3d_draw(surf, cam, p, x, u, t):
-    q0, e1, e2 = m3d_geom(p, x); cl, cr = p.get('cx', [-1.9, 1.9]); c, s = math.cos(q0), math.sin(q0)
+    rc = p.get('_col_dk', RODC); q0, e1, e2 = m3d_geom(p, x); cl, cr = p.get('cx', [-1.9, 1.9]); c, s = math.cos(q0), math.sin(q0)
     top = lambda r: cam.pt((cl + r * c, r * s)); side = lambda r, z: cam.pt((cr + r, z))
     pygame.draw.circle(surf, (214, 218, 228), cam.pt((cl, 0)), cam.len(1.5), 1); pygame.draw.line(surf, (214, 218, 228), cam.pt((cr - 1.5, 0)), cam.pt((cr + 1.5, 0)), 1)
-    a0, a1, a2 = top(0.), top(e1[0]), top(e2[0]); aaline(surf, RODC, a0, a1, 8); aaline(surf, RODC, a1, a2, 6); pygame.draw.circle(surf, (214, 76, 38), a2, cam.len(.08)); pygame.draw.circle(surf, INK, a0, cam.len(.1), 3)
-    b0, b1, b2 = side(0., 0.), side(*e1), side(*e2); aaline(surf, RODC, b0, b1, 8); aaline(surf, RODC, b1, b2, 6); pygame.draw.circle(surf, (214, 76, 38), b2, cam.len(.08)); pygame.draw.circle(surf, INK, b0, cam.len(.1), 3)
+    a0, a1, a2 = top(0.), top(e1[0]), top(e2[0]); aaline(surf, rc, a0, a1, 8); aaline(surf, rc, a1, a2, 6); pygame.draw.circle(surf, p.get('_col', (214, 76, 38)), a2, cam.len(.08)); pygame.draw.circle(surf, INK, a0, cam.len(.1), 3)
+    b0, b1, b2 = side(0., 0.), side(*e1), side(*e2); aaline(surf, rc, b0, b1, 8); aaline(surf, rc, b1, b2, 6); pygame.draw.circle(surf, p.get('_col', (214, 76, 38)), b2, cam.len(.08)); pygame.draw.circle(surf, INK, b0, cam.len(.1), 3)
 _FONT = {}
 def _font(sz=20):
     if sz not in _FONT: _FONT[sz] = pygame.font.SysFont('dejavusans,arial,liberationsans,segoeui,helvetica', sz)
