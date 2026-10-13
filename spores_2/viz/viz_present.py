@@ -8,7 +8,7 @@ import pygame
 import viz_core as vc
 
 PW, PH = 1260, 900; TOP = 64
-AMBER = (0xE8, 0xA3, 0x17); AMBER_DK = (0xA8, 0x6F, 0x00); COMP = [(0x2E, 0x7D, 0x6B), (0x8F, 0xB9, 0xA8), (0x6B, 0x7C, 0x76)]
+AMBER = (0xE8, 0xA3, 0x17); AMBER_DK = (0xA8, 0x6F, 0x00); COMP = [(0x2E, 0x7D, 0x6B), (0x8F, 0xB9, 0xA8), (0x6B, 0x7C, 0x76), (0x3B, 0x6E, 0xA8), (0x9A, 0x5F, 0x9E)]
 INK = (30, 34, 44); FILL = (222, 224, 228); EDGE = (170, 174, 182)
 def is_spore(name): return 'спор' in name.lower() or 'spore' in name.lower()
 def dark(c): return tuple(int(v * .62) for v in c)
@@ -20,10 +20,11 @@ TITLES = {'dd': 'Differential drive', 'ddobst': 'Differential drive + obstacles'
 def en_method(name):
     """имя метода для слайдов (русские имена остаются в обычном режиме)"""
     n = name.lower()
+    if 'дуг' in n: return 'reference (arcs)'                                              # аналитический эталон дуг БЕЗ дисков (не OCP)
     if 'спор' in n or 'spore' in n: return 'SPORE'
     if 'sst' in n: return 'SST 60 s' if '60' in n or n.strip() == 'sst' else name
     if 'ocp' in n or 'эталон' in n: return 'OCP'
-    return name
+    return name.replace(' с', ' s')                                                       # «RRT 60 с» → «RRT 60 s»
 
 def fit_view(eps, data, params, margin=.10):
     """вписать траектории + цель + препятствия (поле ~10%)"""
@@ -54,19 +55,22 @@ def pick_start(eps):
     if not r: return eps[0].start
     med = float(np.median(list(r.values()))); return min(r, key=lambda k: abs(r[k] - med))
 
-def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
+def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0, hide=None, bscale=.6):
     if png: os.environ['SDL_VIDEODRIVER'] = 'dummy'
     pygame.init(); pygame.font.init(); params = data['params']; draw = mod['draw']; static = mod.get('static'); trail_fn = mod.get('trail')
     eps_all = [vc.Episode(e, params, trail_fn) for e in data['episodes']]
     if start is None: start = pick_start(eps_all)
-    eps = [e for e in eps_all if e.start == start]
+    eps = [e for e in eps_all if e.start == start and not any(h.lower() in e.method.lower() or h.lower() in en_method(e.method).lower() for h in (hide or []))]
     if not eps: raise SystemExit('нет эпизодов со стартом %r' % (start,))
     eps.sort(key=lambda e: (is_spore(e.method), e.method))                                  # спор рисуем последними (поверх)
     names = 'dejavusans,arial,liberationsans,segoeui,helvetica,verdana'
     fL = pygame.font.SysFont(names, 30, bold=True); fM = pygame.font.SysFont(names, 22, bold=True); fS = pygame.font.SysFont(names, 20)
     scr = pygame.display.set_mode((PW, PH)) if not png else pygame.Surface((PW, PH))
     pygame.display.set_caption('SPORE · %s · start %s' % (TITLES.get(sysname, data.get('title', sysname)), start))
-    params = dict(params); params.pop('note', None); cam = vc.Cam(fit_view(eps, data, params), (0, TOP, PW, PH - TOP))
+    params = dict(params); params.pop('note', None)
+    for k_ in ('body_r', 'wheel_base', 'car_len', 'car_wid'):                          # №23: тела мельче, чтобы не налезали на старте
+        if k_ in params: params[k_] = params[k_] * bscale
+    cam = vc.Cam(fit_view(eps, data, params), (0, TOP, PW, PH - TOP))
     col = {}; k = 0
     for e in eps:
         if is_spore(e.method): col[id(e)] = AMBER
@@ -82,6 +86,8 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
         params['goal_q'] = eps[0].e.get('goal_q')
         if static: static(scr, cam, params, data)
         used = []
+        for e in eps:
+            if not e.ok: fx, fy = cam.pt(e.trail[-1][0]); used.append(pygame.Rect(fx - 14, fy - 14, 28, 28))
         for e in eps:                                                                    # бледные полные пути
             c = col[id(e)]; w = 4 if is_spore(e.method) else 3
             pts = [cam.pt(e.trail[j][0]) for j in range(len(e.trail))]
@@ -97,13 +103,18 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
             if not e.ok:
                 fx, fy = pts[-1]; pygame.draw.line(scr, dark(c), (fx - 13, fy - 13), (fx + 13, fy + 13), 6); pygame.draw.line(scr, dark(c), (fx - 13, fy + 13), (fx + 13, fy - 13), 6)
             tx = fM.render(en_method(e.method), True, dark(c) if not is_spore(e.method) else AMBER_DK)
-            n = len(eps); ki = eps.index(e); f = [.35, .6, .8, .5][ki % 4] if n > 1 else .5
-            ia = min(int(len(pts) * f), len(pts) - 1); ax, ay = pts[ia]; a2 = pts[min(ia + 6, len(pts) - 1)]; a1 = pts[max(ia - 6, 0)]
-            tv = np.array([a2[0] - a1[0], a2[1] - a1[1]], float); tv = tv / (np.linalg.norm(tv) or 1.); nv = np.array([-tv[1], tv[0]])
-            sg = 1 if ki % 2 == 0 else -1; dist = 30 + tx.get_height() / 2
-            rect = tx.get_rect(center=(int(ax + sg * nv[0] * (dist + tx.get_width() / 2 * abs(nv[0]))), int(ay + sg * nv[1] * dist)))
-            for _ in range(15):
-                if any(rect.colliderect(r) for r in used): rect.move_ip(int(sg * nv[0] * 12), int(sg * nv[1] * 12))
+            n = len(eps); ki = eps.index(e); fr0 = [.35, .6, .8, .5][ki % 4] if n > 1 else .5; best = None            # №23: перебор позиций вдоль пути и сторон — первая без наложений (≥ 20 px от других подписей/крестиков)
+            for f in [fr0] + [.5, .35, .65, .2, .8, .1, .9]:
+                ia = min(int(len(pts) * f), len(pts) - 1); ax, ay = pts[ia]; a2 = pts[min(ia + 6, len(pts) - 1)]; a1 = pts[max(ia - 6, 0)]
+                tv = np.array([a2[0] - a1[0], a2[1] - a1[1]], float); tv = tv / (np.linalg.norm(tv) or 1.); nv = np.array([-tv[1], tv[0]])
+                for sg in ((1, -1) if ki % 2 == 0 else (-1, 1)):
+                    dist = 24 + tx.get_height() / 2; rect = tx.get_rect(center=(int(ax + sg * nv[0] * (dist + tx.get_width() / 2 * abs(nv[0]))), int(ay + sg * nv[1] * dist)))
+                    ok_ = pygame.Rect(4, TOP, PW - 8, PH - TOP - 4).contains(rect) and not any(rect.inflate(20, 20).colliderect(r) for r in used)
+                    if best is None: best = rect
+                    if ok_: best = rect; break
+                else: continue
+                break
+            rect = best
             rect.clamp_ip(pygame.Rect(4, TOP, PW - 8, PH - TOP - 4)); used.append(rect.inflate(6, 4)); scr.blit(tx, rect)
         # шапка и столбик T
         scr.blit(fL.render(TITLES.get(sysname, data.get('title', sysname)), True, INK), (18, 14)); 

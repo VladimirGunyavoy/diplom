@@ -72,6 +72,8 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
     def ghost_of(e):
         if not st['ghost'] or is_ref(e.method): return None
         return next((g for g in methods_of(st['si']) if is_ref(g.method)), None)
+    def ghosts_of(e):                                                       # на каждом старте видны ВСЕ методы: выбранный — ярко, остальные — призраками своего цвета (G — выкл)
+        return [g for g in methods_of(st['si']) if g is not e] if st['ghost'] else []
     def draw_obst(surf): draw_obstacles(surf, cam, data)
     def draw_trail(surf, e, i, col, alpha=255):
         """режимы st['trail']: 0 выкл · 1 след (пройденное) · 2 вся траектория бледно + пройденное ярко (флаг full_path у системы — по умолчанию)"""
@@ -91,9 +93,9 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         e = cur(); g = ghost_of(e)
         params['goal_q'] = e.e.get('goal_q')                                 # цель, своя у каждого эпизода (m3gdg)
         if static: static(scr, cam, params, data)
-        if g is not None:
-            x, u, i = g.state(t_now); layer = pygame.Surface((W, H), pygame.SRCALPHA); draw(layer, cam, params, x, u, t_now)
-            scr.blit(pygame.mask.from_surface(layer, 40).to_surface(setcolor=(70, 120, 235, 120), unsetcolor=(0, 0, 0, 0)), (0, 0)); draw_trail(scr, g, i, (150, 175, 235))
+        for g_ in ghosts_of(e):
+            gc = method_color(g_.method); x, u, i = g_.state(t_now); layer = pygame.Surface((W, H), pygame.SRCALPHA); draw(layer, cam, params, x, u, t_now)
+            scr.blit(pygame.mask.from_surface(layer, 40).to_surface(setcolor=gc + (110,), unsetcolor=(0, 0, 0, 0)), (0, 0)); draw_trail(scr, g_, i, tuple(int(c * .5 + 255 * .5) for c in gc))
         x, u, i = e.state(t_now); draw_trail(scr, e, i, method_color(e.method)); draw(scr, cam, params, x, u, t_now)
         # шапка
         pygame.draw.rect(scr, (255, 255, 255), (0, 0, W, TOP - 8)); pygame.draw.line(scr, GRID, (0, TOP - 8), (W, TOP - 8), 1)
@@ -101,7 +103,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         col = method_color(e.method); pygame.draw.circle(scr, col, (26, 54), 7); ratio = ('   T/T_ref = %.3f' % (e.T / e.Tref)) if (e.Tref and e.ok) else ''
         scr.blit(F['m'].render('%s · старт %s · %s' % (e.method, e.start, 'дошёл' if e.ok else 'НЕ ДОШЁЛ'), True, col if e.ok else (200, 40, 40)), (42, 43))
         tt = F['m'].render('t = %.2f / %.2f с%s' % (min(t_now, e.t_goal, e.T), e.T, ratio), True, INK); scr.blit(tt, (W - tt.get_width() - 16, 12))
-        if g is not None: sg = F['s'].render('призрак (синий): %s, T = %.2f с' % (g.method, g.T), True, (60, 100, 200)); scr.blit(sg, (W - sg.get_width() - 16, 44))
+        for k_, g_ in enumerate(ghosts_of(e)): sg = F['s'].render('%s: %s' % (g_.method, ('T = %.2f с' % g_.T) if g_.ok else 'не дошёл'), True, method_color(g_.method)); scr.blit(sg, (W - sg.get_width() - 16, 38 + 17 * k_))
         # полоски управления
         n = e.U.shape[1] if e.U.ndim == 2 else 1; um = np.array(params.get('umax', [1.] * n), float); bw = 260
         for k in range(n):
@@ -146,7 +148,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
                 elif k == pygame.K_m: st['mi'] = (st['mi'] + 1) % len(methods_of(st['si'])); st['t'] = 0.
                 elif k == pygame.K_g: st['ghost'] = not st['ghost']
                 elif k == pygame.K_t: st['trail'] = (st['trail'] + 1) % 3
-        e = cur(); g = ghost_of(e); tend = max(e.tmax, g.tmax if g else 0.)
+        e = cur(); g = ghost_of(e); tend = max([e.tmax] + [g_.tmax for g_ in ghosts_of(e)])
         if not st['pause']:
             if st['t'] < tend: st['t'] += dtf * st['speed']
             else:
