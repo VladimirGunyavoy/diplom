@@ -379,3 +379,10 @@ hub-v5chain-worker-b11 | started | acc3 | sonnet | 04:46:05
 05:05:01 c5: MAZE PRM* N=3000: 50/50, T/T_ref мед 1.005 (T_ref — A*+натяжение, PRM* ≈ ему), заготовка 64 с, запрос 4 мс; PRM N=1500: 1.27, 2.3 с. Конкурент сильный — спорам на дд в одиночном режиме (а) выигрыш по запросу невозможен; смотреть режим (б) и 4D с инерцией
 05:11:56 c5: MAZE споры: слои 4×3000, 1.89M узлов, рост 284 с (CPU solve не двигался 15 мин → убит мой PID); solve на GPU (SOLVEGPU, flock — очередь за b-линией forb2.py), лог ~/spore_v5/c1/maze_spores_a.log, TAG=_a; FORB2B=1 вариант — отдельным прогоном maze_src после
 05:18:32 c5: maze споры перезапущены на актуальном v7 growN (maze_src, md5 = git): A FORB2B=0 → maze_spores_a, B FORB2B=1 → maze_spores_b (очередь flock, B после A); прежние слои негодны (старый growN не знал GF)
+05:31:41 c5: manipf споры на A_f2b (b11): запуск spores_manip ENVN=manipf FORB=1 WARM=1 TAG=_f2b (maze_src growN), лог ~/spore_v5/c1/manipf_f2b.log; старая строка 'до FORB2b' остаётся
+05:40:30 c5: manipf споры на A_f2b: 11/11 свободных, мед 1.020 (до FORB2b 9/11 1.033), запрос .38 с (CPU делили); table_manipf обновлена, в git
+05:51:38 c5: MAZE споры B (FORB2B=1, MAXC 3000): 19/50 (38%), мед T/T_ref .92 (< верхней оценки), рост 1488 + solve 91 с, запрос ок-стартов .57 с; 31 провал — в основном nseg=0 (старт не покрыт) ⇒ запущен B9 MAXC 9000 (maze_spores_b9.log); A (FORB2B=0) ещё растёт
+hub-v5chain-worker-27 | CA1 6D-a/b/8D готовы (table_m3d/m3g/m8) | 05:57:03
+06:00:59 c5: table_maze.md предварительная в git (make_maze_report.py); B9/A досчитываются
+hub-v5chain-worker-27 | done | ctx 30% | CA1 6D/8D таблицы + SPD6 (запрос спор ×2–10) | next=hub-v5chain-worker-28 | 06:31:11
+hub-v5chain-worker-28 | started | acc3 | sonnet | 06:31:37
