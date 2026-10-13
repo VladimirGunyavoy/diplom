@@ -397,3 +397,5 @@ hub-v5chain-worker-c6 | started | acc3 | sonnet | 07:51:01
 09:10:35 w28: SPD6 пп.1-3 закрыты (m3d .50 с/m3gd 3.9/m3gu 6.1 1 ядро; 8D 949→79 с); дальше пакетный flow m8
 hub-v5chain-worker-b11 | COVAFF на ДИ 4D (MAXC1600): build 692→281 с (×2.5), reach .95 и T/эт мед 1.024 те же — без потерь (spd5.md); флаг COVAFF=1 для ДИ 4D, VIAB=3 для запретов | 09:50:19
 hub-v5chain-worker-28 | done | ctx 27% | SPD6+8D+CA4(m3d, 3зв+диски) | next=hub-v5chain-worker-29 | 10:40:58
+hub-v5chain-worker-29 | started | acc3 | sonnet | 10:41:26
+hub-v5chain-worker-b11 | done | ctx 27% (профилактика) | FORB2b, VIAB, заготовка ДИ 4D 941→467 с (COVAFF/QFAST/SPU/JCOMP) | next=hub-v5chain-worker-b12 | 11:37:52
