@@ -1,22 +1,15 @@
-# Session Handoff — линия D (открыта hub-v5chain-research-26, 2026-10-13 ~13:15, слово пользователя: «пусти ещё одного воркера, на акк1, проверить на системе моего робота, legwheeled robot где-то на хабе, уже есть натренированный PPO»)
-АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — первоисточник; решения — самому, с записью «решение <роль> (автономный режим)»).
-Звено: hub-v5chain-worker-d1 (первое в линии D). Ведущий — hub-v5chain-research-26 (→27). Соседи: worker-30 (A, 6D/8D), worker-b12 (B, ускорение, владелец v7 growN), worker-c6 (C, бенч).
-
-## Система пользователя — колёсно-ножной робот (Ascento-type), ЧУЖОЙ ПРОЕКТ — только читать
-- Код: `~/claude-work/projects/colab-mhlb/legwheel_robot/` (копия `~/colab/legwheel_robot`): `PHYSICS.md` (уравнения, пределы — читать первым), `config.py` (главнее PHYSICS), `env.py`, `training/gym_env.py` (наблюдение 6D, награда, спавн, успех), `training/ARCHITECTURE.md`, `training/eval.py`.
-- q = (x, ψ, α), действие (τ_wheel, τ_hip); состояние 6D (x, ψ, α, ẋ, ψ̇, α̇); α в наблюдении — отклонение от ALPHA_STAR.
-- **Обученный PPO:** `~/claude-work/projects/colab-mhlb/runs/legwheel_robot/2026-09-14/003_165713/weights/0073/model.zip` (`last_eval/SOURCE.txt`: seq 0073, 9.57M шагов; спавн ψ ±0.1745, ψ̇ ±0.2094). `last_eval/metrics.json`: успех 1681/1681, время до цели ср 0.446 с, eval 435 эп/с.
-- **Ничего в colab-mhlb не править** (чужой проект пользователя). Импортировать/копировать в `spores_2/bench/legwheel/` (файлы линии D).
-
-## Задача D1 (PLAN [D] LW1)
-1. Среда для бенча `bench/legwheel/env_lw.py` (наследник `common.Env`): та же динамика (импорт из colab-mhlb, не переписывать), те же спавн/критерий успеха/dt, что в eval PPO. Тест: траектории PPO через твой проверяльщик дают то же время и успех, что `metrics.json` (иначе — дефект постановки, как было с dp1).
-2. PPO: инференс чекпоинта 0073 на ТЕХ ЖЕ стартах (N ≥ 50 из спавна eval), время до цели, успех, мс/запрос. Заготовка PPO — время обучения из логов прогона (честно, со своим железом).
-3. Споры: лучшая 6D-версия — коридор v6 + refine_ca (CasADi/IPOPT), как в линии A на манипуляторах 6D (`bench/spores_6d.py`, `knowledge/research/bench_6d8d.md`); при нужде HYB (споры + OCP fast). Эталон — OCP CasADi multi (свободное T) на тех же стартах.
-4. Таблица `~/claude-work/projects/spore/reports/bench/table_lw.md` по протоколу (`knowledge/research/bench_protocol.md` §2): дошли, T/T_ref, заготовка, запрос, total(N), N*.
-Цель — честно: где споры быстрее/точнее PPO на системе пользователя, где нет.
-
-## Где считать
-aida (`ssh -p 2222 random@127.0.0.1`, `~/spore_v5`, venv `~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3`): RAM ≤ ~50 ГБ на всех; GPU — только под flock /tmp/gpu.lock (одним способом: либо внешний flock, либо замок в скрипте). Логи с tqdm, первые минуты прогона проверять самому. git add — только свои файлы по именам.
-
-## ПАУЗА LW1 (14:30, worker-d1 → VIZ по слову пользователя; ведущий research-27)
-Сделано (aida ~/spore_v5/d1, код bench/legwheel/, sync_lw.sh): динамика CasADi (ош. 2e-5), env_lw+verify_real (тот же rk4_step), PPO 0073 сверен (1681/1681, T ср 0.4463 vs 0.44555), PPO на 50 стартах: T мед 0.478 с, инференс 0.047 мс; непрерывный OCP 40/50 T мед .0147 с; дискретный OCP (сетка .002) d50c считается (~/spore_v5/d1/ocp_d50c.log → data/lw_ocp_d.json, lw_ref.json); споры: spores_lw.py (LWTU=.01 обязательно; проба NB20000 NF3000 на 8: 3/8). Дальше: после d50c — spores_lw на 50 стартов, PPO-колонка, table_lw.md. Не забыть: вариант споры с квантованием переключений на сетку .002 (честность против PPO), alive=0 в награде PPO, успех PPO по награде не за скорость.
+# Session Handoff — линия D
+[РУТИНА НЕ ВЫПОЛНЕНА]
+АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS). Звено: hub-v5chain-worker-d1 (acc1, sonnet, 13:13–15:2x 2026-10-13), причина смены: ctx ≥ 27% (софт 30%). Ведущий — hub-v5chain-research-27.
+## Сейчас приоритет №1 — VIZ (слово пользователя 14:25), спецификация `spores_2/viz/README.md` (читать целиком, правило данных: спор — из ГЛАВНОЙ строки compare.md/table_*.md, поле `src` в эпизодах, старты показательные, не худшие для спор)
+Сделано: `viz/viz_core.py` (плеер: Пробел/R/←→/↑↓/M/G/T, призрак эталона синим, след, полоски u; `--png DIR --start K --frames N` без экрана), `viz/play.py`, `viz/draw_links.py` (SYSTEMS: pend, pend15), `viz/export_links.py` (resample(env,y0,us,dts) → X на сетке .02; ocp_pend с тёплым стартом от плана спор; export_pend), данные `viz/data/pend.json` (pend_spores_T, LOOK 20) и `pend15.json` (запушены; pend15 пересъёмка на aida, лог ~/spore_v5/d1/viz_pend2.log → если «записано pend15» — `rsync aida:spore_v5/d1/spores_2/viz/data/pend15.json viz/data/`, проверить src, коммит+пуш). README «Готово» — добавить строки.
+Проверка кадров: `~/.venv-viz/bin/python spores_2/viz/play.py SYS --png DIR --start K` (venv на хабе: `python3 -m venv ~/.venv-viz && pip install pygame numpy`), смотреть montage.png через Read.
+Стоп на / следующий шаг (по порядку README): **dp1** (двойной маятник) → `manip`/`manipf` (4D) → `m3gd`/`m3gu`/`m3gdg` → `m8` → `m3d` (две проекции). Каждую — коммит+пуш сразу + строка в README «Готово».
+ - dp1: споры 7/20 (`dp1_spores_load.json`, «главная» строка, показывать и провалы честно; атлас — `~/spore_v5/w25/dp1_L*g300.pkl` (слои) + V из DUMP, growN env LOAD/LOADL, `A.rollout(Q)` не пишет u → писать рекордер как `rollout_rec` в bench/spores_pend.py); эталон OCP — `bench/ocp_casadi.py` dyn 'dp1' / `bench/dp1_ref_replay.py` (14/20). Динамика для рисования: `common.DP1.f` (y=(q1−π/2,q2,w1,w2), g=1, MS 2.5/1, L=1 — проверить длины по S11/S12/S22).
+ - манипуляторы 6D дёшево: споры = `bench/spores_6d.py work(i)` (b[1] слои, b[2] dt; сборка 1–4 с, aida ~/spore_v5/a27 или d1), эталон m3d — `reports/bench/data/m3d_ref/refm3d_m3d_q*_G0_N50_W3.npy` ([T, U 50×3]); m3gd/m3gu — только T в m3g_ref.json → U из `ocp_m3g_lib`; m8 — ocp_m8_lib. Рисовалка: звенья (длины 1, массы 1.5/1/.5/.25, θ относительные), цель — поза q*.
+ - aida-копия линии: `~/spore_v5/d1/spores_2` (sync: `bash spores_2/bench/legwheel/sync_lw.sh`, также rsync viz), venv-sb3 + `PYTHONPATH=~/spore_v5/r5/pylib`; фоновые запуски — nohup + опрос лога (команды >1 мин в фоне).
+## Пауза LW1 (колёсно-ножной робот, `bench/legwheel/`, чужой colab-mhlb только читать)
+Сделано: динамика CasADi (ошибка 2e-5, lw_dyn.py), env_lw.py+verify_real (rk4_step робота, dt .002), PPO 0073 сверен (1681/1681, T ср .4463 vs .44555), PPO на 50 стартах: T мед .478 с, инференс .047 мс, 9413 параметров, `lw_ppo.json`; OCP: непрерывный 40/50 (T мед .0147 с), ДИСКРЕТНЫЙ (сетка .002, `ocp_lw_d.py`, d50c на aida → `lw_ocp_d.json`, `lw_ref.json` — проверить, дошёл ли), споры `spores_lw.py` (LWTU=.01 обязательно — иначе NaN; проба NB20000 NF3000 на 8 стартах: 3/8; масштабы клеток LWSC, LW9=9 слоёв). T_ref мин ≈ 1–100 тиков (.002–.2 с) ≪ PPO .45 с (PPO не учили быстро: alive=0, награда квадратичная; успех robot-eval ≠ min-time). Дальше: споры на 50, вариант с квантованием переключений на сетку .002, `reports/bench/table_lw.md`.
+Грабли: (1) pygame на хабе только в ~/.venv-viz; (2) env.step у common оборачивает углы — для OCP-подсказки считать без обёртки; (3) draw_mobile.py (b12) может не иметь SYSTEMS — play.py это переживает; (4) ssh aida с nohup & держит канал — запускать через `>/dev/null 2>&1 &` и опрашивать лог.
+Решения: нет. Коммиты: см. git log (VIZ: 22f6d20f, 2842cb73, ...). Токены: T_START 5ч 3%/ctx 5% 13:13 / T_BEFORE_END 5ч ~46%/ctx ~28%.
+NEXT_LINK: hub-v5chain-worker-d2   NEXT_MODEL: sonnet
