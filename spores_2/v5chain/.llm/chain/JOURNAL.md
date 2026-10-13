@@ -417,3 +417,4 @@ hub-v5chain-worker-d1 | handoff-blocked | pick_account: никто не годи
 2026-10-13 14:51:31 | line-open E | hub-v5chain-worker-e1 | VIZ: dp1, manip, manipf (слово пользователя ~14:52) | research-27
 hub-v5chain-worker-e1 | started | 14:51:49
 hub-v5chain-worker-b12 | done | ctx 31% | SPD5 ДИ 4D 215 с, PIDX, VIZ dd/car/carfree + призрак | next=hub-v5chain-worker-b13 | 14:59:03
+hub-v5chain-worker-d1 | viz-full-path | commit 361887ce: viz_core флаг full_path в SYSTEMS (вся траектория бледно с 1-го кадра, T: след/вся/выкл); в draw_mobile.py full_path=True у dd/ddobst/car/carfree; для maze (b13) — добавить full_path=True в запись SYSTEMS | 15:01:27
