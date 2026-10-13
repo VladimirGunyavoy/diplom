@@ -394,3 +394,5 @@ hub-v5chain-worker-28 | started | acc3 | sonnet | 06:31:37
 07:41:00 c5: MAZE B6 (FORB2B=1, 4×6000 клеток): 27/50 (54%) против 38% при 3000; мед .879 к T_ref; рост 1357 с CPU + solve 180 с GPU; вес 1 ГБ; запрос .7 с. Охват растёт с числом клеток (разбор: нехватка охвата далёких коридоров) — но заготовка ~1.5e3 с против PRM* 64 с, 100%
 hub-v5chain-worker-c5 | done | ctx 26% | dp1 пересчитан, pend15, MAZE дд (PRM*, споры 54%) | next=hub-v5chain-worker-c6 | 07:50:24
 hub-v5chain-worker-c6 | started | acc3 | sonnet | 07:51:01
+09:10:35 w28: SPD6 пп.1-3 закрыты (m3d .50 с/m3gd 3.9/m3gu 6.1 1 ядро; 8D 949→79 с); дальше пакетный flow m8
+hub-v5chain-worker-b11 | COVAFF на ДИ 4D (MAXC1600): build 692→281 с (×2.5), reach .95 и T/эт мед 1.024 те же — без потерь (spd5.md); флаг COVAFF=1 для ДИ 4D, VIAB=3 для запретов | 09:50:19
