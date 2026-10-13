@@ -29,6 +29,7 @@ class CA:
         ng = 2 * nq + (nq * s.ms * n if wl else 0); mg = float(os.environ.get('CAMARG', .004)); lb = np.r_[-(Rq - mg) * np.ones(nq), -(Rw - mg) * np.ones(nq), -WM * np.ones(ng - 2 * nq)]; s.cache[k_] = (S, lb, -lb); return s.cache[k_]
     def refine(s, flow, x0, path, g, tries=3, seed=0, clear=None, ns=16, wlim=None):
         from src.atlas6.corridor_nd import merge, endpoint
+        if clear is not None and not os.environ.get('CACLR'): return s.orig(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=ns, wlim=wlim)   # препятствия: IPOPT-refine их не знает ⇒ штатный SLSQP
         seq, d0 = merge(path); n = len(seq); wl = wlim is not None; S, lbg, ubg = s.solver(n, wl); tries0 = tries; rng = np.random.default_rng(seed); tries = max(tries, int(os.environ.get('CANT', 1))); best = (np.inf, None); US = flow.__self__ if False else None
         tau = s.US[list(seq)].T
         xe0 = endpoint(flow, x0, seq, d0); tgt = s.C3 + 2 * np.pi * np.round((xe0[:s.n] - s.C3) / (2 * np.pi)); P = np.r_[np.asarray(x0, float), tau.ravel(order='F'), tgt]
