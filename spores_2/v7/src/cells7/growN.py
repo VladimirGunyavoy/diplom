@@ -274,6 +274,7 @@ def mlin(Pb, n_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
+FORB2B = int(E('FORB2B', 0))                                                                           # FORB2b (b11, research-26): грань запрещена, только если ВСЕ её точки несвободны (частично несвободная не обрывает рост; рёбра режет edge_ok); 0 — выкл.
 FORB2 = float(E('FORB2', 0.))                                                                          # FORB2a (b10, research-26): r затравки = min(RMAX, FORB2·gfree(seed)), при отказе клетки — повтор с r/2 до RMIN; 0 — выкл.
 def growN(p, u, idx, rm, tm):
     if FORB2 <= 0 or GF is None: return _growN1(p, u, idx, rm, tm)
@@ -295,7 +296,7 @@ def _growN1(p, u, idx, rm, tm):
             for i, Pn in enumerate(nf_rows(base, p, u, float(sg), nmax), 1): rows[sg * i] = Pn
             for i in [k for k in Wt if k != 0 and np.sign(k) == sg and k not in rows]: del Wt[i]
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
-    if GF is not None and not free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all(): return None                         # FORB: начальная заплатка вся свободна
+    if GF is not None and not (free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).any() if FORB2B else free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all()): return None                         # FORB: начальная заплатка вся свободна
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
@@ -313,7 +314,7 @@ def _growN1(p, u, idx, rm, tm):
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
                 if nk < 0 or nk >= KF: act[d] = False; STOP['kf'] += 1; continue
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
-                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and (free(face).any() if FORB2B else free(face).all())); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['field' if fb else 'bend' if bb else 'goal'] += 1; continue
                 klo, khi = nlo, nhi
                 if d in extra:
@@ -324,7 +325,7 @@ def _growN1(p, u, idx, rm, tm):
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax: act[d] = False; STOP['rows'] += 1; continue
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
-                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and (free(face).any() if FORB2B else free(face).all())); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['tfield' if fb else 'tbend' if bb else 'tgoal'] += 1; continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i
