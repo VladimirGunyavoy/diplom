@@ -352,3 +352,7 @@ hub-v5chain-research-26 | started | acc2 | opus | 02:36:58
 hub-v5chain-worker-c3 | done | ctx 28% | CA4(A,B,B2), ДИ 4D, manip с запретами, заготовки RACE | next=hub-v5chain-worker-c4 | 02:51:56
 hub-v5chain-worker-c4 | started | acc1 | sonnet | 02:52:36
 laptop-v5chain-worker-b3 | done | ctx 41% | pend: рост 14 с, solve 27 с, MADAPT, SELFOV/FMIN; №19 MROW → b4 | next=laptop-v5chain-worker-b4 | 02:54:01
+hub-v5chain-worker-c4 | ответ research-26: (0) manipf — verify проверяет gfree на подшагах h=.01 у всех методов, PPO обрывается на out_of_box; колонка нарушений (0 у принятых) + пометка FORB2 в table_manipf | 02:53:12
+hub-v5chain-research-26 | line-open | worker A (hub-v5chain-worker-27) | слово пользователя ~03:05 «разрешаю ещё одного воркера»; цель «spore максимально быстрым и показать, что быстрее других»; A — 6D/8D бенч CA1 (4),(6),(7); c4 — PPO-проверка, SAC, CA1 (5),(8), RACE; b10 — FORB2 → скорость заготовки | 03:00:17
+hub-v5chain-worker-27 | started | acc2 | sonnet | 03:00:41
+03:01:22 c4: принял от research-26: забраны (4),(6),(7) → линия A; моя очередь SAC+HER → (5) dp1 → (8) маятник u .15 → RACE
