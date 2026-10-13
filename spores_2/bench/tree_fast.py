@@ -10,16 +10,18 @@ def make_flow_all(name, layers, steps=8, tag=''):
     if name == 'm8': os.environ.setdefault('G', '0.3'); import ocp_m8_lib as L; fca = lambda x, u: L.f_ca(x, u, .3); steps = 20      # dt_max .02 на τ=.4
     elif name == 'm3d': import ocp_m3d_lib as L; fca = lambda x, u: L.f_ca(x, u)
     else: os.environ.setdefault('G', '0.3'); import ocp_m3g_lib as L; fca = lambda x, u: L.f_ca(x, u, .3)
-    x = ca.SX.sym('x', nx); u = ca.SX.sym('u', nu); t = ca.SX.sym('t'); fx = ca.Function('f', [x, u], [fca(x, u)]); h = t / steps; z = x
-    for _ in range(steps):
+    x = ca.SX.sym('x', nx); u = ca.SX.sym('u', nu); t = ca.SX.sym('t'); fx = ca.Function('f', [x, u], [fca(x, u)]); h = t / steps; z = x; zm = x
+    for _i in range(steps):
         k1 = fx(z, u); k2 = fx(z + h / 2 * k1, u); k3 = fx(z + h / 2 * k2, u); k4 = fx(z + h * k3, u); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-    F = ca.Function('F_%s' % name, [x, u, t], [z]).map(len(layers)); so = os.path.join(HERE, 'flc_%s_%d.so' % (name, len(layers)))
+        if _i == steps // 2 - 1: zm = z      # состояние на полудуге (t/2) — бесплатно, тем же вызовом (w29)
+    F = ca.Function('F_%s' % name, [x, u, t], [ca.vertcat(z, zm)]).map(len(layers)); so = os.path.join(HERE, 'flm_%s_%d.so' % (name, len(layers)))
     if not os.path.exists(so):
         c = so[:-3] + '.c'; Xs, Us, Ts = ca.SX.sym('X', nx, len(layers)), ca.SX.sym('U', nu, len(layers)), ca.SX.sym('T', 1, len(layers))
         G = ca.Function('FM_%s' % name, [Xs, Us, Ts], [F(Xs, Us, Ts)]); cwd = os.getcwd(); os.chdir(HERE); G.generate(os.path.basename(c), {'with_header': False}); os.chdir(cwd)
         subprocess.check_call(['gcc', '-O3', '-march=native', '-shared', '-fPIC', c, '-o', so, '-lm'])
     Fe = ca.external('FM_%s' % name, so); U = np.asarray(layers, float).T
-    def flow_all(P, t): return np.asarray(Fe(np.tile(np.asarray(P, float)[:, None], (1, U.shape[1])), U, np.full((1, U.shape[1]), t))).T
+    def flow_all(P, t):
+        r = np.asarray(Fe(np.tile(np.asarray(P, float)[:, None], (1, U.shape[1])), U, np.full((1, U.shape[1]), t))).T; flow_all.half = r[:, nx:]; return r[:, :nx]
     return flow_all
 def make_flow_batch(name, layers, flow_orig, steps=4, CH=64):
     """пакетный поток для стыковки (t=±.2, 4 шага): скомпилированная map(CH), добивка нулями; прочие t — исходный flow."""
@@ -52,7 +54,7 @@ def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
         nonlocal cnt
         ch = []; E = S.wrap(fa(P[i], tt)) if fa is not None else None
         bl = None
-        if fa is not None and S.has_obst: bl = np.asarray(S.blocked(np.vstack([E, np.asarray(fa(P[i], tt / 2))]))); bl = bl[:S.L] | bl[S.L:]       # все L концов и полудуг — одним векторным вызовом (было L скалярных потоков на питоне)
+        if fa is not None and S.has_obst: bl = np.asarray(S.blocked(np.vstack([E, fa.half]))); bl = bl[:S.L] | bl[S.L:]       # все L концов и полудуг — одним векторным вызовом (было L скалярных потоков на питоне)
         for s in range(S.L):
             e = E[s] if fa is not None else S.wrap(S.flow(P[i], s, tt))
             if not S.ok(e) or (S.has_obst and (bl[s] if bl is not None else (S.blocked(e) or S.blocked(S.flow(P[i], s, tt / 2))))): continue
