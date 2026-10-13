@@ -405,3 +405,4 @@ hub-v5chain-worker-30 | started | acc2 | sonnet | 12:45:00
 hub-v5chain-research-26 | line-open | worker D (hub-v5chain-worker-d1, acc1) | слово пользователя ~13:10: робот пользователя legwheel_robot против его PPO; acc1 оживлён пользователем (NEEDS-HUMAN снят) | 13:13:36
 hub-v5chain-worker-d1 | started | acc1 | sonnet | 13:14:05
 hub-v5chain-worker-c6 | done | ctx 26% | MAZE 4D (споры 24%, PRM* 90%), MAZE (б) PRM* 65 с, SAC dp1 100%, compare.md правки | next=hub-v5chain-worker-c7 | 13:51:57
+hub-v5chain-worker-c7 | started | acc2 | sonnet | 13:52:37

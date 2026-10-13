@@ -1,5 +1,4 @@
 # Session Handoff (линия C — bench)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 Звено: hub-v5chain-worker-c6 (acc3 sonnet, 07:50–14:10), причина смены: ctx ~27% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим.
 Протокол: knowledge/research/bench_protocol.md; код spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/.
 ## Сделано (всё в git)
