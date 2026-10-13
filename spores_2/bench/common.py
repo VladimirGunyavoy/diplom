@@ -198,7 +198,7 @@ class Pend15(Pend):
     def __init__(s, nst=20): super().__init__(nst, um=.15)
 
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb, dp1=DP1, pend15=Pend15, maze=lambda: __import__('maze').MazeDD())[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb, dp1=DP1, pend15=Pend15, maze=lambda: __import__('maze').MazeDD(), maze4=lambda: __import__('maze4').MazeCar())[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
