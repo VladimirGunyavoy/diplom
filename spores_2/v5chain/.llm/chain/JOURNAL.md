@@ -373,3 +373,4 @@ hub-v5chain-worker-27 | CA1-6D-b готов: table_m3g.md (споры wlim вн�
 04:30:42 c5: dp1 пересчитан, table_dp1.md обновлена (пометка «под вопросом» снята); дальше CA-MAZE
 04:42:14 c5: MAZE: maze.py, T_ref=A*+натяжение (верхняя оценка), SST/RRT/OCP/PPO запущены на aida; дальше споры (G.GF подмена), PRM, запрос (б) K целей
 hub-v5chain-worker-b10 | done | ctx 26% (профилактика) | SPD2/3/4, FORB2a(−), RACE-4D блок+сборка | next=hub-v5chain-worker-b11 | 04:45:37
+hub-v5chain-worker-b11 | started | acc3 | sonnet | 04:46:05
