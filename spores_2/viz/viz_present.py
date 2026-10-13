@@ -14,6 +14,29 @@ def is_spore(name): return 'спор' in name.lower() or 'spore' in name.lower()
 def dark(c): return tuple(int(v * .62) for v in c)
 def pale(c): return tuple(int(v * .4 + 255 * .6) for v in c)
 
+TITLES = {'dd': 'Differential drive', 'ddobst': 'Differential drive + obstacles', 'ddobst7': 'Differential drive + obstacles', 'car': 'Car with inertia + obstacles', 'carfree': 'Car with inertia',
+          'm3gdg': '6D arm: many goals', 'm3gd': '6D arm', 'm3gu': '6D arm', 'm8': '8D arm', 'm3d': '3D arm', 'manip': '2-link arm', 'manipf': '2-link arm + table + self-collision',
+          'pend': 'Pendulum swing-up', 'pend15': 'Pendulum swing-up', 'dp1': 'Double pendulum'}
+def en_method(name):
+    """имя метода для слайдов (русские имена остаются в обычном режиме)"""
+    n = name.lower()
+    if 'спор' in n or 'spore' in n: return 'SPORE'
+    if 'sst' in n: return 'SST 60 s' if '60' in n or n.strip() == 'sst' else name
+    if 'ocp' in n or 'эталон' in n: return 'OCP'
+    return name
+
+def fit_view(eps, data, params, margin=.10):
+    """вписать траектории + цель + препятствия (поле ~10%)"""
+    P = [np.asarray(t[:, :2]).reshape(-1, 2) for e in eps for t in [np.vstack(e.trail)]]
+    pts = [np.vstack(P)]
+    for o in data.get('obstacles', []):
+        if o['type'] == 'disc': c = np.array(o['c'], float); r = o['r']; pts.append(np.array([c - r, c + r]))
+        elif o['type'] == 'box': pts.append(np.array([o['lo'], o['hi']], float))
+    g = data.get('goal', {}) or {}
+    if 'c' in g: c = np.array(g['c'][:2], float); r = float(g.get('r', .15)); pts.append(np.array([c - r, c + r]))
+    A = np.vstack(pts); lo = A.min(0); hi = A.max(0); d = hi - lo; d = np.maximum(d, 1e-3); lo = lo - margin * d; hi = hi + margin * d
+    return [float(lo[0]), float(lo[1]), float(hi[0]), float(hi[1])]
+
 def thick(surf, col, pts, w):
     """толстая ломаная со скруглёнными стыками (pygame.draw.lines при w>3 рвётся «пунктиром»); близкие точки склеиваются"""
     q = [pts[0]]
@@ -42,8 +65,8 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
     names = 'dejavusans,arial,liberationsans,segoeui,helvetica,verdana'
     fL = pygame.font.SysFont(names, 30, bold=True); fM = pygame.font.SysFont(names, 22, bold=True); fS = pygame.font.SysFont(names, 20)
     scr = pygame.display.set_mode((PW, PH)) if not png else pygame.Surface((PW, PH))
-    pygame.display.set_caption('spores · %s · старт %s' % (data.get('title', sysname), start))
-    cam = vc.Cam(params['view'], (0, TOP, PW, PH - TOP))
+    pygame.display.set_caption('SPORE · %s · start %s' % (TITLES.get(sysname, data.get('title', sysname)), start))
+    params = dict(params); params.pop('note', None); cam = vc.Cam(fit_view(eps, data, params), (0, TOP, PW, PH - TOP))
     col = {}; k = 0
     for e in eps:
         if is_spore(e.method): col[id(e)] = AMBER
@@ -73,22 +96,26 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
             c = col[id(e)]; pts = [cam.pt(e.trail[j][0]) for j in range(len(e.trail))]
             if not e.ok:
                 fx, fy = pts[-1]; pygame.draw.line(scr, dark(c), (fx - 13, fy - 13), (fx + 13, fy + 13), 6); pygame.draw.line(scr, dark(c), (fx - 13, fy + 13), (fx + 13, fy - 13), 6)
-            tx = fM.render(e.method.upper() if is_spore(e.method) else e.method, True, dark(c) if not is_spore(e.method) else AMBER_DK)
-            ax, ay = pts[int(len(pts) * .55)]; rect = tx.get_rect(midbottom=(ax, ay - 34))
-            for _ in range(12):
-                if any(rect.colliderect(r) for r in used): rect.move_ip(0, -rect.height - 4)
+            tx = fM.render(en_method(e.method), True, dark(c) if not is_spore(e.method) else AMBER_DK)
+            n = len(eps); ki = eps.index(e); f = [.35, .6, .8, .5][ki % 4] if n > 1 else .5
+            ia = min(int(len(pts) * f), len(pts) - 1); ax, ay = pts[ia]; a2 = pts[min(ia + 6, len(pts) - 1)]; a1 = pts[max(ia - 6, 0)]
+            tv = np.array([a2[0] - a1[0], a2[1] - a1[1]], float); tv = tv / (np.linalg.norm(tv) or 1.); nv = np.array([-tv[1], tv[0]])
+            sg = 1 if ki % 2 == 0 else -1; dist = 30 + tx.get_height() / 2
+            rect = tx.get_rect(center=(int(ax + sg * nv[0] * (dist + tx.get_width() / 2 * abs(nv[0]))), int(ay + sg * nv[1] * dist)))
+            for _ in range(15):
+                if any(rect.colliderect(r) for r in used): rect.move_ip(int(sg * nv[0] * 12), int(sg * nv[1] * 12))
             rect.clamp_ip(pygame.Rect(4, TOP, PW - 8, PH - TOP - 4)); used.append(rect.inflate(6, 4)); scr.blit(tx, rect)
         # шапка и столбик T
-        scr.blit(fL.render(data.get('title', sysname), True, INK), (18, 14)); 
-        sub = fS.render('старт %s%s' % (start, ' · ×%.1f' % mult if mult > 1.05 else ''), True, (120, 126, 138)); scr.blit(sub, (PW - sub.get_width() - 18, 8))
+        scr.blit(fL.render(TITLES.get(sysname, data.get('title', sysname)), True, INK), (18, 14)); 
+        sub = fS.render('start %s%s' % (start, ' · ×%.1f' % mult if mult > 1.05 else ''), True, (120, 126, 138)); scr.blit(sub, (PW - sub.get_width() - 18, 8))
         if prelim: pr = fS.render('preliminary', True, (190, 60, 60)); scr.blit(pr, (PW - pr.get_width() - 18, 32))
         y = PH - 18 - 28 * len(eps); box = pygame.Rect(PW - 372, y - 8, 360, 28 * len(eps) + 12)
         for e in sorted(eps, key=lambda e: not is_spore(e.method)):
             c = col[id(e)]; pygame.draw.circle(scr, c, (PW - 352, y + 12), 8)
-            if e.ok: tt = '%s — %.2f с' % (e.method, e.T) + ((' (%.2f)' % (e.T / e.Tref)) if (e.Tref and is_spore(e.method)) else '')
-            else: tt = '%s — не дошёл' % e.method
+            if e.ok: tt = '%s — %.2f s' % (en_method(e.method), e.T) + ((' (%.2f)' % (e.T / e.Tref)) if (e.Tref and is_spore(e.method)) else '')
+            else: tt = '%s — failed' % en_method(e.method)
             scr.blit(fM.render(tt, True, INK if e.ok else (180, 40, 40)), (PW - 334, y)); y += 28
-        ck = fS.render('t = %.1f с' % min(t_now, tmax), True, (120, 126, 138)); scr.blit(ck, (18, PH - 30))
+        ck = fS.render('t = %.1f s' % min(t_now, tmax), True, (120, 126, 138)); scr.blit(ck, (18, PH - 30))
     if png:
         os.makedirs(png, exist_ok=True); outs = []
         for k in range(nframes):
