@@ -33,7 +33,7 @@ def run_spores(K):
     import manip3d_dyn as M3, refine_ca, tree_fast
     from src.atlas6.adaptive_nd import SysN, build_back
     from src.atlas6.corridor_nd import corridor_query
-    tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = 12000, 1000, 3
+    tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = 12000, int(os.environ.get('NFM', 1000)), 3
     CAR = refine_ca.install('m3d', ms=10, maxit=60, prebuild=range(1, 14), wl=False); tree_fast.install(); flow_all = tree_fast.make_flow_all('m3d', M3.US); fl = lambda P, s, t: M3.flow(P, s, t, dt_max=.05)
     res = []; Tr = transitions(K)
     for k, (st, gl) in enumerate(Tr):
