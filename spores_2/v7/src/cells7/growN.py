@@ -476,6 +476,18 @@ def _spu_work(ui):
     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); n0 = int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
     return a, b.astype(np.int32 if s.N < 2 ** 31 else np.int64), c_, n0
+JCOMP = int(E('JCOMP', 0))                                                                              # b11 (SPD5): чанк Якоби GPU одним fused-ядром (torch.compile) вместо ~10 временных тензоров; 0 — выкл.
+_JC = None
+def _jchunk(Vt, X, W, pe, BIGv, wthr):
+    global _JC
+    if _JC is None:
+        import torch
+        def f(Vt, X, W, pe):
+            vi = Vt[X.long()]; w_ = W.double(); ok = vi < BIGv / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).amax(1)
+            v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.)
+            return torch.where(sm < wthr, torch.full_like(v, BIGv), v)
+        _JC = torch.compile(f, dynamic=True)
+    return _JC(Vt, X, W, pe)
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -585,6 +597,7 @@ class Atlas:
                     if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
                     if SMEAN: sg = torch.zeros(NG, dtype=torch.float64, device=dev); cg = torch.zeros(NG, dtype=torch.float64, device=dev)
                     for a in range(0, len(gI), ch):
+                        if JCOMP and PESS >= 0 and not SMEAN: v = _jchunk(Vt, gX[a:a + ch].to(dev), gW[a:a + ch].to(dev), pe, BIG, WTHR); new.scatter_reduce_(0, gI[a:a + ch], DTN + v, 'amin'); continue
                         vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double()
                         if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
                         else:
