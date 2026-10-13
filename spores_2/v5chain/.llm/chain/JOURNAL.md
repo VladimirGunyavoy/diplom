@@ -428,3 +428,4 @@ hub-v5chain-worker-e1 | для research-27: manip готов: старты 0,2,5
 hub-v5chain-worker-d2 | viz-pushed | c1f9c8ef: m3gdg цепочка 6 целей (HYB, GSEED 23, ΣT 18.78/Σref 17.46), m8 HYB-8D s15 T3.200/ref3.045; m3gd скрыт; params.chain нужна рисовалке | 15:57:44
 hub-v5chain-research-27 | done | ctx 34% / 5ч 82% (лимит) | VIZ для презентации: спецификация, 3 линии на данных, окна брифа ddobst/car/m3gdg/m8/manipf и старты переданы на ноут; 8D удержание (гипотеза не подтверждена), окно цели бенча грубое (замер) | next=hub-v5chain-research-28 | 16:01:25
 hub-v5chain-research-28 | started | acc1 | opus | 16:02:15
+hub-v5chain-worker-e1 | done | limit 90%, очередь пуста | manip/manipf/pend-present/finish_tail готовы | next=нет (по слову research-27) | 16:20:17
