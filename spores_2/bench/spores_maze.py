@@ -15,7 +15,8 @@ if __name__ == '__main__':
     else: A = G.Atlas(); t_grow = time.perf_counter() - t0
     print('слои', [len(l) for l in A.layers], 'узлов', A.N, round(t_grow), 'с', flush=True)
     if os.environ.get('DUMPL'): pickle.dump(dict(layers=A.layers), open(os.path.expanduser(os.environ['DUMPL']), 'wb'))
-    t0 = time.perf_counter(); A.solve(); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
+    import fcntl; _lk = open('/tmp/gpu.lock', 'w'); fcntl.flock(_lk, fcntl.LOCK_EX); print('GPU-замок взят', flush=True)      # замок только на solve (рост — на CPU без очереди)
+    t0 = time.perf_counter(); A.solve(); fcntl.flock(_lk, fcntl.LOCK_UN); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
     res = []; Ts = []; tq = []
     for i in range(len(e.X0)):
         t1 = time.perf_counter(); T, seg, nodur = SM.rollout_rec(A, e.X0[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
