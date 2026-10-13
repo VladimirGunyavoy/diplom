@@ -35,13 +35,13 @@ def shoot_pol_rec(y, tmax, NA, inits=2, H=.1):
     return best
 
 def rollout_rec(A, Q, tmax=40.):
-    FG.FREE = ((lambda y: G.inbox(y) & G.free(y)) if G.GF is not None else (lambda y: G.inbox(y))) if int(os.environ.get('FINBOX', 0)) else (G.free if G.GF is not None else None)
+    FG.FREE = ((lambda y: G.inbox(y) & G.free(y)) if getattr(G, "GF", None) is not None else (lambda y: G.inbox(y))) if int(os.environ.get('FINBOX', 0)) else (G.free if getattr(G, "GF", None) is not None else None)
     E = os.environ.get; DTN = G.DTN; US = G.US; VF = G.VF
     Y = G.wrapy(Q); n = len(Y); T = np.zeros(n); done = G.ingoal(Y); tried = np.zeros(n, bool); fin = np.zeros(n, bool); seg = [[] for _ in range(n)]; nodur = np.zeros(n, bool)
     for _ in range(int(tmax / DTN)):
         if done.all(): break
         tgs = np.stack([A.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([A.vstar(G.step(Y, u)) for u in US], 1))
-        if G.GF is not None: J = np.where(np.stack([~G.edge_ok(Y, u) for u in US], 1), G.BIG, J)
+        if getattr(G, "GF", None) is not None: J = np.where(np.stack([~G.edge_ok(Y, u) for u in US], 1), G.BIG, J)
         k = J.argmin(1); tg = tgs[np.arange(n), k]
         for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
             tried[i] = True; Ts, tp, dd = shoot_pol_rec(Y[i], G.FTMAX, int(E('NA', 3)))
