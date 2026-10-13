@@ -17,11 +17,11 @@ import os as _os
 if _os.path.exists(_os.path.join(DD, 'm3gdg_spores_v3.json')):
     v3 = L('m3gdg_spores_v3.json'); tq3 = [x['t_query'] for x in v3['res']]; tb3 = [x['t_build'] for x in v3['res']]
     R.append(row('**споры** v3 (NB24000 NF6000, + полудуга из того же вызова потока), прогон w29 11:3x', [g(r) for r in v3['res']], float(np.median(tb3)), np.median(tq3), np.percentile(tq3, 90), 'отдельный прогон K=20 после доп. ускорения tree_fast (полудуга blocked из того же вызова); заготовка НА КАЖДУЮ цель; T те же, что в строке выше', per_goal_build=True))
-    for tg, nm in (('b', 'NB24000 NF2000'), ('a', 'NB12000 NF3000')):
+    for tg, nm in (('b', 'NB24000 NF2000'), ('a', 'NB12000 NF3000'), ('i', 'NB24000 NF2000, NEIGH=0 TRIES=1'), ('j', 'NB12000 NF3000, NEIGH=0 TRIES=1'), ('k', 'NB12000 NF2000, NEIGH=0 TRIES=1')):
         fn = 'm3gdg_spores_%s.json' % tg
         if _os.path.exists(_os.path.join(DD, fn)):
             v = L(fn); tq_ = [x['t_query'] for x in v['res']]; tb_ = [x['t_build'] for x in v['res']]
-            R.append(row('**споры** v3, урезанные деревья (%s)' % nm, [g(r) for r in v['res']], float(np.median(tb_)), np.median(tq_), np.percentile(tq_, 90), 'свип размера деревьев (w29); без потерь доходимости' if tg == 'b' else 'свип размера деревьев (w29); T хуже на ~5%', per_goal_build=True))
+            R.append(row('**споры** v3, урезанные деревья (%s)' % nm, [g(r) for r in v['res']], float(np.median(tb_)), np.median(tq_), np.percentile(tq_, 90), 'свип размера деревьев и числа refine (w29, K=20)', per_goal_build=True))
 for bi, B in enumerate((.3, 1, 3, 10)):
     R.append(row('SST (свой, prune .1) бюджет %g с' % B, [g(r['runs'][bi], 'T') for r in sst['res']], 0., B, B, 'бюджет на каждый переход'))
 H = '| метод | заготовка, с | запрос мед / p90, с | на переход (заготовка+запрос), с | total(K=%d), с | дошли | T/T_ref мед / ср / p90 / max | примечание |\n|---|---|---|---|---|---|---|---|\n' % K

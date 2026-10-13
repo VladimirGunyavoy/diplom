@@ -54,10 +54,10 @@ def run_spores(K):
         for _ in range(32): v = rng.uniform(-1, 1, 6); v = v / np.max(np.abs(v)) * 0.99; seeds.append(C3 + v * np.array([Rq, Rq, Rq, Rw, Rw, Rw]))
         S = SysN(fl, 8, (PI, PI, PI, WM, WM, WM), ing, seeds, per=(2 * PI, 2 * PI, 2 * PI, 0, 0, 0), ok=lambda p: np.max(np.abs(p[3:])) <= WM, blocked=blk); S.flow_all = flow_all
         back = build_back(S, tau, NB, rho); tb = time.perf_counter() - t0; t1 = time.perf_counter()
-        b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
+        b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=int(os.environ.get('TRIESG', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
         if b is None:                                            # откат на штатный SLSQP-refine (редко; время входит в запрос)
             from src.atlas6 import corridor_nd as _C; _C.refine = CAR.orig
-            try: b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
+            try: b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=int(os.environ.get('TRIESG', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
             finally: _C.refine = CAR.refine
         dq = time.perf_counter() - t1
         if b is None: r = dict(k=k, T=None, why='no_path', t_build=tb, t_query=dq)
