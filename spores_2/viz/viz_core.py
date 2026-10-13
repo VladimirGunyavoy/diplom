@@ -10,6 +10,7 @@ import numpy as np
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
 import pygame
 
+GOALMARK = (40, 140, 80)
 W, H = 1280, 720; TOP, BOT = 74, 78
 BG = (246, 247, 250); INK = (30, 34, 44); GRID = (226, 229, 236); MUTED = (112, 118, 132)
 COLORS = {'споры': (214, 76, 38), 'эталон': (38, 112, 214), 'OCP': (38, 112, 214), 'PPO': (46, 150, 90), 'SST': (140, 90, 170)}
@@ -34,7 +35,12 @@ def fonts():
 class Episode:
     def __init__(s, e, params, trail_fn):
         s.e = e; s.method = e['method']; s.start = e['start']; s.dt = float(e['dt']); s.X = np.asarray(e['X'], float); s.U = np.asarray(e.get('U', np.zeros((len(s.X), 1))), float)
-        s.T = float(e.get('T') or (len(s.X) - 1) * s.dt); s.Tref = e.get('T_ref'); s.ok = bool(e.get('ok', True)); s.tmax = (len(s.X) - 1) * s.dt
+        s.T = float(e.get('T') or (len(s.X) - 1) * s.dt); s.Tref = e.get('T_ref'); s.ok = bool(e.get('ok', True)); s.t_goal = (len(s.X) - 1) * s.dt
+        s.has_tail = bool(e.get('X_tail')) and len(e['X_tail']) > 0
+        if s.has_tail:                                                      # доводка до точной цели (finish_tail.py): после входа в окно цели таймер замирает, тело едет до покоя
+            Xt = np.asarray(e['X_tail'], float); Ut = np.asarray(e['U_tail'], float) if e.get('U_tail') else np.zeros((len(Xt), s.U.shape[1] if s.U.ndim == 2 else 1))
+            s.X = np.vstack([s.X, Xt]); s.U = np.vstack([s.U, Ut.reshape(len(Ut), -1)[:, :s.U.shape[1]]]) if s.U.ndim == 2 and Ut.size else s.U
+        s.tmax = (len(s.X) - 1) * s.dt
         s.trail = None
         if trail_fn: s.trail = [np.array(trail_fn(params, x), float) for x in s.X]       # по кадрам: (k, 2) мировых точек
     def state(s, t):
@@ -94,7 +100,8 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         scr.blit(F['l'].render(data.get('title', sysname), True, INK), (16, 8))
         col = method_color(e.method); pygame.draw.circle(scr, col, (26, 54), 7); ratio = ('   T/T_ref = %.3f' % (e.T / e.Tref)) if (e.Tref and e.ok) else ''
         scr.blit(F['m'].render('%s · старт %s · %s' % (e.method, e.start, 'дошёл' if e.ok else 'НЕ ДОШЁЛ'), True, col if e.ok else (200, 40, 40)), (42, 43))
-        tt = F['m'].render('t = %.2f / %.2f с%s' % (min(t_now, e.tmax), e.T, ratio), True, INK); scr.blit(tt, (W - tt.get_width() - 16, 12))
+        tt = F['m'].render('t = %.2f / %.2f с%s' % (min(t_now, e.t_goal), e.T, ratio), True, INK); scr.blit(tt, (W - tt.get_width() - 16, 12))
+        if e.has_tail and t_now >= e.t_goal: mk = F['m'].render('goal window reached', True, GOALMARK); scr.blit(mk, (W - mk.get_width() - 16, 70))
         if g is not None: sg = F['s'].render('призрак (синий): %s, T = %.2f с' % (g.method, g.T), True, (60, 100, 200)); scr.blit(sg, (W - sg.get_width() - 16, 44))
         # полоски управления
         n = e.U.shape[1] if e.U.ndim == 2 else 1; um = np.array(params.get('umax', [1.] * n), float); bw = 260
