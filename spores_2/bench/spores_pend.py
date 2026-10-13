@@ -2,8 +2,9 @@
 84 — по времени (SIDEOWN MADAPT .001 MROW STOL LOOK 0); 56 — по T (MADAPT .001 LOOK 20). Цель RHO .1 как в bench. Траектории записываются (u_k, dt_k) → единый проверяльщик.
 Реплика rollout() с записью управлений (оригинал не меняем)."""
 import os, sys, time, json
-V = os.environ.get('VARIANT', '84'); base = dict(SYS='pend', TMAX='8', RMAX='.3', OVL='.05', RHO='.1', DELTA='1e9', GOALB='1', GROW='2', OVH='.5', FRAC='.5', M='5', DTN='.06', NORM='gram', SEL='stop', SELFOV='1', BFINE='8', TQDM_MI='1000')
+V = os.environ.get('VARIANT', '84'); ENVN = os.environ.get('ENVN', 'pend'); base = dict(SYS='pend', TMAX='8', RMAX='.3', OVL='.05', RHO='.1', DELTA='1e9', GOALB='1', GROW='2', OVH='.5', FRAC='.5', M='5', DTN='.06', NORM='gram', SEL='stop', SELFOV='1', BFINE='8', TQDM_MI='1000')
 base.update(dict(SIDEOWN='1', MADAPT='.001', MROW='1', STOL='1e-6', LOOK='0') if V == '84' else dict(MADAPT='.001', LOOK='20'))
+if ENVN == 'pend15': base.update(UM='.15', FMIN='.08', OWN='1', LOOK='20', REFF='pend_ref_best_u0.15.npy')
 for k, v in base.items(): os.environ.setdefault(k, v)
 os.environ.setdefault('OMP_NUM_THREADS', '1')
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, '..', 'v7', 'src', 'cells7'))
@@ -28,14 +29,14 @@ def rollout_rec(A, Q, tmax=30.):
     T[~G.ingoal(Y)] = np.inf; return T, rec
 
 if __name__ == '__main__':
-    e = common.make('pend'); t0 = time.perf_counter(); A = G.Atlas(); t_grow = time.perf_counter() - t0; t0 = time.perf_counter(); A.solve(); t_solve = time.perf_counter() - t0
+    e = common.make(ENVN); t0 = time.perf_counter(); A = G.Atlas(); t_grow = time.perf_counter() - t0; t0 = time.perf_counter(); A.solve(); t_solve = time.perf_counter() - t0
     Q = e.X0; res = []; Ts = []; tq = []
     for i in range(len(Q)):
         t1 = time.perf_counter(); T, rec = rollout_rec(A, Q[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq)
         us = [[r[0][0]] for r in rec if r[2][0]]; dts = [float(r[1][0]) for r in rec if r[2][0]]
         Tv, why = common.verify(e, Q[i], us, dts); Ts.append(Tv); res.append(dict(i=i, T_agent=float(T[0]) if np.isfinite(T[0]) else None, T_verify=Tv, why=why, t_query=dtq, nsteps=len(us)))
     t1 = time.perf_counter(); Tb, _ = rollout_rec(A, Q); t_batch = time.perf_counter() - t1
-    s = common.summarize(e, Ts); s.update(env='pend', method='spores v7 grow_cells2d ' + ('84 (по времени: LOOK 0)' if V == '84' else '56 (по T: LOOK 20)'), t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
+    s = common.summarize(e, Ts); s.update(env=ENVN, method='spores v7 grow_cells2d ' + ('84 (по времени: LOOK 0)' if V == '84' else '56 (по T: LOOK 20)'), t_grow=t_grow, t_solve=t_solve, t_build=t_grow + t_solve, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)), t_batch20=t_batch,
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (1 proc; numpy)', per_start=res, Tref=e.Tref.tolist())
     s['weight'] = common.deep_weight(A)
-    json.dump(s, open(os.path.join(common.DATA, 'pend_spores%s.json' % ('' if V == '84' else '_T')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})
+    json.dump(s, open(os.path.join(common.DATA, '%s_spores%s.json' % (ENVN, '' if V == '84' else '_T')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

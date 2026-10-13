@@ -188,8 +188,13 @@ class DP1(Env):
         det = s.S11 * s.S22 - (s.S12 * c) ** 2; a1 = (s.S22 * Q1 - s.S12 * c * Q2) / det; a2 = (s.S11 * Q2 - s.S12 * c * Q1) / det
         return np.stack([w1, w2, a1, a2 - a1], -1)
 
+class Pend15(Pend):
+    """маятник со слабым мотором |u| ≤ .15 (больше раскачек, несколько сепаратрис); эталон pend_ref_best_u0.15 = min(энергия+стрельба, сетка)"""
+    name = 'pend15'
+    def __init__(s, nst=20): super().__init__(nst, um=.15)
+
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb, dp1=DP1)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb, dp1=DP1, pend15=Pend15)[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""
