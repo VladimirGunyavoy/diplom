@@ -22,7 +22,7 @@ def main():
         try: st = int(st)
         except ValueError: pass
     if a.present:
-        import viz_present; outs = viz_present.run(a.system, tab[a.system], data, png=a.png, start=st, nframes=a.frames, hold=a.hold)
+        import viz_present; outs = (tab[a.system].get('present') or viz_present.run)(a.system, tab[a.system], data, png=a.png, start=st, nframes=a.frames, hold=a.hold)
         if outs: print('\n'.join(outs))
         return
     outs = viz_core.run(a.system, tab[a.system], data, png=a.png, start=st, method=a.method, nframes=a.frames, gif=a.gif)

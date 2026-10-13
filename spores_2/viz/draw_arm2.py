@@ -46,3 +46,9 @@ def arm_trail(p, x):
     return [pts_of(p, x)[2]]
 
 SYSTEMS = {k: dict(draw=arm_draw, static=arm_static, trail=arm_trail) for k in ('dp1', 'manip', 'manipf')}
+
+# present-режим маятника (слева маятник, справа фазовый портрет, SPORE против SST): подмешиваем в запись pend из draw_links ключ 'present'
+try:
+    import draw_links, present_pend
+    SYSTEMS['pend'] = dict(draw_links.SYSTEMS['pend'], present=present_pend.run)
+except Exception as ex: print('present для pend не подключён:', ex)
