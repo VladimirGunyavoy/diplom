@@ -20,7 +20,7 @@ def path_len(env, y0, margin=.02):
     return float(np.linalg.norm(np.diff(np.array(Q), axis=0), axis=1).sum())
 
 class MazeCar(common.Env):
-    name = 'maze4'; n = 4; m = 2; period = np.array([0., 0., 2 * PI, 0.]); umin = np.array([-1., -1.]); umax = np.array([1., 1.])
+    name = 'maze4'; n = 4; m = 2; period = np.array([0., 0., 2 * PI, 0.]); umin = np.array([-1., -1.]); umax = np.array([1., 1.]); half = np.array([GB, GB, PI, 1.])      # half — для сэмплера цели OMPL
     def __init__(s, nst=50, n=maze.N_CELLS, seed=0):
         s.M = maze.Maze(n, seed); s.lo = np.array([-n, -n, -PI, -1.]); s.hi = np.array([n, n, PI, 1.]); s.fl_lo = s.lo.copy(); s.fl_hi = s.hi.copy()
         rng = np.random.default_rng(1); X = []

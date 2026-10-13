@@ -7,6 +7,13 @@ from multiprocessing import Pool
 from ompl import base as ob, control as oc, util as ou
 import common
 PSTEP = .05; ENV = None; ARGS = None
+def _set(s, x):
+    try: s[0] = x
+    except TypeError: s.value = x      # SO2State в этой сборке OMPL не поддерживает s[0] = x
+def _get(s):
+    try: return s[0]
+    except TypeError: return s.value
+
 
 def plan(e, y0, algo, budgets, sel, prune, seed):
     ou.RNG.setSeed(seed); sc = (e.hi - e.lo) / 2; cs = ob.CompoundStateSpace(); subs = []
@@ -19,11 +26,11 @@ def plan(e, y0, algo, budgets, sel, prune, seed):
     cspace = oc.RealVectorControlSpace(cs, e.m); cb = ob.RealVectorBounds(e.m)
     for k in range(e.m): cb.setLow(k, float(e.umin[k])); cb.setHigh(k, float(e.umax[k]))
     cspace.setBounds(cb); si = oc.SpaceInformation(cs, cspace); n = e.n
-    def getY(st): return np.array([st[i][0] for i in range(n)])
+    def getY(st): return np.array([_get(st[i]) for i in range(n)])
     def propagate(st, ctrl, dur, res):
         y = getY(st)[None]; u = np.array([[ctrl[k] for k in range(e.m)]]); k = max(1, int(round(dur / PSTEP)))
         y = e.step(y, u, dur / k) if getattr(e, 'exact', False) else _multi(e, y, u, dur, k)
-        for i in range(n): res[i][0] = float(y[0, i])
+        for i in range(n): _set(res[i], float(y[0, i]))
         res[n][0] = st[n][0] + dur
     def _multi(e, y, u, dur, k):
         h = dur / k
@@ -40,13 +47,13 @@ def plan(e, y0, algo, budgets, sel, prune, seed):
             if e.ball is not None:
                 v = grng.normal(size=e.n); v *= e.ball * grng.random() ** (1. / e.n) / np.linalg.norm(v)
             else: v = grng.uniform(-e.half, e.half)
-            for i in range(n): st[i][0] = float(v[i])
+            for i in range(n): _set(st[i], float(v[i]))
             st[n][0] = 0.
     class Cost(ob.OptimizationObjective):
         def __init__(s, si): super().__init__(si)
         def motionCost(s, a, b): return ob.Cost(float(b[n][0] - a[n][0]))
     pdef = ob.ProblemDefinition(si); st0 = cs.allocState()
-    for i in range(n): st0[i][0] = float(y0[i])
+    for i in range(n): _set(st0[i], float(y0[i]))
     st0[n][0] = 0.; pdef.addStartState(st0); pdef.setGoal(G(si)); obj = Cost(si); pdef.setOptimizationObjective(obj)
     pl = oc.RRT(si)
     pl.setGoalBias(.05)
