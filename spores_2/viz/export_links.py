@@ -178,10 +178,48 @@ def export_m3gdg(ks=(1, 3, 5, 10, 12), K=20):
     data = dict(sys='m3gdg', title='3 звена, g = 0.3, 2 диска, цель — свободная поза (зелёная), |τ| ≤ 1', params=par, goal={}, obstacles=obs, episodes=eps)
     json.dump(data, open(os.path.join(OUT, 'm3gdg.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано m3gdg', flush=True)
 
+def export_m3gdg_chain(gseed=23, k0=8, n=6, K=40, name='m3gdg'):
+    """m3gdg: ЦЕПОЧКА n переходов подряд (goals[k0..k0+n]) одним эпизодом, только SPORE+IPOPT (HYB, как строка HYB table_m3gdg.md); старт каждого перехода = центр цели в покое (правило бенча)"""
+    ks = list(range(k0, k0 + n))
+    os.environ.update(G='0.3', DOWN='1', CAREF='1', TREEFAST='1', CACLR='1', BATCHFAST='1', NEIGH='0', TRIESG='1', NBG='8000', NFG='3000', RETRYNF='4', VIZSEQ='1', HYB='1', GSEED=str(gseed), ONLYK=','.join(map(str, ks)))
+    import m3gdg_goals as MG
+    Tr = MG.transitions(K); sp = {r['k']: r for r in MG.run_spores(K)}; Xs = []; Us = []; sw = []; goals = []; t = 0.; Ts = []; info = []
+    ref = json.load(open(os.path.join(BENCH, '..', '..', 'reports', 'bench', 'data', 'm3gdg_ref%s.json' % ('_v40' if gseed == 23 else '_v40c'))))['res']; rf = {r['k']: r.get('T') for r in ref}
+    for k in ks:
+        st, gl = Tr[k]; e = MG.MGoal(gl, st); r = sp.get(k)
+        if not (r and r.get('us')): print('нет HYB-траектории на', k, r and {a: r.get(a) for a in ('T', 'T_hyb', 'hyb_ok')}, flush=True); return
+        X, U, Tv = resample(e, e.X0[0], r['us'], r['dts']); assert Tv is not None, k
+        sw.append(round(t, 3)); goals.append([float(v) for v in gl]); Xs += [x for x in np.round(X, 4).tolist()]; Us += np.round(U, 3).tolist() + [np.round(U[-1], 3).tolist()] * (len(X) - 1 - len(U)); t += (len(X) - 1) * DT; Ts.append(Tv); info.append((k, Tv, rf.get(k)))
+        print('цель', k, 'T', Tv, 'T_ref', rf.get(k), flush=True)
+    Us.append(Us[-1]); st0 = Tr[ks[0]][0]
+    par = dict(umax=[1.] * 3, view=[-3.3, -3.2, 3.3, 3.2], unames=['сустав 1', 'сустав 2', 'сустав 3'], links=[1., 1., 1.], n=3, chain=dict(t_switch=sw, goals=goals, preliminary=True))
+    ep = dict(method='SPORE + IPOPT (HYB)', start=int(ks[0]), dt=DT, X=Xs, U=Us, T=float(sum(Ts)), T_ref=float(sum(v for _, _, v in info if v)), ok=True, src='m3gdg_goals.py HYB (GSEED=%d, переходы %s; T по целям %s, T_ref OCP multi %s)' % (gseed, ks, [round(v, 2) for v in Ts], [None if v is None else round(v, 2) for _, _, v in info]))
+    obs = [dict(type='disc', c=list(c), r=r) for c, r in MG.OB]
+    data = dict(sys='m3gdg', title='3 звена, g = 0.3, 2 диска: цепочка из %d целей подряд (SPORE + IPOPT)' % n, params=par, goal={}, obstacles=obs, episodes=[ep])
+    json.dump(data, open(os.path.join(OUT, name + '.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано', name, flush=True)
+
+def export_m8_hyb(start=15):
+    """m8: ОДНА траектория HYB-8D (споры _tf3 → полный OCP fast, bench/hyb_8d.py; строка «споры+IPOPT» table_m8.md), старт — не лучший по T/T_ref"""
+    os.environ.update(G='0.3', CAREF='1', TREEFAST='1', CAMARG='.004', CAPRE='12', CAMS='20', CAFB='1', NEIGH='1')
+    sys.argv = ['hyb_8d.py', 'm8', '60000', '15000', '3', '', 'wlim']; sys.path.insert(0, BENCH); import hyb_8d as H, common
+    from src.atlas6.corridor_nd import corridor_query
+    i = start; e = H.e; wl = (tuple(range(H.n, 2 * H.n)), H.WM)
+    b = corridor_query(H.S, H.fl, e.X0[i], H.back, H.tau, H.NF, H.rho, H.g, H.miss, K=H.K, tries=3, kn=8, neigh=1, hfun=H.HF, wlim=wl)
+    if b is None: b = corridor_query(H.S, H.fl, e.X0[i], H.back, H.tau, 40000, H.rho, H.g, H.miss, K=H.K, tries=3, kn=8, neigh=1, hfun=H.HF, wlim=wl)
+    us = [H.US_[s_] for s_ in b[1]]; Ts, _ = common.verify(e, e.X0[i], us, list(b[2])); h, st = H.hyb(e.X0[i], list(b[1]), list(b[2])); print('споры', Ts, 'hyb', st, flush=True)
+    Uh, Th = h; Tvh, why = common.verify(e, e.X0[i], [u for u in Uh], [Th / len(Uh)] * len(Uh)); assert why == 'ok' and Tvh <= Ts + 1e-9, (Tvh, why, Ts)
+    X, U, Tv = resample(e, e.X0[i], list(Uh), [Th / len(Uh)] * len(Uh)); print('HYB T', Tv, 'T_ref', e.Tref[i], flush=True)
+    ep = dict(method='SPORE + IPOPT (HYB-8D)', start=int(i), dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=float(e.Tref[i]), ok=Tv is not None, src='hyb_8d.py (m8_hyb8d.json), путь спор _tf3 → OCP fast; споры без доводки T=%.3f' % Ts)
+    par = dict(umax=[1.] * 4, view=[-4.2, -4.2, 4.2, 4.2], unames=['сустав 1', 'сустав 2', 'сустав 3', 'сустав 4'], links=[1., 1., 1., 1.], n=4)
+    data = dict(sys='m8', title='4 звена, g = 0.3, цель — висит вниз, |τ| ≤ 1 (8D, preliminary)', params=par, goal=dict(q=[-np.pi / 2, 0., 0., 0.]), obstacles=[], episodes=[ep])
+    json.dump(data, open(os.path.join(OUT, 'm8.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано m8', flush=True)
+
 if __name__ == '__main__':
     sysn = sys.argv[1]; st = [int(v) for v in sys.argv[2].split(',')] if len(sys.argv) > 2 else None
     if sysn in ('pend', 'pend15'):
         os.environ['ENVN'] = sysn; export_pend(sysn, st or [5, 12, 10, 15, 2, 18])
     elif sysn in ('m3d', 'm3gd', 'm3gu'): export_m3(sysn, st)
     elif sysn == 'm8': export_m8(tuple(st) if st else (3, 6, 8, 14, 15))
+    elif sysn == 'm3gdg_chain': export_m3gdg_chain(*([int(v) for v in sys.argv[2].split(',')] if len(sys.argv) > 2 else []))
     elif sysn == 'm3gdg': export_m3gdg(tuple(st) if st else (1, 3, 5, 10, 12))
+    elif sysn == 'm8_hyb': export_m8_hyb(st[0] if st else 15)

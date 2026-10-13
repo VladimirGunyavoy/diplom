@@ -94,6 +94,7 @@ def run_spores(K):
             r.update(T_sp=r['T'], t_hyb=th, hyb_status=sth, hyb_ok=False)
             if res_h is not None:
                 Uh, Th = res_h; Tvh, whyh = common.verify(e, e.X0[0], Uh, np.full(len(Uh), Th / len(Uh))); r['T_hyb'] = Tvh; r['hyb_why'] = whyh
+                if os.environ.get('VIZSEQ') and whyh == 'ok' and Tvh < r['T_sp']: r.update(us=Uh.tolist(), dts=[float(Th) / len(Uh)] * len(Uh))      # линия D: HYB-траектория
                 if whyh == 'ok' and Tvh < r['T']: r.update(T=Tvh, hyb_ok=True)
             r['t_query'] = dq + th
         res.append(r); print(k, r, flush=True)
