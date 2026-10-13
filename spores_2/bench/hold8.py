@@ -36,7 +36,12 @@ def hold_u(Y, U):
         for b in np.where(new.any(1))[0]:
             s = Sm[b]; fr = ~s; us = np.linalg.solve(J[b][np.ix_(s, s)], tg[b][s] - (a0[b][s] + J[b][np.ix_(s, fr)] @ U[b][fr])); Ue[b, s] = np.clip(us, -1, 1)
     return Ue
+import hold8_c as HC; HC.init(G3.MS, G3.L, e.G)
 def hold_flow(Y, U, t, rec=None):
+    if HOLD and int(os.environ.get('HOLDC', 1)):      # C-версия (hold8_c.c): совпадает с numpy до 1e-15, ×15 быстрее
+        Yo, Yh, R = HC.hold_flow_c(Y, U, t, WM, H, rec=True)
+        if rec is not None: rec.extend(R[0])
+        return Yo, Yh
     """t>0: вперёд с удержанием; возвращает (Y_конец, Y_середина). rec — список для записи эффективных u (только B=1)."""
     k = max(1, int(round(t / H))); Y = np.array(Y, float); half = Y
     for i in range(k):
@@ -59,7 +64,7 @@ def replay(x0, path):
     return np.array(rec), Y[0]
 import ocp_m8_lib as OL; HS = OL.make_solver(50, 4)
 def polish(x0, rec, N=50):
-    S_, lbx, ubx, lbg, ubg = HS; T = len(rec) * H; ws = float(os.environ.get('WSHRINK', 0))
+    S_, lbx, ubx, lbg, ubg = HS; T = len(rec) * H; ws = float(os.environ.get('WSHRINK', .02))
     if ws: lbx = lbx.copy(); ubx = ubx.copy(); wi = np.arange(8 * (N + 1)).reshape(N + 1, 8)[:, n:].ravel(); lbx[wi] = np.maximum(lbx[wi], -(WM - ws)); ubx[wi] = np.minimum(ubx[wi], WM - ws)      # запас по |w| между узлами (проверяльщик RK4 h .01 допускает 3+TOLW)
     edges = np.linspace(0, len(rec), N + 1).astype(int); Ug = np.array([rec[edges[i]:max(edges[i + 1], edges[i] + 1)].mean(0) for i in range(N)])
     x = np.array(x0, float); X = [x.copy()]
@@ -76,7 +81,12 @@ def rk4_n(x, u, T, m=10):
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); HF = back_heuristic(S, back, wh=None); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
 if HOLD: S.flow_all = fa_hold; S.flow = fl_hold; S.ok = lambda p: np.max(np.abs(p[n:])) <= WM + .02
 def work(i):
-    t1 = time.perf_counter(); Cn, nh = CN.candidates(S, e.X0[i], back, tau, NF, rho, miss, 8, hfun=HF); tc = time.perf_counter() - t1
+    t1 = time.perf_counter(); nfs = [int(v) for v in os.environ['NFSEQ'].split(',')] if os.environ.get('NFSEQ') else [NF]; RESMAX = float(os.environ.get('RESMAX', 1.0)); used = []
+    for nf in nfs:      # 3в: повтор с бо́льшим NF, пока нет попадания и остаточный промах лучшего кандидата-промаха > RESMAX
+        Cn, nh = CN.candidates(S, e.X0[i], back, tau, nf, rho, miss, 8, hfun=HF); used.append(nf)
+        ms_ = [c[1] - sum(d for _, d in c[2]) for c in Cn[nh:] if c[2]]; resid = min(ms_) if ms_ else np.inf
+        if nh > 0 or resid <= RESMAX: break
+    tc = time.perf_counter() - t1
     seen = set(); picks = []
     for part, lab in ((Cn[:nh], 'hit'), (Cn[nh:], 'miss')):
         c = 0
@@ -102,7 +112,7 @@ def work(i):
         log.append((lab, round(sc, 3), round(T0, 2), Tv0 and round(Tv0, 3), Th and round(Th, 3), st[:12], round(time.perf_counter() - t2, 1), dg))
         for T in (Tv0, Th):
             if T is not None and (best is None or T < best): best = T
-    return dict(i=i, T=best, ncand=len(Cn), hits=nh, t_cand=tc, t_total=time.perf_counter() - t1, log=log)
+    return dict(i=i, T=best, ncand=len(Cn), hits=nh, nf_used=used, resid=float(resid), t_cand=tc, t_total=time.perf_counter() - t1, log=log)
 if __name__ == '__main__':
     with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 4)), len(STARTS))) as pool: res = pool.map(work, STARTS, chunksize=1)
     ref = json.load(open(os.path.join(common.DATA, 'm8_ref.json')))
