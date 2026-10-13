@@ -37,7 +37,12 @@ def sst(e, y0, budgets, sel=.2, prune=.1, B=64, seed=0, cap=2000000, kmax=20):
                 while par[i] >= 0: us.append(U[i].copy()); dts.append(DUR[i]); i = par[i]
                 us.reverse(); dts.reverse()
             else: us = dts = None
-            snaps.append(dict(budget=budgets[bi], t=el, has=bnode >= 0, T_plan=float(best) if bnode >= 0 else None, us=us, dts=dts, nodes=Nn, witnesses=nW, nf=int(e.nf))); bi += 1
+            near = None
+            if bnode < 0 and bi == len(budgets) - 1:      # c7 (viz): путь к узлу, ближайшему к цели (в embed_phys), — недошедший метод
+                i = int(np.linalg.norm(E[:Nn], axis=1).argmin()); nu, nd = [], []
+                while par[i] >= 0: nu.append(U[i].copy()); nd.append(DUR[i]); i = par[i]
+                near = (nu[::-1], nd[::-1])
+            snaps.append(dict(near=near, budget=budgets[bi], t=el, has=bnode >= 0, T_plan=float(best) if bnode >= 0 else None, us=us, dts=dts, nodes=Nn, witnesses=nW, nf=int(e.nf))); bi += 1
         if Nn > cap - 2 * B: break
     while bi < len(budgets): snaps.append(dict(budget=budgets[bi], t=time.perf_counter() - t0, has=bnode >= 0, T_plan=None, us=None, dts=None, nodes=Nn, witnesses=nW, nf=int(e.nf))); bi += 1
     return snaps
@@ -68,7 +73,12 @@ def rrt(e, y0, budgets, B=64, seed=0, cap=2000000, kmax=20, goal_bias=.05):
         us, dts, i = [], [], found
         while par[i] >= 0: us.append(U[i].copy()); dts.append(DUR[i]); i = par[i]
         us.reverse(); dts.reverse()
+    near = None
+    if found is None and Nn > 1:      # c7 (viz): путь к узлу, ближайшему к цели
+        i = int(np.linalg.norm(E[:Nn], axis=1).argmin()); nu, nd = [], []
+        while par[i] >= 0: nu.append(U[i].copy()); nd.append(DUR[i]); i = par[i]
+        near = (nu[::-1], nd[::-1])
     for B_ in budgets:
         ok = found is not None and tfound <= B_
-        snaps.append(dict(budget=B_, t=(tfound if ok else min(B_, el)), has=ok, T_plan=float(cost[found]) if ok else None, us=us if ok else None, dts=dts if ok else None, nodes=Nn, witnesses=0, nf=int(e.nf)))
+        snaps.append(dict(near=near, budget=B_, t=(tfound if ok else min(B_, el)), has=ok, T_plan=float(cost[found]) if ok else None, us=us if ok else None, dts=dts if ok else None, nodes=Nn, witnesses=0, nf=int(e.nf)))
     return snaps
