@@ -359,3 +359,14 @@ hub-v5chain-worker-c4 | ответ research-26: (0) manipf — verify прове
 hub-v5chain-research-26 | line-open | worker A (hub-v5chain-worker-27) | слово пользователя ~03:05 «разрешаю ещё одного воркера»; цель «spore максимально быстрым и показать, что быстрее других»; A — 6D/8D бенч CA1 (4),(6),(7); c4 — PPO-проверка, SAC, CA1 (5),(8), RACE; b10 — FORB2 → скорость заготовки | 03:00:17
 hub-v5chain-worker-27 | started | acc2 | sonnet | 03:00:41
 03:01:22 c4: принял от research-26: забраны (4),(6),(7) → линия A; моя очередь SAC+HER → (5) dp1 → (8) маятник u .15 → RACE
+03:16:15 c4: принял CA-MAZE (после dp1/маятник .15, до RACE)
+hub-v5chain-worker-27 | CA1-6D-a готов: table_m3d.md | 03:32:32
+hub-v5chain-worker-c4 | done | login expired (acc1 vladimirgun26: OAuth не обновляется), хендофф не записан — читать journals/worker/hub-v5chain-worker-c4.log и PLAN | next=hub-v5chain-worker-c5 | 03:39:10
+hub-v5chain-worker-c5 | started | acc3 | sonnet | 03:39:28
+03:40:37 c5: dp1 готов (table_dp1.md); следующее — маятник u .15
+03:41:53 c5: маятник u.15: запущены на aida спор(ы), envall (SST/RRT/OCP), PPO 5M s0; логи ~/spore_v5/c1/pend15_*.log, ppo_pend15_s0.log
+04:00:26 c5: pend15 готов (table_pend15.md); дальше CA-MAZE
+hub-v5chain-research-26 | NEEDS-HUMAN | 04:00:42 | acc1 (vladimirgun26): истёк вход OAuth — c4 погиб на нём в 03:39 (c5 поднят на acc3); нужен повторный логин acc1, пока цепочка живёт на acc2/acc3 (7д: acc2 ~28%, acc3 ~37%)
+04:03:56 c5: ответ research-26 по dp1: дефект бенча найден — (1) эталон r23 лежит на границе цели с допуском IPOPT (конец 0.30002 при ящике .3, |w| 3.0000035 при пределе 3), ref.check допускал err ≤2e-3 и W ≤ WMP+.01, а проверяльщик бенча строгий ⇒ эталон не проходил (динамика совпала точно); (2) старты в npy округлены до 1e-4; (3) OCP в бенче был generic SLSQP, не CasADi. Правка: DP1 допуск +2e-3 на ящик и 3.01 на |w| для всех методов, точные старты, ocp_casadi dp1. Идёт повторная проверка 20/20, затем пересчёт dp1
+04:06:52 c5: dp1 эталон 20/20 через проверяльщик после правки; пересчёт dp1 (SST/RRT/OCP-SLSQP, ocp_casadi, PPO 5M s0, споры V2000) запущен на aida; старые json в ~/spore_v5/c1/old_dp1
+hub-v5chain-worker-27 | CA1-6D-b готов: table_m3g.md (споры wlim вниз 100% / вверх 95%, OCP multi 95/100%, PPO 98/33%, SST 40/55%@60с) | 04:29:29
