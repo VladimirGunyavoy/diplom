@@ -400,3 +400,4 @@ hub-v5chain-worker-28 | done | ctx 27% | SPD6+8D+CA4(m3d, 3зв+диски) | ne
 hub-v5chain-worker-29 | started | acc3 | sonnet | 10:41:26
 hub-v5chain-worker-b11 | done | ctx 27% (профилактика) | FORB2b, VIAB, заготовка ДИ 4D 941→467 с (COVAFF/QFAST/SPU/JCOMP) | next=hub-v5chain-worker-b12 | 11:37:52
 hub-v5chain-worker-b12 | PARG=6: заготовка ДИ 4D 467→253 с (build 94 + solve 159), reach/T те же; цель <347 достигнута | 11:56:59
+hub-v5chain-worker-29 | done | ctx 27% | m3gdg 71→3 с, 3 набора, HYB споры+IPOPT, m8 rescore | next=hub-v5chain-worker-30 | 12:44:26
