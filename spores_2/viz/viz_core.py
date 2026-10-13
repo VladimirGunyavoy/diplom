@@ -4,7 +4,7 @@
   static(surf, cam, params, data)       — цель/запретные зоны, специфичные для системы (необязательно)
   trail(params, x) -> [(X, Y), ...]     — мировые точки, чей след рисуется (необязательно)
 Данные: viz/data/<система>.json (формат — viz/README.md); params['view'] = [xmin, ymin, xmax, ymax] — мировая область окна (ось y вверх).
-Клавиши: Пробел пауза · R сначала · ←/→ старт · ↑/↓ скорость · M метод · G призрак эталона · T след · Esc выход."""
+Клавиши: Пробел пауза · R сначала · ←/→ старт · ↑/↓ скорость · M метод · G призрак эталона · T след/вся/выкл · Esc выход."""
 import os, sys, json, math
 import numpy as np
 os.environ.setdefault('PYGAME_HIDE_SUPPORT_PROMPT', '1')
@@ -48,7 +48,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
     scr = pygame.display.set_mode((W, H)); pygame.display.set_caption('spores · ' + data.get('title', sysname)); F = fonts()
     cam = Cam(params['view'], (0, TOP, W, H - TOP - BOT)); draw = ctrl['draw']; static = ctrl.get('static'); trail_fn = ctrl.get('trail')
     eps = [Episode(e, params, trail_fn) for e in data['episodes']]; starts = sorted({e.start for e in eps}, key=lambda v: (str(type(v)), v))
-    st = dict(si=0, mi=0, t=0., speed=1., pause=False, ghost=True, trail=True, hold=0.)
+    st = dict(si=0, mi=0, t=0., speed=1., pause=False, ghost=True, trail=2 if ctrl.get('full_path') else 1, hold=0.)
     if start is not None and start in starts: st['si'] = starts.index(start)
     def methods_of(si): return [e for e in eps if e.start == starts[si]]
     if method:
@@ -66,10 +66,14 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
                 n = np.array(o['n'], float); n /= np.linalg.norm(n); d = float(o['d']); t = np.array([-n[1], n[0]]); p0 = n * d; far = 40.
                 poly = [p0 + t * far, p0 - t * far, p0 - t * far + n * far, p0 + t * far + n * far]; pygame.draw.polygon(surf, (222, 224, 232), [cam.pt(p) for p in poly]); pygame.draw.line(surf, (150, 155, 170), cam.pt(p0 + t * far), cam.pt(p0 - t * far), 2)
     def draw_trail(surf, e, i, col, alpha=255):
-        if not (st['trail'] and e.trail is not None): return
+        """режимы st['trail']: 0 выкл · 1 след (пройденное) · 2 вся траектория бледно + пройденное ярко (флаг full_path у системы — по умолчанию)"""
+        if not st['trail'] or e.trail is None: return
         for k in range(e.trail[0].shape[0]):
+            if st['trail'] == 2:
+                allp = [cam.pt(e.trail[j][k]) for j in range(len(e.trail))]
+                if len(allp) > 1: pygame.draw.lines(surf, tuple(int(c * .35 + 255 * .65) for c in col), False, allp, 2)
             pts = [cam.pt(e.trail[j][k]) for j in range(0, i + 1)]
-            if len(pts) > 1: pygame.draw.lines(surf, col, False, pts, 2)
+            if len(pts) > 1: pygame.draw.lines(surf, col, False, pts, 3 if st['trail'] == 2 else 2)
     def render(t_now):
         scr.fill(BG)
         step = params.get('grid', 0.5); wx0, wy1 = cam.inv((0, TOP)); wx1, wy0 = cam.inv((W, H - BOT))
@@ -95,7 +99,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
             cy = H - BOT + 14 + k * 18; cx = 150; pygame.draw.rect(scr, (230, 232, 240), (cx, cy, bw, 11), border_radius=3); pygame.draw.line(scr, MUTED, (cx + bw // 2, cy - 2), (cx + bw // 2, cy + 13), 1)
             v = float(np.clip(u[k] / um[min(k, len(um) - 1)], -1, 1)); xx = cx + bw // 2; pygame.draw.rect(scr, col, (min(xx, xx + v * bw / 2), cy, abs(v * bw / 2), 11), border_radius=3)
             scr.blit(F['s'].render('u%d' % (k + 1) + (' ' + params['unames'][k] if 'unames' in params else ''), True, MUTED), (16, cy - 3))
-        hint = F['s'].render('Пробел пауза · R сначала · ←/→ старт · ↑/↓ скорость ×%.2g · M метод · G призрак · T след · Esc' % st['speed'], True, MUTED); scr.blit(hint, (W - hint.get_width() - 16, H - 24))
+        hint = F['s'].render('Пробел пауза · R сначала · ←/→ старт · ↑/↓ скорость ×%.2g · M метод · G призрак · T след/вся/выкл · Esc' % st['speed'], True, MUTED); scr.blit(hint, (W - hint.get_width() - 16, H - 24))
     if png:
         os.makedirs(png, exist_ok=True); tag = str(sysname); outs = []
         for si in ([st['si']] if start is not None else range(len(starts))):
@@ -132,7 +136,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
                 elif k == pygame.K_DOWN: st['speed'] = max(.25, st['speed'] / 2)
                 elif k == pygame.K_m: st['mi'] = (st['mi'] + 1) % len(methods_of(st['si'])); st['t'] = 0.
                 elif k == pygame.K_g: st['ghost'] = not st['ghost']
-                elif k == pygame.K_t: st['trail'] = not st['trail']
+                elif k == pygame.K_t: st['trail'] = (st['trail'] + 1) % 3
         e = cur(); g = ghost_of(e); tend = max(e.tmax, g.tmax if g else 0.)
         if not st['pause']:
             if st['t'] < tend: st['t'] += dtf * st['speed']

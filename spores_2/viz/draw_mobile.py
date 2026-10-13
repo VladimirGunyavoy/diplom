@@ -46,8 +46,8 @@ def car_static(surf, cam, p, data):
         a = math.pi / 2 * k; pygame.draw.line(surf, GOALC, cam.pt((c[0] + .3 * r * math.cos(a), c[1] + .3 * r * math.sin(a))), cam.pt((c[0] + .8 * r * math.cos(a), c[1] + .8 * r * math.sin(a))), 2)
 
 SYSTEMS = {
-    'dd': dict(draw=dd_draw, static=dd_static, trail=lambda p, x: [(x[0], x[1])]),
-    'ddobst': dict(draw=dd_draw, static=dd_static, trail=lambda p, x: [(x[0], x[1])]),
-    'car': dict(draw=car_draw, static=car_static, trail=lambda p, x: [(x[0], x[1])]),
-    'carfree': dict(draw=car_draw, static=car_static, trail=lambda p, x: [(x[0], x[1])]),
+    'dd': dict(draw=dd_draw, static=dd_static, trail=lambda p, x: [(x[0], x[1])], full_path=True),
+    'ddobst': dict(draw=dd_draw, static=dd_static, trail=lambda p, x: [(x[0], x[1])], full_path=True),
+    'car': dict(draw=car_draw, static=car_static, trail=lambda p, x: [(x[0], x[1])], full_path=True),
+    'carfree': dict(draw=car_draw, static=car_static, trail=lambda p, x: [(x[0], x[1])], full_path=True),
 }
