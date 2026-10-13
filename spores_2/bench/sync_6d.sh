@@ -5,3 +5,4 @@ if [ "$1" = pull ]; then mkdir -p ../reports/bench/data; rsync -a $A/reports/ben
 ssh aida 'mkdir -p ~/spore_v5/a27/spores_2/v8 ~/spore_v5/a27/reports/bench/data/m3d_ref'
 rsync -a --exclude __pycache__ bench $A/spores_2/; rsync -a --exclude __pycache__ v6 $A/spores_2/; rsync -a --exclude __pycache__ v8/src $A/spores_2/v8/
 rsync -a ../reports/bench/data/m3d_ref/ $A/reports/bench/data/m3d_ref/
+rsync -a ../reports/bench/data/m3g_ref.json $A/reports/bench/data/

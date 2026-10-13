@@ -10,12 +10,15 @@ from src.atlas6.adaptive_nd import SysN, build_back
 from src.atlas6.corridor_nd import corridor_query
 import multiprocessing as mp
 name = sys.argv[1]; NB, NF, K = [int(a) for a in sys.argv[2:5]]; tag = sys.argv[5] if len(sys.argv) > 5 else ''; WL = len(sys.argv) > 6 and sys.argv[6] == 'wlim'
-e = common.make(name); tau = .4; Rq, Rw, WM = .3, .6, 3.; rho = .15; C3 = np.zeros(6)
+e = common.make(name); tau = .4; Rq, Rw, WM = .3, .6, 3.; rho = .15; C3 = np.array(getattr(e, 'C3', np.zeros(6)), float)
+import manip3g_dyn as G3
+if name == 'm3d': flow_, US_ = M3.flow, M3.US
+else: flow_, US_ = (lambda P, s, t, dt_max=.05: G3.flow(P, s, t, dt_max=dt_max, g=e.G)), np.array(G3.LAYERS6)
 wr = lambda x: (x + np.pi) % (2 * np.pi) - np.pi
-fl = lambda P, s, t: M3.flow(P, s, t, dt_max=.05)
-ing = lambda P: (np.max(np.abs(wr(P[..., :3])), -1) < Rq) & (np.max(np.abs(P[..., 3:]), -1) < Rw)
-g = lambda x: np.array([Rq ** 2 - wr(x[0]) ** 2, Rq ** 2 - wr(x[1]) ** 2, Rq ** 2 - wr(x[2]) ** 2, Rw ** 2 - x[3] ** 2, Rw ** 2 - x[4] ** 2, Rw ** 2 - x[5] ** 2])
-miss = lambda X: np.maximum(np.max(np.abs(wr(X[..., :3])), -1) - Rq, 0) + np.maximum(np.max(np.abs(X[..., 3:]), -1) - Rw, 0)
+fl = lambda P, s, t: flow_(P, s, t, dt_max=.05)
+ing = lambda P: (np.max(np.abs(wr(P[..., :3] - C3[:3])), -1) < Rq) & (np.max(np.abs(P[..., 3:]), -1) < Rw)
+g = lambda x: np.array([Rq ** 2 - wr(x[0] - C3[0]) ** 2, Rq ** 2 - wr(x[1]) ** 2, Rq ** 2 - wr(x[2]) ** 2, Rw ** 2 - x[3] ** 2, Rw ** 2 - x[4] ** 2, Rw ** 2 - x[5] ** 2])
+miss = lambda X: np.maximum(np.max(np.abs(wr(X[..., :3] - C3[:3])), -1) - Rq, 0) + np.maximum(np.max(np.abs(X[..., 3:]), -1) - Rw, 0)
 rng = np.random.default_rng(0); seeds = []
 for _ in range(32):
     v = rng.uniform(-1, 1, 6); v = v / np.max(np.abs(v)) * 0.99; seeds.append(C3 + v * np.array([Rq, Rq, Rq, Rw, Rw, Rw]))
@@ -24,7 +27,7 @@ t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); t_build = time.per
 def work(i):
     e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, wlim=((3, 4, 5), WM) if WL else None); dt = time.perf_counter() - t1
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
-    us = [M3.US[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
+    us = [US_[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
 if __name__ == '__main__':
     t0 = time.perf_counter()
     with mp.get_context('fork').Pool(min(16, len(e.X0))) as p: res = p.map(work, range(len(e.X0)), chunksize=1)

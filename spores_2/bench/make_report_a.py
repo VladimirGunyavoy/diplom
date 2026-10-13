@@ -3,7 +3,7 @@ import os, sys, json, glob, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common, envs_6d
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
-D = common.DATA; OUT = os.path.join(D, '..'); env = sys.argv[1]; TITLE = {'m3d': 'CA1-6D-a: 3D двузвенный манипулятор, 6D без g'}.get(env, env)
+D = common.DATA; OUT = os.path.join(D, '..'); env = sys.argv[1]; TITLE = {'m3d': 'CA1-6D-a: 3D двузвенный манипулятор, 6D без g', 'm3gd': 'CA1-6D-b: 3 звена 6D + g .3, цель ВНИЗ', 'm3gu': 'CA1-6D-b: 3 звена 6D + g .3, цель ВВЕРХ'}.get(env, env)
 def L(p):
     try: return json.load(open(p))
     except Exception: return None
@@ -18,7 +18,7 @@ for tag, nm in (('', 'v6'), ('_wlim', 'v6 + предел |w| по пути (wlim
 for var in ('multi', 'fast'):
     d = L(f'{D}/{env}_ocp6d_{var}.json')
     if d: R.append(dict(m='OCP CasADi/IPOPT на запрос (%s)' % ('мультистарт 8 ветвей×4 затравки = эталон' if var == 'multi' else 'ближайшая ветвь×2 затравки'), par='multiple shooting N50 M4', build=d['t_build'], qm=d['t_query_med'], qp=d['t_query_p90'], s=d, w=0, hw='CPU 1 проц.',
-                        note='сборка символьной задачи — «заготовка»; multi — тот же алгоритм, что дал T_ref, ⇒ 1.000 по построению' if var == 'multi' else ''))
+                        note=('сборка символьной задачи — «заготовка»; multi — тот же алгоритм, что дал T_ref, ⇒ 1.000 по построению' if env == 'm3d' else 'T_ref — лучшее известное из r5 (N40, другой прогон IPOPT)') if var == 'multi' else ''))
 for st_ in (1000000, 5000000):
     P = [L(x) for x in sorted(glob.glob(f'{D}/{env}_ppo_{st_}_s*.json'))]; P = [p for p in P if p]
     if not P: continue
@@ -54,5 +54,5 @@ for k, r in enumerate(R):
     ax.loglog(Ns, r['build'] + Ns * r['qm'], color=cols[k % 10], lw=2, label='%s [%d%%, %s]' % (r['m'][:46], round(r['s']['reached'] * 100), f(r['s']['ratio_med'], 3)))
 ax.set_xlabel('число запросов N'); ax.set_ylabel('полное время, с = заготовка + N·запрос'); ax.set_title(TITLE + ' — total(N)'); ax.grid(True, which='both', alpha=.3); ax.legend(fontsize=7); fig.tight_layout(); fig.savefig(f'{OUT}/total_{env}.png', dpi=110)
 ex = int((~e.keep).sum())
-hdr = f'# {TITLE}\n20 стартов (поток rng(0), исключено эталоном {ex}); эталон T_ref — OCP CasADi/IPOPT (multiple shooting, 8 ветвей 2π × 4 затравки); единый проверяльщик `common.verify` (RK4 h .01) с допусками эталона: окно +1e-3, |w|≤3+1e-2. Цель — покой в q=0 (окно |q|<.3, |w|<.6). aida, CPU (запросы по 1 ядру; машина разделена с другими линиями).\nПометка: T/T_ref < 1 возможно из-за допусков эталона и кусочно-постоянного u у эталона (N=50).\n\n'
+hdr = f'# {TITLE}\n20 стартов (поток rng(0), исключено эталоном {ex}); эталон T_ref — OCP CasADi/IPOPT (multiple shooting, 8 ветвей 2π × 4 затравки{"; для 3g — лучшее известное из r5 ref6d_T.json (|w|≤3 по пути)" if env != "m3d" else ""}); единый проверяльщик `common.verify` (RK4 h .01) с допусками эталона: окно +1e-3, |w|≤3+1e-2. Цель — покой в q=0 (окно |q|<.3, |w|<.6). aida, CPU (запросы по 1 ядру; машина разделена с другими линиями).\nПометка: T/T_ref < 1 возможно из-за допусков эталона и кусочно-постоянного u у эталона (N=50).\n\n'
 open(f'{OUT}/table_{env}.md', 'w').write(hdr + T + cr + f'\n![total(N)](total_{env}.png)\n'); print(hdr + T + cr)

@@ -3,11 +3,14 @@
 python ocp_6d.py m3d multi|fast [--procs 10] (venv-ompl: casadi)"""
 import os, sys, time, json, argparse
 os.environ.setdefault('OMP_NUM_THREADS', '1'); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import numpy as np, common, envs_6d, ocp_m3d_lib as L
+import numpy as np, common, envs_6d
+ENVN = sys.argv[1]
+if ENVN != 'm3d': os.environ['G'] = '0.3'; os.environ['DOWN' if ENVN == 'm3gd' else 'UP'] = '1'
+import importlib; L = importlib.import_module('ocp_m3d_lib' if ENVN == 'm3d' else 'ocp_m3g_lib')
 from multiprocessing import get_context
 SOL = None; VAR = None
 def work(i):
-    e = common.make('m3d'); t0 = time.perf_counter()
+    e = common.make(ENVN); t0 = time.perf_counter()
     best, res = L.solve_query(e.X0[i], 50, 4, 4 if VAR == 'multi' else 2, seed=i, solver=SOL, nearest=(VAR == 'fast')); dt = time.perf_counter() - t0
     if best is None: return dict(i=i, T=None, t=dt, why='no_sol', nsolve=len(res))
     T, U, br = best; Tv, why = common.verify(e, e.X0[i], U, np.full(len(U), T / len(U))); return dict(i=i, T=Tv, T_ocp=float(T), t=dt, why=why, nsolve=len(res))
