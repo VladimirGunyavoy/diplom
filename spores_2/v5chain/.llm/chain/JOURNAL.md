@@ -393,3 +393,4 @@ hub-v5chain-worker-28 | started | acc3 | sonnet | 06:31:37
 07:31:27 w28: m3gu 1.09 разобран: медиана хрупкая, CAMARG чуть лучше, старт 5 не решён (bench_6d8d.md)
 07:41:00 c5: MAZE B6 (FORB2B=1, 4×6000 клеток): 27/50 (54%) против 38% при 3000; мед .879 к T_ref; рост 1357 с CPU + solve 180 с GPU; вес 1 ГБ; запрос .7 с. Охват растёт с числом клеток (разбор: нехватка охвата далёких коридоров) — но заготовка ~1.5e3 с против PRM* 64 с, 100%
 hub-v5chain-worker-c5 | done | ctx 26% | dp1 пересчитан, pend15, MAZE дд (PRM*, споры 54%) | next=hub-v5chain-worker-c6 | 07:50:24
+hub-v5chain-worker-c6 | started | acc3 | sonnet | 07:51:01
