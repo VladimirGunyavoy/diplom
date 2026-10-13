@@ -1,0 +1,28 @@
+# anim_2026-10-13 — бэкап-видео (файл → система → старт → T и T/T_ref)
+
+- `anim_car_backup_s1.mp4`/`.gif` → car → старт 1 → 8.3 с (play 8.3 с)
+  - SPORE: T 5.55, T/T_ref 1.031
+  - OCP: T 5.39, T/T_ref 1.001
+  - SST 60 s: T 8.33, T/T_ref 1.546
+- `anim_pend_backup_s2.mp4`/`.gif` → pend → старт 2 → 8.1 с (play 8.1 с)
+  - SPORE: T 6.41, T/T_ref 1.016
+  - OCP: T 6.32, T/T_ref 1.002
+  - SST 60 s: T 6.72, T/T_ref 1.065
+- `anim_pend15_backup_s10.mp4`/`.gif` → pend15 → старт 10 → 11.0 с (play 11.0 с)
+  - SPORE: T 12.71, T/T_ref 1.063
+  - OCP: T 11.97, T/T_ref 1.001
+- `anim_dd_backup_s1.mp4`/`.gif` → dd → старт 1 → 5.0 с (play 5.0 с)
+  - SPORE: T 4.43, T/T_ref 1.002
+  - OCP: T 4.43, T/T_ref 1.000
+- `anim_carfree_backup_s3.mp4`/`.gif` → carfree → старт 3 → 5.5 с (play 5.5 с)
+  - SPORE: T 5.54, T/T_ref 1.031
+  - OCP: T 5.37, T/T_ref 1.000
+- `anim_dp1_backup_s3.mp4`/`.gif` → dp1 → старт 3 → 5.0 с (play 5.0 с)
+  - SPORE: T 4.10, T/T_ref 1.146
+  - OCP: T 3.58, T/T_ref 1.000
+- `anim_m3d_backup_s13.mp4`/`.gif` → m3d → старт 13 → 5.0 с (play 5.0 с)
+  - SPORE: T 3.74, T/T_ref 1.075
+  - OCP: T 3.48, T/T_ref 1.000
+- `anim_m3gu_backup_s7.mp4`/`.gif` → m3gu → старт 7 → 5.0 с (play 5.0 с)
+  - SPORE: T 3.72, T/T_ref 1.090
+  - OCP: T 3.41, T/T_ref 1.000
