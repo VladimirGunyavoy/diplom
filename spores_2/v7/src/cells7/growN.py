@@ -434,7 +434,43 @@ def build_layer(u, rng, log=None):
             if len(pr) and 1. - idx.covered(wrapy(pr)).mean() < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), flush=True); break
         if log: log(u, cells)
     bar.close(); return cells, idx
-def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
+PARG = int(E('PARG', 0))                                                                                 # b12 (SPD5): рост слоя пачками — PARG процессов растят клетки от разных затравок против снимка индекса (fork), затем последовательная фиксация; 0 — выкл.
+_PG = None
+def _pg_work(a):
+    p, rm, tm = a; idx, u = _PG; return growN(p, u, idx, rm, tm)
+def build_layer_par(u, rng, log=None):
+    from multiprocessing import get_context
+    global _PG
+    cells = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; B = int(float(E('PARB', 2))) * PARG
+    while fails < NFAIL and len(cells) < MAXC:
+        bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
+        ps = []; Bn = min(B, MAXC - len(cells)) if len(cells) >= PARG else 1                                  # первые клетки — по одной (пустой индекс, очередь короткая)
+        while len(ps) < Bn and fails < NFAIL:
+            p = queue.pop(0) if queue else rand_seed(rng)
+            if not inbox(p) or not free(p): continue
+            p = wrapy(p)
+            if ingoal(p): continue
+            if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
+            ps.append(p)
+        if not ps: continue
+        args = [(p,) + (LIMITS(p, u) if LIMITS else (RMAX, TMAX)) for p in ps]
+        if len(ps) == 1: res = [growN(args[0][0], u, idx, args[0][1], args[0][2])]
+        else:
+            _PG = (idx, u)
+            with get_context('fork').Pool(min(PARG, len(ps))) as pool: res = pool.map(_pg_work, args, chunksize=1)
+        for p, c in zip(ps, res):
+            if len(cells) >= MAXC: break
+            if c is None: fails += 0 if queue else 1; continue
+            if idx.covered(p[None])[0]: continue
+            fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[ctr]; yb = g1[ctr]
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+            queue += [yf, yb]
+            if SIDE:
+                for e0 in (c.c, g0[ctr], g1[ctr]):
+                    for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
+        if log: log(u, cells)
+    bar.close(); return cells, idx
+def _layer(a): return (build_layer_par if PARG > 1 else build_layer)(a[0], np.random.default_rng(a[1]), None)[0]
 _PQ = None
 def _dedup(pi, hid, sc):
     """DEDUP=K (b3): на точку оставить K ячеек с наибольшим запасом до границы (min по координатам min(sc, 1-sc)) — при FRAC 1 пар на узел много (память стенсилов)."""
@@ -515,7 +551,11 @@ class Atlas:
         s.layers = []
         if int(E('PAR', 1)):
             from multiprocessing import Pool
-            with Pool(len(US)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
+            if PARG > 1:
+                from concurrent.futures import ProcessPoolExecutor; from multiprocessing import get_context
+                with ProcessPoolExecutor(len(US), mp_context=get_context('fork')) as ex: s.layers = list(ex.map(_layer, [(u, seed + k) for k, u in enumerate(US)]))
+            else:
+                with Pool(len(US)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
         else: s.layers = [_layer((u, seed + k)) for k, u in enumerate(US)]
         s.finish()
     def finish(s):
