@@ -69,7 +69,7 @@ def ref_T(env, y0, margin=.02):
     if not free[s]: return np.nan
     P = [np.array([(c[1] + .5) * PXM - M.G0[0], (c[0] + .5) * PXM - M.G0[1]]) for c in _astar(free, s, g)]
     def los(a, b):
-        t = np.linspace(0, 1, max(2, int(np.linalg.norm(b - a) / .01)))[:, None]; return (M.gfree(a + t * (b - a)) >= margin - RROB + 1e-9).all()
+        t = np.linspace(0, 1, max(2, int(np.linalg.norm(b - a) / .01)))[:, None]; return (M.gfree(a + t * (b - a)) >= margin - 1e-9).all()
     Q = [P[0]]; i = 0
     while i < len(P) - 1:
         j = len(P) - 1
