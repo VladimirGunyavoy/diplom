@@ -8,7 +8,7 @@ PI = np.pi; wr = lambda x: (x + PI) % (2 * PI) - PI
 import manip3g_dyn as G3
 OB = [((1.0, -1.5), 0.3), ((-1.0, -1.0), 0.3)]
 def goals(K):
-    rng = np.random.default_rng(11); g = []
+    rng = np.random.default_rng(int(os.environ.get('GSEED', 11))); g = []
     while len(g) < K + 1:
         q = rng.uniform(-PI, PI, 3)
         if G3.clearance(q, OB) > .1: g.append(q)
@@ -70,11 +70,11 @@ if __name__ == '__main__':
         import ocp_m3go_lib as L; from multiprocessing import get_context
         t0 = time.perf_counter(); SOL = L.make_solver(50, 4); tbuild = time.perf_counter() - t0
         with get_context('fork').Pool(a.procs) as pool: R = pool.map(ocp_work, [(k, st, g, 'multi' if a.cmd == 'ref' else 'fast') for k, (st, g) in enumerate(Tr)], chunksize=1)
-        json.dump(dict(cmd=a.cmd, t_build=tbuild, K=K, res=R, goals=goals(K).tolist()), open(os.path.join(common.DATA, 'm3gdg_%s.json' % ('ref' if a.cmd == 'ref' else 'ocpfast')), 'w'), indent=1, default=float)
+        json.dump(dict(cmd=a.cmd, t_build=tbuild, K=K, res=R, goals=goals(K).tolist()), open(os.path.join(common.DATA, 'm3gdg_%s%s.json' % ('ref' if a.cmd == 'ref' else 'ocpfast', os.environ.get('OUTSFX', ''))), 'w'), indent=1, default=float)
     elif a.cmd == 'sst':
         from multiprocessing import Pool
         with Pool(a.procs) as pool: R = pool.map(sst_work, [(k, st, g) for k, (st, g) in enumerate(Tr)], chunksize=1)
-        json.dump(dict(K=K, res=R), open(os.path.join(common.DATA, 'm3gdg_sst.json'), 'w'), indent=1, default=float)
+        json.dump(dict(K=K, res=R), open(os.path.join(common.DATA, 'm3gdg_sst%s.json' % os.environ.get('OUTSFX', '')), 'w'), indent=1, default=float)
     else:
         R = run_spores(K); json.dump(dict(K=K, res=R), open(os.path.join(common.DATA, 'm3gdg_spores%s.json' % os.environ.get('TAG', '')), 'w'), indent=1, default=float)
     print('M3GDG', a.cmd, 'done', flush=True)

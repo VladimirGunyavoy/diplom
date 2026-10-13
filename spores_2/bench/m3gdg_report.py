@@ -37,4 +37,20 @@ open(os.path.join(D, 'table_m3gdg.md'), 'w').write('# CA4-6D+2 диска: по�
 ks = np.arange(0, K + 1); plt.figure(figsize=(6, 4))
 for r in R[:3]: tb, per = tot[r['name']]; plt.plot(ks, tb + per * ks, label=r['name'].replace('**', '')[:42])
 plt.xlabel('число переходов K'); plt.ylabel('total, с'); plt.legend(fontsize=7); plt.grid(alpha=.3); plt.title('CA4 3зв.+g+диски: total(K)'); plt.tight_layout(); plt.savefig(os.path.join(D, 'total_m3gdg.png'), dpi=130)
+# --- проверочный набор (w29): другой сид целей (GSEED=23), K=40, конфиг споров заморожен — НЕ подбирался на этом наборе
+if os.path.exists(os.path.join(DD, 'm3gdg_spores_v40.json')):
+    rf, fs, sv, ss = L('m3gdg_ref_v40.json'), L('m3gdg_ocpfast_v40.json'), L('m3gdg_spores_v40.json'), L('m3gdg_sst_v40.json')
+    T0 = np.array([g(r) for r in rf['res']]); ok0 = np.isfinite(T0) & (T0 > .05)
+    def st(T):
+        T = np.array(T, float); m = ok0 & np.isfinite(T); r = T[m] / T0[m]
+        return '%d/%d' % (m.sum(), ok0.sum()), ('%.2f / %.2f / %.2f / %.2f' % (np.median(r), r.mean(), np.percentile(r, 90), r.max())) if len(r) else '—'
+    V = ['\n## Проверочный набор (GSEED=23, K=%d, конфиг споров заморожен: NB8000 NF3000 NEIGH=0 TRIES=1 CACLR=1 BATCHFAST=1; НЕ подбирался на этом наборе)\n' % sv['K'],
+         '| метод | заготовка (на цель), с | запрос мед / p90, с | на переход, с | дошли | T/T_ref мед / ср / p90 / max | примечание |\n|---|---|---|---|---|---|---|\n']
+    tq = [x['t'] for x in rf['res']]; V.append('| OCP multi (эталон) | %.1f | %.1f / %.1f | %.1f | %s | 1.00 по построению | T_ref; переход %d из %d без эталона/нулевой исключён |\n' % (rf['t_build'], np.median(tq), np.percentile(tq, 90), np.median(tq), *(('%d/%d' % (ok0.sum(), len(ok0)),)), (~ok0).sum(), len(ok0)))
+    tq = [x['t'] for x in fs['res']]; a, b = st([g(r) for r in fs['res']]); V.append('| OCP fast | %.1f | %.2f / %.2f | %.2f | %s | %s | |\n' % (fs['t_build'], np.median(tq), np.percentile(tq, 90), np.median(tq), a, b))
+    tq = [x['t_query'] for x in sv['res']]; tb = [x['t_build'] for x in sv['res']]; a, b = st([g(r) for r in sv['res']]); V.append('| **споры** (заморож.) | %.2f | %.2f / %.2f | %.2f | %s | %s | no_path: %s |\n' % (np.median(tb), np.median(tq), np.percentile(tq, 90), np.median(tb) + np.mean(tq), a, b, [r['k'] for r in sv['res'] if not r.get('T')]))
+    for bi, B in enumerate((.3, 1, 3, 10)):
+        a, b = st([g(r['runs'][bi], 'T') for r in ss['res']]); V.append('| SST бюджет %g с | 0 | %g | %g | %s | %s | |\n' % (B, B, B, a, b))
+    V.append('\nЧестно: если на проверочном наборе споры хуже, чем на подбиравшемся, — это и есть оценка без подгонки; конфиг не подстраивался.\n')
+    open(os.path.join(D, 'table_m3gdg.md'), 'a').write(''.join(V))
 print(open(os.path.join(D, 'table_m3gdg.md')).read())
