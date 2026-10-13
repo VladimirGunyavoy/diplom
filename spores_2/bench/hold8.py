@@ -24,7 +24,9 @@ S = SysN(fl_plain, 2 ** n, (np.pi,) * n + (WM,) * n, ing, seeds, per=(2 * np.pi,
 import tree_fast; tree_fast.install(); fa_plain = tree_fast.make_flow_all('m8', US_); S.flow_all = fa_plain
 def rk4(Y, U, h):
     k1 = e.f(Y, U); k2 = e.f(Y + h / 2 * k1, U); k3 = e.f(Y + h / 2 * k2, U); k4 = e.f(Y + h * k3, U); return Y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+HOLD = int(os.environ.get('HOLD', 1))      # 0 = контроль: обычный поток ±1 (дерево, стыковка, replay), всё остальное то же
 def hold_u(Y, U):
+    if not HOLD: return U.copy()
     B = len(Y); a0 = e.f(Y, np.zeros((B, n)))[:, n:]; J = np.stack([e.f(Y, np.tile(np.eye(n)[j], (B, 1)))[:, n:] - a0 for j in range(n)], -1)
     Ue = U.copy(); Sm = np.zeros((B, n), bool); w = Y[:, n:]
     for _ in range(n):
@@ -57,11 +59,14 @@ def replay(x0, path):
     return np.array(rec), Y[0]
 import ocp_m8_lib as OL; HS = OL.make_solver(50, 4)
 def polish(x0, rec, N=50):
-    S_, lbx, ubx, lbg, ubg = HS; T = len(rec) * H; edges = np.linspace(0, len(rec), N + 1).astype(int); Ug = np.array([rec[edges[i]:max(edges[i + 1], edges[i] + 1)].mean(0) for i in range(N)])
+    S_, lbx, ubx, lbg, ubg = HS; T = len(rec) * H; ws = float(os.environ.get('WSHRINK', 0))
+    if ws: lbx = lbx.copy(); ubx = ubx.copy(); wi = np.arange(8 * (N + 1)).reshape(N + 1, 8)[:, n:].ravel(); lbx[wi] = np.maximum(lbx[wi], -(WM - ws)); ubx[wi] = np.minimum(ubx[wi], WM - ws)      # запас по |w| между узлами (проверяльщик RK4 h .01 допускает 3+TOLW)
+    edges = np.linspace(0, len(rec), N + 1).astype(int); Ug = np.array([rec[edges[i]:max(edges[i + 1], edges[i] + 1)].mean(0) for i in range(N)])
     x = np.array(x0, float); X = [x.copy()]
     for i in range(N): x = rk4_n(x, Ug[i], T / N); X.append(x.copy())
     X = np.array(X); tgt = C[:n] + 2 * np.pi * np.round((X[-1][:n] - C[:n]) / (2 * np.pi)); P = np.concatenate([x0, tgt])
     r = S_(x0=np.concatenate([X.ravel(), Ug.ravel(), [T]]), p=P, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg); st = S_.stats()['return_status']
+    polish.diag = dict(guess_wmax=round(float(np.abs(X[:, n:]).max()), 2), guess_miss=round(float(miss(X[-1])), 3), T0=round(T, 2), iters=S_.stats().get('iter_count'))
     if st not in ('Solve_Succeeded', 'Solved_To_Acceptable_Level'): return None, st
     wv = np.array(r['x']).ravel(); return (wv[8 * (N + 1):8 * (N + 1) + 4 * N].reshape(N, 4), wv[-1]), st
 def rk4_n(x, u, T, m=10):
@@ -69,14 +74,14 @@ def rk4_n(x, u, T, m=10):
     for _ in range(m): Y = rk4(Y, U, T / m)
     return Y[0]
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); HF = back_heuristic(S, back, wh=None); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
-S.flow_all = fa_hold; S.flow = fl_hold; S.ok = lambda p: np.max(np.abs(p[n:])) <= WM + .02
+if HOLD: S.flow_all = fa_hold; S.flow = fl_hold; S.ok = lambda p: np.max(np.abs(p[n:])) <= WM + .02
 def work(i):
     t1 = time.perf_counter(); Cn, nh = CN.candidates(S, e.X0[i], back, tau, NF, rho, miss, 8, hfun=HF); tc = time.perf_counter() - t1
     seen = set(); picks = []
     for part, lab in ((Cn[:nh], 'hit'), (Cn[nh:], 'miss')):
         c = 0
         for h, sc, p in part:
-            if not p: continue
+            if not p or sum(d for _, d in p) < float(os.environ.get('MINLEN', 0)): continue
             key = tuple(s for s, _ in p)
             if key in seen: continue
             seen.add(key); picks.append((lab, sc, p)); c += 1
@@ -86,8 +91,15 @@ def work(i):
         rec, xe = replay(e.X0[i], p); T0 = len(rec) * H; Tv0 = None
         if lab == 'hit': Tv0, _ = common.verify(e, e.X0[i], list(rec), [H] * len(rec))
         t2 = time.perf_counter(); h, st = polish(e.X0[i], rec); Th = None
-        if h is not None: Th, _ = common.verify(e, e.X0[i], [u for u in h[0]], [h[1] / len(h[0])] * len(h[0]))
-        log.append((lab, round(sc, 3), round(T0, 2), Tv0 and round(Tv0, 3), Th and round(Th, 3), st[:12], round(time.perf_counter() - t2, 1)))
+        dg = dict(polish.diag)
+        if h is not None:
+            Th, why = common.verify(e, e.X0[i], [u for u in h[0]], [h[1] / len(h[0])] * len(h[0]))
+            if Th is None:
+                x = np.array(e.X0[i], float); wm = 0.
+                for u in h[0]:
+                    x = rk4_n(x, u, h[1] / len(h[0]), 20); wm = max(wm, np.abs(x[n:]).max())
+                dg.update(why=why, T_ocp=round(float(h[1]), 3), end_miss=round(float(miss(x)), 4), wmax=round(float(wm), 3))
+        log.append((lab, round(sc, 3), round(T0, 2), Tv0 and round(Tv0, 3), Th and round(Th, 3), st[:12], round(time.perf_counter() - t2, 1), dg))
         for T in (Tv0, Th):
             if T is not None and (best is None or T < best): best = T
     return dict(i=i, T=best, ncand=len(Cn), hits=nh, t_cand=tc, t_total=time.perf_counter() - t1, log=log)

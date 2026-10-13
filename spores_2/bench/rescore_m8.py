@@ -7,6 +7,7 @@ for f in files:
     d = json.load(open(f)); b = os.path.basename(f)
     if 'sst' in b: [runs.__setitem__((b, i), [r['runs'][i].get('T') if r['runs'][i]['has'] else None for r in sorted(d['raw'], key=lambda r: r['i'])]) for i in range(len(d['budgets']))]
     elif 'ppo' in b: runs[(b, None)] = d['T']
+    elif 'hold8' in b: runs[(b, None)] = [r['T'] for r in sorted(d['res'], key=lambda r: r['i'])]
     else: runs[(b, None)] = [r.get('T_verify', r.get('T')) for r in d['per_start']]
 n = 20; best = np.full(n, np.inf)
 for T in runs.values():
@@ -16,6 +17,7 @@ ref = [None if not np.isfinite(t) else float(t) for t in best]; json.dump(ref, o
 os.environ['M8REF'] = '1'; import envs_6d; e = common.make('m8')
 for f in files:
     d = json.load(open(f)); b = os.path.basename(f)
+    if 'hold8' in b: d.update(common.summarize(e, runs[(b, None)])); d['Tref'] = e.Tref.tolist(); json.dump(d, open(f, 'w'), indent=1, default=float); continue
     def upd(s, T):
         s.update(common.summarize(e, T)); return s
     if 'sst' in b:

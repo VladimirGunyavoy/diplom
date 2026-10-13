@@ -19,8 +19,15 @@ for tag, nm in (('', 'v6'), ('_wlim', 'v6 + предел |w| по пути (wlim
 if len(R) > 1 and R[-1]['m'].startswith('**споры**') and 'SPD6' in R[-1]['m']: R.insert(0, R.pop())   # финальная строка спор — первой (с ней считаются N*)
 if env == 'm8':      # c7: HYB-8D (w30) — отношения к исправленному m8_ref.json (в m8_hyb8d.json лежат к заглушке); цифры из w30 (table_m8.md)
     d = L(f'{D}/m8_hyb8d.json')
-    if d: R.append(dict(m='**споры+IPOPT (HYB-8D)** — путь спор `_tf3` → полный OCP fast (свободное T, N50 M4, тёплый старт; при отказе — путь спор)', par='NB 60000, NF 15000 (повтор NF 40000), K 3, wlim, CAMS 20, tree_fast; 10 процессов', build=d['t_build'] + 8., qm=d['t_query_med'], qp=d['t_query_p90'], s=dict(reached=.9, ratio_med=1.016, ratio_mean=1.195, ratio_p90=1.371, ratio_max=3.23), w=d['weight']['bytes'], hw='CPU 1 ядро/запрос',
-                        note='w30: полировка применена на 18/18 найденных путей; те же 2 провала (13, 16); T_ref — m8_ref.json (лучший найденный ДО HYB; ниже 1 возможно); хвост max 3.23 — старт 19 (путь спор 5.05); T/T_ref вписаны из table_m8 (w30)'))
+    if d: R.append(dict(m='**споры+IPOPT (HYB-8D)** — путь спор `_tf3` → полный OCP fast (свободное T, N50 M4, тёплый старт; при отказе — путь спор)', par='NB 60000, NF 15000 (повтор NF 40000), K 3, wlim, CAMS 20, tree_fast; 10 процессов', build=d['t_build'] + 8., qm=d['t_query_med'], qp=d['t_query_p90'], s={k: d[k] for k in ('reached', 'ratio_med', 'ratio_mean', 'ratio_p90', 'ratio_max')}, w=d['weight']['bytes'], hw='CPU 1 ядро/запрос',
+                        note='w30: полировка применена на 18/18 найденных путей; те же 2 провала (13, 16); T_ref — m8_ref.json (лучший найденный ДО HYB; ниже 1 возможно); хвост max 3.23 — старт 19 (путь спор 5.05); отношения пересчитаны по обновлённому m8_ref.json (старт 14: T_ref 3.39)'))
+    for tg, nm, par_ in (('all', '**споры+удержание → OCP (HOLD8)** — прямое дерево и стыковка с потоком «удержание на пределе |w|=3», обратное ±1; refine спор НЕ используется: топ-3 попадания + топ-3 промаха → тёплый старт полного OCP (N50, свободное T)', 'NB 60000, NF 1500, kn 8, 3+3 кандидата; 10 процессов; numpy-поток удержания (не скомпилирован)'),
+                         ('ctl', '**споры без удержания → OCP (контроль HOLD8)** — то же, но обычный поток ±1 (tree_fast), refine спор не используется: топ-3 попадания + топ-3 промаха → тёплый старт полного OCP', 'NB 60000, NF 1500, kn 8, 3+3 кандидата; 10 процессов; поток ±1 (скомпилирован)')):
+        d = L(f'{D}/m8_hold8_{tg}.json')
+        if not d: continue
+        tt = np.array([r['t_total'] for r in d['res']]); nh = sum(r['hits'] > 0 for r in d['res'])
+        R.append(dict(m=nm, par=par_, build=d['t_build'], qm=float(np.median(tt)), qp=float(np.percentile(tt, 90)), s={k: d[k] for k in ('reached', 'ratio_med', 'ratio_mean', 'ratio_p90', 'ratio_max')}, w=0, hw='CPU 1 ядро/запрос',
+                        note='w30: попадания в дереве на %d/20 стартах (остальные — OCP из затравки-промаха); T_ref — m8_ref.json; число стартов с попаданием дерева — основной разграничитель вклада потока и OCP' % nh))
 for var in ('multi', 'fast'):
     d = L(f'{D}/{env}_ocp6d_{var}.json')
     if d: R.append(dict(m='OCP CasADi/IPOPT на запрос (%s)' % ('мультистарт 8 ветвей×4 затравки = эталон' if var == 'multi' else 'ближайшая ветвь×2 затравки'), par='multiple shooting N50 M4', build=d['t_build'], qm=d['t_query_med'], qp=d['t_query_p90'], s=d, w=0, hw='CPU 1 проц.',
