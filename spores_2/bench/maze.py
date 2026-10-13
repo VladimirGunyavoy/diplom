@@ -37,8 +37,8 @@ class Maze:
 class MazeDD(common.DD):
     """дд в лабиринте, цель в нуле (центр клетки goal), коробка цели ±.05; выход за коробку = столкновение со стеной (gfree<0)"""
     name = 'maze'
-    def __init__(s, nst=50, n=N_CELLS, seed=0):
-        s.M = Maze(n, seed); s.lo = np.array([-n, -n, -PI]); s.hi = np.array([n, n, PI]); s.fl_lo = s.lo.copy(); s.fl_hi = s.hi.copy()
+    def __init__(s, nst=50, n=N_CELLS, seed=0, goal=(5, 5)):
+        s.M = Maze(n, seed, goal); s.lo = np.array([-n, -n, -PI]); s.hi = np.array([n, n, PI]); s.fl_lo = s.lo.copy(); s.fl_hi = s.hi.copy()
         rng = np.random.default_rng(1); X = []
         while len(X) < nst:
             p = rng.uniform(0, n, 2) - s.M.G0; 
