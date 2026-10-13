@@ -42,6 +42,7 @@ def run_spores(K):
     from src.atlas6.corridor_nd import corridor_query
     tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = int(os.environ.get('NBG', 24000)), int(os.environ.get('NFG', 6000)), 3
     CAR = refine_ca.install('m3gd', ms=10, maxit=60, prebuild=range(1, 14), wl=True); tree_fast.install(); flow_all = tree_fast.make_flow_all('m3gd', US_); fl = lambda P, s, t: G3.flow(P, s, t, dt_max=.05, g=.3)
+    if os.environ.get('BATCHFAST'): fl = tree_fast.make_flow_batch('m3gd', US_, fl)      # пакетный поток стыковки (t=±.2), остальное — исходный
     OBS = lambda P: G3.clearance(np.asarray(P)[..., :3], OB); blk = lambda P: OBS(P) < 0; clear = lambda P: OBS(P) - .02; WLIM = ((3, 4, 5), WM)
     res = []; Tr = transitions(K)
     for k, (st, gl) in enumerate(Tr):
