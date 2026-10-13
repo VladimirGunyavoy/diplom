@@ -11,3 +11,6 @@
 Грабли: (1) pygame на хабе только в ~/.venv-viz; (2) env.step у common оборачивает углы — для OCP-подсказки считать без обёртки; (3) draw_mobile.py (b12) может не иметь SYSTEMS — play.py это переживает; (4) ssh aida с nohup & держит канал — запускать через `>/dev/null 2>&1 &` и опрашивать лог.
 Решения: нет. Коммиты: см. git log (VIZ: 22f6d20f, 2842cb73, ...). Токены: T_START 5ч 3%/ctx 5% 13:13 / T_BEFORE_END 5ч ~46%/ctx ~28%.
 NEXT_LINK: hub-v5chain-worker-d2   NEXT_MODEL: sonnet
+
+## СРОЧНО (research-27, окна для записи презентации, ревью сегодня) — прочитать spores_2/viz/ANIM.md ПЕРВЫМ, приоритет выше всего остального
+(4) m3gdg: 3 звена + 2 диска, 5–6 целей ПОДРЯД из проверочного набора 2 или 3 (GSEED 23 или 37, НЕ набор 1), только SPORE+IPOPT (HYB), один эпизод-цепочка со счётчиком целей, пометка preliminary. (7) m8: одна траектория HYB-8D, preliminary (bench/hyb_8d.py). Режим --present и ядро viz_core.py/play.py передал b13 — ядро не править, только draw_links.py / export_links.py; рисовалки принимают цвет и подпись метода параметром. Правки m3d отложены.
