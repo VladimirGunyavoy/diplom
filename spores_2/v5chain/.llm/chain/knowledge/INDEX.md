@@ -83,3 +83,4 @@
 - [research/lit_seed_ellipse.md](research/lit_seed_ellipse.md) — посев по эллипсу/кольцам: слово пользователя, v7 ellipse.py, числа
 - [research/lit_adapt_clones.md](research/lit_adapt_clones.md) — MADAPT/MROW (5→9→17→33) и SELFOV/endcov: критерии, код, числа
 - [research/forb_hole.md](research/forb_hole.md) — CA5: застревание спор у запрещённого = дыра покрытия шириной ~.2 gfree; FORB2a радиус клетки ≤ c·gfree
+| 8D m8: провалы 13/16, предел скорости, слой удержания (research-27) | `knowledge/research/m8_hold_limit.md` | весь |
