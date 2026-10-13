@@ -42,6 +42,15 @@ class Episode:
         x = s.X[i] if (a == 0 or np.abs(s.X[j] - s.X[i]).max() > 2.0) else (1 - a) * s.X[i] + a * s.X[j]            # скачок > 2 — обёртка угла: без интерполяции
         k = min(i, len(s.U) - 1); return x, s.U[k], i
 
+def draw_obstacles(surf, cam, data, fill=(205, 208, 218), edge=(150, 155, 170), half=(222, 224, 232)):
+    for o in data.get('obstacles', []):
+        if o['type'] == 'disc': pygame.draw.circle(surf, fill, cam.pt(o['c']), cam.len(o['r'])); pygame.draw.circle(surf, edge, cam.pt(o['c']), cam.len(o['r']), 2)
+        elif o['type'] == 'box':
+            (x0, y0), (x1, y1) = o['lo'], o['hi']; a = cam.pt((x0, y1)); b = cam.pt((x1, y0)); r = pygame.Rect(a[0], a[1], b[0] - a[0], b[1] - a[1]); pygame.draw.rect(surf, fill, r); pygame.draw.rect(surf, edge, r, 2)
+        elif o['type'] == 'halfplane':                                   # n·p ≥ d — запретная сторона закрашена
+            n = np.array(o['n'], float); n /= np.linalg.norm(n); d = float(o['d']); t = np.array([-n[1], n[0]]); p0 = n * d; far = 40.
+            poly = [p0 + t * far, p0 - t * far, p0 - t * far + n * far, p0 + t * far + n * far]; pygame.draw.polygon(surf, half, [cam.pt(p) for p in poly]); pygame.draw.line(surf, edge, cam.pt(p0 + t * far), cam.pt(p0 - t * far), 2)
+
 def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=None):
     if png: os.environ['SDL_VIDEODRIVER'] = 'dummy'
     pygame.init(); pygame.font.init(); params = data['params']; ctrl = mod
@@ -57,14 +66,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
     def ghost_of(e):
         if not st['ghost'] or is_ref(e.method): return None
         return next((g for g in methods_of(st['si']) if is_ref(g.method)), None)
-    def draw_obst(surf):
-        for o in data.get('obstacles', []):
-            if o['type'] == 'disc': pygame.draw.circle(surf, (205, 208, 218), cam.pt(o['c']), cam.len(o['r'])); pygame.draw.circle(surf, (150, 155, 170), cam.pt(o['c']), cam.len(o['r']), 2)
-            elif o['type'] == 'box':
-                (x0, y0), (x1, y1) = o['lo'], o['hi']; a = cam.pt((x0, y1)); b = cam.pt((x1, y0)); r = pygame.Rect(a[0], a[1], b[0] - a[0], b[1] - a[1]); pygame.draw.rect(surf, (205, 208, 218), r); pygame.draw.rect(surf, (150, 155, 170), r, 2)
-            elif o['type'] == 'halfplane':                                   # n·p ≥ d — запретная сторона закрашена
-                n = np.array(o['n'], float); n /= np.linalg.norm(n); d = float(o['d']); t = np.array([-n[1], n[0]]); p0 = n * d; far = 40.
-                poly = [p0 + t * far, p0 - t * far, p0 - t * far + n * far, p0 + t * far + n * far]; pygame.draw.polygon(surf, (222, 224, 232), [cam.pt(p) for p in poly]); pygame.draw.line(surf, (150, 155, 170), cam.pt(p0 + t * far), cam.pt(p0 - t * far), 2)
+    def draw_obst(surf): draw_obstacles(surf, cam, data)
     def draw_trail(surf, e, i, col, alpha=255):
         """режимы st['trail']: 0 выкл · 1 след (пройденное) · 2 вся траектория бледно + пройденное ярко (флаг full_path у системы — по умолчанию)"""
         if not st['trail'] or e.trail is None: return
@@ -80,8 +82,9 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         for gx in np.arange(math.floor(wx0 / step) * step, wx1 + step, step): pygame.draw.line(scr, GRID, cam.pt((gx, wy0)), cam.pt((gx, wy1)), 1)
         for gy in np.arange(math.floor(wy0 / step) * step, wy1 + step, step): pygame.draw.line(scr, GRID, cam.pt((wx0, gy)), cam.pt((wx1, gy)), 1)
         draw_obst(scr)
-        if static: static(scr, cam, params, data)
         e = cur(); g = ghost_of(e)
+        params['goal_q'] = e.e.get('goal_q')                                 # цель, своя у каждого эпизода (m3gdg)
+        if static: static(scr, cam, params, data)
         if g is not None:
             x, u, i = g.state(t_now); layer = pygame.Surface((W, H), pygame.SRCALPHA); draw(layer, cam, params, x, u, t_now)
             scr.blit(pygame.mask.from_surface(layer, 40).to_surface(setcolor=(70, 120, 235, 120), unsetcolor=(0, 0, 0, 0)), (0, 0)); draw_trail(scr, g, i, (150, 175, 235))

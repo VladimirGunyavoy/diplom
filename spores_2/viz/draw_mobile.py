@@ -14,6 +14,7 @@ def rot(pts, th, c):
 # ---------- дифдрайв: состояние (x, y, θ), u = (v, ω), |v| + |ω| ≤ 1 ----------
 def dd_draw(surf, cam, p, x, u, t):
     """круглое тело, два колеса по бокам (штрих длиннее — колесо быстрее), жёлтый нос по курсу"""
+    BODY = p.get('_col', globals()['BODY']); BODY_DK = p.get('_col_dk', globals()['BODY_DK'])                  # режим --present: цвет метода
     r = p.get('body_r', .2); L = p.get('wheel_base', .34) / 2; px, py, th = float(x[0]), float(x[1]), float(x[2])
     v, w = (float(u[0]), float(u[1])) if len(u) >= 2 else (0., 0.); vl, vr = v - w * L, v + w * L
     for side, vw in ((1, vl), (-1, vr)):                                           # колесо слева (+) / справа (−) в системе тела
@@ -29,6 +30,7 @@ def dd_static(surf, cam, p, data):
 # ---------- машина: состояние (x, y, θ, v), u = (a, ω) ----------
 def car_draw(surf, cam, p, x, u, t):
     """кузов-прямоугольник, окна, стоп-сигналы горят при торможении (a < 0), фары — при разгоне"""
+    BODY = p.get('_col', globals()['BODY']); BODY_DK = p.get('_col_dk', globals()['BODY_DK'])
     px, py, th = float(x[0]), float(x[1]), float(x[2]); Lc, Wc = p.get('car_len', .8), p.get('car_wid', .44); a = float(u[0]) if len(u) else 0.
     poly(surf, cam, rot([(-Lc / 2, -Wc / 2), (Lc / 2, -Wc / 2), (Lc / 2, Wc / 2), (-Lc / 2, Wc / 2)], th, (px, py)), BODY, BODY_DK, 2)
     poly(surf, cam, rot([(Lc * .12, -Wc * .38), (Lc * .34, -Wc * .38), (Lc * .34, Wc * .38), (Lc * .12, Wc * .38)], th, (px, py)), (190, 220, 245))
