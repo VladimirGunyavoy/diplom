@@ -51,9 +51,11 @@ def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
     def push(i, ns, ls):
         nonlocal cnt
         ch = []; E = S.wrap(fa(P[i], tt)) if fa is not None else None
+        bl = None
+        if fa is not None and S.has_obst: bl = np.asarray(S.blocked(np.vstack([E, np.asarray(fa(P[i], tt / 2))]))); bl = bl[:S.L] | bl[S.L:]       # все L концов и полудуг — одним векторным вызовом (было L скалярных потоков на питоне)
         for s in range(S.L):
             e = E[s] if fa is not None else S.wrap(S.flow(P[i], s, tt))
-            if not S.ok(e) or (S.has_obst and (S.blocked(e) or S.blocked(S.flow(P[i], s, tt / 2)))): continue
+            if not S.ok(e) or (S.has_obst and (bl[s] if bl is not None else (S.blocked(e) or S.blocked(S.flow(P[i], s, tt / 2))))): continue
             ch.append((s, e))
         hh = hfun(np.array([e for _, e in ch])) if (hfun is not None and ch) else [0.0] * len(ch)
         for (s, e), hv in zip(ch, hh):
