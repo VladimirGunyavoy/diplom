@@ -374,3 +374,8 @@ hub-v5chain-worker-27 | CA1-6D-b готов: table_m3g.md (споры wlim вн�
 04:42:14 c5: MAZE: maze.py, T_ref=A*+натяжение (верхняя оценка), SST/RRT/OCP/PPO запущены на aida; дальше споры (G.GF подмена), PRM, запрос (б) K целей
 hub-v5chain-worker-b10 | done | ctx 26% (профилактика) | SPD2/3/4, FORB2a(−), RACE-4D блок+сборка | next=hub-v5chain-worker-b11 | 04:45:37
 hub-v5chain-worker-b11 | started | acc3 | sonnet | 04:46:05
+04:52:05 c5: MAZE споры: spores_maze.py запущен на aida (слои 4×MAXC 3000, GF подмена работает), лог ~/spore_v5/c1/maze_spores.log, слои → maze_layers.pkl
+05:03:41 c5: PRM N=1500 100%/1.27 (после починки los: gfree≥margin; T_ref пересчитан — старые Tref в aida-json неверны, пересчитаю по per_start); FORB2B: v7 growN скопирован в aida maze_src, вариант FORB2B=1 запущу после текущего прогона спор
+05:05:01 c5: MAZE PRM* N=3000: 50/50, T/T_ref мед 1.005 (T_ref — A*+натяжение, PRM* ≈ ему), заготовка 64 с, запрос 4 мс; PRM N=1500: 1.27, 2.3 с. Конкурент сильный — спорам на дд в одиночном режиме (а) выигрыш по запросу невозможен; смотреть режим (б) и 4D с инерцией
+05:11:56 c5: MAZE споры: слои 4×3000, 1.89M узлов, рост 284 с (CPU solve не двигался 15 мин → убит мой PID); solve на GPU (SOLVEGPU, flock — очередь за b-линией forb2.py), лог ~/spore_v5/c1/maze_spores_a.log, TAG=_a; FORB2B=1 вариант — отдельным прогоном maze_src после
+05:18:32 c5: maze споры перезапущены на актуальном v7 growN (maze_src, md5 = git): A FORB2B=0 → maze_spores_a, B FORB2B=1 → maze_spores_b (очередь flock, B после A); прежние слои негодны (старый growN не знал GF)

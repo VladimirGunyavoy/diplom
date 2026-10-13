@@ -5,8 +5,8 @@ import os, sys, time, json, argparse
 os.environ.setdefault('OMP_NUM_THREADS', '1'); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np, common, envs_6d
 ENVN = sys.argv[1]
-if ENVN != 'm3d': os.environ['G'] = '0.3'; os.environ['DOWN' if ENVN == 'm3gd' else 'UP'] = '1'
-import importlib; L = importlib.import_module('ocp_m3d_lib' if ENVN == 'm3d' else 'ocp_m3g_lib')
+if ENVN in ('m3gd', 'm3gu'): os.environ['G'] = '0.3'; os.environ['DOWN' if ENVN == 'm3gd' else 'UP'] = '1'
+import importlib; L = importlib.import_module({'m3d': 'ocp_m3d_lib', 'm8': 'ocp_m8_lib'}.get(ENVN, 'ocp_m3g_lib'))
 from multiprocessing import get_context
 SOL = None; VAR = None
 def work(i):
