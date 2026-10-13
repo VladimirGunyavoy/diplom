@@ -30,7 +30,7 @@ def hyb(x0, seq, dts, N=50):
     S_, lbx, ubx, lbg, ubg = HS; T = float(sum(dts)); ts = np.linspace(0, T, N + 1); ce = np.cumsum(dts); x = np.array(x0, float); X = [x.copy()]; seg = 0; t = 0.
     for i in range(1, N + 1):
         while t < ts[i] - 1e-12:
-            step = min(ts[i], ce[seg]) - t; x = fl(x, US_[seq[seg]], step); t += step
+            step = min(ts[i], ce[seg]) - t; x = fl(x, int(seq[seg]), step); t += step
             if t >= ce[seg] - 1e-12 and seg < len(seq) - 1: seg += 1
         X.append(x.copy())
     X = np.array(X); tm = (ts[:-1] + ts[1:]) / 2; Ug = np.array([US_[seq[min(int(np.searchsorted(ce, v)), len(seq) - 1)]] for v in tm], float)
@@ -43,7 +43,7 @@ def work(i):
     e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=HF, wlim=(tuple(range(n, 2 * n)), WM) if WL else None); dt = time.perf_counter() - t1
     if b is None and os.environ.get('NFRETRY'):       # не нашли путь — один повтор с большим прямым деревом (только провалы платят)
         b = corridor_query(S, fl, e.X0[i], back, tau, int(os.environ['NFRETRY']), rho, g, miss, K=K, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=HF, wlim=(tuple(range(n, 2 * n)), WM) if WL else None); dt = time.perf_counter() - t1
-    if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
+    if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, T_spores=None, why='no_path', whyh='skip', hyb_used=False, t_hyb=0.)
     us = [US_[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); th = time.perf_counter(); Th = None; whyh = 'skip'
     if Tv is not None:
         try:
@@ -56,7 +56,7 @@ def work(i):
 if __name__ == '__main__':
     t0 = time.perf_counter()
     with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(e.X0))) as p: res = p.map(work, range(len(e.X0)), chunksize=1)
-    wall = time.perf_counter() - t0; Ts = [r['T_verify'] for r in res]; tq = np.array([r['t_query'] + r['t_hyb'] for r in res]); s = common.summarize(e, Ts)
+    wall = time.perf_counter() - t0; json.dump(res, open('hyb8d_raw.json', 'w'), default=float); Ts = [r['T_verify'] for r in res]; tq = np.array([r['t_query'] + r['t_hyb'] for r in res]); s = common.summarize(e, Ts)
     s.update(env=name, method='HYB-8D споры+IPOPT NB%d NF%d K%d%s' % (NB, NF, K, ' wlim' if WL else ''), t_build=t_build, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(tq.sum()), t_wall_parallel=wall,
              hw='CPU 1 ядро/запрос, numpy+math-поток', per_start=res, Tref=e.Tref.tolist(), weight=common.deep_weight(back), nodes_back=int(len(back[0])))
     os.makedirs(common.DATA, exist_ok=True); json.dump(s, open(os.path.join(common.DATA, '%s_hyb8d%s.json' % (name, tag)), 'w'), indent=1, default=float)
