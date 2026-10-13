@@ -28,7 +28,14 @@ def save(sysn, data):
     os.makedirs(OUT, exist_ok=True); fn = os.path.join(OUT, sysn + '.json'); json.dump(data, open(fn, 'w'), ensure_ascii=False, separators=(',', ':')); print('записано', fn, os.path.getsize(fn), 'байт', flush=True)
 def put(sysn, method, eps):
     d = load(sysn); d['episodes'] = [e for e in d['episodes'] if e['method'] != method] + eps; d['episodes'].sort(key=lambda e: (e['start'], e['method'] != 'споры')); save(sysn, d)
-def ep(method, i, X, U, Tv, Tref, src): return dict(method=method, start=int(i), dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=float(Tref), ok=Tv is not None, src=src)
+BEST = dict(manipf={1: 2.19, 2: 6.85, 3: 3.01, 7: 4.08, 9: 1.94, 10: 3.75, 13: 1.72, 14: 1.37, 15: .4, 16: 1.69, 19: 4.35})        # table_manipf.md: T_ref = лучшее T среди методов (НЕ Env.Tref = manipf_ref.json, это одна только OCP: на стартах 2/3/7/19 она в 2–6 раз хуже лучшего)
+def ep(method, i, X, U, Tv, Tref, src, sysn=None):
+    if sysn in BEST: Tref = BEST[sysn][int(i)]
+    ex = {}
+    if Tv is not None and Tv > 3 * Tref:                                                   # критерий бенча summarize: «дошёл» = T ≤ 3·T_ref; дальше — не дошёл, траектория обрезается на 3·T_ref
+        n = int(3 * Tref / DT) + 1; ex = dict(T_full=Tv, note='T > 3·T_ref — по критерию бенча не дошёл; показан до 3·T_ref'); X, U, Tv = X[:n], U[:n - 1] if len(U) >= n else U, None
+    return dict(ex, **_ep(method, i, X, U, Tv, Tref, src))
+def _ep(method, i, X, U, Tv, Tref, src): return dict(method=method, start=int(i), dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=float(Tref), ok=Tv is not None, src=src)
 
 def pick(sysn, nshow=5):
     """показательные старты из главной строки: успешные с большим T_ref (длинные раскачки) + один честный провал спор, если есть"""
@@ -47,23 +54,26 @@ def run_spores(sysn, starts):
         X, U, Tv = resample(e, e.X0[i], [list(u) for u, dd in sg], [dd for u, dd in sg])
         if len(U) == 0: U = np.zeros((1, e.m))
         print('споры', sysn, i, 'T', Tv, 'T_ref', round(float(e.Tref[i]), 3), 'без длительностей финиша' if nodur[0] else '', flush=True)
-        eps.append(ep('споры', i, X, U, Tv, e.Tref[i], CFG[sysn]['src']))
+        eps.append(ep('споры', i, X, U, Tv, e.Tref[i], CFG[sysn]['src'], sysn))
     put(sysn, 'споры', eps)
 
 def run_ocp(sysn, starts):
     import common; e = common.make(sysn); eps = []
+    if sysn == 'manip': e.lo = e.lo - np.array([0, 0, .02, .02]); e.hi = e.hi + np.array([0, 0, .02, .02])      # OCP-эталон держит |ω| ≤ 3 + 1e-2 (check в r23/ref.py) — коробка пересчёта чуть шире, как у dp1
     for i in starts:
-        if sysn == 'dp1': r = ocp_dp1(e, i)
-        else: r = ocp_arm(e, i)
+        r = ocp_ref(sysn, i) if sysn in ('dp1', 'manip') else ocp_arm(e, i)
         if r is None: print('эталон', sysn, i, 'не нашёлся', flush=True); continue
         T, Ur = r; X, U, Tv = resample(e, e.X0[i], list(Ur), [T / len(Ur)] * len(Ur)); print('эталон', sysn, i, 'T', Tv, 'T_ref', round(float(e.Tref[i]), 3), flush=True)
-        eps.append(ep('эталон (OCP)', i, X, U, Tv, e.Tref[i], 'r23 ref.solve_one (CasADi/IPOPT N=160)' if sysn == 'dp1' else 'bench/ocp_casadi (CasADi+IPOPT N=60, свободный T)'))
+        eps.append(ep('эталон (OCP)', i, X, U, Tv, e.Tref[i], 'r23 ref.solve_one (источник T_ref бенча; CasADi/IPOPT)' if sysn in ('dp1', 'manip') else 'bench/ocp_casadi (CasADi+IPOPT N=60, свободный T; источник manipf_ref.json)', sysn))
     put(sysn, 'эталон (OCP)', eps)
 
-def ocp_dp1(e, q):
-    R23 = os.path.expanduser('~/spore_v5/r23/06_dp1_ref'); sys.path.insert(0, R23); sys.argv = ['ref.py', '160', '4']; import ref
-    Q = ref.starts(); dd = json.loads(open('%s/out_%d.jsonl' % (R23, q)).readline()); k, g = dd['k'], dd['g']; rng = np.random.default_rng(1000 * q + 10 * g + 3 * k[0] + k[1] + 4); x0 = Q[q]
-    T0 = 2.5 + .7 * np.abs(np.r_[np.asarray(ref.C3) + 2 * np.pi * np.asarray(k) - x0[:2]]).max(); st, T, U = ref.solve_one(x0, k, rng, T0); return T, np.asarray(U)
+def ocp_ref(sysn, q):
+    """эталон бенча: тот же решатель, старт и зерно, что дали T_ref (r23 ref.solve_one; dp1: 06_dp1_ref N=160, manip: 01_manip_ref_ocp N=60), поэтому T совпадает с T_ref"""
+    if sysn == 'dp1': R23 = os.path.expanduser('~/spore_v5/r23/06_dp1_ref'); sys.argv = ['ref.py', '160', '4']; T0b = 2.5; files = ['%s/out_%d.jsonl' % (R23, q)]
+    else: R23 = os.path.expanduser('~/spore_v5/r23/01_manip_ref_ocp'); sys.argv = ['ref.py', '60', '3']; T0b = 1.5; files = [os.path.join(R23, f) for f in os.listdir(R23) if f.startswith('out_w3_')]
+    sys.path.insert(0, R23); import ref
+    dd = next(d for f in files for d in map(json.loads, open(f)) if d['q'] == q); k, g = dd['k'], dd['g']; Q = ref.starts(); x0 = Q[q]
+    rng = np.random.default_rng(1000 * q + 10 * g + 3 * k[0] + k[1] + 4); T0 = T0b + .7 * np.abs(np.r_[(np.asarray(ref.C3) if sysn == 'dp1' else 0.) + 2 * np.pi * np.asarray(k) - x0[:2]]).max(); st, T, U = ref.solve_one(x0, k, rng, T0); return T, np.asarray(U)
 
 def ocp_arm(e, i, N=60):
     """как ocp_casadi.solve, но возвращает (T, U) лучшего прошедшего проверку решения"""
