@@ -23,10 +23,11 @@ for k, (T, _, _, _) in M.items():
 keep = free & np.isfinite(best); excl = free & ~keep
 with open(os.path.join(os.path.dirname(D), 'table_manipf.md'), 'w') as f:
     f.write('manip 4D с запретами (самостолкновение |q2| ≤ π−.5, стол y ≥ −.6): стартов 20, свободных %d, с хотя бы одним дошедшим методом %d (исключены для всех: %s). T_ref = лучшее T среди методов.\n\n' % (free.sum(), keep.sum(), np.flatnonzero(excl).tolist()))
-    f.write('| метод | дошли | T/T_ref мед | p90 | max | заготовка, с | запрос, с |\n|---|---|---|---|---|---|---|\n')
+    f.write('| метод | дошли | T/T_ref мед | p90 | max | заготовка, с | запрос, с | нарушений пути (принятые) |\n|---|---|---|---|---|---|---|---|\n')
     for k, (T, tb, tq, _) in M.items():
         r = np.array([np.nan if (t is None or not np.isfinite(t)) else t / best[i] for i, t in enumerate(T)])[keep]; ok = np.isfinite(r) & (r <= 3)
-        f.write('| %s | %d/%d | %s | %s | %s | %.0f | %.2f |\n' % (k, ok.sum(), keep.sum(), *(('%.3f' % np.median(r[ok]), '%.3f' % np.percentile(r[ok], 90), '%.2f' % r[ok].max()) if ok.any() else ('—', '—', '—')), tb, tq))
+        f.write('| %s | %d/%d | %s | %s | %s | %.0f | %.2f | 0 |\n' % (k, ok.sum(), keep.sum(), *(('%.3f' % np.median(r[ok]), '%.3f' % np.percentile(r[ok], 90), '%.2f' % r[ok].max()) if ok.any() else ('—', '—', '—')), tb, tq))
     sp_T = M[[k for k in M if k.startswith('споры')][0]][0]; f.write('\nСпоры не дошли на стартах (из keep): %s — OCP/SST доходят, т.е. это провалы спор (честно): агент «застрял» у границы запрещённого (gfree .05–.3, b9 forb.md).\n' % [int(i) for i in np.flatnonzero(keep) if sp_T[i] is None])
+    f.write('\nНарушения пути: T у любого метода — только после common.verify (подшаги h=.01, gfree<0 → отказ «box»), поэтому у принятых путей нарушений 0 для всех методов; PPO дополнительно обрывает эпизод на out_of_box (BenchGym.step, и при прокатке). Нарушившие путь считаются недошедшими. Провалы спор 7/16 — дефект атласа: дыра покрытия у границы запрещённого, чинит [B] FORB2 (knowledge/research/forb_hole.md).\n')
     f.write('\nПо стартам (индекс: лучшее T) — %s\n' % {int(i): round(float(best[i]), 2) for i in np.flatnonzero(keep)})
 print(open(os.path.join(os.path.dirname(D), 'table_manipf.md')).read())

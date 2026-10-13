@@ -82,3 +82,4 @@
 - [research/lit_clones.md](research/lit_clones.md) — клоны/копии ±2π через шов θ в v4…v8: SH в growN, wrap_lines/tris в v8
 - [research/lit_seed_ellipse.md](research/lit_seed_ellipse.md) — посев по эллипсу/кольцам: слово пользователя, v7 ellipse.py, числа
 - [research/lit_adapt_clones.md](research/lit_adapt_clones.md) — MADAPT/MROW (5→9→17→33) и SELFOV/endcov: критерии, код, числа
+- [research/forb_hole.md](research/forb_hole.md) — CA5: застревание спор у запрещённого = дыра покрытия шириной ~.2 gfree; FORB2a радиус клетки ≤ c·gfree

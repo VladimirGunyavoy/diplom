@@ -9,7 +9,7 @@ E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1', 'race', 'race4') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
-BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
+PREF = int(E('PREF', 0)); BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS == 'manip' else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
 NORMFRONT = int(E('NORMFRONT', 0)); NFSUB = int(E('NFSUB', 4)); NFW = int(E('NFW', 2)); NFFB = float(E('NFFB', 0))                      # п.48 (b7): строка i — пересечение траектории клона с гиперплоскостью ⟂ f(c_i) через центр c_i (свои времена клонов); 0 = равновременные строки
 NOLATCH = int(E('NOLATCH', 0))                                                                             # п.40: solve без защёлки min(V, ·)
 # ---- системы: N, PERIOD (0 = нет), RHOV (полуширины цели), XLV (границы поля по непериодическим), US, f(y,u), Bq(y) = B·Bᵀ при |δu| ≤ 1 по каналам ----
@@ -274,7 +274,15 @@ def mlin(Pb, n_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
+FORB2 = float(E('FORB2', 0.))                                                                          # FORB2a (b10, research-26): r затравки = min(RMAX, FORB2·gfree(seed)), при отказе клетки — повтор с r/2 до RMIN; 0 — выкл.
 def growN(p, u, idx, rm, tm):
+    if FORB2 <= 0 or GF is None: return _growN1(p, u, idx, rm, tm)
+    r = min(rm, max(FORB2 * float(GF(wrapy(np.asarray(p, float)[None]))[0]), RMIN))
+    while True:
+        c = _growN1(p, u, idx, r, tm)
+        if c is not None or r / 2 < RMIN: return c
+        r /= 2
+def _growN1(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
     e = basis(p, u); S = np.linspace(-rm, rm, KF); k0 = KF // 2; nmax = int(tm / DTN + 1e-9); lat = np.stack(np.meshgrid(*([S] * m_), indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
     for sg in (1, -1):
@@ -336,9 +344,13 @@ def goal_seeds(rng):
         k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(wrapy(y + GC))
     return out
 def build_layer(u, rng, log=None):
-    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_
+    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; nf = 0
     while fails < NFAIL and len(cells) < MAXC:
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
+        if PREF and queue and nf == 0 and QMIX == 0:                                                            # SPD3 (b10): пакетный префильтр очереди — покрытые/вне поля/запрещённые/в цели затравки отбрасываются разом (покрытие только растёт ⇒ результат тот же, fails при непустой очереди не растут)
+            ch = np.array(queue[:PREF], float); ok_ = inbox(ch) & free(ch) & ~ingoal(wrapy(ch)); ok_[ok_] = ~idx.covered(ch[ok_]); queue[:PREF] = [queue[i] for i in np.flatnonzero(ok_)]; nf = len(np.flatnonzero(ok_))
+            if not queue: continue
+        if nf: nf -= 1
         p = rand_seed(rng) if (queue and QMIX > 0 and rng.random() < QMIX) else queue.pop(0) if queue else rand_seed(rng)      # QMIX (b6, по r23/04): с вероятностью QMIX случайная затравка при непустой очереди (+13% покрытия manip)
         if not inbox(p) or not free(p): continue
         p = wrapy(p)
