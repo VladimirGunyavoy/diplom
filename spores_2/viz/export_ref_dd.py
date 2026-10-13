@@ -38,7 +38,7 @@ def one(a):
     return best
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('system'); ap.add_argument('--procs', type=int, default=5); a = ap.parse_args(); OBST = a.system == 'ddobst'
-    p = os.path.join(HERE, 'data', a.system + '.json'); d = json.load(open(p)); e = common.make({'dd': 'dd', 'ddobst': 'ddobst7'}[a.system]); starts = sorted({ep['start'] for ep in d['episodes']})
+    p = os.path.join(HERE, 'data', a.system + '.json'); d = json.load(open(p)); e = common.make({'dd': 'dd', 'ddobst': 'ddobst'}[a.system]); starts = sorted({ep['start'] for ep in d['episodes']})
     jobs = [(G.wrapy(e.X0[i]), 1.1 * float(e.Tref[i])) for i in starts]
     with Pool(min(a.procs, len(jobs))) as pool: R = pool.map(one, jobs)
     d['episodes'] = [ep for ep in d['episodes'] if 'эталон' not in ep['method']]
