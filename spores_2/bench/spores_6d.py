@@ -31,10 +31,10 @@ if os.environ.get('TREEFAST'):
     if os.environ.get('BATCHFAST'): S.flow = tree_fast.make_flow_batch(name, US_, S.flow)
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
 def work(i):
-    e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), wlim=((3, 4, 5), WM) if WL else None); dt = time.perf_counter() - t1
+    e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), nbest=int(os.environ.get('NBEST', 1)), wlim=((3, 4, 5), WM) if WL else None); dt = time.perf_counter() - t1
     if b is None and CAR is not None and int(os.environ.get('CAFB', 1)):                  # запрос без пути: повторить штатным SLSQP-refine (редко; время входит в запрос)
         from src.atlas6 import corridor_nd as _C; _C.refine = CAR.orig
-        try: b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=None, wlim=((3, 4, 5), WM) if WL else None)
+        try: b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), nbest=int(os.environ.get('NBEST', 1)), hfun=None, wlim=((3, 4, 5), WM) if WL else None)
         finally: _C.refine = CAR.refine
         dt = time.perf_counter() - t1; fb = True
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')

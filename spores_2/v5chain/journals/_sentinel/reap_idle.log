@@ -37,3 +37,7 @@
 2026-10-13 03:15:01 | reaped hop-hub-v5chain-worker-c3 (idle 20m, finished-marker present, 24 hop-* sessions > limit 20)
 2026-10-13 03:55:02 | reaped hop-hub-v5chain-worker-c4 (idle 15m, finished-marker present, 24 hop-* sessions > limit 20)
 2026-10-13 05:10:01 | reaped hop-hub-v5chain-worker-b10 (idle 20m, finished-marker present, 24 hop-* sessions > limit 20)
+2026-10-13 06:50:01 | reaped hop-hub-v5chain-worker-27 (idle 15m, finished-marker present, 24 hop-* sessions > limit 20)
+2026-10-13 08:10:01 | reaped hop-hub-v5chain-worker-c5 (idle 15m, finished-marker present, 24 hop-* sessions > limit 20)
+2026-10-13 11:00:01 | reaped hop-hub-v5chain-worker-28 (idle 15m, finished-marker present, 24 hop-* sessions > limit 20)
+2026-10-13 12:00:02 | reaped hop-hub-v5chain-worker-b11 (idle 20m, finished-marker present, 25 hop-* sessions > limit 20)
