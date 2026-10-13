@@ -224,6 +224,24 @@ class HexIdx:
         if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(VV)))
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
+    def query_fast(s, Y):
+        """QFAST=1 (b11, SPD5): query без цикла по бинам Python — CSR бинов (кеш на s.n; индекс заморожен: фаза стенсилов) + векторная раздача пар; множество пар то же."""
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if s.n == 0 or not len(Y): return z
+        c_ = getattr(s, '_csr', None)
+        if c_ is None or c_[0] != (s.n, len(s.bins)):
+            ks = np.fromiter(s.bins.keys(), np.int64, len(s.bins)); o = np.argsort(ks); L = [np.concatenate(l) if len(l) > 1 else l[0] for l in s.bins.values()]; ln = np.array([len(l) for l in L], np.int64)[o]
+            vals = np.concatenate([L[i] for i in o]) if len(L) else np.zeros(0, np.int64); offs = np.r_[0, np.cumsum(ln)]; s._csr = c_ = ((s.n, len(s.bins)), ks[o], ln, offs, vals)
+        _, keys, ln, offs, vals = c_
+        kk = s._key(np.floor(Y / QB).astype(np.int64)); pos = np.minimum(np.searchsorted(keys, kk), max(len(keys) - 1, 0)); hit = (keys[pos] == kk) if len(keys) else np.zeros(len(kk), bool)
+        cnt = np.where(hit, ln[pos] if len(keys) else 0, 0); cum = np.cumsum(cnt); LIM = int(float(E('QLIM', 8e6))); out = []; a = 0
+        while a < len(Y):
+            b = max(int(np.searchsorted(cum, (cum[a - 1] if a else 0) + LIM, 'right')), a + 1); b = min(b, len(Y)); c = cnt[a:b]; ip = np.flatnonzero(c)
+            if len(ip):
+                cc = c[ip]; tot = int(cc.sum()); pi = np.repeat(ip + a, cc); within = np.arange(tot) - np.repeat(np.cumsum(cc) - cc, cc); vv = vals[np.repeat(offs[pos[ip + a]], cc) + within]; out.append(s._test(Y, pi, vv))
+            a = b
+        if not out: return z
+        return [np.concatenate(x) for x in zip(*out)]
     def _test_orig(s, Y, pi, vv):
         hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
@@ -436,6 +454,7 @@ def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
     k = int(E('SPAR', 0))
+    if int(E('QFAST', 0)): return _dedup(*qx.query_fast(Y))
     if k <= 1 or len(Y) < 50000: return _dedup(*qx.query(Y))
     from multiprocessing import Pool
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
@@ -497,6 +516,7 @@ class Atlas:
             tg = np.where(np.isinf(tg) & ingoal(y) & (True if al is None else al), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
+        _ts = time.time()
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
         else:
             I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
@@ -516,7 +536,7 @@ class Atlas:
                 else:
                     a, b, c_ = s.stencils(step(s.P, u))
                     if GF is not None: k_ = edge_ok(s.P, u)[a]; a, b, c_ = a[k_], b[k_], c_[k_]
-                print('stencils built for u =', u, flush=True)
+                print('stencils built for u =', u, '| t=%.0f с' % (time.time() - _ts), flush=True)
                 if SBC and not SONE:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
                     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
@@ -528,7 +548,7 @@ class Atlas:
                 ea = np.concatenate(ea)
                 if GF is not None: fr_ = free(s.P); ea = ea[fr_[ea] & fr_[ea + mm]]
                 ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
-                I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
+                I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), '| t=%.0f с' % (time.time() - _ts), flush=True)
             I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
@@ -557,7 +577,7 @@ class Atlas:
                     if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
                     new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
                     if d < 1e-9: break
-                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); (_lk.close() if int(E('GPULOCK', 0)) else None); torch.cuda.empty_cache(); return s
+                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, '| solve всего %.0f с' % (time.time() - _ts), flush=True); (_lk.close() if int(E('GPULOCK', 0)) else None); torch.cuda.empty_cache(); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
