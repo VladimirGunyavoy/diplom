@@ -308,6 +308,7 @@ def mlin(Pb, n_):
     return D
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 VIAB = int(E('VIAB', 0))                                                                                  # VIAB (b11): rollout с проверкой жизнеспособности на шаг вперёд (см. rollout)
+COVB = int(E('COVB', 0))                                                                                  # COVB (b11, SPD5): покрытие граней раунда одним вызовом covered + кеш по точкам R; 0 — выкл.
 FORB2B = int(E('FORB2B', 0))                                                                           # FORB2b (b11, research-26): грань запрещена, только если ВСЕ её точки несвободны (частично несвободная не обрывает рост; рёбра режет edge_ok); 0 — выкл.
 FORB2 = float(E('FORB2', 0.))                                                                          # FORB2a (b10, research-26): r затравки = min(RMAX, FORB2·gfree(seed)), при отказе клетки — повтор с r/2 до RMIN; 0 — выкл.
 def growN(p, u, idx, rm, tm):
@@ -331,6 +332,12 @@ def _growN1(p, u, idx, rm, tm):
             for i in [k for k in Wt if k != 0 and np.sign(k) == sg and k not in rows]: del Wt[i]
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
     if GF is not None and not (free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).any() if FORB2B else free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all()): return None                         # FORB: начальная заплатка вся свободна
+    if COVB:                                                                                             # COVB (b11): кеш покрытия точек R (−1 неизвестно); граней раунда считаем одним вызовом covered
+        IXR = np.arange(R.size // N).reshape(R.shape[:-1]); Rf = R.reshape(-1, N); covR = np.full(len(Rf), -1, np.int8)
+        def covget(ix):
+            mi = covR[ix] < 0
+            if mi.any(): ms = np.unique(ix[mi]); covR[ms] = idx.covered(Rf[ms])
+            return covR[ix] > 0
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
@@ -340,7 +347,22 @@ def _growN1(p, u, idx, rm, tm):
     klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dirs = [('a', k, sg) for k in range(m_) for sg in (1, -1)] + [('F',), ('B',)]; act = {d: True for d in dirs}; extra = {}
     def faceof(d, nk):
         sl = (slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi)); sl = list(sl); sl[1 + d[1]] = nk; return R[tuple(sl)].reshape(-1, N)
+    def faceix(d, nk):
+        sl = [slice(ilo - imin, ihi - imin + 1)] + [slice(a, b + 1) for a, b in zip(klo, khi)]; sl[1 + d[1]] = nk; return IXR[tuple(sl)].reshape(-1)
     while any(act.values()):
+        if COVB:
+            need = []
+            for d in dirs:
+                if not act[d]: continue
+                if d[0] == 'a':
+                    k = d[1]; nk = khi[k] + 1 if d[2] > 0 else klo[k] - 1
+                    if nk < 0 or nk >= KF: continue
+                    sl = [slice(ilo - imin, ihi - imin + 1)] + [slice(a, b + 1) for a, b in zip(klo, khi)]; sl[1 + k] = nk; need.append(IXR[tuple(sl)].reshape(-1))
+                else:
+                    i = ihi + 1 if d[0] == 'F' else ilo - 1
+                    if i < imin or i > imax: continue
+                    need.append(IXR[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1))
+            if need: covget(np.concatenate(need))
         for d in dirs:
             if not act[d]: continue
             if d[0] == 'a':
@@ -354,7 +376,7 @@ def _growN1(p, u, idx, rm, tm):
                 if d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: act[d] = False; STOP['ovh'] += 1
-                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
+                elif ((covget(faceix(d, nk)) if COVB else idx.covered(face)) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
             else:
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax: act[d] = False; STOP['rows'] += 1; continue
@@ -364,7 +386,7 @@ def _growN1(p, u, idx, rm, tm):
                 if d[0] == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False; STOP['tovh'] += 1
-                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
+                elif ((covget(IXR[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1)) if COVB else idx.covered(face)) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p.copy(); c.nf, c.nb = ihi, -ilo; return c
