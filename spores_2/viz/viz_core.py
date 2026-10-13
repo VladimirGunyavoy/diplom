@@ -96,7 +96,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         # полоски управления
         n = e.U.shape[1] if e.U.ndim == 2 else 1; um = np.array(params.get('umax', [1.] * n), float); bw = 260
         for k in range(n):
-            cy = H - BOT + 14 + k * 18; cx = 150; pygame.draw.rect(scr, (230, 232, 240), (cx, cy, bw, 11), border_radius=3); pygame.draw.line(scr, MUTED, (cx + bw // 2, cy - 2), (cx + bw // 2, cy + 13), 1)
+            cy = H - BOT + 10 + int(k * min(18, 62 / n)); cx = 150; pygame.draw.rect(scr, (230, 232, 240), (cx, cy, bw, 11), border_radius=3); pygame.draw.line(scr, MUTED, (cx + bw // 2, cy - 2), (cx + bw // 2, cy + 13), 1)
             v = float(np.clip(u[k] / um[min(k, len(um) - 1)], -1, 1)); xx = cx + bw // 2; pygame.draw.rect(scr, col, (min(xx, xx + v * bw / 2), cy, abs(v * bw / 2), 11), border_radius=3)
             scr.blit(F['s'].render('u%d' % (k + 1) + (' ' + params['unames'][k] if 'unames' in params else ''), True, MUTED), (16, cy - 3))
         hint = F['s'].render('Пробел пауза · R сначала · ←/→ старт · ↑/↓ скорость ×%.2g · M метод · G призрак · T след/вся/выкл · Esc' % st['speed'], True, MUTED); scr.blit(hint, (W - hint.get_width() - 16, H - 24))
