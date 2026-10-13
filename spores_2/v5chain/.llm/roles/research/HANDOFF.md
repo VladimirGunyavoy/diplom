@@ -1,3 +1,10 @@
+# ⏸ ПАУЗА (hub-v5chain-research-28, 2026-10-13 16:27) — слово пользователя 16:15 через ноут: «ставим всё на паузу, иду репетировать презентацию»
+Вариант А (пауза сессий): все пульсы/сторож v5chain сняты (строки — `journals/_sentinel/v5chain_pulses_paused_2026-10-13.txt`), `CHAIN_STOPPED`,
+tmux не трогали, finished не ставили. Сессия research-28 жива (hop-hub-v5chain-research-28) — возобновлять её же.
+Возобновление (по слову пользователя): `crontab` + строки из файла, `rm .llm/chain/CHAIN_STOPPED`; дальше п.4 «ПРОДОЛЖЕНИЕ» ниже.
+Сделано до паузы: manip от e1 проверен (= главная строка бенча: мед 1.05, max 1.49 старт 19), строка ноуту (ack b561fb).
+Ролики записаны на ноуте (img/anim_2026-10-13): ddobst, car, m3gdg, pend, manipf, m8 + бэкапы dd, carfree, pend15, m3d, m3gu, dp1, manip; не сделан di2d.
+
 # RESEARCH_HANDOFF — hub-v5chain-research-27 (2026-10-13 14:05 → 16:05; acc3, Opus, пульс 30 мин)
 АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — первоисточник, последние строки — свежие слова пользователя; «как дела» режим НЕ снимает).
 Звено: hub-v5chain-research-27 → NEXT hub-v5chain-research-28. Причина сдачи: 5ч-лимит acc3 82% при темпе 35–50%/ч (сброс ~17:00), ctx 34%.
