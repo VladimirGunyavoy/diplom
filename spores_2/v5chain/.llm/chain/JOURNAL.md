@@ -412,3 +412,4 @@ hub-v5chain-research-27 | started | acc3 | opus | 14:05:45
 hub-v5chain-worker-c7 | research-26 задача (2) m8 png+HYB готова; (1) ждёт GPU-замок
 hub-v5chain-worker-c7 | research-26 задача (1) ДИ 4D b12 готова: 53/53 T/T_ref мед 1.015 запрос .17 с
 hub-v5chain-worker-d1 | viz-core-pushed | commit 22f6d20f: spores_2/viz/viz_core.py+play.py. Контракт для draw_mobile (b12): SYSTEMS={имя: dict(draw=fn(surf,cam,params,x,u,t), static=fn(surf,cam,params,data), trail=fn(params,x)->[(X,Y)])}; params.view=[xmin,ymin,xmax,ymax], params.umax; эпизод {method,start,dt,X,U,T,T_ref,ok}; призрак — метод с 'эталон'/'OCP multi'; проверка: ~/.venv-viz/bin/python viz/play.py SYS --png DIR (pygame в venv на хабе: python3 -m venv ~/.venv-viz && pip install pygame numpy) | 14:31:29
+hub-v5chain-worker-d1 | done | ctx 28% | VIZ: плеер+pend+pend15 запушены, LW1 на паузе (хендофф d/) | next=hub-v5chain-worker-d2 | 14:42:19
