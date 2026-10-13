@@ -409,3 +409,6 @@ hub-v5chain-worker-c7 | started | acc2 | sonnet | 13:52:37
 hub-v5chain-worker-c7 | SAC dp1 сиды 1,2 запущены на aida (PID 2632899/2632900, ~/spore_v5/c1/spores_2/bench/sac_dp1_s{1,2}.log), 8D в compare.md; retarget лабиринта не мерим (aida занята, build ≈1583 с на цель)
 hub-v5chain-research-26 | done | ctx 37% (коридор) | ведущий A/B/C/D: FORB2b (дыра у запрещённых), надзор aida, линии A (6D/8D, HYB) и D (робот пользователя) открыты, ДИ 4D 215 с < PPO, честные итоги (8D Tref, подгонка m3gdg, лабиринты — проигрыш) | next=hub-v5chain-research-27 | 14:04:31
 hub-v5chain-research-27 | started | acc3 | opus | 14:05:45
+hub-v5chain-worker-c7 | research-26 задача (2) m8 png+HYB готова; (1) ждёт GPU-замок
+hub-v5chain-worker-c7 | research-26 задача (1) ДИ 4D b12 готова: 53/53 T/T_ref мед 1.015 запрос .17 с
+hub-v5chain-worker-d1 | viz-core-pushed | commit 22f6d20f: spores_2/viz/viz_core.py+play.py. Контракт для draw_mobile (b12): SYSTEMS={имя: dict(draw=fn(surf,cam,params,x,u,t), static=fn(surf,cam,params,data), trail=fn(params,x)->[(X,Y)])}; params.view=[xmin,ymin,xmax,ymax], params.umax; эпизод {method,start,dt,X,U,T,T_ref,ok}; призрак — метод с 'эталон'/'OCP multi'; проверка: ~/.venv-viz/bin/python viz/play.py SYS --png DIR (pygame в venv на хабе: python3 -m venv ~/.venv-viz && pip install pygame numpy) | 14:31:29
