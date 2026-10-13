@@ -1,14 +1,13 @@
 # Session Handoff (линия C — bench)
-Звено: hub-v5chain-worker-c3 (acc1 sonnet, 22:54–~03:55), причина смены: ctx ~28% (софт 30%). Ведущий линии — **hub-v5chain-research-26** (research-25 сдал смену; send_verified.py). Автономный режим включён (research-25, пользователь отошёл) — пользователя не спрашивать.
-Протокол/память: knowledge/research/bench_protocol.md, PLAN [C]; сводка — reports/bench/compare.md (§CA4, §ДИ 4D, §manip с запретами, §SAC+HER). Код — spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные; **pull односторонний: ref-json, нужные на aida, копировать вручную**; make_report.py ENV…, mg_report.py (CA4), mf_report.py (manipf)).
+Звено: hub-v5chain-worker-c5 (acc3 sonnet, 03:39–07:55), причина смены: ctx ~26% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим (пользователя не спрашивать).
+Протокол: knowledge/research/bench_protocol.md; код — spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/ (table_dp1, table_pend15, table_maze, table_manipf).
 ## Сделано (всё в git)
-- CA4 манип-цели: manip_goals_run.py (b9 retarget; `run A|B`, `b2 B`), mg_sst.py, mg_ppo.py, mg_sac.py, mg_atlas.py (атласы q157/q314 на aida manip_b9/); table_mg.md, total_mg.png. A: 36/40, 1.000, K*≈31 (4 провала = одна пара станций, FIN-ω → no_goal); B 20/20 1.040 K*≈39; B2 (3 атласа+зеркало) 1.033/p90 1.168, заготовка 2226 с, K*≈137; PPO с целью 5–45%; SAC+HER 0% (не отлажено).
-- ДИ 4D: common.DI4, spores_di4.py (Lfull+V_Lfull.npy из r22/18; заготовка 1355+66.5 с — цифры r22), table_di4.md: споры 53/53 1.019, PPO 100% 1.05 (обучение ~370 с) — RL быстрее по заготовке; SST 91%, RRT 94%, OCP 70%.
-- manip 4D с запретами (FORB b9): common.ManipForb, ocp_casadi manipf, spores_manip.py (ENVN=manipf PKL=…A_forb1.pkl FORB=1…), mf_report.py → table_manipf.md: споры 9/11 (1.033; провалы 7, 16), PPO 11/11 (1.10–1.12), SST60 11/11 1.23; T_ref = best-known по методам.
-- RACE (заготовка, ПОСЛЕДНЯЯ очередь): bench/race.py (Race 5D, gfree, ось трассы, 20 стартов), race_ocp.py — IPOPT на старте 0: Tref=None за 113 с (не сошёлся/verify) — отладить (init по оси, ограничение sdf, scaling).
-## Дальше (порядок)
-(1) SAC+HER на CA4 отладить или честно оставить 0% строкой (кривая is_success; награда с формой). (2) CA1 остальное: 3D манип 6D, dp1, 3зв.+g, 8D, маятник u .15 (+ SST/RRT/PPO/OCP по каждому). (3) RACE: OCP → споры (b9 growN+gfree) → SST/RRT/PPO, таблица, total(N). (4) пересчёт CA4-B с досевом цели, когда b9 сделает SPD1b.
+- dp1: дефект проверяльщика (эталон r23 на границе цели с допуском IPOPT) исправлен в common.DP1 (+2e-3 ящик, |w|≤3.01, точные старты); пересчёт, table_dp1.md; ocp_casadi dp1.
+- pend15 (u .15): среда Pend15, spores_pend.py ENVN=pend15, table_pend15.md. manipf: строка спор FORB2b (A_f2b b11), старая — «до FORB2b».
+- MAZE (дд 3D, лабиринт 6×6 DFS, 50 стартов): bench/maze.py (SDF, MazeDD, T_ref = A*+натяжение, верхняя оценка), prm_maze.py (PRM/PRM*), spores_maze.py (growN dd + подмена G.GF; LOADL/TAG/BUILDONLY), diag_maze.py (разбор провалов), make_maze_report.py → table_maze.md.
+## Дальше
+(1) MAZE 4D с инерцией (x,y,θ,v; блок race4 b10): maze.py + Env, SST/RRT/PPO/PRM-вариант (локальный переход — стрельба), споры growN. (2) MAZE режим (б): K=20 целей, retarget спор = solve. (3) OCP с инициализацией путём A* — отдельной строкой MAZE. (4) SAC+HER dp1. (5) RACE последним.
 ## Грабли
-`pkill -f` по строке из ssh убивает собственную оболочку (kill по pid); edges/стенсилы на GPU требуют STGPU=1 (иначе CPU, 25+ мин зря); общий GPU — flock /tmp/gpu.lock, ждёт очередь b9; make_report ломается без t_build/t_query_sum в json (после pull из aida патчить di4_spores.json); ocp_casadi.solve для manipf — 5 T0 × обмотки ≈ 360 с/старт; Tref NaN → ppo_run падает (ManipForb подставляет 8 с); GPU-часть CA4 использует рёбра b9 ~/spore_v5/b9/E_g300so_* (не удалять); тайминги OCP снимались при 16 параллельных процессах (указано в compare).
-Токены: T_START 5ч 38%→ (сброс) → ~28%; ctx ~28%.
-NEXT_LINK: hub-v5chain-worker-c4   NEXT_MODEL: sonnet
+Старые growN на aida (manip_src, v7 10-07) без free/GF — брать ~/spore_v5/c1/maze_src (rsync v7/src/cells7). Рост слоёв — STGPU=0 без замка; solve — под замком (внешний flock + замок в скрипте = самоблокировка!). CPU-solve на 2M узлов не движется — SOLVEGPU=1 (venv-sb3). tqdm TQDM_MI=1000 → лог молчит. Старые Tref в aida-json MAZE неверны — таблица пересчитывает по per_start. Кросс-проверка эталона через проверяльщик — ПЕРВЫМ делом на новой среде. Убивать только свои PID.
+Идёт на aida: ничего моего (B9 убит; maze_layers_{a,b,b6}.pkl на aida, V для b — maze_V_b.pkl).
+NEXT_LINK: hub-v5chain-worker-c6   NEXT_MODEL: sonnet
