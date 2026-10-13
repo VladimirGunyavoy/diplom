@@ -172,6 +172,15 @@ def _contract(Xa, sa, j=-1):
     T = Xa.reshape((len(Xa),) + (2,) * N + (N,))
     for k in range(N): T = (T[:, 1] - T[:, 0]) if k == j else T[:, 0] + sa[:, k].reshape((-1,) + (1,) * (N - k)) * (T[:, 1] - T[:, 0])
     return T
+PREFK = int(E('PREFK', 0))                                                                              # b11 (SPD5): до Ньютона на группу (точка, слой) оставить K пар с наибольшим аффинным запасом min(sc,1−sc); 0 — выкл. (нужен s.CL: слой клетки; ставит Atlas.stencils)
+def _prefk(s, pi, hid, sc, gpu=False):
+    if gpu:
+        import torch
+        mg = torch.minimum(sc, 1 - sc).min(1).values; key = pi.long() * 8 + s._gCL[s._gI0[hid]]; o = torch.argsort(mg, descending=True, stable=True); o = o[torch.argsort(key[o], stable=True)]
+        ks = key[o]; st = torch.ones(len(o), dtype=torch.bool, device=o.device); st[1:] = ks[1:] != ks[:-1]
+        idx = torch.arange(len(o), device=o.device); first = torch.cummax(torch.where(st, idx, torch.zeros_like(idx)), 0).values; keep = torch.zeros(len(o), dtype=torch.bool, device=o.device); keep[o] = (idx - first) < PREFK; return keep
+    mg = np.minimum(sc, 1 - sc).min(1); key = pi.astype(np.int64) * 8 + s.CL[s.I[hid, 0]]; o = np.lexsort((-mg, key)); ks = key[o]
+    st = np.r_[True, ks[1:] != ks[:-1]]; idx = np.arange(len(o)); first = np.maximum.accumulate(np.where(st, idx, 0)); keep = np.zeros(len(o), bool); keep[o] = (idx - first) < PREFK; return keep
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
     def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
@@ -246,6 +255,7 @@ class HexIdx:
         if not int(E('FASTT', 1)): return s._test_orig(Y, pi, vv)
         s._prep(); hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         sc0 = .5 + np.einsum('kij,kj->ki', s.JI[hid], y - s.A0[hid]); MG = float(E('MG', .4)); ok = ((sc0 >= -MG) & (sc0 <= 1 + MG)).all(1); pi, hid, y, sc = pi[ok], hid[ok], y[ok], sc0[ok]
+        if PREFK > 0 and getattr(s, 'CL', None) is not None and len(pi): k_ = _prefk(s, pi, hid, sc); pi, hid, y, sc = pi[k_], hid[k_], y[k_], sc[k_]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
         if not len(pi): return z
         X = s.X[hid]; alive = np.arange(len(pi))
@@ -393,12 +403,14 @@ def _test_gpu(s, Y, pi, vv, tolc=1e-10):
     import torch
     dev = 'cuda'; CH = int(E('GCH', 1 << 21)); T = lambda a: torch.as_tensor(a, device=dev)
     s._prep()
+    if PREFK > 0 and getattr(s, 'CL', None) is not None and not hasattr(s, '_gCL'): s._gCL = T(s.CL); s._gI0 = T(s.I[:, 0].astype(np.int64))
     if getattr(s, '_gn', -1) != s.n: s._g = [T(a[:s.n] if len(a) >= s.n else a) for a in (s.X, s.LO, s.HI, s.A0, s.JI)]; s._gn = s.n; s._gsh = T(np.asarray(SH, float))
     if getattr(s, '_gy', None) is not Y: s._gy = Y; s._gY = T(Y)
     X_, LO, HI, A0, JI = s._g; MG = float(E('MG', .4)); out = []
     for a in range(0, len(pi), CH):
         p = T(pi[a:a + CH]); v = T(vv[a:a + CH]); hid = v // KSH; y = s._gY[p] - s._gsh[v % KSH]; ok = ((y >= LO[hid]) & (y <= HI[hid])).all(1); p, hid, y = p[ok], hid[ok], y[ok]
         sc = .5 + torch.einsum('kij,kj->ki', JI[hid], y - A0[hid]); ok = ((sc >= -MG) & (sc <= 1 + MG)).all(1); p, hid, y, sc = p[ok], hid[ok], y[ok], sc[ok]
+        if PREFK > 0 and getattr(s, 'CL', None) is not None and len(p): k_ = _prefk(s, p, hid, sc, True); p, hid, y, sc = p[k_], hid[k_], y[k_], sc[k_]
         if not len(p): continue
         X = X_[hid]; alive = torch.arange(len(p), device=dev)
         for it in range(8):
@@ -440,6 +452,7 @@ class Atlas:
             s.qx = HexIdx()
             for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
+            if PREFK > 0: s.qx.CL = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]).astype(np.int64)
         Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
         if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
