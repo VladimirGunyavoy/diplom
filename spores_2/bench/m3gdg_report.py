@@ -12,7 +12,7 @@ R = []
 tq = [x['t'] for x in ref['res']]; R.append(row('OCP CasADi/IPOPT + зазор в узлах: multi (8 ветвей×4 затравки) = эталон', Tref, ref['t_build'], np.median(tq), np.percentile(tq, 90), 'T_ref по построению (1.00); заготовка = сборка символьной задачи, один раз'))
 tq = [x['t'] for x in fast['res']]; R.append(row('OCP CasADi/IPOPT + зазор: fast (ближайшая ветвь×2 затравки)', [g(r) for r in fast['res']], fast['t_build'], np.median(tq), np.percentile(tq, 90), 'цель — параметр NLP, перестройки нет'))
 tq = [x['t_query'] for x in sp['res']]; tbs = [x['t_build'] for x in sp['res']]
-R.append(row('**споры** коридор v6 SPD6 (NB24000 NF6000, 1 ядро)', [g(r) for r in sp['res']], float(np.median(tbs)), np.median(tq), np.percentile(tq, 90), 'заготовка (build_back) — НА КАЖДУЮ цель; refine с дисками — штатный SLSQP (IPOPT-refine зазор не знает)', True))
+R.append(row('**споры** коридор v6 SPD6 (NB24000 NF6000, 1 ядро)', [g(r) for r in sp['res']], float(np.median(tbs)), np.median(tq), np.percentile(tq, 90), 'заготовка (build_back) — НА КАЖДУЮ цель; refine в IPOPT с зазором до дисков (CACLR=1, w29), пакетный поток стыковки BATCHFAST=1, tree_fast с векторным blocked; было 40 с заготовка + 28 с запрос (SLSQP) — m3gdg_spores_slsqp_old.json', True))
 for bi, B in enumerate((.3, 1, 3, 10)):
     R.append(row('SST (свой, prune .1) бюджет %g с' % B, [g(r['runs'][bi], 'T') for r in sst['res']], 0., B, B, 'бюджет на каждый переход'))
 H = '| метод | заготовка, с | запрос мед / p90, с | на переход (заготовка+запрос), с | total(K=%d), с | дошли | T/T_ref мед / ср / p90 / max | примечание |\n|---|---|---|---|---|---|---|---|\n' % K
