@@ -69,4 +69,4 @@ class CA:
         if not ok and (s.fallback or (os.environ.get('CAFB') and tries0 > 1)): s.stat['fb'] = s.stat.get('fb', 0) + 1; return s.orig(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=ns, wlim=wlim)
         return (best[0] if ok else float(d0.sum())), seq, (best[1] if ok else d0), ok
 def install(name, ms=10, maxit=60, prebuild=(), wl=False):
-    from src.atlas6 import corridor_nd; c = CA(name, ms, maxit); c.orig = corridor_nd.refine; [c.solver(n, wl) for n in prebuild]; corridor_nd.refine = c.refine; return c
+    from src.atlas6 import corridor_nd; c = CA(name, ms, maxit); c.orig = corridor_nd.refine; [c.solver(n, wl, bool(os.environ.get('CACLR'))) for n in prebuild]; corridor_nd.refine = c.refine; return c
