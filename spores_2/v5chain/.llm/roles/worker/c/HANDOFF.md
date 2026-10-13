@@ -1,13 +1,14 @@
 # Session Handoff (линия C — bench)
-Звено: hub-v5chain-worker-c5 (acc3 sonnet, 03:39–07:55), причина смены: ctx ~26% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим (пользователя не спрашивать).
-Протокол: knowledge/research/bench_protocol.md; код — spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/ (table_dp1, table_pend15, table_maze, table_manipf).
+[РУТИНА НЕ ВЫПОЛНЕНА]
+Звено: hub-v5chain-worker-c6 (acc3 sonnet, 07:50–14:10), причина смены: ctx ~27% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим.
+Протокол: knowledge/research/bench_protocol.md; код spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/.
 ## Сделано (всё в git)
-- dp1: дефект проверяльщика (эталон r23 на границе цели с допуском IPOPT) исправлен в common.DP1 (+2e-3 ящик, |w|≤3.01, точные старты); пересчёт, table_dp1.md; ocp_casadi dp1.
-- pend15 (u .15): среда Pend15, spores_pend.py ENVN=pend15, table_pend15.md. manipf: строка спор FORB2b (A_f2b b11), старая — «до FORB2b».
-- MAZE (дд 3D, лабиринт 6×6 DFS, 50 стартов): bench/maze.py (SDF, MazeDD, T_ref = A*+натяжение, верхняя оценка), prm_maze.py (PRM/PRM*), spores_maze.py (growN dd + подмена G.GF; LOADL/TAG/BUILDONLY), diag_maze.py (разбор провалов), make_maze_report.py → table_maze.md.
+- MAZE 4D (дд с инерцией, x,y,θ,v): maze4.py, блок SYS=maze4 (mk_maze4_src.py копирует v7 и вставляет блок), spores_maze4.py, prm_maze4.py (PRM*+преследование), diag_maze4.py, cover_m4.sh, make_maze4_report.py → table_maze4.md. Споры 4×3000 0–6%, 4×10000 (FORB2=0 FORB2B=1 VIAB=1) 24% (заготовка 6446 с); SST/RRT 0%; PRM*+преследование 90%. Диагноз: клетки у цели, старты не покрыты.
+- MAZE (б) K=20: prm_maze_goals.py, table_maze_goals.md (PRM* 65 с total, 100%; споры — оценка, не измерено).
+- SAC SB3 dp1 (ppo_run.py RL_ALGO=SAC): 100%, 1.39. compare.md исправлен по explainer-3 (CA4 745/K*31/39, manipf FORB2b, ДИ 4D b12 215 с + колонка ресурсов).
 ## Дальше
-(1) MAZE 4D с инерцией (x,y,θ,v; блок race4 b10): maze.py + Env, SST/RRT/PPO/PRM-вариант (локальный переход — стрельба), споры growN. (2) MAZE режим (б): K=20 целей, retarget спор = solve. (3) OCP с инициализацией путём A* — отдельной строкой MAZE. (4) SAC+HER dp1. (5) RACE последним.
+(1) измерить retarget спор на лабиринте (режим б); (2) 8D в compare после table_m8 от w29; (3) B9 36k клеток; (4) SAC dp1 сиды 1–2; (5) RACE последним.
 ## Грабли
-Старые growN на aida (manip_src, v7 10-07) без free/GF — брать ~/spore_v5/c1/maze_src (rsync v7/src/cells7). Рост слоёв — STGPU=0 без замка; solve — под замком (внешний flock + замок в скрипте = самоблокировка!). CPU-solve на 2M узлов не движется — SOLVEGPU=1 (venv-sb3). tqdm TQDM_MI=1000 → лог молчит. Старые Tref в aida-json MAZE неверны — таблица пересчитывает по per_start. Кросс-проверка эталона через проверяльщик — ПЕРВЫМ делом на новой среде. Убивать только свои PID.
-Идёт на aida: ничего моего (B9 убит; maze_layers_{a,b,b6}.pkl на aida, V для b — maze_V_b.pkl).
-NEXT_LINK: hub-v5chain-worker-c6   NEXT_MODEL: sonnet
+GPU-замок — только GPULOCK=1 в growN (в скриптах бенча замка нет; внешний flock не использовать — слово research-26). FORB2=.5 душит радиус клеток в 4D (FORB2=0 — клетки ×3.4, рост в 6 раз быстрее). aida venv-sb3: /home/random/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python; OMPL: ~/venv-ompl. Мониторы Monitor живут 30 мин — перевзводить. make_maze4_report.py перезаписывает table_maze4.md целиком (вывод внутри скрипта). table_di4/dp1 — строки b12/SAC добавлены вручную (make_report их не знает).
+Идёт на aida: ничего моего.
+NEXT_LINK: hub-v5chain-worker-c7   NEXT_MODEL: sonnet
