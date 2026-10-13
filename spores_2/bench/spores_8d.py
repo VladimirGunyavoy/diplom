@@ -28,6 +28,8 @@ if os.environ.get('TREEFAST'):
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); HF = back_heuristic(S, back, wh=None); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
 def work(i):
     e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=HF, wlim=(tuple(range(n, 2 * n)), WM) if WL else None); dt = time.perf_counter() - t1
+    if b is None and os.environ.get('NFRETRY'):       # не нашли путь — один повтор с большим прямым деревом (только провалы платят)
+        b = corridor_query(S, fl, e.X0[i], back, tau, int(os.environ['NFRETRY']), rho, g, miss, K=K, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=HF, wlim=(tuple(range(n, 2 * n)), WM) if WL else None); dt = time.perf_counter() - t1
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
     us = [US_[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
 if __name__ == '__main__':
