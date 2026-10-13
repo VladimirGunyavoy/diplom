@@ -7,17 +7,22 @@ HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser(os.e
 import numpy as np, common, maze
 import growN as G, finish_gen as FG
 G.GF = lambda y: M.gfree(y)
-M = maze.Maze(); G.GC = G.GC if hasattr(G, 'GC') else None
+MGOAL = tuple(int(x) for x in os.environ.get('MGOAL', '5,5').split(','))      # c7: цель-клетка (режим б, retarget); по умолч. (5,5)
+M = maze.Maze(goal=MGOAL); G.GC = G.GC if hasattr(G, 'GC') else None
+import finish_gen as _FG
+if not hasattr(_FG, 'shoot_grid'):      # c7: SRC_DIR=b12 cells7 (growN с COVAFF/PARB) несёт finish_gen без shoot_grid — финиш берём из manip_src
+    import importlib.util; _sp = importlib.util.spec_from_file_location('finish_gen', os.path.expanduser('~/spore_v5/c1/manip_src/finish_gen.py')); _m = importlib.util.module_from_spec(_sp); _sp.loader.exec_module(_m); sys.modules['finish_gen'] = _m
 import spores_manip as SM          # rollout_rec и finish; в нём growN подхватится из того же sys.path (тот же модуль)
 assert SM.G is G
 if __name__ == '__main__':
-    e = common.make('maze'); t0 = time.perf_counter()
+    e = __import__('maze').MazeDD(goal=MGOAL); t0 = time.perf_counter()
     if os.environ.get('LOADL'): d_ = pickle.load(open(os.path.expanduser(os.environ['LOADL']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d_['layers']; A.finish(); t_grow = float(os.environ.get('GROWT', 0))   # слои с диска (GROWT — время роста из лога)
     else: A = G.Atlas(); t_grow = time.perf_counter() - t0
     print('слои', [len(l) for l in A.layers], 'узлов', A.N, round(t_grow), 'с', flush=True)
     if os.environ.get('DUMPL'): pickle.dump(dict(layers=A.layers), open(os.path.expanduser(os.environ['DUMPL']), 'wb'))
     if int(os.environ.get('BUILDONLY', 0)): sys.exit(0)      # рост на CPU (STGPU=0, без замка) → слои на диск; solve — отдельным запуском LOADL под замком
     t0 = time.perf_counter(); A.solve(); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
+    if os.environ.get('DUMPV'): pickle.dump(dict(layers=A.layers, V=A.V), open(os.path.expanduser(os.environ['DUMPV']), 'wb'))      # c7: V на диск до агента
     res = []; Ts = []; tq = []
     for i in range(len(e.X0)):
         t1 = time.perf_counter(); T, seg, nodur = SM.rollout_rec(A, e.X0[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
