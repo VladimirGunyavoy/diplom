@@ -6,8 +6,8 @@ MODS = ['draw_links', 'draw_mobile']
 def systems():
     tab = {}
     for m in MODS:
-        try: tab.update({k: v for k, v in importlib.import_module(m).SYSTEMS.items()})
-        except ImportError: pass
+        try: tab.update(getattr(importlib.import_module(m), 'SYSTEMS', {}))
+        except Exception as ex: print('модуль', m, 'не загрузился:', ex)
     return tab
 def main():
     p = argparse.ArgumentParser(); p.add_argument('system', nargs='?'); p.add_argument('--png'); p.add_argument('--start'); p.add_argument('--method'); p.add_argument('--frames', type=int, default=8); p.add_argument('--gif'); p.add_argument('--data', help='json вне viz/data (для проверок)'); a = p.parse_args()

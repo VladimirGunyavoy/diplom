@@ -11,11 +11,11 @@ def pend_tip(p, x): L = p.get('L', 1.0); return (L * math.sin(x[0]), L * math.co
 def pend_draw(surf, cam, p, x, u, t):
     L = p.get('L', 1.0); piv = cam.pt((0, 0)); tip = cam.pt(pend_tip(p, x)); pygame.draw.circle(surf, (200, 204, 214), piv, cam.len(.07), 2)
     aaline(surf, RODC, piv, tip, 7); pygame.draw.circle(surf, (214, 76, 38), tip, cam.len(.11)); pygame.draw.circle(surf, INK, tip, cam.len(.11), 2); pygame.draw.circle(surf, INK, piv, cam.len(.04))
-    uu = float(u[0]) * p.get('umax', [1.])[0] if len(u) else 0.                                             # дуга момента у оси
-    if abs(uu) > 1e-3:
-        r = cam.len(.28); a0 = math.radians(90); sweep = math.radians(70) * uu / p.get('umax', [1.])[0]; n = 14
+    r_ = float(np.clip(u[0] / p.get('umax', [1.])[0], -1, 1)) if len(u) else 0.                              # дуга момента у оси: направление и размер ∝ u
+    if abs(r_) > 1e-3:
+        r = cam.len(.28); a0 = math.radians(90); sweep = -math.radians(80) * r_; n = 14
         pts = [(piv[0] + r * math.cos(a0 + sweep * k / n), piv[1] - r * math.sin(a0 + sweep * k / n)) for k in range(n + 1)]
-        if len(pts) > 1: pygame.draw.lines(surf, (240, 160, 40), False, pts, 4)
+        pygame.draw.lines(surf, (240, 160, 40), False, pts, 4)
 def pend_static(surf, cam, p, data):
     L = p.get('L', 1.0); g = data.get('goal', {}); tol = g.get('theta', .1); top = cam.pt((0, L))
     pygame.draw.circle(surf, (190, 235, 205), top, cam.len(.16)); pygame.draw.circle(surf, GOALC, top, cam.len(.16), 2)
