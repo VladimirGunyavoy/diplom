@@ -49,3 +49,9 @@
 - `anim_m3d_backup_s18.mp4`/`.gif` → m3d → старт 18 → 5.4 с (play 5.4 с)
   - SPORE: T 2.77, T/T_ref 1.011
   - OCP: T 2.74, T/T_ref 1.000
+- `anim_manip_backup_s5.mp4`/`.gif` → manip → старт 5 → 5.0 с (play 5.0 с)
+  - SPORE: T 3.34, T/T_ref 1.050
+  - OCP: T 3.18, T/T_ref 1.000
+- `anim_dp1_backup_s18.mp4`/`.gif` → dp1 → старт 18 → 8.5 с (play 8.5 с)
+  - SPORE: T 6.49, T/T_ref 1.937
+  - OCP: T 3.35, T/T_ref 1.000
