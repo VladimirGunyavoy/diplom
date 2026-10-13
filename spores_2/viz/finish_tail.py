@@ -72,7 +72,10 @@ def tail(env, y_last, q_star=None, dt=.02):
     if b is not None: Tv, Xs, Us, yf = b; return np.array(Xs), np.array(Us), len(Xs) * dt, 'OCP'
     return np.zeros((0, env.n)), np.zeros((0, env.m)), 0., None
 def add_tails(sysn, q_star=None):
-    import common; env = common.make(sysn); fn = os.path.join(HERE, 'data', sysn + '.json'); d = json.load(open(fn)); rep = []
+    import common
+    try: import envs_6d                       # регистрирует m3d, m3gd, m3gu, m8 (research-27)
+    except Exception: pass
+    env = common.make(sysn); fn = os.path.join(HERE, 'data', sysn + '.json'); d = json.load(open(fn)); rep = []
     for e in d['episodes']:
         e.pop('X_tail', None); e.pop('U_tail', None)
         if not e.get('ok', True): continue

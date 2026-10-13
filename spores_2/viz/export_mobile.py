@@ -5,7 +5,7 @@
 import os, sys, json, argparse, numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); BENCH = os.path.join(HERE, '..', 'bench'); sys.path.insert(0, BENCH)
 DT = .02
-SRC = dict(dd='dd_spores.json', ddobst='ddobst7_spores.json', car='car_spores.json', carfree='')        # главная строка бенча (table_dd.md / table_ddobst7.md / table_car.md): правило research-27
+SRC = dict(dd='dd_spores.json', ddobst='ddobst_spores.json', car='car_spores.json', carfree='')        # главная строка бенча (table_dd.md / table_ddobst7.md / table_car.md): правило research-27
 
 def replay(env, y0, segs, dt=DT, h=.005):
     """(u_k, d_k) → сетка состояний с шагом dt: X (K+1, n) с непрерывным θ (развёрнутым), U (K, m); обрезка по попаданию в цель. Возврат X, U, T (время попадания или None)."""
@@ -43,11 +43,11 @@ def pick(env, n):
         if k not in r: r.append(k)
     return r[:n]
 
-def export_dd(name, nstarts):
-    os.environ['BENCH_ENV'] = {'dd': 'dd', 'ddobst': 'ddobst7'}[name]
+def export_dd(name, nstarts, ids=None):
+    os.environ['BENCH_ENV'] = {'dd': 'dd', 'ddobst': 'ddobst'}[name]
     import spores_dd as S, common
     e = common.make(os.environ['BENCH_ENV']); A = S.G.Atlas(); A.solve(); eps = []
-    for i in pick(e, nstarts):
+    for i in (ids or pick(e, nstarts)):
         T, seg = S.rollout_rec(A, e.X0[i:i + 1]); eps.append(episode(e, i, 'споры', [(u, d) for u, d in seg[0]], e.Tref[i], SRC[name])); print(name, i, eps[-1]['T'], eps[-1]['T_ref'], len(eps[-1]['X']), flush=True)
     d = dict(sys=name, title={'dd': 'Дифдрайв: |v|+|ω| ≤ 1', 'ddobst': 'Дифдрайв с двумя препятствиями'}[name],
              params=dict(body_r=.2, wheel_base=.34, fov=[-3, 3, -3, 3], view=[-3, -3, 3, 3], umax=[1, 1]), goal=dict(type='box', c=[0, 0], half=[.05, .05], theta=0, half_theta=.05),
@@ -68,5 +68,5 @@ def finalize(d):
     return d
 
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser(); ap.add_argument('system'); ap.add_argument('--starts', type=int, default=4); a = ap.parse_args()
-    d = finalize(export_dd(a.system, a.starts)); p = os.path.join(HERE, 'data', a.system + '.json'); json.dump(d, open(p, 'w'), ensure_ascii=False, separators=(',', ':')); print(p, os.path.getsize(p) // 1024, 'КБ')
+    ap = argparse.ArgumentParser(); ap.add_argument('system'); ap.add_argument('--starts', type=int, default=4); ap.add_argument('--ids', default=''); a = ap.parse_args()
+    d = finalize(export_dd(a.system, a.starts, [int(k) for k in a.ids.split(',')] if a.ids else None)); p = os.path.join(HERE, 'data', a.system + '.json'); json.dump(d, open(p, 'w'), ensure_ascii=False, separators=(',', ':')); print(p, os.path.getsize(p) // 1024, 'КБ')
