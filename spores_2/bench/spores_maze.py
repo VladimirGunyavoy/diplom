@@ -2,6 +2,7 @@
 import os, sys, time, json, pickle
 ENV = dict(SYS='dd', XL='6', RMAX='.3', TMAX='3', RHO='.05', KF='21', M='3', FRAC='.5', OVH='.5', MINROWS='3', GLIM='0', NOLATCH='1', FINGRID='2', VF='2', PESS='1', GS='50', DELTA='.3', MAXC='3000', TQDM_MI='1000', OMP_NUM_THREADS='2', FORB2='.5')
 for k, v in ENV.items(): os.environ.setdefault(k, v)
+os.environ.setdefault('GPULOCK', '1')      # замок GPU берёт growN только на GPU-участке solve (стенсилы на CPU — до него); второго замка в скрипте нет (решение research-26)
 HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser(os.environ.get('SRC_DIR', '~/spore_v5/c1/manip_src')); sys.path.insert(0, HERE); sys.path.insert(0, SRC)
 import numpy as np, common, maze
 import growN as G, finish_gen as FG
@@ -16,8 +17,7 @@ if __name__ == '__main__':
     print('слои', [len(l) for l in A.layers], 'узлов', A.N, round(t_grow), 'с', flush=True)
     if os.environ.get('DUMPL'): pickle.dump(dict(layers=A.layers), open(os.path.expanduser(os.environ['DUMPL']), 'wb'))
     if int(os.environ.get('BUILDONLY', 0)): sys.exit(0)      # рост на CPU (STGPU=0, без замка) → слои на диск; solve — отдельным запуском LOADL под замком
-    import fcntl; _lk = open('/tmp/gpu.lock', 'w'); fcntl.flock(_lk, fcntl.LOCK_EX); print('GPU-замок взят', flush=True)      # замок только на solve (рост — на CPU без очереди)
-    t0 = time.perf_counter(); A.solve(); fcntl.flock(_lk, fcntl.LOCK_UN); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
+    t0 = time.perf_counter(); A.solve(); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
     res = []; Ts = []; tq = []
     for i in range(len(e.X0)):
         t1 = time.perf_counter(); T, seg, nodur = SM.rollout_rec(A, e.X0[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
