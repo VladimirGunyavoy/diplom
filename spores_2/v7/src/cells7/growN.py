@@ -441,10 +441,10 @@ def _pg_work(a):
 def build_layer_par(u, rng, log=None):
     from multiprocessing import get_context
     global _PG
-    cells = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; B = int(float(E('PARB', 2))) * PARG
+    cells = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; B = int(float(E('PARB', 2))) * PARG; TT = np.zeros(4); tm = time.time
     while fails < NFAIL and len(cells) < MAXC:
         bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
-        ps = []; Bn = min(B, MAXC - len(cells)) if len(cells) >= PARG else 1                                  # первые клетки — по одной (пустой индекс, очередь короткая)
+        t0 = tm(); ps = []; Bn = min(B, MAXC - len(cells)) if len(cells) >= PARG else 1                                  # первые клетки — по одной (пустой индекс, очередь короткая)
         while len(ps) < Bn and fails < NFAIL:
             p = queue.pop(0) if queue else rand_seed(rng)
             if not inbox(p) or not free(p): continue
@@ -453,11 +453,12 @@ def build_layer_par(u, rng, log=None):
             if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
             ps.append(p)
         if not ps: continue
-        args = [(p,) + (LIMITS(p, u) if LIMITS else (RMAX, TMAX)) for p in ps]
+        t1 = tm(); args = [(p,) + (LIMITS(p, u) if LIMITS else (RMAX, TMAX)) for p in ps]
         if len(ps) == 1: res = [growN(args[0][0], u, idx, args[0][1], args[0][2])]
         else:
             _PG = (idx, u)
             with get_context('fork').Pool(min(PARG, len(ps))) as pool: res = pool.map(_pg_work, args, chunksize=1)
+        t2 = tm(); TT[0] += t1 - t0; TT[1] += t2 - t1
         for p, c in zip(ps, res):
             if len(cells) >= MAXC: break
             if c is None: fails += 0 if queue else 1; continue
@@ -468,7 +469,9 @@ def build_layer_par(u, rng, log=None):
             if SIDE:
                 for e0 in (c.c, g0[ctr], g1[ctr]):
                     for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
+        TT[2] += tm() - t2
         if log: log(u, cells)
+    if E('PARDBG'): print('PARG layer %s: затравки %.1f с, рост (пул) %.1f с, фиксация %.1f с' % (u, TT[0], TT[1], TT[2]), flush=True)
     bar.close(); return cells, idx
 def _layer(a): return (build_layer_par if PARG > 1 else build_layer)(a[0], np.random.default_rng(a[1]), None)[0]
 _PQ = None
