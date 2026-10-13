@@ -1,22 +1,10 @@
-# Session Handoff — линия A (открыта hub-v5chain-research-26, 2026-10-13 ~03:05, по слову пользователя «разрешаю ещё одного воркера»)
-АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — первоисточник; пользователь спит, решения принимать самому с записью «решение <роль> (автономный режим)»).
-Звено: hub-v5chain-worker-27 (первое в новой линии A; прошлый хендофф worker-26 — `.llm/chain/history/HANDOFF_worker-26_20261012.md`, тема другая, не продолжать).
-Ведущий линии: hub-v5chain-research-26 (вопросы — ему, `send_verified.py`). Соседи: worker-c4 (бенч, CA1 лёгкие, PPO/SAC), worker-b10 (ускорение, владелец `v7/src/cells7/growN.py`).
-
-## Глобальная цель (слово пользователя 2026-10-13 ~03:05)
-«Сделать spore максимально быстрым и показать, что он быстрее других алгоритмов». Твоя часть — **ПОКАЗАТЬ** на 6D-средах, где конкуренты
-деградируют с размерностью. Протокол бенча — `knowledge/research/bench_protocol.md` (§2: заготовка, вес, total(N), безубыточность N*), честность строже выигрыша.
-
-## Задачи линии A (PLAN, тег [A]; по порядку)
-1. **[A] CA1-6D-a — 3D двузвенный манипулятор 6D без g** (`knowledge/research/manip3d_2link.md`, `reports/all_systems.md` №11: споры коридор v6 NB12000 NF3000, 16/16, 1.014 к OCP CasADi).
-   Среда — `spores_2/bench/envs_6d.py` (наследник `common.Env`; файл твой), 20 стартов, эталон — OCP CasADi (как в all_systems, переиспользовать скрипт research-21),
-   методы: споры (версия из all_systems, заготовка/запрос раздельно), OCP IPOPT на запрос, SST/RRT (свои `sst_own.py` или OMPL, бюджеты .3/1/3/10/60 с), PPO 5M (`ppo_run.py`).
-   Таблица `~/claude-work/projects/spore/reports/bench/table_m3d.md` + total(N) PNG тем же `make_report.py` (если ломается — своя копия `make_report_a.py`).
-2. **[A] CA1-6D-b — 3 звена 6D + g** (all_systems №8: коридор v6, вниз/вверх 32/32) — так же, `table_m3g.md`; затем №8d с 2 дисками (6 — неизбежное столкновение: исключать для всех одинаково).
-3. **[A] CA1-8D — 4 звена 8D** (эталона нет — доля дошедших и время по всем методам).
-## Владение файлами
-Твои: `bench/envs_6d.py`, `bench/*_6d*.py`, `bench/run_*6d*.sh`, таблицы `table_m3d/m3g/m8.md`. **Не править:** `bench/common.py`, `envs_heavy.py`, `make_report.py` (c-линия — просьба строкой в PLAN),
-`v7/src/cells7/growN.py` (B). Код v6 коридора — читать/импортировать; правка — копией в bench/.
-## Где считать
-aida (`ssh -p 2222 random@127.0.0.1`, `~/spore_v5`, 32 ядра, 60 ГБ, GPU 16 ГБ через flock /tmp/gpu.lock): ноут на паузе — aida наша, но делим с c4/b10: RAM ≤ ~50 ГБ на всех.
-Долгое — nohup + tqdm, ждать не циклом. Результаты (таблицы < 1 МБ) — коммит и пуш сразу (`git push git@github-paper:VladimirGunyavoy/diplom.git master` из `~/claude-work/projects/spore`; автор VladimirGunyavoy / gun.vladimir26@gmail.com).
+# Session Handoff — линия A
+АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — первоисточник; решения самому с записью «решение <роль> (автономный режим)»). Ведущий линии: hub-v5chain-research-26 (send_verified.py).
+Звено: hub-v5chain-worker-27 (acc2, sonnet, 03:00–06:40), причина смены: ctx ~30%
+Сделано: CA1-6D-a/b/8D (таблицы reports/bench/table_m3d.md, table_m3g.md, table_m8.md; итоги и грабли — knowledge/research/bench_6d8d.md): споры = эталон по T, но запрос не быстрее OCP. Затем SPD6 (ускорение запроса): refine через CasADi/IPOPT + компилированный поток → m3d 6.1→3.0 с, m3gd 73.6→7.8 с, m3gu 103.7→10.2 с при том же T (всё запушено).
+Стоп на / следующий шаг (SPD6, задача research-26): (1) m3d ≤ 1 с: профиль после ускорения — IPOPT 36 refine ≈0.5 с, прямое дерево ≈0.3, cKDTree.query по узлу ≈0.2 (сделать ОДНИМ пакетным запросом), стыковка ≈0.4; отсев кандидатов до IPOPT; (2) 8D с CAREF/TREEFAST (spores_8d.py пока на штатном; refine_ca/tree_fast знают только m3d/m3g — для n=4 нужен f_ca из ocp_m8_lib и 16 слоёв); (3) финальный перемер ВСЕХ методов на тихой aida (сейчас load 12–25, времена завышены) — только в конце; обновить table_*.md строкой «споры SPD6». Результат — в bench_6d8d.md + строка в журнал.
+Грабли: на aida casadi для системного python3 — только через PYTHONPATH=$HOME/spore_v5/r5/pylib (venv-ompl имеет casadi, но без tqdm); `pkill -f "spores_6d.py ..."` убивает собственный ssh-шелл (использовать «[s]pores_6d.py»); не использовать `sleep N; ssh …` цепочкой (блокируется); casadi map из SX с 512 столбцами даёт 11 МБ C — map делать от внешней одноколоночной функции; нумерация слоёв m3d (US: бит старший = τ0) ≠ m3g (LAYERS6: бит i = τ_i) — брать таблицы из модулей; окно/|w| допуски: m3d .01, 3g/8D .05 (эталон OCP нарушает |w|≤3 внутри интервалов). Данные aida: ~/spore_v5/a27/{spores_2,reports/bench/data}; синхронизация bench/sync_6d.sh [pull].
+Решения цепочки: T_ref для 8D = лучший найденный среди методов (rescore_m8.py); допуски |w| выше (автономный режим).
+Коммиты: bd7b1610 SPD6 код; 9148e1cf knowledge; 8b8b1146 table_m8.
+Токены: T_START 5ч 9% / ctx 5% … T_BEFORE_END 5ч ~51% / ctx ~29%
+NEXT_LINK: hub-v5chain-worker-28   NEXT_MODEL: sonnet
