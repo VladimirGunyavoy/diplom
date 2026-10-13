@@ -12,9 +12,9 @@ def fb(b): return '—' if not b else ('%.3g МБ' % (b / 1e6) if b >= 1e6 else 
 def st(s): return '%d%% | %s / %s / %s / %s' % (round(s['reached'] * 100), f(s['ratio_med']), f(s['ratio_mean']), f(s['ratio_p90']), f(s['ratio_max']))
 e = common.make(env); R = []   # dict(m, par, build, qm, st, w, hw, note)
 FIN = {'m3d': 'NB 12000, NF 1000, K 3, NEIGH 0', 'm3gd': 'NB 12000, NF 3000, K 3', 'm3gu': 'NB 12000, NF 3000, K 3', 'm8': 'NB 60000, NF 15000, K 3, NEIGH 1'}
-for tag, nm in (('', 'v6'), ('_wlim', 'v6 + предел |w| по пути (wlim)'), ('_final' if env != 'm8' else '_ca3', 'v6 SPD6 (CasADi/IPOPT-refine + скомпилированный поток, |w|≤3 по пути)')):
+for tag, nm in (('', 'v6'), ('_wlim', 'v6 + предел |w| по пути (wlim)'), ('_final' if env != 'm8' else '_tf1', 'v6 SPD6 (CasADi/IPOPT-refine + скомпилированный поток, |w|≤3 по пути)')):
     d = L(f'{D}/{env}_spores{"8d" if env == "m8" else "6d"}{tag}.json')
-    if d: R.append(dict(m='**споры** коридор ' + nm, par=((FIN[env] + '; ' + ('1 ядро, taskset, OMP=1' if env != 'm8' else '10 процессов') + '; load average aida при прогоне ~6' if tag in ('_final', '_ca3') else ('NB 100000, NF 25000, K 3, эвристика back_heuristic; 1 ядро/запрос' if env == 'm8' else 'NB 12000, NF 3000, K 3; 1 ядро/запрос'))), build=d['t_build'], qm=d['t_query_med'], qp=d['t_query_p90'], s=d, w=d['weight']['bytes'], hw='CPU numpy+math',
+    if d: R.append(dict(m='**споры** коридор ' + nm, par=((FIN[env] + '; ' + ('1 ядро, taskset, OMP=1' if env != 'm8' else '10 процессов') + '; load average aida при прогоне ~6' if tag in ('_final', '_tf1') else ('NB 100000, NF 25000, K 3, эвристика back_heuristic; 1 ядро/запрос' if env == 'm8' else 'NB 12000, NF 3000, K 3; 1 ядро/запрос'))), build=d['t_build'], qm=d['t_query_med'], qp=d['t_query_p90'], s=d, w=d['weight']['bytes'], hw='CPU numpy+math',
                         note='SLSQP-доводка держит |w|≤3 только в узлах' if not tag else ('жёсткий предел |w|≤3 в 16 точках сегмента' if tag == '_wlim' else 'ФИНАЛ: IPOPT-refine (запас .004), gcc-поток; ' + ('wlim' if env != 'm3d' else 'без wlim'))))
 if len(R) > 1 and R[-1]['m'].startswith('**споры**') and 'SPD6' in R[-1]['m']: R.insert(0, R.pop())   # финальная строка спор — первой (с ней считаются N*)
 for var in ('multi', 'fast'):
