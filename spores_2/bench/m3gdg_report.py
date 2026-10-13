@@ -53,4 +53,17 @@ if os.path.exists(os.path.join(DD, 'm3gdg_spores_v40.json')):
         a, b = st([g(r['runs'][bi], 'T') for r in ss['res']]); V.append('| SST бюджет %g с | 0 | %g | %g | %s | %s | |\n' % (B, B, B, a, b))
     V.append('\nЧестно: если на проверочном наборе споры хуже, чем на подбиравшемся, — это и есть оценка без подгонки; конфиг не подстраивался.\n')
     open(os.path.join(D, 'table_m3gdg.md'), 'a').write(''.join(V))
+# --- третий набор (w29): GSEED=37, K=40; конфиг споров заморожен + RETRYNF=4 (повтор с NF×4 после провала, введён после разбора провалов 2/30/38 на втором наборе)
+if os.path.exists(os.path.join(DD, 'm3gdg_spores_v40c.json')):
+    rf, fs, sv = L('m3gdg_ref_v40c.json'), L('m3gdg_ocpfast_v40c.json'), L('m3gdg_spores_v40c.json')
+    T0 = np.array([g(r) for r in rf['res']]); ok0 = np.isfinite(T0) & (T0 > .05)
+    def st3(T):
+        T = np.array(T, float); m = ok0 & np.isfinite(T); r = T[m] / T0[m]
+        return '%d/%d' % (m.sum(), ok0.sum()), '%.2f / %.2f / %.2f / %.2f' % (np.median(r), r.mean(), np.percentile(r, 90), r.max())
+    V = ['\n## Третий набор (GSEED=37, K=%d; конфиг заморожен: NB8000 NF3000 NEIGH=0 TRIES=1 CACLR=1 BATCHFAST=1 + RETRYNF=4 — повтор с NF×4 после провала, введён по разбору провалов второго набора)\n' % sv['K'],
+         '| метод | на переход: среднее / медиана, с | запрос p90, с | дошли | T/T_ref мед / ср / p90 / max | примечание |\n|---|---|---|---|---|---|\n']
+    tq = [x['t'] for x in rf['res']]; V.append('| OCP multi (эталон) | %.1f / %.1f | %.1f | %d/%d | 1.00 по построению | |\n' % (np.mean(tq), np.median(tq), np.percentile(tq, 90), ok0.sum(), len(ok0)))
+    tq = [x['t'] for x in fs['res']]; a, b = st3([g(r) for r in fs['res']]); V.append('| OCP fast | %.2f / %.2f | %.1f | %s | %s | |\n' % (np.mean(tq), np.median(tq), np.percentile(tq, 90), a, b))
+    tt = [x['t_build'] + x['t_query'] for x in sv['res']]; a, b = st3([g(r) for r in sv['res']]); V.append('| **споры** | %.2f / %.2f | %.1f | %s | %s | no_path: %s; долгие запросы (повтор NF×4): %s |\n' % (np.mean(tt), np.median(tt), np.percentile([x['t_query'] for x in sv['res']], 90), a, b, [r['k'] for r in sv['res'] if not r.get('T')], [(r['k'], round(r['t_query'])) for r in sv['res'] if r['t_query'] > 6]))
+    open(os.path.join(D, 'table_m3gdg.md'), 'a').write(''.join(V))
 print(open(os.path.join(D, 'table_m3gdg.md')).read())

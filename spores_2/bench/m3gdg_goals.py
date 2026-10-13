@@ -41,11 +41,18 @@ def run_spores(K):
     from src.atlas6.adaptive_nd import SysN, build_back
     from src.atlas6.corridor_nd import corridor_query
     tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = int(os.environ.get('NBG', 24000)), int(os.environ.get('NFG', 6000)), 3
+    DG = {}
+    if os.environ.get('DIAG'):
+        from src.atlas6 import corridor_nd as _CN; _c0 = _CN.candidates
+        def _cw(*a, **kw):
+            C, nh = _c0(*a, **kw); DG['cand'] = len(C); DG['hits'] = nh; return C, nh
+        _CN.candidates = _cw
     CAR = refine_ca.install('m3gd', ms=10, maxit=60, prebuild=range(1, 14), wl=True); tree_fast.install(); flow_all = tree_fast.make_flow_all('m3gd', US_); fl = lambda P, s, t: G3.flow(P, s, t, dt_max=.05, g=.3)
     if os.environ.get('BATCHFAST'): fl = tree_fast.make_flow_batch('m3gd', US_, fl)      # пакетный поток стыковки (t=±.2), остальное — исходный
     OBS = lambda P: G3.clearance(np.asarray(P)[..., :3], OB); blk = lambda P: OBS(P) < 0; clear = lambda P: OBS(P) - .02; WLIM = ((3, 4, 5), WM)
     res = []; Tr = transitions(K)
     for k, (st, gl) in enumerate(Tr):
+        if os.environ.get('ONLYK') and k not in [int(v) for v in os.environ['ONLYK'].split(',')]: continue      # диагностика (w29): только указанные переходы
         e = MGoal(gl, st); C3 = e.C3; CAR.C3 = C3[:3].copy(); t0 = time.perf_counter()
         ing = lambda P: (np.max(np.abs(wr(P[..., :3] - C3[:3])), -1) < Rq) & (np.max(np.abs(P[..., 3:]), -1) < Rw)
         g = lambda x: np.array([Rq ** 2 - wr(x[0] - C3[0]) ** 2, Rq ** 2 - wr(x[1] - C3[1]) ** 2, Rq ** 2 - wr(x[2] - C3[2]) ** 2, Rw ** 2 - x[3] ** 2, Rw ** 2 - x[4] ** 2, Rw ** 2 - x[5] ** 2])
@@ -57,9 +64,10 @@ def run_spores(K):
         b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=int(os.environ.get('TRIESG', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
         if b is None:                                            # откат на штатный SLSQP-refine (редко; время входит в запрос)
             from src.atlas6 import corridor_nd as _C; _C.refine = CAR.orig
-            try: b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=int(os.environ.get('TRIESG', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
+            try: b = corridor_query(S, fl, e.X0[0], back, tau, NF * int(os.environ.get('RETRYNF', 1)), rho, g, miss, K=KK, tries=int(os.environ.get('TRIESG', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 1)), clear=clear, wlim=WLIM)
             finally: _C.refine = CAR.refine
         dq = time.perf_counter() - t1
+        if os.environ.get('DIAG'): print('DIAG k=%d refine-stat=%s ipopt-status=%s nh/nm=%s' % (k, CAR.stat, CAR.st, DG), flush=True)
         if b is None: r = dict(k=k, T=None, why='no_path', t_build=tb, t_query=dq)
         else: Tv, why = common.verify(e, e.X0[0], [US_[s] for s in b[1]], list(b[2])); r = dict(k=k, T=Tv, why=why, t_build=tb, t_query=dq, nseg=len(b[1]))
         res.append(r); print(k, r, flush=True)

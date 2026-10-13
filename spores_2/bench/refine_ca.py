@@ -55,15 +55,15 @@ class CA:
             d = np.array(r['x']).ravel(); T = float(d.sum())
             if T >= best[0] or np.any(d < -1e-9): continue
             d = np.maximum(d, 0.); xe = endpoint(flow, x0, seq, d)
-            if not np.all(np.atleast_1d(g(xe)) >= -1e-4): continue
+            if not np.all(np.atleast_1d(g(xe)) >= -1e-4): s.stat['rej_goal'] = s.stat.get('rej_goal', 0) + 1; continue
             if wl or cl:
                 x = np.array(x0, float); okw = True
                 for sg, t in zip(seq, d):
                     for _ in range(8):
                         x = flow(x, sg, t / 8)
                         if wl and np.abs(x[s.n:]).max() > WM + 1e-2: okw = False
-                        if cl and np.min(clear(x[:3])) < -1e-3: okw = False
-                if not okw: continue
+                        if cl and np.min(clear(x[:3])) < -1e-3: okw = False; s.stat['rej_clr'] = s.stat.get('rej_clr', 0) + 1
+                if not okw: s.stat['rej_w_or_clr'] = s.stat.get('rej_w_or_clr', 0) + 1; continue
             best = (T, d)
         ok = best[1] is not None
         if not ok and (s.fallback or (os.environ.get('CAFB') and tries0 > 1)): s.stat['fb'] = s.stat.get('fb', 0) + 1; return s.orig(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=ns, wlim=wlim)
