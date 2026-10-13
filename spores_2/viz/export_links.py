@@ -129,8 +129,59 @@ def export_m3(envn, starts=None, nshow=5):
     data = dict(sys=envn, title=names[envn], params=par, goal=goal, obstacles=[], episodes=eps)
     os.makedirs(OUT, exist_ok=True); json.dump(data, open(os.path.join(OUT, envn + '.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано', envn, os.path.getsize(os.path.join(OUT, envn + '.json')), flush=True)
 
+def _m8work(i):
+    import spores_8d as SP8
+    b = SP8.corridor_query(SP8.S, SP8.fl, SP8.e.X0[i], SP8.back, SP8.tau, SP8.NF, SP8.rho, SP8.g, SP8.miss, K=SP8.K, tries=3, kn=8, neigh=1, hfun=SP8.HF, wlim=(tuple(range(4, 8)), SP8.WM))
+    if b is None: b = SP8.corridor_query(SP8.S, SP8.fl, SP8.e.X0[i], SP8.back, SP8.tau, 40000, SP8.rho, SP8.g, SP8.miss, K=SP8.K, tries=3, kn=8, neigh=1, hfun=SP8.HF, wlim=(tuple(range(4, 8)), SP8.WM))
+    return i, (None if b is None else ([SP8.US_[s_] for s_ in b[1]], list(b[2])))
+def _m8ref(i):
+    import ocp_m8_lib as OL, spores_8d as SP8
+    best, _ = OL.solve_query(SP8.e.X0[i], 50, 4, 4, seed=i, solver=_M8SOL, nearest=False); return i, best
+def export_m8(starts=(3, 6, 8, 14, 15)):
+    """m8 (4 звена, 8D, g=.3): споры _tf3 (NB60000 NF15000, CAMS 20, NFRETRY), эталон — OCP multi (ocp_m8_lib); T_ref — m8_ref.json (лучший найденный среди методов)"""
+    os.environ.update(G='0.3', CAREF='1', TREEFAST='1', CAMARG='.004', CAPRE='12', CAMS='20', CAFB='1', NEIGH='1')
+    sys.argv = ['spores_8d.py', 'm8', '60000', '15000', '3', '', 'wlim']; sys.path.insert(0, BENCH); import spores_8d as SP8, ocp_m8_lib as OL
+    from multiprocessing import get_context
+    global _M8SOL; _M8SOL = OL.make_solver(50, 4); e = SP8.e
+    with get_context('fork').Pool(len(starts)) as pool: R = dict(pool.map(_m8work, starts)); RR = dict(pool.map(_m8ref, starts))
+    eps = []
+    for i in starts:
+        if R[i] is not None:
+            X, U, Tv = resample(e, e.X0[i], R[i][0], R[i][1]); eps.append(dict(method='споры', start=int(i), dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=float(e.Tref[i]), ok=Tv is not None, src='m8_spores8d_tf3.json'))
+        if RR[i] is not None:
+            T, Ur = RR[i][0], RR[i][1]; Xr, Ur2, Tvr = resample(e, e.X0[i], list(Ur), [T / len(Ur)] * len(Ur)); eps.append(dict(method='эталон (OCP)', start=int(i), dt=DT, X=np.round(Xr, 4).tolist(), U=np.round(Ur2, 3).tolist(), T=Tvr, T_ref=float(e.Tref[i]), ok=Tvr is not None, src='OCP multi (ocp_m8_lib); T_ref — m8_ref.json'))
+        print('m8', i, [ (x['method'][:4], x['T']) for x in eps if x['start'] == i], flush=True)
+    par = dict(umax=[1.] * 4, view=[-4.2, -4.2, 4.2, 4.2], unames=['сустав 1', 'сустав 2', 'сустав 3', 'сустав 4'], links=[1., 1., 1., 1.], n=4)
+    data = dict(sys='m8', title='4 звена, g = 0.3, цель — висит вниз, |τ| ≤ 1 (8D)', params=par, goal=dict(q=[-np.pi / 2, 0., 0., 0.]), obstacles=[], episodes=eps)
+    json.dump(data, open(os.path.join(OUT, 'm8.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано m8', flush=True)
+
+def _g_ref(a):
+    k, st, gl = a; best, _ = _GL.solve_query(np.r_[st, 0., 0., 0.], gl, 50, 4, 4, seed=k, solver=_GSOL); return k, best
+def export_m3gdg(ks=(1, 3, 5, 10, 12), K=20):
+    """m3gdg (3 зв. + g .3 + 2 диска, цель — свободные позы): переходы k = goals[k] → goals[k+1] (GSEED=11), споры — конфиг ИТОГ w29 (NB8000 NF3000 NEIGH=0 TRIES=1, главная строка table_m3gdg.md), эталон — OCP multi (ocp_m3go_lib)"""
+    os.environ.update(G='0.3', DOWN='1', CAREF='1', TREEFAST='1', CACLR='1', BATCHFAST='1', NEIGH='0', TRIESG='1', NBG='8000', NFG='3000', RETRYNF='4', VIZSEQ='1', ONLYK=','.join(map(str, ks)))
+    import m3gdg_goals as MG, common, ocp_m3go_lib as OL; from multiprocessing import get_context
+    global _GL, _GSOL; _GL, _GSOL = OL, OL.make_solver(50, 4); Tr = MG.transitions(K)
+    with get_context('fork').Pool(len(ks)) as pool: refs = dict(pool.map(_g_ref, [(k, Tr[k][0], Tr[k][1]) for k in ks]))
+    sp = {r['k']: r for r in MG.run_spores(K)}; eps = []
+    for k in ks:
+        st, gl = Tr[k]; e = MG.MGoal(gl, st); x0 = e.X0[0]; gq = [float(v) for v in gl]; ref = refs.get(k); Tr_ = float(ref[0]) if ref else None
+        r = sp.get(k)
+        if r and r.get('us'):
+            X, U, Tv = resample(e, x0, r['us'], r['dts']); eps.append(dict(method='споры', start=int(k), goal_q=gq, dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=Tr_, ok=Tv is not None, src='m3gdg_goals.py spores, NB8000 NF3000 NEIGH=0 TRIES=1 (ИТОГ w29, table_m3gdg.md)'))
+        else: print('споры: нет пути на', k, flush=True)
+        if ref:
+            Xr, Ur2, Tvr = resample(e, x0, list(ref[1]), [ref[0] / len(ref[1])] * len(ref[1])); eps.append(dict(method='эталон (OCP)', start=int(k), goal_q=gq, dt=DT, X=np.round(Xr, 4).tolist(), U=np.round(Ur2, 3).tolist(), T=Tvr, T_ref=Tr_, ok=Tvr is not None, src='OCP multi (ocp_m3go_lib, N50, 8 ветвей×4 затравки)'))
+        print('m3gdg', k, [(x['method'][:4], x['T']) for x in eps if x['start'] == k], flush=True)
+    par = dict(umax=[1.] * 3, view=[-3.3, -3.2, 3.3, 3.2], unames=['сустав 1', 'сустав 2', 'сустав 3'], links=[1., 1., 1.], n=3)
+    obs = [dict(type='disc', c=list(c), r=r) for c, r in MG.OB]
+    data = dict(sys='m3gdg', title='3 звена, g = 0.3, 2 диска, цель — свободная поза (зелёная), |τ| ≤ 1', params=par, goal={}, obstacles=obs, episodes=eps)
+    json.dump(data, open(os.path.join(OUT, 'm3gdg.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано m3gdg', flush=True)
+
 if __name__ == '__main__':
     sysn = sys.argv[1]; st = [int(v) for v in sys.argv[2].split(',')] if len(sys.argv) > 2 else None
     if sysn in ('pend', 'pend15'):
         os.environ['ENVN'] = sysn; export_pend(sysn, st or [5, 12, 10, 15, 2, 18])
     elif sysn in ('m3d', 'm3gd', 'm3gu'): export_m3(sysn, st)
+    elif sysn == 'm8': export_m8(tuple(st) if st else (3, 6, 8, 14, 15))
+    elif sysn == 'm3gdg': export_m3gdg(tuple(st) if st else (1, 3, 5, 10, 12))

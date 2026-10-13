@@ -88,6 +88,7 @@ def run_spores(K):
         if os.environ.get('DIAG'): print('DIAG k=%d refine-stat=%s ipopt-status=%s nh/nm=%s' % (k, CAR.stat, CAR.st, DG), flush=True)
         if b is None: r = dict(k=k, T=None, why='no_path', t_build=tb, t_query=dq)
         else: Tv, why = common.verify(e, e.X0[0], [US_[s] for s in b[1]], list(b[2])); r = dict(k=k, T=Tv, why=why, t_build=tb, t_query=dq, nseg=len(b[1]))
+        if os.environ.get('VIZSEQ') and b is not None: r.update(us=[US_[s_].tolist() for s_ in b[1]], dts=[float(v) for v in b[2]])      # линия D (viz): план для воспроизведения
         if HS is not None and b is not None and r.get('T'):
             th0 = time.perf_counter(); res_h, sth = hyb_refine(HS, _L, e.X0[0], gl, b[1], b[2], fl, US_); th = time.perf_counter() - th0
             r.update(T_sp=r['T'], t_hyb=th, hyb_status=sth, hyb_ok=False)

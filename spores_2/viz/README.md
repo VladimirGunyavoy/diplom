@@ -50,6 +50,7 @@
 | m3gd (3 зв. + g=.3, цель — вниз) | `python spores_2/viz/play.py m3gd` | споры 6D (m3gd_spores6d_final) + эталон OCP × 4 старта (17, 1, 6, 9; старт 12 снят — OCP-повтор не прошёл проверку) | кадры --png | d1 |
 | m3gu (3 зв. + g=.3, цель — вверх) | `python spores_2/viz/play.py m3gu` | споры 6D (m3gu_spores6d_final) + эталон OCP × 5 стартов (14, 7, 10, 19, 16) | кадры --png | d1 |
 | m8 (4 звена, 8D, g=.3, цель — вниз) | `python spores_2/viz/play.py m8` | споры _tf3 + эталон OCP multi × 5 стартов (3, 6, 8, 14, 15) | кадры --png; старт 8: споры 3.76 / эталон 3.27 | d1 |
+| m3gdg (3 зв. + g=.3 + 2 диска, цель — свободная поза, своя на переход) | `python spores_2/viz/play.py m3gdg` | споры (ИТОГ w29: NB8000 NF3000, главная строка table_m3gdg.md) + эталон OCP multi × 5 переходов k = goals[k]→goals[k+1], GSEED=11 (k = 1, 3, 5, 10, 12); цель — зелёная поза, диски серые | кадры --png; k=1: споры 3.66 / эталон 3.30 | d2 |
 
 ## Запуск на ноуте (пользователь проверяет там, слово 2026-10-13 ~14:30)
 `git pull && pip install pygame numpy && python spores_2/viz/play.py <система>` — без aida, без GPU, без кода спор; все `viz/data/*.json` лежат в репозитории.

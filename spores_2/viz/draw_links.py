@@ -37,7 +37,7 @@ def chain_draw(surf, cam, p, x, u, t):
     for k in range(n + 1): pygame.draw.circle(surf, (214, 76, 38) if k == n else (240, 242, 248), sc[k], cam.len(.06 if k < n else .09)); pygame.draw.circle(surf, INK, sc[k], cam.len(.06 if k < n else .09), 2)
     pygame.draw.circle(surf, INK, sc[0], cam.len(.12), 3)
 def chain_static(surf, cam, p, data):
-    g = data.get('goal', {}); q = g.get('q')
+    g = data.get('goal', {}); q = p.get('goal_q') or g.get('q')
     if q is not None:
         pts = [cam.pt(v) for v in chain_pts(p, np.array(q, float))]
         for k in range(len(pts) - 1): pygame.draw.line(surf, (120, 200, 150), pts[k], pts[k + 1], 7)
