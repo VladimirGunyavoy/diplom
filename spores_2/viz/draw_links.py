@@ -25,3 +25,38 @@ SYSTEMS = {
     'pend': dict(draw=pend_draw, static=pend_static, trail=lambda p, x: [pend_tip(p, x)]),
     'pend15': dict(draw=pend_draw, static=pend_static, trail=lambda p, x: [pend_tip(p, x)]),
 }
+
+# ---------- плоские цепочки из n звеньев (3 зв. + g: m3gd/m3gu/m3gdg; 4 зв.: m8): θ_i = Σ q_j от горизонтали, длины params['links'] ----------
+def chain_pts(p, x):
+    ln = p.get('links', [1., 1., 1.]); th = np.cumsum(x[:len(ln)]); pts = [(0., 0.)]
+    for l, a in zip(ln, th): pts.append((pts[-1][0] + l * math.cos(a), pts[-1][1] + l * math.sin(a)))
+    return pts
+def chain_draw(surf, cam, p, x, u, t):
+    pts = chain_pts(p, x); sc = [cam.pt(q) for q in pts]; n = len(sc) - 1
+    for k in range(n): aaline(surf, RODC, sc[k], sc[k + 1], 9 - k)
+    for k in range(n + 1): pygame.draw.circle(surf, (214, 76, 38) if k == n else (240, 242, 248), sc[k], cam.len(.06 if k < n else .09)); pygame.draw.circle(surf, INK, sc[k], cam.len(.06 if k < n else .09), 2)
+    pygame.draw.circle(surf, INK, sc[0], cam.len(.12), 3)
+def chain_static(surf, cam, p, data):
+    g = data.get('goal', {}); q = g.get('q')
+    if q is not None:
+        pts = [cam.pt(v) for v in chain_pts(p, np.array(q, float))]
+        for k in range(len(pts) - 1): pygame.draw.line(surf, (120, 200, 150), pts[k], pts[k + 1], 7)
+        pygame.draw.circle(surf, (60, 170, 90), pts[-1], cam.len(.12), 3)
+    for r in (1., 2., 3.): pygame.draw.circle(surf, (228, 231, 238), cam.pt((0, 0)), cam.len(r), 1) if r <= sum(p.get('links', [1, 1, 1])) else None
+SYSTEMS.update({k: dict(draw=chain_draw, static=chain_static, trail=lambda p, x: [chain_pts(p, x)[-1]]) for k in ('m3gd', 'm3gu', 'm3gdg', 'm8')})
+
+# ---------- m3d: 3D двузвенник (основание q0 вокруг вертикали, плечо q1 — тангаж, локоть q2): две проекции — сверху (слева) и сбоку в плоскости руки (справа) ----------
+def m3d_geom(p, x):
+    l1, l2 = p.get('links', [.5, 1.]); q0, q1, q2 = x[0], x[1], x[2]; r1 = l1 * math.cos(q1); z1 = l1 * math.sin(q1); r2 = r1 + l2 * math.cos(q1 + q2); z2 = z1 + l2 * math.sin(q1 + q2); return q0, (r1, z1), (r2, z2)
+def m3d_draw(surf, cam, p, x, u, t):
+    q0, e1, e2 = m3d_geom(p, x); cl, cr = p.get('cx', [-1.9, 1.9]); c, s = math.cos(q0), math.sin(q0)
+    top = lambda r: cam.pt((cl + r * c, r * s)); side = lambda r, z: cam.pt((cr + r, z))
+    pygame.draw.circle(surf, (214, 218, 228), cam.pt((cl, 0)), cam.len(1.5), 1); pygame.draw.line(surf, (214, 218, 228), cam.pt((cr - 1.5, 0)), cam.pt((cr + 1.5, 0)), 1)
+    a0, a1, a2 = top(0.), top(e1[0]), top(e2[0]); aaline(surf, RODC, a0, a1, 8); aaline(surf, RODC, a1, a2, 6); pygame.draw.circle(surf, (214, 76, 38), a2, cam.len(.08)); pygame.draw.circle(surf, INK, a0, cam.len(.1), 3)
+    b0, b1, b2 = side(0., 0.), side(*e1), side(*e2); aaline(surf, RODC, b0, b1, 8); aaline(surf, RODC, b1, b2, 6); pygame.draw.circle(surf, (214, 76, 38), b2, cam.len(.08)); pygame.draw.circle(surf, INK, b0, cam.len(.1), 3)
+def m3d_static(surf, cam, p, data):
+    cl, cr = p.get('cx', [-1.9, 1.9]); _, e1, e2 = m3d_geom(p, np.zeros(6))
+    for pt in ((cl + e1[0], 0), (cl + e2[0], 0)): pass
+    pygame.draw.line(surf, (120, 200, 150), cam.pt((cl, 0)), cam.pt((cl + e1[0], 0)), 6); pygame.draw.line(surf, (120, 200, 150), cam.pt((cl + e1[0], 0)), cam.pt((cl + e2[0], 0)), 4)
+    pygame.draw.line(surf, (120, 200, 150), cam.pt((cr, 0)), cam.pt((cr + e1[0], e1[1])), 6); pygame.draw.line(surf, (120, 200, 150), cam.pt((cr + e1[0], e1[1])), cam.pt((cr + e2[0], e2[1])), 4)
+SYSTEMS['m3d'] = dict(draw=m3d_draw, static=m3d_static, trail=lambda p, x: [(p.get('cx', [-1.9, 1.9])[0] + m3d_geom(p, x)[2][0] * math.cos(x[0]), m3d_geom(p, x)[2][0] * math.sin(x[0])), (p.get('cx', [-1.9, 1.9])[1] + m3d_geom(p, x)[2][0], m3d_geom(p, x)[2][1])])

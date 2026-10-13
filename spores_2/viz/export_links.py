@@ -80,7 +80,56 @@ def export_pend(envn, starts):
     os.makedirs(OUT, exist_ok=True); json.dump(data, open(os.path.join(OUT, envn + '.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
     print('записано', envn, os.path.getsize(os.path.join(OUT, envn + '.json')), 'байт')
 
+def _refwork(i):
+    best, _ = _OL.solve_query(_E.X0[i], 50, 4, 4, seed=i, solver=_SOL, nearest=False); return i, best
+VIEWS = dict(m3gd=[-3.3, -3.2, 3.3, 3.2], m3gu=[-3.3, -3.2, 3.3, 3.2], m3d=[-3.7, -1.8, 3.7, 1.9])
+def export_m3(envn, starts=None, nshow=5):
+    """6D: m3d / m3gd / m3gu — споры = коридор v6 как bench/spores_6d.py (финальные конфиги из bench_6d8d.md: *_spores6d_final.json), эталон — OCP CasADi (m3d: готовые refm3d_*.npy, m3g: ocp_m3g_lib multi)"""
+    import common
+    cfg = dict(m3d=(12000, 1000, 3, False, '0'), m3gd=(12000, 3000, 3, True, '2'), m3gu=(12000, 3000, 3, True, '2'))[envn]; NB, NF, K, wl, neigh = cfg
+    os.environ.update(CAREF='1', TREEFAST='1', BATCHFAST='1', CAMARG='.004', CAPRE='12', NEIGH=neigh)
+    sys.argv = ['spores_6d.py', envn, str(NB), str(NF), str(K), ''] + (['wlim'] if wl else [])
+    sys.path.insert(0, os.path.join(BENCH)); import spores_6d as SP
+    e = SP.e; us_all = {}
+    def query(i):
+        b = SP.corridor_query(SP.S, SP.fl, e.X0[i], SP.back, SP.tau, NF, SP.rho, SP.g, SP.miss, K=K, tries=3, kn=8, neigh=int(neigh), nbest=1, wlim=((3, 4, 5), SP.WM) if wl else None)
+        return None if b is None else ([SP.US_[s_] for s_ in b[1]], list(b[2]))
+    res = {}
+    for i in range(len(e.X0)):
+        q = query(i)
+        if q is None: continue
+        X, U, Tv = resample(e, e.X0[i], q[0], q[1])
+        if Tv is not None: res[i] = (X, U, Tv, e.Tref[i])
+        print('споры', i, Tv, 'Tref', round(float(e.Tref[i]), 3), flush=True)
+    if starts is None:
+        good = [i for i, r in res.items() if r[2] / r[3] <= 1.2 and e.keep[i]]; starts = sorted(good, key=lambda i: -e.Tref[i])[:nshow]
+    print('показываем старты', starts, flush=True)
+    refs = {}
+    if envn == 'm3d':
+        for i in starts:
+            a = np.load(os.path.join(common.DATA, 'm3d_ref', 'refm3d_m3d_q%d_G0_N50_W3.npy' % (i + 1))); T = float(a[0]); U = np.asarray(a[1:], float).reshape(50, 3) if a.size == 151 else np.asarray(a[1], float); refs[i] = (T, U)
+    else:
+        os.environ['G'] = '0.3'; os.environ['DOWN' if envn == 'm3gd' else 'UP'] = '1'; import ocp_m3g_lib as OL; from multiprocessing import get_context
+        global _OL, _SOL, _E; _OL, _SOL, _E = OL, OL.make_solver(50, 4), e
+        with get_context('fork').Pool(len(starts)) as pool:
+            for i, best in pool.map(_refwork, starts):
+                if best is not None: refs[i] = (best[0], best[1])
+    eps = []; srcf = '%s_spores6d_final.json' % envn
+    for i in starts:
+        X, U, Tv, Tr_ = res[i]; eps.append(dict(method='споры', start=int(i), dt=DT, X=np.round(X, 4).tolist(), U=np.round(U, 3).tolist(), T=Tv, T_ref=float(Tr_), ok=True, src=srcf))
+        if i in refs:
+            T, Ur = refs[i]; Xr, Ur2, Tvr = resample(e, e.X0[i], list(Ur), [T / len(Ur)] * len(Ur))
+            eps.append(dict(method='эталон (OCP)', start=int(i), dt=DT, X=np.round(Xr, 4).tolist(), U=np.round(Ur2, 3).tolist(), T=Tvr, T_ref=float(Tr_), ok=Tvr is not None, src='OCP CasADi multiple shooting N50 (%s)' % ('refm3d npy' if envn == 'm3d' else 'ocp_m3g_lib multi')))
+    names = dict(m3d='3D двузвенник (основание + плечо + локоть), без g, |τ| ≤ 1', m3gd='3 звена, g = 0.3, цель — висит вниз, |τ| ≤ 1', m3gu='3 звена, g = 0.3, цель — стойка вверх, |τ| ≤ 1')
+    goal = {} if envn == 'm3d' else dict(q=[(-np.pi / 2 if envn == 'm3gd' else np.pi / 2), 0., 0.])
+    par = dict(umax=[1., 1., 1.], view=VIEWS[envn], unames=['база', 'плечо', 'локоть'] if envn == 'm3d' else ['сустав 1', 'сустав 2', 'сустав 3'])
+    par.update(links=[.5, 1.] if envn == 'm3d' else [1., 1., 1.]);
+    if envn != 'm3d': par['n'] = 3
+    data = dict(sys=envn, title=names[envn], params=par, goal=goal, obstacles=[], episodes=eps)
+    os.makedirs(OUT, exist_ok=True); json.dump(data, open(os.path.join(OUT, envn + '.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('записано', envn, os.path.getsize(os.path.join(OUT, envn + '.json')), flush=True)
+
 if __name__ == '__main__':
     sysn = sys.argv[1]; st = [int(v) for v in sys.argv[2].split(',')] if len(sys.argv) > 2 else None
     if sysn in ('pend', 'pend15'):
         os.environ['ENVN'] = sysn; export_pend(sysn, st or [5, 12, 10, 15, 2, 18])
+    elif sysn in ('m3d', 'm3gd', 'm3gu'): export_m3(sysn, st)
