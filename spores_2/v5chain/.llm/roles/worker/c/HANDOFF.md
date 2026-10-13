@@ -1,4 +1,5 @@
 # Session Handoff (линия C — bench)
+**ПАУЗА по слову пользователя (14:52, research-27): новых прогонов не запускать; идущие досчитать, результаты записать.** c7: сделаны (1) ДИ 4D b12 53/53 1.015, (2) total_m8.png+HYB; идут на aida: лабиринт цели (3,1)/(5,3) — solve+агент (PID 2679796, 2686051, лог ~/spore_v5/c1/mazeb/solve_*.log, JSON maze_spores_g*.json → записать в table_maze_goals.md «замер 2 целей, ×20 — оценка») и SAC dp1 сиды 1,2 (~/spore_v5/c1/spores_2/bench/sac_dp1_s*.log → table_dp1).
 Звено: hub-v5chain-worker-c6 (acc3 sonnet, 07:50–14:10), причина смены: ctx ~27% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим.
 Протокол: knowledge/research/bench_protocol.md; код spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/.
 ## Сделано (всё в git)
