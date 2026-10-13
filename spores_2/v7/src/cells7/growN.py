@@ -468,6 +468,14 @@ def _viable(P, d):
         if d > 1 and m.any(): m[m] = _viable(wrapy(step(P[m], u)), d - 1)
         ok |= m
     return ok
+_SOLVE_S = None
+def _spu_work(ui):
+    s, cl_, O_ = _SOLVE_S; u = US[ui]; SBL = int(E('SBLAY', 0))
+    a, b, c_ = s.stencils(step(s.P, u))
+    if GF is not None: k_ = edge_ok(s.P, u)[a]; a, b, c_ = a[k_], b[k_], c_[k_]
+    nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
+    keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); n0 = int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
+    return a, b.astype(np.int32 if s.N < 2 ** 31 else np.int64), c_, n0
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -480,12 +488,14 @@ class Atlas:
         s.cells = [c for l in s.layers for c in l]; n_ = 0
         for c in s.cells: c.o = n_; n_ += c.G.shape[0] * M ** m_
         s.P = np.concatenate([c.G.reshape(-1, N) for c in s.cells]); s.N = n_; s.goal = ingoal(s.P); s.V = np.full(n_, BIG); s.V[s.goal] = 0.
-    def stencils(s, Y):
+    def _init_qx(s):
         if not hasattr(s, 'qx'):
             s.qx = HexIdx()
             for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
             if PREFK > 0: s.qx.CL = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]).astype(np.int64)
+    def stencils(s, Y):
+        s._init_qx()
         Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
         if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
@@ -523,7 +533,15 @@ class Atlas:
             SBC = int(E('SBCAUS', 0)); SBL = int(E('SBLAY', 0))                                                      # п.37 (research-21; r18/solve_bucket.py SBCAUS/SBLAY): свой u — точное ребро по столбцу клетки, переключение на u2 — стенсил только по клеткам слоя u2
             SONE = int(E('SONE', 0)); SONE_CH = int(E('CHN', 400000)); SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
             if SBC or SMEAN or SONE: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
-            for ui, u in enumerate(US):
+            SPU = int(E('SPU', 0)) and not SONE and SBC                                                          # SPU=1 (b11): стенсилы четырёх u в отдельных процессах (fork до инициализации CUDA в родителе); результат — уже после SBCAUS-фильтра
+            if SPU:
+                from multiprocessing import get_context
+                s._init_qx(); global _SOLVE_S; _SOLVE_S = (s, cl_, O_)
+                with get_context('fork').Pool(len(US)) as pool: res = pool.map(_spu_work, list(range(len(US))))
+                for ui, (a, b, c_, nst_) in enumerate(res):
+                    Vg = np.minimum(Vg, s.tgoal(s.P, US[ui])); nst += nst_; I_.append(a); IDX_.append(b); W_.append(c_)
+                print('stencils built (SPU, 4 процесса) | t=%.0f с' % (time.time() - _ts), flush=True)
+            for ui, u in (enumerate(US) if not SPU else []):
                 Vg = np.minimum(Vg, s.tgoal(s.P, u))
                 if SONE:                                                                                            # п.44 (research-22, r22/18/p18.py): ОДИН (самый центральный = max наибольшего веса) стенсил на группу (узел, слой приземления), потоково по CHN узлов
                     aa, bb, cc = [], [], []; nc0 = 0
