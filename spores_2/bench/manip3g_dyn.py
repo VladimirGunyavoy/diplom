@@ -71,15 +71,11 @@ def energy(x, m=MS, ln=L, g=0.0):
 
 
 def clearance(P, obstacles, ln=L[:3]):
-    """Зазор звеньев n-звенника до дисков ((cx,cy),r): min по звеньям и дискам (dist − r); P (...,≥n) — относительные углы q (n = len(ln)); <0 — столкновение."""
-    P = np.asarray(P, float); n = len(ln); th = np.cumsum(P[..., :n], -1)
-    pts = [np.zeros(P.shape[:-1] + (2,))]
-    for i in range(n): pts.append(pts[-1] + ln[i] * np.stack([np.cos(th[..., i]), np.sin(th[..., i])], -1))
-    def seg(a, b, c):
-        d = b - a; u = np.clip(np.sum((c - a) * d, -1) / np.maximum(np.sum(d * d, -1), 1e-12), 0, 1)
-        return np.linalg.norm(a + u[..., None] * d - c, axis=-1)
-    out = np.full(P.shape[:-1], np.inf)
-    for c, r in obstacles:
-        c = np.array(c, float)
-        for i in range(n): out = np.minimum(out, seg(pts[i], pts[i + 1], c) - r)
-    return out
+    """Зазор звеньев n-звенника до дисков ((cx,cy),r): min по звеньям и дискам (dist − r); P (...,≥n) — относительные углы q (n = len(ln)); <0 — столкновение.
+    Векторно по звеньям и дискам сразу (w29; результат тот же, что у цикла по парам)."""
+    P = np.asarray(P, float); n = len(ln); th = np.cumsum(P[..., :n], -1); ln = np.asarray(ln, float)
+    px = np.concatenate([np.zeros(P.shape[:-1] + (1,)), np.cumsum(ln * np.cos(th), -1)], -1); py = np.concatenate([np.zeros(P.shape[:-1] + (1,)), np.cumsum(ln * np.sin(th), -1)], -1)
+    ax, ay = px[..., :-1, None], py[..., :-1, None]; dx, dy = (px[..., 1:] - px[..., :-1])[..., None], (py[..., 1:] - py[..., :-1])[..., None]
+    C = np.array([o[0] for o in obstacles], float); R = np.array([o[1] for o in obstacles], float)
+    u = np.clip(((C[:, 0] - ax) * dx + (C[:, 1] - ay) * dy) / np.maximum(dx * dx + dy * dy, 1e-12), 0, 1)
+    return (np.hypot(ax + u * dx - C[:, 0], ay + u * dy - C[:, 1]) - R).min((-1, -2))
