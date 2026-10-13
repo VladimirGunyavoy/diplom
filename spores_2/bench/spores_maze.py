@@ -15,6 +15,7 @@ if __name__ == '__main__':
     else: A = G.Atlas(); t_grow = time.perf_counter() - t0
     print('слои', [len(l) for l in A.layers], 'узлов', A.N, round(t_grow), 'с', flush=True)
     if os.environ.get('DUMPL'): pickle.dump(dict(layers=A.layers), open(os.path.expanduser(os.environ['DUMPL']), 'wb'))
+    if int(os.environ.get('BUILDONLY', 0)): sys.exit(0)      # рост на CPU (STGPU=0, без замка) → слои на диск; solve — отдельным запуском LOADL под замком
     import fcntl; _lk = open('/tmp/gpu.lock', 'w'); fcntl.flock(_lk, fcntl.LOCK_EX); print('GPU-замок взят', flush=True)      # замок только на solve (рост — на CPU без очереди)
     t0 = time.perf_counter(); A.solve(); fcntl.flock(_lk, fcntl.LOCK_UN); t_solve = time.perf_counter() - t0; print('solve', round(t_solve), 'с', flush=True)
     res = []; Ts = []; tq = []

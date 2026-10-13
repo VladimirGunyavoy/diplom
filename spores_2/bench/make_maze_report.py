@@ -4,7 +4,7 @@ D = common.DATA; e = common.make('maze'); L = lambda f: json.load(open(f'{D}/{f}
 def f(x, n=3): return '—' if x is None or (isinstance(x, float) and not np.isfinite(x)) else ('%.' + str(n) + 'g') % x
 rows = []
 def add(m, par, build, qm, qp, s, w, note=''): rows.append('| %s | %s | %s | %s / %s | %s | %.0f%% | %s / %s / %s | %s | %s |' % (m, par, f(build), f(qm), f(qp), f(None if build is None else build + 50 * qm), 100 * s['reached'], f(s['ratio_med']), f(s['ratio_p90']), f(s['ratio_max']), w, note))
-for tag, nm in (('_b', 'FORB2B=1, 4×3000 клеток'), ('_b9', 'FORB2B=1, 4×9000 клеток'), ('_a', 'FORB2B=0, 4×3000 клеток')):
+for tag, nm in (('_b', 'FORB2B=1, 4×3000 клеток'), ('_b6', 'FORB2B=1, 4×6000 клеток'), ('_b9', 'FORB2B=1, 4×9000 клеток'), ('_a', 'FORB2B=0, 4×3000 клеток')):
     d = L(f'maze_spores{tag}.json')
     if d:
         s = common.summarize(e, [r['T_verify'] for r in d['per_start']]); ok = [r['t_query'] for r in d['per_start'] if r['T_verify']]
