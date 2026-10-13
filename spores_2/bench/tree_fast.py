@@ -44,7 +44,8 @@ def make_flow_batch(name, layers, flow_orig, steps=4, CH=64):
         return out
     return flow
 def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
-    key = lambda p, s: (s,) + tuple(int(np.floor(p[k] / (rho * S.scale[k]))) for k in range(S.d))
+    inv = 1.0 / (rho * np.asarray(S.scale, float)[:S.d])
+    key = lambda p, s: (s,) + tuple(np.floor(np.asarray(p)[:S.d] * inv).astype(np.int64).tolist())
     seen = set(); P = []; G = []; par = []; lay = []; pq = []; cnt = 0; fa = getattr(S, 'flow_all', None); tt = tau if fwd else -tau
     def add(p, s, g, pa, ls):
         k = key(p, s)
@@ -55,9 +56,12 @@ def _tree(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
         ch = []; E = S.wrap(fa(P[i], tt)) if fa is not None else None
         bl = None
         if fa is not None and S.has_obst: bl = np.asarray(S.blocked(np.vstack([E, fa.half]))); bl = bl[:S.L] | bl[S.L:]       # все L концов и полудуг — одним векторным вызовом (было L скалярных потоков на питоне)
+        KK = np.floor(E[:, :S.d] * inv).astype(np.int64).tolist() if fa is not None else None       # ключи клеток всех L детей одним вызовом; уже виденные не кладём в кучу (при выталкивании их всё равно отбросили бы)
         for s in range(S.L):
             e = E[s] if fa is not None else S.wrap(S.flow(P[i], s, tt))
-            if not S.ok(e) or (S.has_obst and (bl[s] if bl is not None else (S.blocked(e) or S.blocked(S.flow(P[i], s, tt / 2))))): continue
+            if bl is not None and bl[s]: continue
+            if fa is not None and ((s,) + tuple(KK[s])) in seen: continue
+            if not S.ok(e) or (S.has_obst and bl is None and (S.blocked(e) or S.blocked(S.flow(P[i], s, tt / 2)))): continue
             ch.append((s, e))
         hh = hfun(np.array([e for _, e in ch])) if (hfun is not None and ch) else [0.0] * len(ch)
         for (s, e), hv in zip(ch, hh):
