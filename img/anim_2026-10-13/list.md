@@ -26,3 +26,23 @@
 - `anim_m3gu_backup_s7.mp4`/`.gif` → m3gu → старт 7 → 5.0 с (play 5.0 с)
   - SPORE: T 3.72, T/T_ref 1.090
   - OCP: T 3.41, T/T_ref 1.000
+- `anim_ddobst_compare_s10.mp4`/`.gif` → ddobst → старт 10 → 8.9 с (play 8.9 с)
+  - SPORE: T 3.93, T/T_ref 0.983
+  - reference (arcs): T 4.00, T/T_ref 1.000
+  - kRRT*-BM: T 4.18, T/T_ref 1.046
+  - RRT 60 s: T failed, T/T_ref — (провал)
+  - SST 60 s: T failed, T/T_ref — (провал)
+- `anim_car_compare_s10.mp4`/`.gif` → car → старт 10 → 7.8 с (play 7.8 с)
+  - SPORE: T 5.48, T/T_ref 1.045
+  - OCP: T 5.25, T/T_ref 1.001
+  - SST 60 s: T 7.78, T/T_ref 1.484
+- `anim_dd_backup_s11.mp4`/`.gif` → dd → старт 11 → 5.0 с (play 5.0 с)
+  - SPORE: T 4.50, T/T_ref 1.002
+  - reference (arcs): T 4.49, T/T_ref 1.000
+- `anim_carfree_backup_s5.mp4`/`.gif` → carfree → старт 5 → 5.3 с (play 5.3 с)
+  - SPORE: T 5.34, T/T_ref 1.026
+  - OCP: T 5.21, T/T_ref 1.000
+- `anim_m8_backup_s3.mp4`/`.gif` → m8 → старт 3 → 5.0 с (play 5.0 с)
+  - SPORE: T 3.47, T/T_ref 1.153
+  - OCP: T 3.01, T/T_ref 1.000
+  - (m8: метод в данных «споры» (_tf3), а не SPORE+IPOPT; пометки preliminary в данных нет — в кадре её нет. Окно m8 --present: подписи латиницей, 4 звена рисуются, но два манипулятора (споры/OCP) одним тёмным цветом накладываются, цель внизу кадра обрезана легендой — косметика не правилась.)
