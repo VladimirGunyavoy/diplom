@@ -59,7 +59,7 @@ def run_spores(sysn, starts):
 
 def run_ocp(sysn, starts):
     import common; e = common.make(sysn); eps = []
-    if sysn == 'manip': e.lo = e.lo - np.array([0, 0, .02, .02]); e.hi = e.hi + np.array([0, 0, .02, .02])      # OCP-эталон держит |ω| ≤ 3 + 1e-2 (check в r23/ref.py) — коробка пересчёта чуть шире, как у dp1
+    if sysn == 'manip': e.lo = e.lo - np.array([0, 0, .02, .02]); e.hi = e.hi + np.array([0, 0, .02, .02]); e.half = e.half + 2e-3      # + допуск окна цели 2e-3 (как у dp1: OCP-эталон приходит ровно на границу окна); OCP-эталон держит |ω| ≤ 3 + 1e-2 (check в r23/ref.py) — коробка пересчёта чуть шире, как у dp1
     for i in starts:
         r = ocp_ref(sysn, i) if sysn in ('dp1', 'manip') else ocp_arm(e, i)
         if r is None: print('эталон', sysn, i, 'не нашёлся', flush=True); continue
