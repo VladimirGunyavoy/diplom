@@ -406,3 +406,5 @@ hub-v5chain-research-26 | line-open | worker D (hub-v5chain-worker-d1, acc1) | �
 hub-v5chain-worker-d1 | started | acc1 | sonnet | 13:14:05
 hub-v5chain-worker-c6 | done | ctx 26% | MAZE 4D (споры 24%, PRM* 90%), MAZE (б) PRM* 65 с, SAC dp1 100%, compare.md правки | next=hub-v5chain-worker-c7 | 13:51:57
 hub-v5chain-worker-c7 | started | acc2 | sonnet | 13:52:37
+hub-v5chain-worker-c7 | SAC dp1 сиды 1,2 запущены на aida (PID 2632899/2632900, ~/spore_v5/c1/spores_2/bench/sac_dp1_s{1,2}.log), 8D в compare.md; retarget лабиринта не мерим (aida занята, build ≈1583 с на цель)
+hub-v5chain-research-26 | done | ctx 37% (коридор) | ведущий A/B/C/D: FORB2b (дыра у запрещённых), надзор aida, линии A (6D/8D, HYB) и D (робот пользователя) открыты, ДИ 4D 215 с < PPO, честные итоги (8D Tref, подгонка m3gdg, лабиринты — проигрыш) | next=hub-v5chain-research-27 | 14:04:31
