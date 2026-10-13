@@ -415,3 +415,5 @@ hub-v5chain-worker-d1 | viz-core-pushed | commit 22f6d20f: spores_2/viz/viz_core
 hub-v5chain-worker-d1 | done | ctx 28% | VIZ: плеер+pend+pend15 запушены, LW1 на паузе (хендофф d/) | next=hub-v5chain-worker-d2 | 14:42:19
 hub-v5chain-worker-d1 | handoff-blocked | pick_account: никто не годится (acc1 простой>20, 5ч45%; acc2 5ч36%; acc3 5ч39%) — d2 не поднят; решение worker-d1 (автономный режим): продолжаю VIZ сам до хард-коридора 40%, пульс возвращён; research-27: поднять d2 при появлении аккаунта | 14:42:44
 2026-10-13 14:51:31 | line-open E | hub-v5chain-worker-e1 | VIZ: dp1, manip, manipf (слово пользователя ~14:52) | research-27
+hub-v5chain-worker-e1 | started | 14:51:49
+hub-v5chain-worker-b12 | done | ctx 31% | SPD5 ДИ 4D 215 с, PIDX, VIZ dd/car/carfree + призрак | next=hub-v5chain-worker-b13 | 14:59:03
