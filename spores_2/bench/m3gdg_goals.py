@@ -34,6 +34,22 @@ def sst_work(a):
         if s['has']: T, why = common.verify(e, e.X0[0], s['us'], s['dts']); r.update(T=T, why=why)
         out.append(r)
     return dict(k=k, runs=out)
+def hyb_refine(HS, L, x0, gl, seq, dts, fl, US_, N=50):
+    """HYB (w29): путь спор → тёплый старт полного OCP (свободное T, N=50, зазор до дисков в узлах). → (U[N,3], T) либо None, если не сошлось/не прошло проверку."""
+    S, lbx, ubx, lbg, ubg = HS; seq = list(seq); dts = list(dts); T = float(sum(dts)); ts = np.linspace(0, T, N + 1); ce = np.cumsum(dts)
+    x = np.array(x0, float); X = [x.copy()]; seg = 0; t = 0.
+    for i in range(1, N + 1):
+        while t < ts[i] - 1e-12:
+            step = min(ts[i], ce[seg]) - t; x = fl(x, seq[seg], step); t += step
+            if t >= ce[seg] - 1e-12 and seg < len(seq) - 1: seg += 1
+        X.append(x.copy())
+    X = np.array(X); tm = (ts[:-1] + ts[1:]) / 2; Ug = np.array([US_[seq[min(int(np.searchsorted(ce, v)), len(seq) - 1)]] for v in tm], float)
+    C3 = np.asarray(gl, float); tgt = C3 + 2 * np.pi * np.round((X[-1][:3] - C3) / (2 * np.pi)); P = np.concatenate([x0, tgt, np.zeros(3)])
+    r = S(x0=np.concatenate([X.ravel(), Ug.ravel(), [T]]), p=P, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg); st = S.stats()['return_status']
+    if st not in ('Solve_Succeeded', 'Solved_To_Acceptable_Level'): return None, st
+    wv = np.array(r['x']).ravel(); To = wv[-1]; U = wv[6 * (N + 1):6 * (N + 1) + 3 * N].reshape(N, 3); xe, wmax, mc = L.simulate(x0, U, To)
+    ok = np.all(np.abs(L.wr(xe[:3] - C3)) < L.Rq + 1e-3) and np.all(np.abs(xe[3:]) < L.Rw + 1e-3) and wmax <= L.WM + 1e-2 and mc >= 0
+    return ((U, To) if ok else None), st
 def run_spores(K):
     sys.path.insert(0, os.path.join(HERE, '..', 'v6'))
     import refine_ca, tree_fast
@@ -41,7 +57,9 @@ def run_spores(K):
     from src.atlas6.adaptive_nd import SysN, build_back
     from src.atlas6.corridor_nd import corridor_query
     tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = int(os.environ.get('NBG', 24000)), int(os.environ.get('NFG', 6000)), 3
-    DG = {}
+    DG = {}; HS = None
+    if os.environ.get('HYB'):
+        import ocp_m3go_lib as _L; t0h = time.perf_counter(); HS = _L.make_solver(50, 4); print('HYB: OCP-решатель собран за %.1f с' % (time.perf_counter() - t0h), flush=True)
     if os.environ.get('DIAG'):
         from src.atlas6 import corridor_nd as _CN; _c0 = _CN.candidates
         def _cw(*a, **kw):
@@ -70,6 +88,13 @@ def run_spores(K):
         if os.environ.get('DIAG'): print('DIAG k=%d refine-stat=%s ipopt-status=%s nh/nm=%s' % (k, CAR.stat, CAR.st, DG), flush=True)
         if b is None: r = dict(k=k, T=None, why='no_path', t_build=tb, t_query=dq)
         else: Tv, why = common.verify(e, e.X0[0], [US_[s] for s in b[1]], list(b[2])); r = dict(k=k, T=Tv, why=why, t_build=tb, t_query=dq, nseg=len(b[1]))
+        if HS is not None and b is not None and r.get('T'):
+            th0 = time.perf_counter(); res_h, sth = hyb_refine(HS, _L, e.X0[0], gl, b[1], b[2], fl, US_); th = time.perf_counter() - th0
+            r.update(T_sp=r['T'], t_hyb=th, hyb_status=sth, hyb_ok=False)
+            if res_h is not None:
+                Uh, Th = res_h; Tvh, whyh = common.verify(e, e.X0[0], Uh, np.full(len(Uh), Th / len(Uh))); r['T_hyb'] = Tvh; r['hyb_why'] = whyh
+                if whyh == 'ok' and Tvh < r['T']: r.update(T=Tvh, hyb_ok=True)
+            r['t_query'] = dq + th
         res.append(r); print(k, r, flush=True)
     return res
 if __name__ == '__main__':

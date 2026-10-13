@@ -66,4 +66,18 @@ if os.path.exists(os.path.join(DD, 'm3gdg_spores_v40c.json')):
     tq = [x['t'] for x in fs['res']]; a, b = st3([g(r) for r in fs['res']]); V.append('| OCP fast | %.2f / %.2f | %.1f | %s | %s | |\n' % (np.mean(tq), np.median(tq), np.percentile(tq, 90), a, b))
     tt = [x['t_build'] + x['t_query'] for x in sv['res']]; a, b = st3([g(r) for r in sv['res']]); V.append('| **споры** | %.2f / %.2f | %.1f | %s | %s | no_path: %s; долгие запросы (повтор NF×4): %s |\n' % (np.mean(tt), np.median(tt), np.percentile([x['t_query'] for x in sv['res']], 90), a, b, [r['k'] for r in sv['res'] if not r.get('T')], [(r['k'], round(r['t_query'])) for r in sv['res'] if r['t_query'] > 6]))
     open(os.path.join(D, 'table_m3gdg.md'), 'a').write(''.join(V))
+# --- HYB (w29): споры как инициализация + полный OCP fast с тёплым стартом (свободное T, N=50, зазор до дисков); при несходимости/хуже — путь спор
+if os.path.exists(os.path.join(DD, 'm3gdg_spores_hyb.json')):
+    V = ['\n## HYB «споры+IPOPT» (w29): путь спор → тёплый старт полного OCP; конфиг споров заморожен (NB8000 NF3000 NEIGH=0 TRIES=1 CACLR=1 BATCHFAST=1 RETRYNF=4), на всех 3 наборах\n',
+         'T_ref = OCP multi, поэтому «мед 1.000» у HYB — следствие того, что финальный шаг тот же OCP; значимы ср / p90 / max и надёжность.\n\n',
+         '| набор | метод | дошли | T/T_ref мед / ср / p90 / max | на переход, с (ср) | примечание |\n|---|---|---|---|---|---|\n']
+    for nm, rf, hf, ff in (('основной K=20 (seed 11)', 'm3gdg_ref.json', 'm3gdg_spores_hyb.json', 'm3gdg_ocpfast.json'), ('проверочный K=40 (seed 23)', 'm3gdg_ref_v40.json', 'm3gdg_spores_v40_hyb.json', 'm3gdg_ocpfast_v40.json'), ('третий K=40 (seed 37)', 'm3gdg_ref_v40c.json', 'm3gdg_spores_v40c_hyb.json', 'm3gdg_ocpfast_v40c.json')):
+        rf_, h_, f_ = L(rf)['res'], L(hf)['res'], L(ff)['res']; T0 = np.array([g(r) for r in rf_]); ok0 = np.isfinite(T0) & (T0 > .05)
+        def stH(Ts):
+            T = np.array([t if t else np.nan for t in Ts], float); m = ok0 & np.isfinite(T); r = T[m] / T0[m]
+            return '%d/%d' % (m.sum(), ok0.sum()), '%.2f / %.2f / %.2f / %.2f' % (np.median(r), r.mean(), np.percentile(r, 90), r.max())
+        a, b = stH([r.get('T_sp', r.get('T')) for r in h_]); V.append('| %s | споры | %s | %s | %.2f | |\n' % (nm, a, b, np.mean([r['t_build'] + r['t_query'] - r.get('t_hyb', 0) for r in h_])))
+        a, b = stH([r.get('T') for r in h_]); V.append('| %s | **споры+IPOPT** | %s | %s | %.2f | OCP улучшил путь на %d переходах, добавка ср %.2f с |\n' % (nm, a, b, np.mean([r['t_build'] + r['t_query'] for r in h_]), sum(r.get('hyb_ok', False) for r in h_), np.mean([r.get('t_hyb', 0) for r in h_])))
+        a, b = stH([g(r) for r in f_]); V.append('| %s | OCP fast | %s | %s | %.2f | время зависит от загрузки aida |\n' % (nm, a, b, np.mean([r['t'] for r in f_])))
+    open(os.path.join(D, 'table_m3gdg.md'), 'a').write(''.join(V))
 print(open(os.path.join(D, 'table_m3gdg.md')).read())
