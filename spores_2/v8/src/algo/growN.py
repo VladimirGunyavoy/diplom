@@ -551,16 +551,16 @@ def build_layer(u, rng, log=None, seeds=None, only_queue=False):
     cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = [np.array(q_, float) for q_ in seeds] if seeds is not None else goal_seeds(rng) if GS else []
     gseed0 = None
     if seeds is None and GSEED and not slowf(np.zeros(N), u): gseed0 = np.zeros(N); queue.insert(0, gseed0)      # первая спора — центр цели (для неё ingoal-пропуск отключён)
-    bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; ncov = 0
-    dead = []; streak = [0]; passes = [0]                                                                # ZACEP: dead — затравки, не давшие клетку (reject по размеру): окрестность RMINZ считаем закрытой гало соседей
-    def covcheck():
-        """посев в непокрытое: COVP проб по полю; вне ядро∪гало (и не в окрестности dead) кладём в начало очереди; слой кончается, когда непокрытых ≤ COVTOL два раза подряд"""
     ellS = []
     if seeds is None and SEEDELL and N == 2:
         F2_ = np.zeros(N); F2_[0] = PERIOD[0] / 2; ellS.append(float(np.linalg.norm(F2_)) + SEEDELL0); ELLS[u] = ellS; ESMAX = ell_smax()
     elif seeds is None and SEEDLINE > 0:
         for k_ in range(1, SEEDLINEK + 1):
             for sg_ in (1., -1.): q0 = np.zeros(N); q0[0] = sg_ * k_ * SEEDLINE; queue.append(q0)
+    bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; ncov = 0
+    dead = []; streak = [0]; passes = [0]                                                                # ZACEP: dead — затравки, не давшие клетку (reject по размеру): окрестность RMINZ считаем закрытой гало соседей
+    def covcheck():
+        """посев в непокрытое: COVP проб по полю; вне ядро∪гало (и не в окрестности dead) кладём в начало очереди; слой кончается, когда непокрытых ≤ COVTOL два раза подряд"""
         passes[0] += 1; pr = rand_seeds(rng, COVP); pr = pr[inbox(pr) & ~ingoal(pr) & ~slowf(pr, u)]
         if not len(pr): return True
         cand = pr[~idx.inside(pr)] if idx.n else pr
