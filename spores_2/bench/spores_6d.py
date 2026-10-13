@@ -41,7 +41,7 @@ def work(i):
     us = [US_[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
 if __name__ == '__main__':
     t0 = time.perf_counter()
-    with mp.get_context('fork').Pool(min(16, len(e.X0))) as p: res = p.map(work, range(len(e.X0)), chunksize=1)
+    with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(e.X0))) as p: res = p.map(work, range(len(e.X0)), chunksize=1)
     wall = time.perf_counter() - t0; Ts = [r['T_verify'] for r in res]; tq = np.array([r['t_query'] for r in res]); s = common.summarize(e, Ts)
     s.update(env=name, method='споры 6D коридор v6 NB%d NF%d K%d%s' % (NB, NF, K, ' wlim' if WL else ''), t_build=t_build, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(tq.sum()), t_wall_parallel=wall,
              hw='CPU 1 ядро/запрос, numpy+math-поток', per_start=res, Tref=e.Tref.tolist(), weight=common.deep_weight(back), nodes_back=int(len(back[0])))
