@@ -181,6 +181,7 @@ def _prefk(s, pi, hid, sc, gpu=False):
         idx = torch.arange(len(o), device=o.device); first = torch.cummax(torch.where(st, idx, torch.zeros_like(idx)), 0).values; keep = torch.zeros(len(o), dtype=torch.bool, device=o.device); keep[o] = (idx - first) < PREFK; return keep
     mg = np.minimum(sc, 1 - sc).min(1); key = pi.astype(np.int64) * 8 + s.CL[s.I[hid, 0]]; o = np.lexsort((-mg, key)); ks = key[o]
     st = np.r_[True, ks[1:] != ks[:-1]]; idx = np.arange(len(o)); first = np.maximum.accumulate(np.where(st, idx, 0)); keep = np.zeros(len(o), bool); keep[o] = (idx - first) < PREFK; return keep
+COVAFF = int(E('COVAFF', 0))                                                                            # b11 (SPD5): covered() по аффинной оценке без Ньютона (приближённо; 0 — точно)
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
     def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
@@ -258,6 +259,8 @@ class HexIdx:
         if PREFK > 0 and getattr(s, 'CL', None) is not None and len(pi): k_ = _prefk(s, pi, hid, sc); pi, hid, y, sc = pi[k_], hid[k_], y[k_], sc[k_]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
         if not len(pi): return z
+        if getattr(s, 'aff', False):                                                                            # COVAFF (b11): только аффинная оценка sc0 без Ньютона (для covered)
+            k = ((sc >= 0) & (sc <= 1)).all(1); return pi[k], hid[k], sc[k]
         X = s.X[hid]; alive = np.arange(len(pi))
         for it in range(8):
             Xa, ya, sa = X[alive], y[alive], sc[alive]; F = _contract(Xa, sa) - ya; J = np.stack([_contract(Xa, sa, j) for j in range(N)], 2)
@@ -270,7 +273,9 @@ class HexIdx:
         k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
         return pi[k], hid[k], np.clip(sc[k], 0, 1)
     def covered(s, Y):
-        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y)
+        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); s.aff = COVAFF
+        try: pi, hid, sc = s.query(Y)
+        finally: s.aff = False
         if len(pi):
             R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
             sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); m[pi[core]] = True
