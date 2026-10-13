@@ -100,8 +100,7 @@ def run(sysname, mod, data, png=None, start=None, method=None, nframes=8, gif=No
         scr.blit(F['l'].render(data.get('title', sysname), True, INK), (16, 8))
         col = method_color(e.method); pygame.draw.circle(scr, col, (26, 54), 7); ratio = ('   T/T_ref = %.3f' % (e.T / e.Tref)) if (e.Tref and e.ok) else ''
         scr.blit(F['m'].render('%s · старт %s · %s' % (e.method, e.start, 'дошёл' if e.ok else 'НЕ ДОШЁЛ'), True, col if e.ok else (200, 40, 40)), (42, 43))
-        tt = F['m'].render('t = %.2f / %.2f с%s' % (min(t_now, e.t_goal), e.T, ratio), True, INK); scr.blit(tt, (W - tt.get_width() - 16, 12))
-        if e.has_tail and t_now >= e.t_goal: mk = F['m'].render('goal window reached', True, GOALMARK); scr.blit(mk, (W - mk.get_width() - 16, 70))
+        tt = F['m'].render('t = %.2f / %.2f с%s' % (min(t_now, e.t_goal, e.T), e.T, ratio), True, INK); scr.blit(tt, (W - tt.get_width() - 16, 12))
         if g is not None: sg = F['s'].render('призрак (синий): %s, T = %.2f с' % (g.method, g.T), True, (60, 100, 200)); scr.blit(sg, (W - sg.get_width() - 16, 44))
         # полоски управления
         n = e.U.shape[1] if e.U.ndim == 2 else 1; um = np.array(params.get('umax', [1.] * n), float); bw = 260

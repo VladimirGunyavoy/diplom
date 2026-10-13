@@ -116,10 +116,6 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0):
             else: tt = '%s — failed' % en_method(e.method)
             scr.blit(fM.render(tt, True, INK if e.ok else (180, 40, 40)), (PW - 334, y)); y += 28
         ck = fS.render('t = %.1f s' % min(t_now, max(e.t_goal for e in eps)), True, (120, 126, 138)); scr.blit(ck, (18, PH - 30))
-        for e in eps:                                                                    # отметка входа в окно цели (доводка X_tail)
-            if e.has_tail and t_now >= e.t_goal:
-                gx, gy = cam.pt(e.trail[int(round(e.t_goal / e.dt))][0]); c = col[id(e)]; pygame.draw.circle(scr, dark(c), (gx, gy), 11, 4)
-                mk = fS.render('goal window reached', True, (40, 140, 80)); r = mk.get_rect(midtop=(gx, gy + 18)); r.clamp_ip(pygame.Rect(4, TOP, PW - 8, PH - TOP - 4)); scr.blit(mk, r)
     if png:
         os.makedirs(png, exist_ok=True); outs = []
         for k in range(nframes):
