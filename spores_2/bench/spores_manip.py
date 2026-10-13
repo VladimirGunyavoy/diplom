@@ -65,6 +65,7 @@ if __name__ == '__main__':
     if mode == 'load':
         d = pickle.load(open(os.path.expanduser(os.environ.get('PKL', '~/spore_v5/wb5/m45/A_g300so.pkl')), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; A.n_it = 0; A.edges = 0
     Q = e.X0; res = []; Ts = []; tq = []
+    if int(os.environ.get('WARM', 0)): rollout_rec(A, Q[:1])   # прогрев qx/индексов (не в замере)
     for i in range(len(Q)):
         t1 = time.perf_counter(); T, seg, nodur = rollout_rec(A, Q[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
         Tv, why = common.verify(e, Q[i], [list(u) for u, d in sg], [d for u, d in sg]); Ts.append(Tv)
@@ -72,4 +73,4 @@ if __name__ == '__main__':
     s = common.summarize(e, Ts); s.update(env=e.name, method='spores growN g300 SONE VF2 PESS1 4x3000 (%s)' % mode, t_grow=t_grow, t_solve=t_solve, t_build=(t_grow or 0) + (t_solve or 0) if t_grow else None, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)),
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (запросы)', per_start=res, Tref=e.Tref.tolist())
     s['weight'] = common.deep_weight(A)
-    json.dump(s, open(os.path.join(common.DATA, '%s_spores%s.json' % (e.name, '' if mode == 'full' else '_load')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})
+    json.dump(s, open(os.path.join(common.DATA, '%s_spores%s%s.json' % (e.name, '' if mode == 'full' else '_load', os.environ.get('TAG', ''))), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

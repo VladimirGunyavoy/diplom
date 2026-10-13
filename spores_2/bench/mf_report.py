@@ -6,7 +6,9 @@ D = common.DATA; e = common.make('manipf'); n = len(e.X0); free = e.free0
 def L(f): return json.load(open(os.path.join(D, f))) if os.path.exists(os.path.join(D, f)) else None
 M = {}                                                                                # метод → (T по стартам (None — не дошёл), t_заготовка, t_запрос, пометка)
 oc = L('manipf_ocpc.json'); M['OCP IPOPT + запреты (мультистарт T0×5)'] = ([r['T'] for r in oc['per_start']], 0., oc['t_query_med'], '')
-sp = L('manipf_spores_load.json'); M['споры b9 (A_forb1: слои 343 + solve 211 с — цифры b9 forb.md; FIN-ω)'] = ([r['T_verify'] for r in sp['per_start']], 343. + 211., sp['t_query_med'], '')
+sp = L('manipf_spores_load.json'); M['споры ДО FORB2b (b9 A_forb1: слои 343 + solve 211 с — цифры b9 forb.md; FIN-ω)'] = ([r['T_verify'] for r in sp['per_start']], 343. + 211., sp['t_query_med'], '')
+sp2 = L('manipf_spores_load_f2b.json')
+if sp2: M['споры FORB2b (b11 A_f2b, MAXC 3000; запрос с прогревом qx; заготовка — оценка по b9 343+211, у b11 не мерили)'] = ([r['T_verify'] for r in sp2['per_start']], 343. + 211., sp2['t_query_med'], '')
 for a in ('sst', 'rrt'):
     d = L('manipf_%s.json' % a)
     if d:
