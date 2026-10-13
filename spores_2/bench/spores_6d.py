@@ -23,9 +23,20 @@ rng = np.random.default_rng(0); seeds = []
 for _ in range(32):
     v = rng.uniform(-1, 1, 6); v = v / np.max(np.abs(v)) * 0.99; seeds.append(C3 + v * np.array([Rq, Rq, Rq, Rw, Rw, Rw]))
 S = SysN(fl, 8, (np.pi, np.pi, np.pi, WM, WM, WM), ing, seeds, per=(2 * np.pi, 2 * np.pi, 2 * np.pi, 0, 0, 0), ok=lambda p: np.max(np.abs(p[3:])) <= WM)
+CAR = None
+if os.environ.get('CAREF'):
+    import refine_ca; t0 = time.perf_counter(); CAR = refine_ca.install(name, ms=int(os.environ.get('CAMS', 10)), maxit=int(os.environ.get('CAIT', 60)), prebuild=range(1, int(os.environ.get('CAPRE', 14))), wl=WL); print('refine_ca: сборка солверов %.1f с' % (time.perf_counter() - t0), flush=True)
+if os.environ.get('TREEFAST'):
+    import tree_fast; tree_fast.install(); S.flow_all = tree_fast.make_flow_all(name, US_)
+    if os.environ.get('BATCHFAST'): S.flow = tree_fast.make_flow_batch(name, US_, S.flow)
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
 def work(i):
-    e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, wlim=((3, 4, 5), WM) if WL else None); dt = time.perf_counter() - t1
+    e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, wlim=((3, 4, 5), WM) if WL else None); dt = time.perf_counter() - t1
+    if b is None and CAR is not None and int(os.environ.get('CAFB', 1)):                  # запрос без пути: повторить штатным SLSQP-refine (редко; время входит в запрос)
+        from src.atlas6 import corridor_nd as _C; _C.refine = CAR.orig
+        try: b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=int(os.environ.get('TRIES', 3)), kn=8, hfun=None, wlim=((3, 4, 5), WM) if WL else None)
+        finally: _C.refine = CAR.refine
+        dt = time.perf_counter() - t1; fb = True
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
     us = [US_[s] for s in b[1]]; Tv, why = common.verify(e, e.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
 if __name__ == '__main__':
