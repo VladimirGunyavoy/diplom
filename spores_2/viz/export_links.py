@@ -62,17 +62,18 @@ def ocp_pend(env, x0, N=60, seeds=6, guess=None):
 
 def export_pend(envn, starts):
     import common
+    os.environ['VARIANT'] = '56' if envn == 'pend' else '84'; srcf = 'pend_spores_T.json' if envn == 'pend' else 'pend15_spores.json'          # главная строка бенча (compare.md): pend — LOOK 20 (мед 1.016), pend15 — основная
     e = common.make(envn); import spores_pend as SP; G = SP.G
     t0 = time.perf_counter(); A = G.Atlas(); A.solve(); print('атлас', time.perf_counter() - t0, flush=True)
     eps = []
     for i in starts:
         T, rec = SP.rollout_rec(A, e.X0[i:i + 1]); us = [[r[0][0]] for r in rec if r[2][0]]; dts = [float(r[1][0]) for r in rec if r[2][0]]
         X, U, Tv = resample(e, e.X0[i], us, dts)
-        eps.append(dict(method='споры', start=int(i), dt=DT, X=np.round(X, 5).tolist(), U=np.round(U, 4).tolist(), T=Tv, T_ref=float(e.Tref[i]), ok=Tv is not None))
+        eps.append(dict(method='споры', start=int(i), dt=DT, X=np.round(X, 5).tolist(), U=np.round(U, 4).tolist(), T=Tv, T_ref=float(e.Tref[i]), ok=Tv is not None, src=srcf))
         b = ocp_pend(e, e.X0[i], guess=(us, dts))
         if b is not None:
             Tb, Ub = b; Xr, Ur, Tr = resample(e, e.X0[i], [[u] for u in Ub], [Tb / len(Ub)] * len(Ub))
-            eps.append(dict(method='эталон (OCP)', start=int(i), dt=DT, X=np.round(Xr, 5).tolist(), U=np.round(Ur, 4).tolist(), T=Tr, T_ref=float(e.Tref[i]), ok=Tr is not None))
+            eps.append(dict(method='эталон (OCP)', start=int(i), dt=DT, X=np.round(Xr, 5).tolist(), U=np.round(Ur, 4).tolist(), T=Tr, T_ref=float(e.Tref[i]), ok=Tr is not None, src='ocp_pend (CasADi, тёплый старт от плана спор); T_ref — pend_ref_T.npy'))
         print('старт', i, 'споры', eps[-2 if b else -1]['T'], 'эталон', eps[-1]['T'] if b else None, 'Tref', e.Tref[i], flush=True)
     um = float(e.umax[0]); title = 'Маятник, |u| ≤ %g (θ=0 — вверх)' % um
     data = dict(sys=envn, title=title, params=dict(L=1.0, umax=[um], view=[-1.9, -1.35, 1.9, 1.5], unames=['момент']), goal=dict(theta=float(e.half[0])), obstacles=[], episodes=eps)
