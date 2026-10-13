@@ -33,6 +33,6 @@ for i in ids:
     segs = [(C.US[s], float(d)) for s, d in zip(b[1], b[2])]; ep = EM.episode(e, i, 'споры', segs, float(e.Tref[i]) if not FREE else float('nan'), 'car_spores.json' if not FREE else 'car_spores.json (без дисков, тот же метод)')
     if FREE and ep['T'] is not None: ep['T_ref'] = ep['T']
     eps.append(ep); print(i, ep['T'], ep['T_ref'], ep['ok'], len(ep['X']), flush=True)
-d = dict(sys=a.system, title='Машина: ускорение и руль' + (' — без препятствий (эталона нет: T/T_ref ≡ 1)' if FREE else ', три препятствия'), params=dict(car_len=.8, car_wid=.44, fov=[-5, 5, -5, 5], goal_r=float(C.GR)), goal=dict(type='disc', c=[float(C.GOAL[0]), float(C.GOAL[1])], r=float(C.GR)),
-         obstacles=[] if FREE else [dict(type='disc', c=[float(h[0]), float(h[1])], r=float(C.HR)) for h in C.HZ], episodes=eps); d['params']['obstacles'] = d['obstacles']; d['params']['goal'] = d['goal']
+d = dict(sys=a.system, title='Машина без препятствий' if FREE else 'Машина, три препятствия', params=dict(car_len=.8, car_wid=.44, fov=[-5, 5, -5, 5], goal_r=float(C.GR)), goal=dict(type='disc', c=[float(C.GOAL[0]), float(C.GOAL[1])], r=float(C.GR)),
+         obstacles=[] if FREE else [dict(type='disc', c=[float(h[0]), float(h[1])], r=float(C.HR)) for h in C.HZ], episodes=eps); d['params']['obstacles'] = d['obstacles']; d['params']['goal'] = d['goal']; d['params']['note'] = ('эталона в бенче для этой постановки нет: «эталон» — OCP CasADi (оптимум), T/T_ref — к нему' if FREE else 'диски раздуты на габарит; столкновение проверяется по центру машины (белая точка)')
 out = os.path.join(HERE, 'data', a.system + '.json'); json.dump(d, open(out, 'w'), ensure_ascii=False, separators=(',', ':')); print(out, os.path.getsize(out) // 1024, 'КБ')

@@ -50,11 +50,23 @@ def export_dd(name, nstarts):
     for i in pick(e, nstarts):
         T, seg = S.rollout_rec(A, e.X0[i:i + 1]); eps.append(episode(e, i, 'споры', [(u, d) for u, d in seg[0]], e.Tref[i], SRC[name])); print(name, i, eps[-1]['T'], eps[-1]['T_ref'], len(eps[-1]['X']), flush=True)
     d = dict(sys=name, title={'dd': 'Дифдрайв: |v|+|ω| ≤ 1', 'ddobst': 'Дифдрайв с двумя препятствиями'}[name],
-             params=dict(body_r=.2, wheel_base=.34, fov=[-3, 3, -3, 3]), goal=dict(type='box', c=[0, 0], half=[.05, .05], theta=0, half_theta=.05),
+             params=dict(body_r=.2, wheel_base=.34, fov=[-3, 3, -3, 3], view=[-3, -3, 3, 3], umax=[1, 1]), goal=dict(type='box', c=[0, 0], half=[.05, .05], theta=0, half_theta=.05),
              obstacles=[dict(type='disc', c=[float(c[0]), float(c[1])], r=float(c[2])) for c in getattr(e, 'DISKS', [])], episodes=eps)
     d['params']['obstacles'] = d['obstacles']; d['params']['goal'] = d['goal']                # draw(…, params, …) видит и препятствия, и цель
     return d
 
+def finalize(d):
+    """камера по данным: ограничивающий прямоугольник всех траекторий (все методы) + цель + диски, поле 12 %; размер тела — доля от размаха (читаемо при любом масштабе)"""
+    P = [np.array(e['X'])[:, :2] for e in d['episodes'] if len(e['X'])]; g = d['goal']; r = g.get('r', .15) if g['type'] == 'disc' else .15
+    P.append(np.array([[g['c'][0] - r, g['c'][1] - r], [g['c'][0] + r, g['c'][1] + r]]))
+    for o in d.get('obstacles', []): P.append(np.array([[o['c'][0] - o['r'], o['c'][1] - o['r']], [o['c'][0] + o['r'], o['c'][1] + o['r']]]))
+    A = np.concatenate(P); lo, hi = A.min(0), A.max(0); span = (hi - lo).max(); m = .12 * span; lo, hi = lo - m, hi + m; p = d['params']; p['view'] = [round(float(lo[0]), 2), round(float(lo[1]), 2), round(float(hi[0]), 2), round(float(hi[1]), 2)]
+    sp = float((hi - lo).max())
+    if d['sys'].startswith('dd'): p['body_r'] = round(.045 * sp, 3); p['wheel_base'] = round(.075 * sp, 3); p['umax'] = [1, 1]
+    else: p['car_len'] = round(.075 * sp, 3); p['car_wid'] = round(.042 * sp, 3); p['umax'] = [1.5, 1.8]
+    p['obstacles'] = d['obstacles']; p['goal'] = d['goal']
+    return d
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('system'); ap.add_argument('--starts', type=int, default=4); a = ap.parse_args()
-    d = export_dd(a.system, a.starts); p = os.path.join(HERE, 'data', a.system + '.json'); json.dump(d, open(p, 'w'), ensure_ascii=False, separators=(',', ':')); print(p, os.path.getsize(p) // 1024, 'КБ')
+    d = finalize(export_dd(a.system, a.starts)); p = os.path.join(HERE, 'data', a.system + '.json'); json.dump(d, open(p, 'w'), ensure_ascii=False, separators=(',', ':')); print(p, os.path.getsize(p) // 1024, 'КБ')

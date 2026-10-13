@@ -32,11 +32,14 @@ def car_draw(surf, cam, p, x, u, t):
     px, py, th = float(x[0]), float(x[1]), float(x[2]); Lc, Wc = p.get('car_len', .8), p.get('car_wid', .44); a = float(u[0]) if len(u) else 0.
     poly(surf, cam, rot([(-Lc / 2, -Wc / 2), (Lc / 2, -Wc / 2), (Lc / 2, Wc / 2), (-Lc / 2, Wc / 2)], th, (px, py)), BODY, BODY_DK, 2)
     poly(surf, cam, rot([(Lc * .12, -Wc * .38), (Lc * .34, -Wc * .38), (Lc * .34, Wc * .38), (Lc * .12, Wc * .38)], th, (px, py)), (190, 220, 245))
+    pygame.draw.circle(surf, (255, 255, 255), cam.pt((px, py)), cam.len(.07)); pygame.draw.circle(surf, (200, 40, 40), cam.pt((px, py)), cam.len(.07), 2)   # центр: по нему проверяется столкновение (диск уже раздут на габарит)
     brk = (255, 60, 50) if a < -.05 else (120, 40, 40); head = (255, 236, 150) if a > .05 else (200, 200, 190)
     for sd in (-1, 1):
         poly(surf, cam, rot([(-Lc / 2, sd * Wc * .30), (-Lc / 2 + Lc * .08, sd * Wc * .30), (-Lc / 2 + Lc * .08, sd * Wc * .44), (-Lc / 2, sd * Wc * .44)], th, (px, py)), brk)
         poly(surf, cam, rot([(Lc / 2 - Lc * .08, sd * Wc * .30), (Lc / 2, sd * Wc * .30), (Lc / 2, sd * Wc * .44), (Lc / 2 - Lc * .08, sd * Wc * .44)], th, (px, py)), head)
 def car_static(surf, cam, p, data):
+    if p.get('note'):
+        f = pygame.font.SysFont(None, 22); x0, y0 = cam.pt((cam.view[0], cam.view[1])); surf.blit(f.render(p['note'], True, (110, 115, 130)), (x0 + 12, y0 - 26))
     g = data.get('goal', {}); c = g.get('c', [4, 3.6]); r = g.get('r', .45)
     pygame.draw.circle(surf, (190, 235, 205), cam.pt(c), cam.len(r)); pygame.draw.circle(surf, GOALC, cam.pt(c), cam.len(r), 3)
     for k in range(4):                                                              # финишная «шашка»
