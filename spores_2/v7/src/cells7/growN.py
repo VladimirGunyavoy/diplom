@@ -289,6 +289,7 @@ def mlin(Pb, n_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
+VIAB = int(E('VIAB', 0))                                                                                  # VIAB (b11): rollout с проверкой жизнеспособности на шаг вперёд (см. rollout)
 FORB2B = int(E('FORB2B', 0))                                                                           # FORB2b (b11, research-26): грань запрещена, только если ВСЕ её точки несвободны (частично несвободная не обрывает рост; рёбра режет edge_ok); 0 — выкл.
 FORB2 = float(E('FORB2', 0.))                                                                          # FORB2a (b10, research-26): r затравки = min(RMAX, FORB2·gfree(seed)), при отказе клетки — повтор с r/2 до RMIN; 0 — выкл.
 def growN(p, u, idx, rm, tm):
@@ -440,6 +441,14 @@ def _pquery(qx, Y):
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
     return np.concatenate([r[0] + r[3] for r in R]), np.concatenate([r[1] for r in R]), np.concatenate([r[2] for r in R])
+def _viable(P, d):
+    """VIAB: есть ли u с edge_ok, после которого ещё d−1 шагов жизнеспособны (d=1 — достаточно одного допустимого шага)."""
+    ok = np.zeros(len(P), bool)
+    for u in US:
+        m = edge_ok(P, u) & ~ok
+        if d > 1 and m.any(): m[m] = _viable(wrapy(step(P[m], u)), d - 1)
+        ok |= m
+    return ok
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -586,6 +595,10 @@ class Atlas:
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1))
             if GF is not None: J = np.where(np.stack([~edge_ok(Y, u) for u in US], 1), BIG, J)                            # FORB: шаг, заходящий в запрещённое, недопустим; нет допустимого — «застрял» (T = inf)
+            if GF is not None and VIAB:                                                                          # VIAB=d (b11, research-26): u допустим, только если из step(Y,u) можно прожить ещё d−1 шагов (перебор u на каждом, edge_ok); нет ни одного жизнеспособного — прежний выбор
+                Jv = J.copy()
+                for ki, ui in enumerate(US): Jv[:, ki] = np.where(_viable(wrapy(step(Y, ui)), VIAB - 1), J[:, ki], BIG)
+                J = np.where((Jv.min(1) >= BIG / 2)[:, None], J, Jv)
             k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
