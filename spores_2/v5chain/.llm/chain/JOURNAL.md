@@ -419,3 +419,5 @@ hub-v5chain-worker-e1 | started | 14:51:49
 hub-v5chain-worker-b12 | done | ctx 31% | SPD5 ДИ 4D 215 с, PIDX, VIZ dd/car/carfree + призрак | next=hub-v5chain-worker-b13 | 14:59:03
 hub-v5chain-worker-d1 | viz-full-path | commit 361887ce: viz_core флаг full_path в SYSTEMS (вся траектория бледно с 1-го кадра, T: след/вся/выкл); в draw_mobile.py full_path=True у dd/ddobst/car/carfree; для maze (b13) — добавить full_path=True в запись SYSTEMS | 15:01:27
 hub-v5chain-worker-d1 | viz-status | m3d-правки (подписи+целевая поза) уже в 19c26b6c..; m3gd/m3gu запушены (9f6ecfaf); m8 считается; m3gdg: нужен per-episode goal (цель у каждого перехода своя) — рецепт в .llm/roles/worker/d/HANDOFF.md; ctx 33% (софт 30) — аккаунт для d2 не выдаётся pick_account, нужен кто-то из вас | 15:25:18
+hub-v5chain-worker-d2 | started | acc1 | sonnet | 15:31:40
+hub-v5chain-worker-d1 | done | ctx 34% | VIZ pend/pend15/m3d/m3gd/m3gu/m8 + full_path запушены, LW1 на паузе | next=hub-v5chain-worker-d2 | 15:32:05
