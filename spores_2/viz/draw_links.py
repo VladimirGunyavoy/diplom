@@ -54,9 +54,15 @@ def m3d_draw(surf, cam, p, x, u, t):
     pygame.draw.circle(surf, (214, 218, 228), cam.pt((cl, 0)), cam.len(1.5), 1); pygame.draw.line(surf, (214, 218, 228), cam.pt((cr - 1.5, 0)), cam.pt((cr + 1.5, 0)), 1)
     a0, a1, a2 = top(0.), top(e1[0]), top(e2[0]); aaline(surf, RODC, a0, a1, 8); aaline(surf, RODC, a1, a2, 6); pygame.draw.circle(surf, (214, 76, 38), a2, cam.len(.08)); pygame.draw.circle(surf, INK, a0, cam.len(.1), 3)
     b0, b1, b2 = side(0., 0.), side(*e1), side(*e2); aaline(surf, RODC, b0, b1, 8); aaline(surf, RODC, b1, b2, 6); pygame.draw.circle(surf, (214, 76, 38), b2, cam.len(.08)); pygame.draw.circle(surf, INK, b0, cam.len(.1), 3)
+_FONT = {}
+def _font(sz=20):
+    if sz not in _FONT: _FONT[sz] = pygame.font.SysFont('dejavusans,arial,liberationsans,segoeui,helvetica', sz)
+    return _FONT[sz]
 def m3d_static(surf, cam, p, data):
-    cl, cr = p.get('cx', [-1.9, 1.9]); _, e1, e2 = m3d_geom(p, np.zeros(6))
-    for pt in ((cl + e1[0], 0), (cl + e2[0], 0)): pass
-    pygame.draw.line(surf, (120, 200, 150), cam.pt((cl, 0)), cam.pt((cl + e1[0], 0)), 6); pygame.draw.line(surf, (120, 200, 150), cam.pt((cl + e1[0], 0)), cam.pt((cl + e2[0], 0)), 4)
-    pygame.draw.line(surf, (120, 200, 150), cam.pt((cr, 0)), cam.pt((cr + e1[0], e1[1])), 6); pygame.draw.line(surf, (120, 200, 150), cam.pt((cr + e1[0], e1[1])), cam.pt((cr + e2[0], e2[1])), 4)
+    cl, cr = p.get('cx', [-1.9, 1.9]); _, e1, e2 = m3d_geom(p, np.zeros(6)); lay = pygame.Surface(surf.get_size(), pygame.SRCALPHA); gc = (60, 190, 110, 120)   # целевая поза (q=0, рука вытянута) — полупрозрачные звенья
+    for (a0, a1, a2) in (((cl, 0), (cl + e1[0], 0), (cl + e2[0], 0)), ((cr, 0), (cr + e1[0], e1[1]), (cr + e2[0], e2[1]))):
+        pygame.draw.line(lay, gc, cam.pt(a0), cam.pt(a1), 14); pygame.draw.line(lay, gc, cam.pt(a1), cam.pt(a2), 10); pygame.draw.circle(lay, gc, cam.pt(a2), cam.len(.14))
+    surf.blit(lay, (0, 0))
+    for cx, txt in ((cl, 'вид сверху'), (cr, 'вид сбоку (в плоскости руки)')):
+        im = _font(20).render(txt, True, (90, 96, 112)); pos = cam.pt((cx, 1.65)); surf.blit(im, (pos[0] - im.get_width() // 2, pos[1]))
 SYSTEMS['m3d'] = dict(draw=m3d_draw, static=m3d_static, trail=lambda p, x: [(p.get('cx', [-1.9, 1.9])[0] + m3d_geom(p, x)[2][0] * math.cos(x[0]), m3d_geom(p, x)[2][0] * math.sin(x[0])), (p.get('cx', [-1.9, 1.9])[1] + m3d_geom(p, x)[2][0], m3d_geom(p, x)[2][1])])
