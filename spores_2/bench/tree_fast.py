@@ -6,14 +6,16 @@ import numpy as np
 import casadi as ca
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 def make_flow_all(name, layers, steps=8, tag=''):
-    if name == 'm3d': import ocp_m3d_lib as L; fca = lambda x, u: L.f_ca(x, u)
+    nx, nu = (8, 4) if name == 'm8' else (6, 3)
+    if name == 'm8': os.environ.setdefault('G', '0.3'); import ocp_m8_lib as L; fca = lambda x, u: L.f_ca(x, u, .3); steps = 20      # dt_max .02 на τ=.4
+    elif name == 'm3d': import ocp_m3d_lib as L; fca = lambda x, u: L.f_ca(x, u)
     else: os.environ.setdefault('G', '0.3'); import ocp_m3g_lib as L; fca = lambda x, u: L.f_ca(x, u, .3)
-    x = ca.SX.sym('x', 6); u = ca.SX.sym('u', 3); t = ca.SX.sym('t'); fx = ca.Function('f', [x, u], [fca(x, u)]); h = t / steps; z = x
+    x = ca.SX.sym('x', nx); u = ca.SX.sym('u', nu); t = ca.SX.sym('t'); fx = ca.Function('f', [x, u], [fca(x, u)]); h = t / steps; z = x
     for _ in range(steps):
         k1 = fx(z, u); k2 = fx(z + h / 2 * k1, u); k3 = fx(z + h / 2 * k2, u); k4 = fx(z + h * k3, u); z = z + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     F = ca.Function('F_%s' % name, [x, u, t], [z]).map(len(layers)); so = os.path.join(HERE, 'flc_%s_%d.so' % (name, len(layers)))
     if not os.path.exists(so):
-        c = so[:-3] + '.c'; Xs, Us, Ts = ca.SX.sym('X', 6, len(layers)), ca.SX.sym('U', 3, len(layers)), ca.SX.sym('T', 1, len(layers))
+        c = so[:-3] + '.c'; Xs, Us, Ts = ca.SX.sym('X', nx, len(layers)), ca.SX.sym('U', nu, len(layers)), ca.SX.sym('T', 1, len(layers))
         G = ca.Function('FM_%s' % name, [Xs, Us, Ts], [F(Xs, Us, Ts)]); cwd = os.getcwd(); os.chdir(HERE); G.generate(os.path.basename(c), {'with_header': False}); os.chdir(cwd)
         subprocess.check_call(['gcc', '-O3', '-march=native', '-shared', '-fPIC', c, '-o', so, '-lm'])
     Fe = ca.external('FM_%s' % name, so); U = np.asarray(layers, float).T

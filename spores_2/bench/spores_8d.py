@@ -23,6 +23,8 @@ for _ in range(32):
 S = SysN(fl, 2 ** n, (np.pi,) * n + (WM,) * n, ing, seeds, per=(2 * np.pi,) * n + (0,) * n, ok=lambda p: np.max(np.abs(p[n:])) <= WM)
 if os.environ.get('CAREF'):
     import refine_ca; t0 = time.perf_counter(); CAR = refine_ca.install(name, ms=int(os.environ.get('CAMS', 10)), maxit=int(os.environ.get('CAIT', 60)), prebuild=range(1, int(os.environ.get('CAPRE', 12))), wl=WL); print('refine_ca: сборка солверов %.1f с' % (time.perf_counter() - t0), flush=True)
+if os.environ.get('TREEFAST'):
+    import tree_fast; tree_fast.install(); t0 = time.perf_counter(); S.flow_all = tree_fast.make_flow_all(name, US_); print('tree_fast: компиляция потока %.1f с' % (time.perf_counter() - t0), flush=True)
 t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); HF = back_heuristic(S, back, wh=None); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с' % (NB, t_build), flush=True)
 def work(i):
     e.nf = 0; t1 = time.perf_counter(); b = corridor_query(S, fl, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, neigh=int(os.environ.get('NEIGH', 2)), hfun=HF, wlim=(tuple(range(n, 2 * n)), WM) if WL else None); dt = time.perf_counter() - t1
