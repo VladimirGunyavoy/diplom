@@ -1,22 +1,12 @@
-# Session Handoff — линия A (открыта hub-v5chain-research-26, 2026-10-13 ~03:05, по слову пользователя «разрешаю ещё одного воркера»)
-АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — первоисточник; пользователь спит, решения принимать самому с записью «решение <роль> (автономный режим)»).
-Звено: hub-v5chain-worker-27 (первое в новой линии A; прошлый хендофф worker-26 — `.llm/chain/history/HANDOFF_worker-26_20261012.md`, тема другая, не продолжать).
-Ведущий линии: hub-v5chain-research-26 (вопросы — ему, `send_verified.py`). Соседи: worker-c4 (бенч, CA1 лёгкие, PPO/SAC), worker-b10 (ускорение, владелец `v7/src/cells7/growN.py`).
-
-## Глобальная цель (слово пользователя 2026-10-13 ~03:05)
-«Сделать spore максимально быстрым и показать, что он быстрее других алгоритмов». Твоя часть — **ПОКАЗАТЬ** на 6D-средах, где конкуренты
-деградируют с размерностью. Протокол бенча — `knowledge/research/bench_protocol.md` (§2: заготовка, вес, total(N), безубыточность N*), честность строже выигрыша.
-
-## Задачи линии A (PLAN, тег [A]; по порядку)
-1. **[A] CA1-6D-a — 3D двузвенный манипулятор 6D без g** (`knowledge/research/manip3d_2link.md`, `reports/all_systems.md` №11: споры коридор v6 NB12000 NF3000, 16/16, 1.014 к OCP CasADi).
-   Среда — `spores_2/bench/envs_6d.py` (наследник `common.Env`; файл твой), 20 стартов, эталон — OCP CasADi (как в all_systems, переиспользовать скрипт research-21),
-   методы: споры (версия из all_systems, заготовка/запрос раздельно), OCP IPOPT на запрос, SST/RRT (свои `sst_own.py` или OMPL, бюджеты .3/1/3/10/60 с), PPO 5M (`ppo_run.py`).
-   Таблица `~/claude-work/projects/spore/reports/bench/table_m3d.md` + total(N) PNG тем же `make_report.py` (если ломается — своя копия `make_report_a.py`).
-2. **[A] CA1-6D-b — 3 звена 6D + g** (all_systems №8: коридор v6, вниз/вверх 32/32) — так же, `table_m3g.md`; затем №8d с 2 дисками (6 — неизбежное столкновение: исключать для всех одинаково).
-3. **[A] CA1-8D — 4 звена 8D** (эталона нет — доля дошедших и время по всем методам).
-## Владение файлами
-Твои: `bench/envs_6d.py`, `bench/*_6d*.py`, `bench/run_*6d*.sh`, таблицы `table_m3d/m3g/m8.md`. **Не править:** `bench/common.py`, `envs_heavy.py`, `make_report.py` (c-линия — просьба строкой в PLAN),
-`v7/src/cells7/growN.py` (B). Код v6 коридора — читать/импортировать; правка — копией в bench/.
-## Где считать
-aida (`ssh -p 2222 random@127.0.0.1`, `~/spore_v5`, 32 ядра, 60 ГБ, GPU 16 ГБ через flock /tmp/gpu.lock): ноут на паузе — aida наша, но делим с c4/b10: RAM ≤ ~50 ГБ на всех.
-Долгое — nohup + tqdm, ждать не циклом. Результаты (таблицы < 1 МБ) — коммит и пуш сразу (`git push git@github-paper:VladimirGunyavoy/diplom.git master` из `~/claude-work/projects/spore`; автор VladimirGunyavoy / gun.vladimir26@gmail.com).
+# Session Handoff — линия A
+ПАУЗА ЗАМЕРОВ (слово пользователя ~15:00 через research-27): новых прогонов не запускать, результаты очереди не разбирать до слова. w30 (hub-v5chain-worker-30) сделал: HYB-8D, HYB в table_m3d/m3gd/m3gu, диагностика 8D 13/16, HOLD8 (+контроль HOLD=0, C-поток hold8_c.c, NFSEQ), m8_ref обновлён — всё в bench_6d8d.md/table_m8.md (f7008cdc и далее).
+Очередь на aida (досчитывается сама): ~/spore_v5/a27/spores_2/bench/{sweep_ctl.sh→sweep_hold.sh}, логи hold8_{ctl,hold}_nf{1500,5000,15000}.log и hold8_hold_seq.log, результаты reports/bench/data/m8_hold8_{ctl,hold}_nf*.json и m8_hold8_hold_seq.json (rsync вниз → rescore_m8.py → make_report_a.py m8). Дальше по слову: разбор свипа (число стартов с попаданиями, 3/12/15/13/16), строки в table_m8, 3в итог.
+АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS; решения самому с записью «решение <роль> (автономный режим)»). Ведущий линии: hub-v5chain-research-26 (send_verified.py).
+Звено: hub-v5chain-worker-29 (acc3, sonnet, 10:41–13:15), причина смены: ctx ~27% (софт 30%)
+Сделано (всё запушено, отчёт bench_6d8d.md + table_m3gdg.md): m3gdg (3 зв.+g+2 диска) 71 → ~3.0 с/переход (refine_ca с дисками CACLR=1, tree_fast векторный blocked/полудуга, BATCHFAST=1 в m3gdg_goals, векторный clearance, NEIGH=0 TRIESG=1 NB8000 NF3000); 3 набора целей (seed 11/23/37): споры 19/19, 36→39/39, 39/40 vs OCP fast 17/19, 29/39, 34/40 — вывод «надёжность при сопоставимом, не лучшем качестве и времени»; разбор провалов (hits=0 → RETRYNF=4; rej_goal); HYB споры+IPOPT (HYB=1): 19/19, 39/39, 39/40, ср T/Tref 1.03/1.08/1.08 за +0.5 с; m8 rescore по m8_ref (Tref был заглушкой 10.0), честный вывод 8D; NF300 m3d отвергнут; explainer-3 поднят (задача: .llm/roles/explainer/BRIEF_presentation.md → reports/presentation_brief.md).
+Стоп на / следующий шаг: ПЕРВЫМ (слово research-26): [A] HYB-8D — 8D (4 зв., где проигрываем по качеству: споры 18/20 1.18/p90 1.73 против OCP multi 1.00, OCP fast 16/20 1.28): споры (конфиг заморожен, `_tf3`) + полный OCP fast с тёплым стартом (по образцу `hyb_refine` в m3gdg_goals.py; для 8D нужен ocp_m8_lib solver) → дошли/T/время против multi и fast, строка в table_m8. Пакетный flow m8 отложен ещё раз. Ротация PLAN.md (208 строк) НЕ сделана — сделать первым делом (выполненное сверх ~10 → history/plan_archive.md).
+Грабли: casadi только на aida (PYTHONPATH=$HOME/spore_v5/r5/pylib), запуск скриптом-файлом (scp + bash); данные aida: ~/spore_v5/a27/{spores_2/bench,reports/bench/data}, rsync вниз; в m3gdg_goals env: GSEED (сид целей), OUTSFX/TAG (имена файлов), ONLYK+DIAG (диагностика), RETRYNF, TRIESG, HYB; git: ТОЛЬКО `git add <файлы>` + `git diff --cached --stat` (я раз сделал `commit -a` — d6ae8d9d захватил чужие правки; research-26 сказал ок). 5ч-лимит acc3 ~11%.
+Решения цепочки: m3gdg итоговый конфиг заморожен для сравнения (CACLR=1 BATCHFAST=1 NEIGH=0 TRIESG=1 NBG=8000 NFG=3000 RETRYNF=4); «время сравнимо» верно только для подбиравшегося набора.
+Коммиты: cba4f99e HYB, c0b4e6f5 третий набор, 93981b2b проверочный набор
+Токены: T_START 5ч 33%/ctx 5% … T_BEFORE_END 5ч 11% (окно сбросилось)/ctx 26%
+NEXT_LINK: hub-v5chain-worker-30   NEXT_MODEL: sonnet

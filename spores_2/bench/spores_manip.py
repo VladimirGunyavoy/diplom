@@ -35,13 +35,13 @@ def shoot_pol_rec(y, tmax, NA, inits=2, H=.1):
     return best
 
 def rollout_rec(A, Q, tmax=40.):
-    FG.FREE = ((lambda y: G.inbox(y) & G.free(y)) if G.GF is not None else (lambda y: G.inbox(y))) if int(os.environ.get('FINBOX', 0)) else (G.free if G.GF is not None else None)
+    FG.FREE = ((lambda y: G.inbox(y) & G.free(y)) if getattr(G, "GF", None) is not None else (lambda y: G.inbox(y))) if int(os.environ.get('FINBOX', 0)) else (G.free if getattr(G, "GF", None) is not None else None)
     E = os.environ.get; DTN = G.DTN; US = G.US; VF = G.VF
     Y = G.wrapy(Q); n = len(Y); T = np.zeros(n); done = G.ingoal(Y); tried = np.zeros(n, bool); fin = np.zeros(n, bool); seg = [[] for _ in range(n)]; nodur = np.zeros(n, bool)
     for _ in range(int(tmax / DTN)):
         if done.all(): break
         tgs = np.stack([A.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([A.vstar(G.step(Y, u)) for u in US], 1))
-        if G.GF is not None: J = np.where(np.stack([~G.edge_ok(Y, u) for u in US], 1), G.BIG, J)
+        if getattr(G, "GF", None) is not None: J = np.where(np.stack([~G.edge_ok(Y, u) for u in US], 1), G.BIG, J)
         k = J.argmin(1); tg = tgs[np.arange(n), k]
         for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
             tried[i] = True; Ts, tp, dd = shoot_pol_rec(Y[i], G.FTMAX, int(E('NA', 3)))
@@ -65,6 +65,7 @@ if __name__ == '__main__':
     if mode == 'load':
         d = pickle.load(open(os.path.expanduser(os.environ.get('PKL', '~/spore_v5/wb5/m45/A_g300so.pkl')), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; A.n_it = 0; A.edges = 0
     Q = e.X0; res = []; Ts = []; tq = []
+    if int(os.environ.get('WARM', 0)): rollout_rec(A, Q[:1])   # прогрев qx/индексов (не в замере)
     for i in range(len(Q)):
         t1 = time.perf_counter(); T, seg, nodur = rollout_rec(A, Q[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
         Tv, why = common.verify(e, Q[i], [list(u) for u, d in sg], [d for u, d in sg]); Ts.append(Tv)
@@ -72,4 +73,4 @@ if __name__ == '__main__':
     s = common.summarize(e, Ts); s.update(env=e.name, method='spores growN g300 SONE VF2 PESS1 4x3000 (%s)' % mode, t_grow=t_grow, t_solve=t_solve, t_build=(t_grow or 0) + (t_solve or 0) if t_grow else None, t_query_med=float(np.median(tq)), t_query_p90=float(np.percentile(tq, 90)), t_query_sum=float(np.sum(tq)),
                                       cells=[len(l) for l in A.layers], nodes=int(A.N), hw='CPU (запросы)', per_start=res, Tref=e.Tref.tolist())
     s['weight'] = common.deep_weight(A)
-    json.dump(s, open(os.path.join(common.DATA, '%s_spores%s.json' % (e.name, '' if mode == 'full' else '_load')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})
+    json.dump(s, open(os.path.join(common.DATA, '%s_spores%s%s.json' % (e.name, '' if mode == 'full' else '_load', os.environ.get('TAG', ''))), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

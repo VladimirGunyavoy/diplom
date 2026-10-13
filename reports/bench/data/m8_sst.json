@@ -1,0 +1,1018 @@
+{
+ "env": "m8",
+ "algo": "sst",
+ "prune": 0.1,
+ "sel": 0.2,
+ "starts": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "budgets": [
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 0.3,
+   "t_wall_sum": 6.059589114971459,
+   "nf_med": 7352.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 1.0,
+   "t_wall_sum": 20.130457433173433,
+   "nf_med": 20808.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 3.0,
+   "t_wall_sum": 60.14534531591926,
+   "nf_med": 46504.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 10.0,
+   "t_wall_sum": 200.28527075680904,
+   "nf_med": 101580.0
+  },
+  {
+   "n": 20,
+   "excluded": 0,
+   "reached": 0.0,
+   "ratio_med": null,
+   "ratio_mean": null,
+   "ratio_p90": null,
+   "ratio_max": null,
+   "budget": 60.0,
+   "t_wall_sum": 1200.7712435328867,
+   "nf_med": 233180.0
+  }
+ ],
+ "raw": [
+  {
+   "i": 0,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3036078680306673,
+     "has": false,
+     "nodes": 1413,
+     "nf": 6448,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0074332649819553,
+     "has": false,
+     "nodes": 4484,
+     "nf": 20416,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.004991426016204,
+     "has": false,
+     "nodes": 10110,
+     "nf": 46536,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.001336097018793,
+     "has": false,
+     "nodes": 21598,
+     "nf": 101312,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.075803105020896,
+     "has": false,
+     "nodes": 48335,
+     "nf": 232112,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 1,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30078945797868073,
+     "has": false,
+     "nodes": 1722,
+     "nf": 7416,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0059230850310996,
+     "has": false,
+     "nodes": 4710,
+     "nf": 21032,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0093782659387216,
+     "has": false,
+     "nodes": 10287,
+     "nf": 46648,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.005535656935535,
+     "has": false,
+     "nodes": 21933,
+     "nf": 101712,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.03987454692833,
+     "has": false,
+     "nodes": 49841,
+     "nf": 237872,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 2,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30210330802947283,
+     "has": false,
+     "nodes": 1921,
+     "nf": 7952,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0089579049963504,
+     "has": false,
+     "nodes": 4915,
+     "nf": 21200,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0105021960334852,
+     "has": false,
+     "nodes": 10619,
+     "nf": 46120,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.007172576966695,
+     "has": false,
+     "nodes": 22250,
+     "nf": 100256,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.06498978205491,
+     "has": false,
+     "nodes": 50749,
+     "nf": 238184,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 3,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3022746379720047,
+     "has": false,
+     "nodes": 1656,
+     "nf": 7192,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0089619950158522,
+     "has": false,
+     "nodes": 4617,
+     "nf": 20904,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0093303959583864,
+     "has": false,
+     "nodes": 10217,
+     "nf": 46800,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.012129658018239,
+     "has": false,
+     "nodes": 21643,
+     "nf": 102024,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.05186542007141,
+     "has": false,
+     "nodes": 48266,
+     "nf": 231528,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 4,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3046162179671228,
+     "has": false,
+     "nodes": 1429,
+     "nf": 5760,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0014358349144459,
+     "has": false,
+     "nodes": 3554,
+     "nf": 14928,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.011905506020412,
+     "has": false,
+     "nodes": 7914,
+     "nf": 34144,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.034949357970618,
+     "has": false,
+     "nodes": 17201,
+     "nf": 75128,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.02481372398324,
+     "has": false,
+     "nodes": 38716,
+     "nf": 175376,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 5,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3001352079445496,
+     "has": false,
+     "nodes": 1472,
+     "nf": 6256,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0060631550149992,
+     "has": false,
+     "nodes": 4535,
+     "nf": 19960,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.00848971598316,
+     "has": false,
+     "nodes": 10212,
+     "nf": 45784,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.021027617971413,
+     "has": false,
+     "nodes": 21652,
+     "nf": 100176,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.07767024601344,
+     "has": false,
+     "nodes": 48402,
+     "nf": 230920,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 6,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3011584180640057,
+     "has": false,
+     "nodes": 1692,
+     "nf": 7728,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0086330350022763,
+     "has": false,
+     "nodes": 4714,
+     "nf": 21216,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0048222560435534,
+     "has": false,
+     "nodes": 10240,
+     "nf": 47088,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.025689658010378,
+     "has": false,
+     "nodes": 21593,
+     "nf": 102704,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.011510891024955,
+     "has": false,
+     "nodes": 48441,
+     "nf": 234792,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 7,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30240747798234224,
+     "has": false,
+     "nodes": 1668,
+     "nf": 7128,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0063071449985728,
+     "has": false,
+     "nodes": 4590,
+     "nf": 20704,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0077593659516424,
+     "has": false,
+     "nodes": 10140,
+     "nf": 46752,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.008119798032567,
+     "has": false,
+     "nodes": 21615,
+     "nf": 101888,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.07393468497321,
+     "has": false,
+     "nodes": 48819,
+     "nf": 236208,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 8,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3092425790382549,
+     "has": false,
+     "nodes": 1605,
+     "nf": 6504,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0091473669745028,
+     "has": false,
+     "nodes": 3697,
+     "nf": 15968,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0137585180345923,
+     "has": false,
+     "nodes": 8041,
+     "nf": 35824,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.026062752935104,
+     "has": false,
+     "nodes": 17556,
+     "nf": 79792,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.05467467394192,
+     "has": false,
+     "nodes": 37921,
+     "nf": 177408,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 9,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3044439280638471,
+     "has": false,
+     "nodes": 1220,
+     "nf": 4856,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0130731870885938,
+     "has": false,
+     "nodes": 3279,
+     "nf": 13800,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.012248387094587,
+     "has": false,
+     "nodes": 7581,
+     "nf": 32712,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.018738841055892,
+     "has": false,
+     "nodes": 16897,
+     "nf": 75752,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.05821077700239,
+     "has": false,
+     "nodes": 36670,
+     "nf": 168560,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 10,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30422764795366675,
+     "has": false,
+     "nodes": 1375,
+     "nf": 6600,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0097202359465882,
+     "has": false,
+     "nodes": 3373,
+     "nf": 16128,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0078213359229267,
+     "has": false,
+     "nodes": 7614,
+     "nf": 36072,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.01620779093355,
+     "has": false,
+     "nodes": 16817,
+     "nf": 80520,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.01204012997914,
+     "has": false,
+     "nodes": 46432,
+     "nf": 228696,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 11,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3003602270036936,
+     "has": false,
+     "nodes": 1678,
+     "nf": 7792,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0017147950129583,
+     "has": false,
+     "nodes": 4581,
+     "nf": 21024,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0025013859849423,
+     "has": false,
+     "nodes": 10158,
+     "nf": 46472,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.00222585897427,
+     "has": false,
+     "nodes": 21730,
+     "nf": 100072,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.0055574500002,
+     "has": false,
+     "nodes": 46110,
+     "nf": 217304,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 12,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30152289697434753,
+     "has": false,
+     "nodes": 1582,
+     "nf": 7288,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.009459606022574,
+     "has": false,
+     "nodes": 4426,
+     "nf": 20888,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.002864444977604,
+     "has": false,
+     "nodes": 9927,
+     "nf": 46944,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.005651739076711,
+     "has": false,
+     "nodes": 21325,
+     "nf": 101904,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.058303394005634,
+     "has": true,
+     "nodes": 47962,
+     "nf": 234248,
+     "hist": null,
+     "T": 13.069999999999766,
+     "why": "ok"
+    }
+   ]
+  },
+  {
+   "i": 13,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30059041699860245,
+     "has": false,
+     "nodes": 1497,
+     "nf": 8008,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0063670160016045,
+     "has": false,
+     "nodes": 3920,
+     "nf": 22528,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0041324560297653,
+     "has": false,
+     "nodes": 8547,
+     "nf": 51056,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.000133677967824,
+     "has": false,
+     "nodes": 18292,
+     "nf": 112016,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.04724346194416,
+     "has": false,
+     "nodes": 43694,
+     "nf": 248888,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 14,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3016193169169128,
+     "has": false,
+     "nodes": 1882,
+     "nf": 7504,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0025327350012958,
+     "has": false,
+     "nodes": 4727,
+     "nf": 20576,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.010775976930745,
+     "has": false,
+     "nodes": 10272,
+     "nf": 46208,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.016833142959513,
+     "has": false,
+     "nodes": 21673,
+     "nf": 100960,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.04903872299474,
+     "has": false,
+     "nodes": 46325,
+     "nf": 222152,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 15,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30393678799737245,
+     "has": false,
+     "nodes": 1617,
+     "nf": 7912,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0070171470288187,
+     "has": false,
+     "nodes": 4177,
+     "nf": 21824,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0000939649762586,
+     "has": false,
+     "nodes": 9104,
+     "nf": 48792,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.021450293948874,
+     "has": false,
+     "nodes": 20577,
+     "nf": 106752,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.000058352947235,
+     "has": false,
+     "nodes": 45027,
+     "nf": 231032,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 16,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3066693809814751,
+     "has": false,
+     "nodes": 1810,
+     "nf": 8104,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.005864572012797,
+     "has": false,
+     "nodes": 4667,
+     "nf": 21776,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.00396603893023,
+     "has": false,
+     "nodes": 10339,
+     "nf": 48456,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.023878995911218,
+     "has": false,
+     "nodes": 22174,
+     "nf": 106384,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.026603510952555,
+     "has": false,
+     "nodes": 54538,
+     "nf": 269440,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 17,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.3005175880389288,
+     "has": false,
+     "nodes": 1747,
+     "nf": 7640,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.0047151610488072,
+     "has": false,
+     "nodes": 4676,
+     "nf": 21024,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0011500969994813,
+     "has": false,
+     "nodes": 10194,
+     "nf": 46728,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.013217210071161,
+     "has": false,
+     "nodes": 21859,
+     "nf": 102192,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.005746589042246,
+     "has": false,
+     "nodes": 59948,
+     "nf": 290128,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 18,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30346345994621515,
+     "has": false,
+     "nodes": 1535,
+     "nf": 6264,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.007017501979135,
+     "has": false,
+     "nodes": 4603,
+     "nf": 20040,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.00524193898309,
+     "has": false,
+     "nodes": 10328,
+     "nf": 46240,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.01354807196185,
+     "has": false,
+     "nodes": 22298,
+     "nf": 102480,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.02866579894908,
+     "has": false,
+     "nodes": 55081,
+     "nf": 261872,
+     "hist": null
+    }
+   ]
+  },
+  {
+   "i": 19,
+   "runs": [
+    {
+     "budget": 0.3,
+     "t": 0.30590229108929634,
+     "has": false,
+     "nodes": 1818,
+     "nf": 7680,
+     "hist": null
+    },
+    {
+     "budget": 1.0,
+     "t": 1.000112689100206,
+     "has": false,
+     "nodes": 4703,
+     "nf": 20728,
+     "hist": null
+    },
+    {
+     "budget": 3.0,
+     "t": 3.0136116431094706,
+     "has": false,
+     "nodes": 10227,
+     "nf": 46376,
+     "hist": null
+    },
+    {
+     "budget": 10.0,
+     "t": 10.011361960088834,
+     "has": false,
+     "nodes": 21857,
+     "nf": 101448,
+     "hist": null
+    },
+    {
+     "budget": 60.0,
+     "t": 60.00463827105705,
+     "has": false,
+     "nodes": 57367,
+     "nf": 274768,
+     "hist": null
+    }
+   ]
+  }
+ ],
+ "Tref": [
+  2.5082237022595195,
+  0.9181376993449232,
+  1.5719498025617866,
+  3.010251400867619,
+  2.4388922470025105,
+  2.3991428845961953,
+  3.1454900436504687,
+  2.845111217824901,
+  3.272859144067519,
+  1.268683260223201,
+  2.5580904526064328,
+  1.919514652926413,
+  2.8487213799202427,
+  2.4161062373444615,
+  3.390236582959093,
+  3.0446574254824146,
+  1.9886145133835327,
+  2.714299427836589,
+  2.1155859585943615,
+  1.389439497058684
+ ],
+ "hw": "CPU 1 proc/\u0437\u0430\u043f\u0440\u043e\u0441, numpy",
+ "Tref_note": "\u043b\u0443\u0447\u0448\u0438\u0439 \u043d\u0430\u0439\u0434\u0435\u043d\u043d\u044b\u0439 \u0441\u0440\u0435\u0434\u0438 \u043c\u0435\u0442\u043e\u0434\u043e\u0432 (m8_ref.json)"
+}

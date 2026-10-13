@@ -1,0 +1,233 @@
+{
+ "n": 11,
+ "excluded": 9,
+ "reached": 1.0,
+ "ratio_med": 1.0125189691390055,
+ "ratio_mean": 0.7696881014339731,
+ "ratio_p90": 1.0572962155217174,
+ "ratio_max": 1.132007592146927,
+ "env": "manipf",
+ "method": "spores growN g300 SONE VF2 PESS1 4x3000 (load)",
+ "t_grow": null,
+ "t_solve": null,
+ "t_build": null,
+ "t_query_med": 0.3834541339892894,
+ "t_query_p90": 1.010430547082797,
+ "t_query_sum": 8.891161320963874,
+ "cells": [
+  3000,
+  3000,
+  3000,
+  3000
+ ],
+ "nodes": 1813941,
+ "hw": "CPU (\u0437\u0430\u043f\u0440\u043e\u0441\u044b)",
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.01009221002459526,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 1,
+   "T_agent": 2.3416128612184353,
+   "T_verify": 2.3118466734755443,
+   "why": "ok",
+   "t_query": 0.9609534409828484,
+   "nseg": 11,
+   "finish_no_durations": false
+  },
+  {
+   "i": 2,
+   "T_agent": 6.939921495577341,
+   "T_verify": 6.930200199572914,
+   "why": "ok",
+   "t_query": 1.3103521290468052,
+   "nseg": 55,
+   "finish_no_durations": false
+  },
+  {
+   "i": 3,
+   "T_agent": 3.0750000000000015,
+   "T_verify": 3.0749999999999793,
+   "why": "ok",
+   "t_query": 0.6075233389856294,
+   "nseg": 31,
+   "finish_no_durations": false
+  },
+  {
+   "i": 4,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.009997418965213,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 5,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.022579977056011558,
+   "nseg": 1,
+   "finish_no_durations": false
+  },
+  {
+   "i": 6,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.009191256947815418,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 7,
+   "T_agent": 4.096904610181532,
+   "T_verify": 4.077071441242615,
+   "why": "ok",
+   "t_query": 0.8064132649451494,
+   "nseg": 29,
+   "finish_no_durations": false
+  },
+  {
+   "i": 8,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.008794906083494425,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 9,
+   "T_agent": 2.035068629570046,
+   "T_verify": 2.015179511617661,
+   "why": "ok",
+   "t_query": 0.6214001800399274,
+   "nseg": 6,
+   "finish_no_durations": false
+  },
+  {
+   "i": 10,
+   "T_agent": 3.8089814856308273,
+   "T_verify": 3.799032532457576,
+   "why": "ok",
+   "t_query": 1.1541893481044099,
+   "nseg": 24,
+   "finish_no_durations": false
+  },
+  {
+   "i": 11,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.007167720934376121,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 12,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.010607720934785903,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 13,
+   "T_agent": 1.7985685282890833,
+   "T_verify": 1.7787588896596023,
+   "why": "ok",
+   "t_query": 0.4885936490027234,
+   "nseg": 6,
+   "finish_no_durations": false
+  },
+  {
+   "i": 14,
+   "T_agent": 1.3758623671869763,
+   "T_verify": 1.3659579409588434,
+   "why": "ok",
+   "t_query": 0.6079381100134924,
+   "nseg": 3,
+   "finish_no_durations": false
+  },
+  {
+   "i": 15,
+   "T_agent": 0.4473049019158084,
+   "T_verify": 0.41783235436431454,
+   "why": "ok",
+   "t_query": 0.2783146189758554,
+   "nseg": 3,
+   "finish_no_durations": false
+  },
+  {
+   "i": 16,
+   "T_agent": 1.9203712086167015,
+   "T_verify": 1.9103968289091877,
+   "why": "ok",
+   "t_query": 0.9944573469692841,
+   "nseg": 9,
+   "finish_no_durations": false
+  },
+  {
+   "i": 17,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.009757588966749609,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 18,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.007260372047312558,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 19,
+   "T_agent": 4.373932841779962,
+   "T_verify": 4.35444813904181,
+   "why": "ok",
+   "t_query": 0.9655767219373956,
+   "nseg": 30,
+   "finish_no_durations": false
+  }
+ ],
+ "Tref": [
+  8.0,
+  2.1865647862314304,
+  16.58660165503549,
+  18.948708589386364,
+  8.0,
+  8.0,
+  8.0,
+  12.763730301112217,
+  8.0,
+  1.9384634359537671,
+  3.7520606015787332,
+  8.0,
+  8.0,
+  1.721169938814389,
+  1.3682979150972876,
+  0.3970893596987953,
+  1.6876183889244014,
+  8.0,
+  8.0,
+  18.019030985364193
+ ],
+ "weight": {
+  "elems": 147566073,
+  "bytes": 1157345237
+ }
+}

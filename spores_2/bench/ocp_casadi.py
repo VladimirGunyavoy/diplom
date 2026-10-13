@@ -19,6 +19,12 @@ def dyn(name, x, u):
         r1 = u[0] - h * (2 * w1 * w2 + w2 ** 2); r2 = u[1] + h * w1 ** 2
         m11, m12, m22 = A + 2 * B * c, D + B * c, D; det = m11 * m22 - m12 ** 2
         return ca.vertcat(w1, w2, (m22 * r1 - m12 * r2) / det, (-m12 * r1 + m11 * r2) / det)
+    if name == 'dp1':                                                                   # y = (q1 − π/2, q2, w1, w2); динамика r23 ref.acc / common.DP1
+        G1, MS, S11, S12, S22 = common.DP1.G1, common.DP1.MS, common.DP1.S11, common.DP1.S12, common.DP1.S22
+        th1 = x[0] + ca.pi / 2; th2 = th1 + x[1]; d1 = x[2]; d2 = x[2] + x[3]; c = ca.cos(th1 - th2); sn = ca.sin(th1 - th2)
+        Q1 = u[0] - u[1] - G1 * MS[0] * ca.cos(th1) - S12 * sn * d2 ** 2; Q2 = u[1] - G1 * MS[1] * ca.cos(th2) + S12 * sn * d1 ** 2
+        det = S11 * S22 - (S12 * c) ** 2; a1 = (S22 * Q1 - S12 * c * Q2) / det; a2 = (S11 * Q2 - S12 * c * Q1) / det
+        return ca.vertcat(x[2], x[3], a1, a2 - a1)
     raise ValueError(name)
 
 def build(e, N):

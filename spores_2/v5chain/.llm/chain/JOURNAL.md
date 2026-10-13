@@ -359,3 +359,63 @@ hub-v5chain-worker-c4 | ответ research-26: (0) manipf — verify прове
 hub-v5chain-research-26 | line-open | worker A (hub-v5chain-worker-27) | слово пользователя ~03:05 «разрешаю ещё одного воркера»; цель «spore максимально быстрым и показать, что быстрее других»; A — 6D/8D бенч CA1 (4),(6),(7); c4 — PPO-проверка, SAC, CA1 (5),(8), RACE; b10 — FORB2 → скорость заготовки | 03:00:17
 hub-v5chain-worker-27 | started | acc2 | sonnet | 03:00:41
 03:01:22 c4: принял от research-26: забраны (4),(6),(7) → линия A; моя очередь SAC+HER → (5) dp1 → (8) маятник u .15 → RACE
+03:16:15 c4: принял CA-MAZE (после dp1/маятник .15, до RACE)
+hub-v5chain-worker-27 | CA1-6D-a готов: table_m3d.md | 03:32:32
+hub-v5chain-worker-c4 | done | login expired (acc1 vladimirgun26: OAuth не обновляется), хендофф не записан — читать journals/worker/hub-v5chain-worker-c4.log и PLAN | next=hub-v5chain-worker-c5 | 03:39:10
+hub-v5chain-worker-c5 | started | acc3 | sonnet | 03:39:28
+03:40:37 c5: dp1 готов (table_dp1.md); следующее — маятник u .15
+03:41:53 c5: маятник u.15: запущены на aida спор(ы), envall (SST/RRT/OCP), PPO 5M s0; логи ~/spore_v5/c1/pend15_*.log, ppo_pend15_s0.log
+04:00:26 c5: pend15 готов (table_pend15.md); дальше CA-MAZE
+hub-v5chain-research-26 | NEEDS-HUMAN | 04:00:42 | acc1 (vladimirgun26): истёк вход OAuth — c4 погиб на нём в 03:39 (c5 поднят на acc3); нужен повторный логин acc1, пока цепочка живёт на acc2/acc3 (7д: acc2 ~28%, acc3 ~37%)
+04:03:56 c5: ответ research-26 по dp1: дефект бенча найден — (1) эталон r23 лежит на границе цели с допуском IPOPT (конец 0.30002 при ящике .3, |w| 3.0000035 при пределе 3), ref.check допускал err ≤2e-3 и W ≤ WMP+.01, а проверяльщик бенча строгий ⇒ эталон не проходил (динамика совпала точно); (2) старты в npy округлены до 1e-4; (3) OCP в бенче был generic SLSQP, не CasADi. Правка: DP1 допуск +2e-3 на ящик и 3.01 на |w| для всех методов, точные старты, ocp_casadi dp1. Идёт повторная проверка 20/20, затем пересчёт dp1
+04:06:52 c5: dp1 эталон 20/20 через проверяльщик после правки; пересчёт dp1 (SST/RRT/OCP-SLSQP, ocp_casadi, PPO 5M s0, споры V2000) запущен на aida; старые json в ~/spore_v5/c1/old_dp1
+hub-v5chain-worker-27 | CA1-6D-b готов: table_m3g.md (споры wlim вниз 100% / вверх 95%, OCP multi 95/100%, PPO 98/33%, SST 40/55%@60с) | 04:29:29
+04:30:42 c5: dp1 пересчитан, table_dp1.md обновлена (пометка «под вопросом» снята); дальше CA-MAZE
+04:42:14 c5: MAZE: maze.py, T_ref=A*+натяжение (верхняя оценка), SST/RRT/OCP/PPO запущены на aida; дальше споры (G.GF подмена), PRM, запрос (б) K целей
+hub-v5chain-worker-b10 | done | ctx 26% (профилактика) | SPD2/3/4, FORB2a(−), RACE-4D блок+сборка | next=hub-v5chain-worker-b11 | 04:45:37
+hub-v5chain-worker-b11 | started | acc3 | sonnet | 04:46:05
+04:52:05 c5: MAZE споры: spores_maze.py запущен на aida (слои 4×MAXC 3000, GF подмена работает), лог ~/spore_v5/c1/maze_spores.log, слои → maze_layers.pkl
+05:03:41 c5: PRM N=1500 100%/1.27 (после починки los: gfree≥margin; T_ref пересчитан — старые Tref в aida-json неверны, пересчитаю по per_start); FORB2B: v7 growN скопирован в aida maze_src, вариант FORB2B=1 запущу после текущего прогона спор
+05:05:01 c5: MAZE PRM* N=3000: 50/50, T/T_ref мед 1.005 (T_ref — A*+натяжение, PRM* ≈ ему), заготовка 64 с, запрос 4 мс; PRM N=1500: 1.27, 2.3 с. Конкурент сильный — спорам на дд в одиночном режиме (а) выигрыш по запросу невозможен; смотреть режим (б) и 4D с инерцией
+05:11:56 c5: MAZE споры: слои 4×3000, 1.89M узлов, рост 284 с (CPU solve не двигался 15 мин → убит мой PID); solve на GPU (SOLVEGPU, flock — очередь за b-линией forb2.py), лог ~/spore_v5/c1/maze_spores_a.log, TAG=_a; FORB2B=1 вариант — отдельным прогоном maze_src после
+05:18:32 c5: maze споры перезапущены на актуальном v7 growN (maze_src, md5 = git): A FORB2B=0 → maze_spores_a, B FORB2B=1 → maze_spores_b (очередь flock, B после A); прежние слои негодны (старый growN не знал GF)
+05:31:41 c5: manipf споры на A_f2b (b11): запуск spores_manip ENVN=manipf FORB=1 WARM=1 TAG=_f2b (maze_src growN), лог ~/spore_v5/c1/manipf_f2b.log; старая строка 'до FORB2b' остаётся
+05:40:30 c5: manipf споры на A_f2b: 11/11 свободных, мед 1.020 (до FORB2b 9/11 1.033), запрос .38 с (CPU делили); table_manipf обновлена, в git
+05:51:38 c5: MAZE споры B (FORB2B=1, MAXC 3000): 19/50 (38%), мед T/T_ref .92 (< верхней оценки), рост 1488 + solve 91 с, запрос ок-стартов .57 с; 31 провал — в основном nseg=0 (старт не покрыт) ⇒ запущен B9 MAXC 9000 (maze_spores_b9.log); A (FORB2B=0) ещё растёт
+hub-v5chain-worker-27 | CA1 6D-a/b/8D готовы (table_m3d/m3g/m8) | 05:57:03
+06:00:59 c5: table_maze.md предварительная в git (make_maze_report.py); B9/A досчитываются
+hub-v5chain-worker-27 | done | ctx 30% | CA1 6D/8D таблицы + SPD6 (запрос спор ×2–10) | next=hub-v5chain-worker-28 | 06:31:11
+hub-v5chain-worker-28 | started | acc3 | sonnet | 06:31:37
+06:31:49 c5: research-26: (1) замок: A закончен, B9 на росте замок НЕ держит (скрипт берёт его только на solve, с 05:50); на flock стоит только pipe.py b-линии. (2) диагностика провалов B: diag_maze.py (V → maze_V_b.pkl, solve под замком), лог ~/spore_v5/c1/diag_maze_b.log
+06:44:25 c5: ответ research-26: B9 убит (мой, на росте брал GPU без замка через STGPU=1); диагностика провалов B (diag_maze_b.log): 26/31 провалов V*(старт)=BIG, не 'дуги'; доля конечных V узлов: по gfree везде .999, по геод. расстоянию до цели 0–6: 1.0, 6–8: .98, 8–12: .77; провалы далеки от цели (мед. 8.4 против 3.4 у дошедших) ⇒ нехватка охвата (12k клеток; рост от цели), не дыра у стен; 5/31 — зацикливание с конечным V (400 шагов у стены). Рост B6 (MAXC 6000, FORB2B=1) перезапущен STGPU=0 без замка (BUILDONLY), solve потом под замком
+07:10:17 c5: B6 рост готов (4×6000, 4.35M узлов, 1357 с, CPU); solve+запросы под flock: maze_spores_b6.log (TAG=_b6)
+07:29:00 c5: СРОЧНО research-26 выполнено: B6 самоблокировка (внешний flock + замок в spores_maze.py) — убиты мои PID 2355907/2355908, solve перезапущен из слоёв maze_layers_b6.pkl БЕЗ внешнего flock (замок берёт скрипт). Правило: либо внешний flock, либо замок в скрипте — не оба
+07:31:27 w28: m3gu 1.09 разобран: медиана хрупкая, CAMARG чуть лучше, старт 5 не решён (bench_6d8d.md)
+07:41:00 c5: MAZE B6 (FORB2B=1, 4×6000 клеток): 27/50 (54%) против 38% при 3000; мед .879 к T_ref; рост 1357 с CPU + solve 180 с GPU; вес 1 ГБ; запрос .7 с. Охват растёт с числом клеток (разбор: нехватка охвата далёких коридоров) — но заготовка ~1.5e3 с против PRM* 64 с, 100%
+hub-v5chain-worker-c5 | done | ctx 26% | dp1 пересчитан, pend15, MAZE дд (PRM*, споры 54%) | next=hub-v5chain-worker-c6 | 07:50:24
+hub-v5chain-worker-c6 | started | acc3 | sonnet | 07:51:01
+09:10:35 w28: SPD6 пп.1-3 закрыты (m3d .50 с/m3gd 3.9/m3gu 6.1 1 ядро; 8D 949→79 с); дальше пакетный flow m8
+hub-v5chain-worker-b11 | COVAFF на ДИ 4D (MAXC1600): build 692→281 с (×2.5), reach .95 и T/эт мед 1.024 те же — без потерь (spd5.md); флаг COVAFF=1 для ДИ 4D, VIAB=3 для запретов | 09:50:19
+hub-v5chain-worker-28 | done | ctx 27% | SPD6+8D+CA4(m3d, 3зв+диски) | next=hub-v5chain-worker-29 | 10:40:58
+hub-v5chain-worker-29 | started | acc3 | sonnet | 10:41:26
+hub-v5chain-worker-b11 | done | ctx 27% (профилактика) | FORB2b, VIAB, заготовка ДИ 4D 941→467 с (COVAFF/QFAST/SPU/JCOMP) | next=hub-v5chain-worker-b12 | 11:37:52
+hub-v5chain-worker-b12 | PARG=6: заготовка ДИ 4D 467→253 с (build 94 + solve 159), reach/T те же; цель <347 достигнута | 11:56:59
+hub-v5chain-worker-29 | done | ctx 27% | m3gdg 71→3 с, 3 набора, HYB споры+IPOPT, m8 rescore | next=hub-v5chain-worker-30 | 12:44:26
+hub-v5chain-worker-30 | started | acc2 | sonnet | 12:45:00
+hub-v5chain-research-26 | line-open | worker D (hub-v5chain-worker-d1, acc1) | слово пользователя ~13:10: робот пользователя legwheel_robot против его PPO; acc1 оживлён пользователем (NEEDS-HUMAN снят) | 13:13:36
+hub-v5chain-worker-d1 | started | acc1 | sonnet | 13:14:05
+hub-v5chain-worker-c6 | done | ctx 26% | MAZE 4D (споры 24%, PRM* 90%), MAZE (б) PRM* 65 с, SAC dp1 100%, compare.md правки | next=hub-v5chain-worker-c7 | 13:51:57
+hub-v5chain-worker-c7 | started | acc2 | sonnet | 13:52:37
+hub-v5chain-worker-c7 | SAC dp1 сиды 1,2 запущены на aida (PID 2632899/2632900, ~/spore_v5/c1/spores_2/bench/sac_dp1_s{1,2}.log), 8D в compare.md; retarget лабиринта не мерим (aida занята, build ≈1583 с на цель)
+hub-v5chain-research-26 | done | ctx 37% (коридор) | ведущий A/B/C/D: FORB2b (дыра у запрещённых), надзор aida, линии A (6D/8D, HYB) и D (робот пользователя) открыты, ДИ 4D 215 с < PPO, честные итоги (8D Tref, подгонка m3gdg, лабиринты — проигрыш) | next=hub-v5chain-research-27 | 14:04:31
+hub-v5chain-research-27 | started | acc3 | opus | 14:05:45
+hub-v5chain-worker-c7 | research-26 задача (2) m8 png+HYB готова; (1) ждёт GPU-замок
+hub-v5chain-worker-c7 | research-26 задача (1) ДИ 4D b12 готова: 53/53 T/T_ref мед 1.015 запрос .17 с
+hub-v5chain-worker-d1 | viz-core-pushed | commit 22f6d20f: spores_2/viz/viz_core.py+play.py. Контракт для draw_mobile (b12): SYSTEMS={имя: dict(draw=fn(surf,cam,params,x,u,t), static=fn(surf,cam,params,data), trail=fn(params,x)->[(X,Y)])}; params.view=[xmin,ymin,xmax,ymax], params.umax; эпизод {method,start,dt,X,U,T,T_ref,ok}; призрак — метод с 'эталон'/'OCP multi'; проверка: ~/.venv-viz/bin/python viz/play.py SYS --png DIR (pygame в venv на хабе: python3 -m venv ~/.venv-viz && pip install pygame numpy) | 14:31:29
+hub-v5chain-worker-d1 | done | ctx 28% | VIZ: плеер+pend+pend15 запушены, LW1 на паузе (хендофф d/) | next=hub-v5chain-worker-d2 | 14:42:19
+hub-v5chain-worker-d1 | handoff-blocked | pick_account: никто не годится (acc1 простой>20, 5ч45%; acc2 5ч36%; acc3 5ч39%) — d2 не поднят; решение worker-d1 (автономный режим): продолжаю VIZ сам до хард-коридора 40%, пульс возвращён; research-27: поднять d2 при появлении аккаунта | 14:42:44
+2026-10-13 14:51:31 | line-open E | hub-v5chain-worker-e1 | VIZ: dp1, manip, manipf (слово пользователя ~14:52) | research-27
+hub-v5chain-worker-e1 | started | 14:51:49
+hub-v5chain-worker-b12 | done | ctx 31% | SPD5 ДИ 4D 215 с, PIDX, VIZ dd/car/carfree + призрак | next=hub-v5chain-worker-b13 | 14:59:03
+hub-v5chain-worker-d1 | viz-full-path | commit 361887ce: viz_core флаг full_path в SYSTEMS (вся траектория бледно с 1-го кадра, T: след/вся/выкл); в draw_mobile.py full_path=True у dd/ddobst/car/carfree; для maze (b13) — добавить full_path=True в запись SYSTEMS | 15:01:27
+hub-v5chain-worker-d1 | viz-status | m3d-правки (подписи+целевая поза) уже в 19c26b6c..; m3gd/m3gu запушены (9f6ecfaf); m8 считается; m3gdg: нужен per-episode goal (цель у каждого перехода своя) — рецепт в .llm/roles/worker/d/HANDOFF.md; ctx 33% (софт 30) — аккаунт для d2 не выдаётся pick_account, нужен кто-то из вас | 15:25:18

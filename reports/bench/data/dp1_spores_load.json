@@ -1,0 +1,233 @@
+{
+ "n": 20,
+ "excluded": 0,
+ "reached": 0.35,
+ "ratio_med": 1.1947801169647012,
+ "ratio_mean": 1.4614210530133678,
+ "ratio_p90": 2.207424687394834,
+ "ratio_max": 2.6066454942912114,
+ "env": "dp1",
+ "method": "spores growN g300 SONE VF2 PESS1 4x3000 (load)",
+ "t_grow": null,
+ "t_solve": null,
+ "t_build": null,
+ "t_query_med": 0.20628095953725278,
+ "t_query_p90": 1.718489510007204,
+ "t_query_sum": 160.46698765968904,
+ "cells": [
+  2000,
+  2000,
+  2000,
+  2000
+ ],
+ "nodes": 2627667,
+ "hw": "CPU (\u0437\u0430\u043f\u0440\u043e\u0441\u044b)",
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 150.81958258594386,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 1,
+   "T_agent": 4.834373732903906,
+   "T_verify": 4.735033081542807,
+   "why": "ok",
+   "t_query": 2.565276721958071,
+   "nseg": 42,
+   "finish_no_durations": false
+  },
+  {
+   "i": 2,
+   "T_agent": 0.3085955885327697,
+   "T_verify": 0.22524233370625857,
+   "why": "ok",
+   "t_query": 0.21411349100526422,
+   "nseg": 2,
+   "finish_no_durations": false
+  },
+  {
+   "i": 3,
+   "T_agent": 4.053980643272939,
+   "T_verify": 4.033990358615412,
+   "why": "ok",
+   "t_query": 0.951577580999583,
+   "nseg": 34,
+   "finish_no_durations": false
+  },
+  {
+   "i": 4,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.6929670349927619,
+   "nseg": 52,
+   "finish_no_durations": false
+  },
+  {
+   "i": 5,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.007318262942135334,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 6,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.008190833032131195,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 7,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.006217082962393761,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 8,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.008030012948438525,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 9,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.2221099849557504,
+   "nseg": 22,
+   "finish_no_durations": false
+  },
+  {
+   "i": 10,
+   "T_agent": 3.4643863710776537,
+   "T_verify": 3.45444015937007,
+   "why": "ok",
+   "t_query": 1.2669996810145676,
+   "nseg": 9,
+   "finish_no_durations": false
+  },
+  {
+   "i": 11,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.19844842806924134,
+   "nseg": 14,
+   "finish_no_durations": false
+  },
+  {
+   "i": 12,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.006769872969016433,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 13,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.08433622296433896,
+   "nseg": 8,
+   "finish_no_durations": false
+  },
+  {
+   "i": 14,
+   "T_agent": 6.842950357093407,
+   "T_verify": 6.82471923315325,
+   "why": "ok",
+   "t_query": 1.6244020420126617,
+   "nseg": 61,
+   "finish_no_durations": false
+  },
+  {
+   "i": 15,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.007684533018618822,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 16,
+   "T_agent": 3.944086716735475,
+   "T_verify": 3.924297687672309,
+   "why": "ok",
+   "t_query": 0.7365986349759623,
+   "nseg": 33,
+   "finish_no_durations": false
+  },
+  {
+   "i": 17,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.006157241994515061,
+   "nseg": 0,
+   "finish_no_durations": false
+  },
+  {
+   "i": 18,
+   "T_agent": 6.518280551679531,
+   "T_verify": 6.508326888826056,
+   "why": "ok",
+   "t_query": 1.034361187950708,
+   "nseg": 59,
+   "finish_no_durations": false
+  },
+  {
+   "i": 19,
+   "T_agent": null,
+   "T_verify": null,
+   "why": "no_goal",
+   "t_query": 0.005846222979016602,
+   "nseg": 0,
+   "finish_no_durations": false
+  }
+ ],
+ "Tref": [
+  5.0992,
+  3.9631,
+  0.2196,
+  3.5804,
+  2.7965,
+  2.534,
+  3.7842,
+  3.4108,
+  2.736,
+  3.3853,
+  2.7393,
+  4.1353,
+  4.6362,
+  2.0891,
+  2.6182,
+  3.1955,
+  3.6546,
+  3.9909,
+  3.3526,
+  4.841
+ ],
+ "weight": {
+  "elems": 211723790,
+  "bytes": 1654425131
+ }
+}

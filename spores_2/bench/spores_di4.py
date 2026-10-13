@@ -3,7 +3,7 @@
 python spores_di4.py (aida, cwd ~/spore_v5/c1/di4_run, venv-sb3 не нужен для запросов, но growN импортирует torch → venv-sb3) → data/di4_spores.json"""
 import os, sys, time, json, pickle
 for k, v in dict(SYS='di4', M='3', SIDE='0', GM='.25', GLIM='0', FRAC='1', RHO='.35', PESS='1', FH='.1').items(): os.environ.setdefault(k, v)
-HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser('~/spore_v5/c1/di4_run'); sys.path.insert(0, HERE); sys.path.insert(0, SRC)
+HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.expanduser(os.environ.get('SRC_DIR', '~/spore_v5/c1/di4_run')); sys.path.insert(0, HERE); sys.path.insert(0, SRC)
 import numpy as np, common
 import growN as G, fin, finish_gen as FGm
 import __main__; [setattr(__main__, k_, v_) for k_, v_ in vars(G).items() if isinstance(v_, type)]
@@ -44,13 +44,15 @@ def rollout_rec(A, Q, tmax=40.):
     T[~G.ingoal(Y) & ~fin_] = np.inf; return T, seg
 
 if __name__ == '__main__':
-    e = common.make('di4'); d_ = pickle.load(open(os.path.join(os.path.expanduser('~/spore_v5/wb5/p38'), 'Lfull.pkl'), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d_['layers']; A.finish(); A.V = np.load(os.path.join(SRC, 'V_Lfull.npy'))
+    e = common.make('di4'); AVP = os.environ.get('AVPKL')      # c7: b12 — слои+V из growN DUMP; без него — Lfull r22/18
+    if AVP: d_ = pickle.load(open(os.path.expanduser(AVP), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']
+    else: d_ = pickle.load(open(os.path.join(os.path.expanduser('~/spore_v5/wb5/p38'), 'Lfull.pkl'), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d_['layers']; A.finish(); A.V = np.load(os.path.join(SRC, 'V_Lfull.npy'))
     G.VF = 1.; res = []; Ts = []; tq = []
     for i in range(len(e.X0)):
         t1 = time.perf_counter(); T, seg = rollout_rec(A, e.X0[i:i + 1]); dtq = time.perf_counter() - t1; tq.append(dtq); sg = seg[0]
         Tv, why = common.verify(e, e.X0[i], [np.array(u, float) for u, d in sg], [d for u, d in sg]); Ts.append(Tv)
         res.append(dict(i=i, keep=bool(e.keep[i]), T_agent=float(T[0]) if np.isfinite(T[0]) else None, T_verify=Tv, why=why, t_query=dtq, nseg=len(sg))); print(i, res[-1], flush=True)
-    s = common.summarize(e, Ts); s.update(env='di4', method='споры Lfull (r22/18, один стенсил/группу) + финиш shoot_pol VF1', t_build=1355. + 66.5, t_build_note='слои Lfull (b5) без времени', t_stencils=1355., t_solve=66.5, t_query_med=float(np.median(tq)), t_query_sum=float(np.sum(tq)), t_query_p90=float(np.percentile(tq, 90)), cells=[len(l) for l in A.layers], nodes=int(A.N), hw='GPU (стенсилы, solve; цифры r22/18), CPU (запросы)', per_start=res, Tref=e.Tref.tolist())
+    s = common.summarize(e, Ts); s.update(env='di4', **(dict(method='споры b12 (COVAFF PARG=6 PARB=8 QFAST SPU JCOMP, 4×1600) + финиш shoot_pol VF1', t_build=float(os.environ['TB']), t_solve=float(os.environ['TS']), t_build_note='замер b12/c7 под нагрузкой aida') if AVP else dict(method='споры Lfull (r22/18, один стенсил/группу) + финиш shoot_pol VF1', t_build=1355. + 66.5, t_build_note='слои Lfull (b5) без времени', t_stencils=1355., t_solve=66.5)), t_query_med=float(np.median(tq)), t_query_sum=float(np.sum(tq)), t_query_p90=float(np.percentile(tq, 90)), cells=[len(l) for l in A.layers], nodes=int(A.N), hw='GPU (стенсилы, solve; цифры r22/18), CPU (запросы)', per_start=res, Tref=e.Tref.tolist())
     try: s['weight'] = common.deep_weight(A)
     except Exception as ex: s['weight_err'] = repr(ex)[:100]
-    json.dump(s, open(os.path.join(common.DATA, 'di4_spores.json'), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})
+    json.dump(s, open(os.path.join(common.DATA, ('di4_spores_b12.json' if AVP else 'di4_spores.json')), 'w'), indent=1, default=float); print({k: v for k, v in s.items() if k not in ('per_start', 'Tref')})

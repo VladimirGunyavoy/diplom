@@ -175,8 +175,30 @@ class ManipForb(Manip):
         Y = np.asarray(Y, float); g = (PI - s.FD) - np.abs(wrap(Y[..., 1], 2 * PI)); ye = s.ML * np.sin(Y[..., 0]); yt = ye + s.ML * np.sin(Y[..., 0] + Y[..., 1]); return np.minimum(g, np.minimum(ye, yt) - s.TY)
     def out_of_box(s, Y): return super().out_of_box(Y) | (s.gfree(Y) < 0)
 
+class DP1(Env):
+    """двойной маятник g=1, 2 мотора |τi| ≤ 1 (динамика v7 growN SYS=dp1 = butterfly_dp.acc); y = (q1 − π/2, q2, w1, w2) ⇒ цель (q1,q2)=(π/2,0) — в нуле, ящик ±(.3,.3,.5,.5); |ω| ≤ 3;
+    20 стартов и эталон OCP r23/dp1_ref_ocp_20.npy (x в обычных координатах, T); keep — все (эталон есть на 20)"""
+    name = 'dp1'; n = 4; m = 2; period = np.array([2 * PI, 2 * PI, 0., 0.]); half = np.array([.3, .3, .5, .5]) + 2e-3; lo = np.array([-PI, -PI, -3.01, -3.01]); hi = -lo; umin = -np.ones(2); umax = np.ones(2); fl_lo = np.array([-PI, -PI, -2., -2.]); fl_hi = -fl_lo
+    G1, MS, S11, S12, S22 = 1., np.array([2.5, 1.]), 2.5, 1., 1.
+    def __init__(s, nst=20):
+        a = np.load(os.path.join(REF, 'r23', 'dp1_ref_ocp_20.npy'))[:nst]; s.Tref = a[:, 4].copy(); s.keep = np.ones(len(a), bool)
+        rng = np.random.default_rng(0)                                      # старты — точная копия r23 ref.starts() (в npy они округлены до 1e-4: на границе неустойчивой системы это важно)
+        for _ in range(32): rng.uniform(-1, 1, 4)
+        X = [np.array([-PI / 2, 0., 0., 0.])] + [np.array([*rng.uniform(-PI, PI, 2), *rng.uniform(-1, 1, 2)]) for _ in range(19)]
+        X = np.array(X)[:nst]; assert np.abs(X - a[:, :4]).max() < 1e-3; s.X0 = wrap(X - np.array([PI / 2, 0, 0, 0]), s.period)
+    def f(s, Y, u):
+        s.nf += 1; q1, q2, w1, w2 = Y[..., 0] + PI / 2, Y[..., 1], Y[..., 2], Y[..., 3]; th1, th2 = q1, q1 + q2; d1, d2 = w1, w1 + w2; c = np.cos(th1 - th2); sn = np.sin(th1 - th2)
+        Q1 = u[..., 0] - u[..., 1] - s.G1 * s.MS[0] * np.cos(th1) - s.S12 * sn * d2 ** 2; Q2 = u[..., 1] - s.G1 * s.MS[1] * np.cos(th2) + s.S12 * sn * d1 ** 2
+        det = s.S11 * s.S22 - (s.S12 * c) ** 2; a1 = (s.S22 * Q1 - s.S12 * c * Q2) / det; a2 = (s.S11 * Q2 - s.S12 * c * Q1) / det
+        return np.stack([w1, w2, a1, a2 - a1], -1)
+
+class Pend15(Pend):
+    """маятник со слабым мотором |u| ≤ .15 (больше раскачек, несколько сепаратрис); эталон pend_ref_best_u0.15 = min(энергия+стрельба, сетка)"""
+    name = 'pend15'
+    def __init__(s, nst=20): super().__init__(nst, um=.15)
+
 def make(name):
-    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb)[name]()
+    return dict(di=DI, pend=Pend, dd=DD, dd2=DD2, ddobst=DDObst, ddobst7=DDObst7, car=Car, manip=Manip, di4=DI4, manipf=ManipForb, dp1=DP1, pend15=Pend15, maze=lambda: __import__('maze').MazeDD(), maze4=lambda: __import__('maze4').MazeCar())[name]()
 
 def deep_weight(*objs):
     """вес данных: сумма nbytes всех numpy/scipy.sparse/torch массивов, достижимых из объектов (__dict__, list/tuple/dict); (элементов, байт). Не считает код/классы."""

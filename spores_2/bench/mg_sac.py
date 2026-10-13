@@ -8,7 +8,7 @@ import gymnasium as gym
 from stable_baselines3 import SAC, HerReplayBuffer
 from stable_baselines3.common.callbacks import BaseCallback
 import common, manip_goals as MGm
-PI = np.pi; DT = .05; TEP = 20.; GAM = float(os.environ.get('SAC_GAMMA', .99))
+PI = np.pi; DT = .05; TEP = 20.; PEN = float(os.environ.get('SAC_PEN', 0.)); GAM = float(os.environ.get('SAC_GAMMA', .99))
 def emb(e, y): return e.embed(y).astype(np.float32)          # (cos q1, sin q1, cos q2, sin q2, w1/3, w2/3)
 def goal_vec(g): return np.r_[np.cos(g[0]), np.sin(g[0]), np.cos(g[1]), np.sin(g[1]), 0., 0.].astype(np.float32)
 def success(a, d):
@@ -16,9 +16,11 @@ def success(a, d):
     dq = np.abs((qa - qd + PI) % (2 * PI) - PI); return (dq <= .3).all(1) & (np.abs(a[:, 4:] * 3) <= .5).all(1)
 
 class Prog(BaseCallback):
-    def __init__(s, total): super().__init__(); s.tot = total; s.t0 = time.time(); s.last = 0
+    def __init__(s, total): super().__init__(); s.tot = total; s.t0 = time.time(); s.last = 0; s.eps = []
     def _on_step(s):
-        if time.time() - s.last > 30: s.last = time.time(); print('SAC %d/%d шагов, %.0f с' % (s.num_timesteps, s.tot, time.time() - s.t0), flush=True)
+        for d, i in zip(s.locals['dones'], s.locals['infos']):
+            if d: s.eps.append(bool(i.get('is_success', False)))
+        if time.time() - s.last > 30: s.last = time.time(); print('SAC %d/%d шагов, %.0f с, is_success (последние 100 эп.) %.2f, эп. %d' % (s.num_timesteps, s.tot, time.time() - s.t0, np.mean(s.eps[-100:]) if s.eps else 0., len(s.eps)), flush=True)
         return True
 
 class GoalEnv(gym.Env):
@@ -35,7 +37,7 @@ class GoalEnv(gym.Env):
         s.y = y; s.n = 0; return s.obs(), {}
     def step(s, a):
         s.y = s.e.step(s.y[None], np.clip(a, -1, 1)[None], DT)[0]; s.n += 1; goal = bool(s.e.in_goal(s.y[None])[0]); box = bool(s.e.out_of_box(s.y[None])[0])
-        return s.obs(), 0. if goal else -1., goal or box, s.n * DT >= TEP and not goal, dict(is_success=goal, pen=(s.n + 100.) if box else 0.)
+        return s.obs(), 0. if goal else -1., goal or box, s.n * DT >= TEP and not goal, dict(is_success=goal, pen=((s.n + 100.) if box else 0.) * PEN)
     def compute_reward(s, achieved_goal, desired_goal, info):
         r = np.where(success(achieved_goal, desired_goal), 0., -1.)
         if info is not None:

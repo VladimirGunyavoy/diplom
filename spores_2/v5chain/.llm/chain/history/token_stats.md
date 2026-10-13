@@ -227,3 +227,24 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | laptop-v5chain-worker-b3 | end | 5ч 24% / ctx 41% | - | 2026-10-13 02:54:01 |
 | laptop-v5chain-worker-b4 | start | 5ч 4% / ctx 5% | $0.10 | 2026-10-13 02:55:36 |
 | hub-v5chain-worker-27 | start | 5ч 9% / ctx 5% | $0.11 | 2026-10-13 03:00:41 |
+| hub-v5chain-worker-c5 | start | 5ч 32% / ctx 5% | $0.10 | 2026-10-13 03:39:28 |
+| hub-v5chain-worker-b10 | T_END | 5ч 41% / ctx 26% | - | 2026-10-13 04:45:37 |
+| hub-v5chain-worker-b11 | start | 5ч 42% / ctx 5% | $0.10 | 2026-10-13 04:46:05 |
+| hub-v5chain-worker-27 | T_END | 5ч ~51% / ctx ~29% | $~7 | 2026-10-13 06:31:11 |
+| hub-v5chain-worker-28 | start | 5ч 54% / ctx 5% | $0.10 | 2026-10-13 06:31:37 |
+| hub-v5chain-worker-c5 | T_BEFORE_END | 5ч 5% / ctx 26% | $4.3 | 2026-10-13 07:50:24 |
+| hub-v5chain-worker-c6 | start | 5ч 6% / ctx 5% | $0.05 | 2026-10-13 07:51:01 |
+| hub-v5chain-worker-28 | T_BEFORE_END | 5ч ~32% / ctx ~27% | $6.6 | 2026-10-13 10:40:58 |
+| hub-v5chain-worker-29 | start | 5ч 33% / ctx 5% | $0.10 | 2026-10-13 10:41:26 |
+| hub-v5chain-worker-b11 | T_BEFORE_END | 5ч ~45% / ctx ~27% | $5.6 | 2026-10-13 11:37:46 |
+| hub-v5chain-worker-b11 | T_END | 5ч ~45% / ctx ~27% | $5.7 | 2026-10-13 11:37:52 |
+| hub-v5chain-explainer-3 | start | 5ч ? / ctx ~3% | ? | 2026-10-13 11:45:43 |
+| hub-v5chain-worker-29 | T_BEFORE_END | 5ч 11% / ctx 26% | $4.66 | 2026-10-13 12:44:26 |
+| hub-v5chain-worker-30 | start | 5ч 29% / ctx 5% | $0.05 | 2026-10-13 12:45:00 |
+| hub-v5chain-worker-d1 | start | 5ч 3% / ctx 5% | $0.05 | 2026-10-13 13:14:05 |
+| hub-v5chain-worker-c6 | T_END | 5ч 19% / ctx 26% | $5.15 | 2026-10-13 13:51:57 |
+| hub-v5chain-worker-c7 | start | 5ч 14% / ctx 5% | $0.04 | 2026-10-13 13:52:37 |
+| hub-v5chain-research-26 | T_END | 5ч 23% / ctx 37% / 7д 39% | $20.1 | 2026-10-13 14:04 |
+| hub-v5chain-research-27 | start | 5ч 21% / ctx 6% / 7д 50% | $0.27 | 2026-10-13 14:05:45 |
+| hub-v5chain-worker-d1 | end | 5ч ~46% / ctx ~28% | $5 | 2026-10-13 14:42:19 |
+| hub-v5chain-worker-b12 | T_END | 5ч 48% / ctx 31% | $6.4 | 2026-10-13 14:59:03 |

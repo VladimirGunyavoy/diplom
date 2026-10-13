@@ -172,6 +172,16 @@ def _contract(Xa, sa, j=-1):
     T = Xa.reshape((len(Xa),) + (2,) * N + (N,))
     for k in range(N): T = (T[:, 1] - T[:, 0]) if k == j else T[:, 0] + sa[:, k].reshape((-1,) + (1,) * (N - k)) * (T[:, 1] - T[:, 0])
     return T
+PREFK = int(E('PREFK', 0))                                                                              # b11 (SPD5): до Ньютона на группу (точка, слой) оставить K пар с наибольшим аффинным запасом min(sc,1−sc); 0 — выкл. (нужен s.CL: слой клетки; ставит Atlas.stencils)
+def _prefk(s, pi, hid, sc, gpu=False):
+    if gpu:
+        import torch
+        mg = torch.minimum(sc, 1 - sc).min(1).values; key = pi.long() * 8 + s._gCL[s._gI0[hid]]; o = torch.argsort(mg, descending=True, stable=True); o = o[torch.argsort(key[o], stable=True)]
+        ks = key[o]; st = torch.ones(len(o), dtype=torch.bool, device=o.device); st[1:] = ks[1:] != ks[:-1]
+        idx = torch.arange(len(o), device=o.device); first = torch.cummax(torch.where(st, idx, torch.zeros_like(idx)), 0).values; keep = torch.zeros(len(o), dtype=torch.bool, device=o.device); keep[o] = (idx - first) < PREFK; return keep
+    mg = np.minimum(sc, 1 - sc).min(1); key = pi.astype(np.int64) * 8 + s.CL[s.I[hid, 0]]; o = np.lexsort((-mg, key)); ks = key[o]
+    st = np.r_[True, ks[1:] != ks[:-1]]; idx = np.arange(len(o)); first = np.maximum.accumulate(np.where(st, idx, 0)); keep = np.zeros(len(o), bool); keep[o] = (idx - first) < PREFK; return keep
+COVAFF = int(E('COVAFF', 0))                                                                            # b11 (SPD5): covered() по аффинной оценке без Ньютона (приближённо; 0 — точно)
 class HexIdx:
     """индекс гиперячеек: бины QB^n (периодические оси — копии ±период), запрос — все точки сразу; полилинейная обратная карта Ньютоном n×n."""
     def __init__(s): s.n = 0; s.cap = 0; s.X = np.zeros((0, 2 ** N, N)); s.LO = np.zeros((0, N)); s.HI = np.zeros((0, N)); s.I = np.zeros((0, N + 1), np.int32); s.bins = {}; s.R = []; s.nc = 0
@@ -191,9 +201,24 @@ class HexIdx:
             for dd_ in itertools.product(*[range(a + 1) for a in sp]):
                 dd_ = np.array(dd_); k = ((i0 + dd_) <= i1).all(1)
                 if k.any(): Ks.append(s._key(i0[k] + dd_)); Vs.append(hv[k] * KSH + si)
+        if getattr(s, 'collect', None) is not None:                                                                  # PIDX (b12): слой в процессе — пары (ключ бина, значение) копятся, словарь не строится
+            if Ks: s.collect.append((np.concatenate(Ks), np.concatenate(Vs)))
+            return
         if not Ks: return
         K = np.concatenate(Ks); V = np.concatenate(Vs); o = np.argsort(K, kind='stable'); K, V = K[o], V[o]; uk, st = np.unique(K, return_index=True); st = np.r_[st, len(K)]
         for k_, a_, b_ in zip(uk.tolist(), st[:-1], st[1:]): s.bins.setdefault(k_, []).append(V[a_:b_])
+    def add_layers_par(s, layers):
+        """PIDX=1 (b12, SPD5; нужен QFAST): индекс слоёв строится в процессах (fork), результат склеивается и сразу в CSR (словарь бинов не нужен); множество пар то же, порядок в бине — по hid."""
+        global _PIX
+        from multiprocessing import get_context
+        _PIX = layers
+        with get_context('fork').Pool(len(layers)) as pool: res = pool.map(_pix_work, range(len(layers)))
+        _PIX = None; H0 = 0; C0 = 0; Xs, Is, Ls, Hs, Ks, Vs = [], [], [], [], [], []
+        for X, I, LO, HI, R, K, V in res:
+            I = I.copy(); I[:, 0] += C0; Xs.append(X); Is.append(I); Ls.append(LO); Hs.append(HI); s.R += R; Ks.append(K); Vs.append(V + H0 * KSH); H0 += len(X); C0 += len(R)
+        s.X = np.concatenate(Xs); s.I = np.concatenate(Is); s.LO = np.concatenate(Ls); s.HI = np.concatenate(Hs); s.n = len(s.X); s.cap = s.n; s.nc = C0
+        K = np.concatenate(Ks); V = np.concatenate(Vs); o = np.argsort(K, kind='stable'); K, V = K[o], V[o]; uk, st = np.unique(K, return_index=True); ln = np.diff(np.r_[st, len(K)])
+        s._csr = ((s.n, len(s.bins)), uk, ln.astype(np.int64), np.r_[0, np.cumsum(ln)], V)
     @staticmethod
     def _key(ib):
         key = np.zeros(len(ib), np.int64)
@@ -214,6 +239,24 @@ class HexIdx:
         if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(VV)))
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
+    def query_fast(s, Y):
+        """QFAST=1 (b11, SPD5): query без цикла по бинам Python — CSR бинов (кеш на s.n; индекс заморожен: фаза стенсилов) + векторная раздача пар; множество пар то же."""
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if s.n == 0 or not len(Y): return z
+        c_ = getattr(s, '_csr', None)
+        if c_ is None or c_[0] != (s.n, len(s.bins)):
+            ks = np.fromiter(s.bins.keys(), np.int64, len(s.bins)); o = np.argsort(ks); L = [np.concatenate(l) if len(l) > 1 else l[0] for l in s.bins.values()]; ln = np.array([len(l) for l in L], np.int64)[o]
+            vals = np.concatenate([L[i] for i in o]) if len(L) else np.zeros(0, np.int64); offs = np.r_[0, np.cumsum(ln)]; s._csr = c_ = ((s.n, len(s.bins)), ks[o], ln, offs, vals)
+        _, keys, ln, offs, vals = c_
+        kk = s._key(np.floor(Y / QB).astype(np.int64)); pos = np.minimum(np.searchsorted(keys, kk), max(len(keys) - 1, 0)); hit = (keys[pos] == kk) if len(keys) else np.zeros(len(kk), bool)
+        cnt = np.where(hit, ln[pos] if len(keys) else 0, 0); cum = np.cumsum(cnt); LIM = int(float(E('QLIM', 8e6))); out = []; a = 0
+        while a < len(Y):
+            b = max(int(np.searchsorted(cum, (cum[a - 1] if a else 0) + LIM, 'right')), a + 1); b = min(b, len(Y)); c = cnt[a:b]; ip = np.flatnonzero(c)
+            if len(ip):
+                cc = c[ip]; tot = int(cc.sum()); pi = np.repeat(ip + a, cc); within = np.arange(tot) - np.repeat(np.cumsum(cc) - cc, cc); vv = vals[np.repeat(offs[pos[ip + a]], cc) + within]; out.append(s._test(Y, pi, vv))
+            a = b
+        if not out: return z
+        return [np.concatenate(x) for x in zip(*out)]
     def _test_orig(s, Y, pi, vv):
         hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
@@ -246,8 +289,11 @@ class HexIdx:
         if not int(E('FASTT', 1)): return s._test_orig(Y, pi, vv)
         s._prep(); hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         sc0 = .5 + np.einsum('kij,kj->ki', s.JI[hid], y - s.A0[hid]); MG = float(E('MG', .4)); ok = ((sc0 >= -MG) & (sc0 <= 1 + MG)).all(1); pi, hid, y, sc = pi[ok], hid[ok], y[ok], sc0[ok]
+        if PREFK > 0 and getattr(s, 'CL', None) is not None and len(pi): k_ = _prefk(s, pi, hid, sc); pi, hid, y, sc = pi[k_], hid[k_], y[k_], sc[k_]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
         if not len(pi): return z
+        if getattr(s, 'aff', False):                                                                            # COVAFF (b11): только аффинная оценка sc0 без Ньютона (для covered)
+            k = ((sc >= 0) & (sc <= 1)).all(1); return pi[k], hid[k], sc[k]
         X = s.X[hid]; alive = np.arange(len(pi))
         for it in range(8):
             Xa, ya, sa = X[alive], y[alive], sc[alive]; F = _contract(Xa, sa) - ya; J = np.stack([_contract(Xa, sa, j) for j in range(N)], 2)
@@ -260,7 +306,9 @@ class HexIdx:
         k = (np.linalg.norm(F, axis=1) < 1e-7) & ((sc >= -tol) & (sc <= 1 + tol)).all(1)
         return pi[k], hid[k], np.clip(sc[k], 0, 1)
     def covered(s, Y):
-        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); pi, hid, sc = s.query(Y)
+        Y = wrapy(np.atleast_2d(Y)); m = np.zeros(len(Y), bool); s.aff = COVAFF
+        try: pi, hid, sc = s.query(Y)
+        finally: s.aff = False
         if len(pi):
             R = np.array(s.R); cid = s.I[hid, 0]; J = s.I[hid, 2:]; w = 2 * (1 + HALO) / (M - 1)
             sl = -(1 + HALO) * R[cid] + (J + sc[:, 1:]) * w * R[cid]; core = (np.abs(sl) <= R[cid] + 1e-9).all(1); m[pi[core]] = True
@@ -274,6 +322,9 @@ def mlin(Pb, n_):
         sh = [1] * (m_ + 2); sh[1 + j] = n_[j]; a = np.linspace(0, 1, n_[j]).reshape(sh); D = (1 - a) * np.take(D, [0], axis=1 + j) + a * np.take(D, [1], axis=1 + j)
     return D
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
+VIAB = int(E('VIAB', 0))                                                                                  # VIAB (b11): rollout с проверкой жизнеспособности на шаг вперёд (см. rollout)
+COVB = int(E('COVB', 0))                                                                                  # COVB (b11, SPD5): покрытие граней раунда одним вызовом covered + кеш по точкам R; 0 — выкл.
+FORB2B = int(E('FORB2B', 0))                                                                           # FORB2b (b11, research-26): грань запрещена, только если ВСЕ её точки несвободны (частично несвободная не обрывает рост; рёбра режет edge_ok); 0 — выкл.
 FORB2 = float(E('FORB2', 0.))                                                                          # FORB2a (b10, research-26): r затравки = min(RMAX, FORB2·gfree(seed)), при отказе клетки — повтор с r/2 до RMIN; 0 — выкл.
 def growN(p, u, idx, rm, tm):
     if FORB2 <= 0 or GF is None: return _growN1(p, u, idx, rm, tm)
@@ -295,7 +346,13 @@ def _growN1(p, u, idx, rm, tm):
             for i, Pn in enumerate(nf_rows(base, p, u, float(sg), nmax), 1): rows[sg * i] = Pn
             for i in [k for k in Wt if k != 0 and np.sign(k) == sg and k not in rows]: del Wt[i]
     imin, imax = min(rows), max(rows); R = np.stack([rows[i] for i in range(imin, imax + 1)])
-    if GF is not None and not free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all(): return None                         # FORB: начальная заплатка вся свободна
+    if GF is not None and not (free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).any() if FORB2B else free(R[(-imin,) + (slice(k0 - 1, k0 + 2),) * m_]).all()): return None                         # FORB: начальная заплатка вся свободна
+    if COVB:                                                                                             # COVB (b11): кеш покрытия точек R (−1 неизвестно); граней раунда считаем одним вызовом covered
+        IXR = np.arange(R.size // N).reshape(R.shape[:-1]); Rf = R.reshape(-1, N); covR = np.full(len(Rf), -1, np.int8)
+        def covget(ix):
+            mi = covR[ix] < 0
+            if mi.any(): ms = np.unique(ix[mi]); covR[ms] = idx.covered(Rf[ms])
+            return covR[ix] > 0
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
@@ -305,7 +362,22 @@ def _growN1(p, u, idx, rm, tm):
     klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dirs = [('a', k, sg) for k in range(m_) for sg in (1, -1)] + [('F',), ('B',)]; act = {d: True for d in dirs}; extra = {}
     def faceof(d, nk):
         sl = (slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi)); sl = list(sl); sl[1 + d[1]] = nk; return R[tuple(sl)].reshape(-1, N)
+    def faceix(d, nk):
+        sl = [slice(ilo - imin, ihi - imin + 1)] + [slice(a, b + 1) for a, b in zip(klo, khi)]; sl[1 + d[1]] = nk; return IXR[tuple(sl)].reshape(-1)
     while any(act.values()):
+        if COVB:
+            need = []
+            for d in dirs:
+                if not act[d]: continue
+                if d[0] == 'a':
+                    k = d[1]; nk = khi[k] + 1 if d[2] > 0 else klo[k] - 1
+                    if nk < 0 or nk >= KF: continue
+                    sl = [slice(ilo - imin, ihi - imin + 1)] + [slice(a, b + 1) for a, b in zip(klo, khi)]; sl[1 + k] = nk; need.append(IXR[tuple(sl)].reshape(-1))
+                else:
+                    i = ihi + 1 if d[0] == 'F' else ilo - 1
+                    if i < imin or i > imax: continue
+                    need.append(IXR[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1))
+            if need: covget(np.concatenate(need))
         for d in dirs:
             if not act[d]: continue
             if d[0] == 'a':
@@ -313,23 +385,23 @@ def _growN1(p, u, idx, rm, tm):
                 k, pl = d[1], d[2] > 0; nk = khi[k] + 1 if pl else klo[k] - 1
                 if nk < 0 or nk >= KF: act[d] = False; STOP['kf'] += 1; continue
                 face = faceof(d, nk); nlo = list(klo); nhi = list(khi); nlo[k] = min(klo[k], nk); nhi[k] = max(khi[k], nk)
-                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and (free(face).any() if FORB2B else free(face).all())); bb = (not fb) and bend(nlo, nhi, ilo, ihi) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['field' if fb else 'bend' if bb else 'goal'] += 1; continue
                 klo, khi = nlo, nhi
                 if d in extra:
                     extra[d] -= 1
                     if extra[d] <= 0: act[d] = False; STOP['ovh'] += 1
-                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
+                elif ((covget(faceix(d, nk)) if COVB else idx.covered(face)) | ~inbox_g(face)).mean() > FRAC: extra[d] = int(np.ceil(OVH * (khi[k] - klo[k]) / (M - 1)))
             else:
                 i = ihi + 1 if d[0] == 'F' else ilo - 1
                 if i < imin or i > imax: act[d] = False; STOP['rows'] += 1; continue
                 face = R[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1, N)
-                fb = not (inbox_g(face).all() and free(face).all()); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
+                fb = not (inbox_g(face).all() and (free(face).any() if FORB2B else free(face).all())); bb = (not fb) and bend(klo, khi, min(ilo, i), max(ihi, i)) > DELTA; gb = (not fb and not bb) and GOALB and nearb(face).any()
                 if fb or bb or gb: act[d] = False; STOP['tfield' if fb else 'tbend' if bb else 'tgoal'] += 1; continue
                 if d[0] == 'F': ihi = i
                 else: ilo = i
                 if d in extra: act[d] = False; STOP['tovh'] += 1
-                elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
+                elif ((covget(IXR[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1)) if COVB else idx.covered(face)) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p.copy(); c.nf, c.nb = ihi, -ilo; return c
@@ -377,7 +449,46 @@ def build_layer(u, rng, log=None):
             if len(pr) and 1. - idx.covered(wrapy(pr)).mean() < COVTOL: print('layer', u, 'стоп по покрытию:', len(cells), 'клеток, непокрыто', round(1. - idx.covered(wrapy(pr)).mean(), 4), flush=True); break
         if log: log(u, cells)
     bar.close(); return cells, idx
-def _layer(a): return build_layer(a[0], np.random.default_rng(a[1]), None)[0]
+PARG = int(E('PARG', 0))                                                                                 # b12 (SPD5): рост слоя пачками — PARG процессов растят клетки от разных затравок против снимка индекса (fork), затем последовательная фиксация; 0 — выкл.
+_PG = None
+def _pg_work(a):
+    p, rm, tm = a; idx, u = _PG; return growN(p, u, idx, rm, tm)
+def build_layer_par(u, rng, log=None):
+    from multiprocessing import get_context
+    global _PG
+    cells = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; B = int(float(E('PARB', 2))) * PARG; TT = np.zeros(4); tm = time.time
+    while fails < NFAIL and len(cells) < MAXC:
+        bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
+        t0 = tm(); ps = []; Bn = min(B, MAXC - len(cells)) if len(cells) >= PARG else 1                                  # первые клетки — по одной (пустой индекс, очередь короткая)
+        while len(ps) < Bn and fails < NFAIL:
+            p = queue.pop(0) if queue else rand_seed(rng)
+            if not inbox(p) or not free(p): continue
+            p = wrapy(p)
+            if ingoal(p): continue
+            if idx.covered(p[None])[0]: fails += 0 if queue else 1; continue
+            ps.append(p)
+        if not ps: continue
+        t1 = tm(); args = [(p,) + (LIMITS(p, u) if LIMITS else (RMAX, TMAX)) for p in ps]
+        if len(ps) == 1: res = [growN(args[0][0], u, idx, args[0][1], args[0][2])]
+        else:
+            _PG = (idx, u)
+            with get_context('fork').Pool(min(PARG, len(ps))) as pool: res = pool.map(_pg_work, args, chunksize=1)
+        t2 = tm(); TT[0] += t1 - t0; TT[1] += t2 - t1
+        for p, c in zip(ps, res):
+            if len(cells) >= MAXC: break
+            if c is None: fails += 0 if queue else 1; continue
+            if idx.covered(p[None])[0]: continue
+            fails = 0; c.build(); cells.append(c); idx.add(c); g0, g1 = c.G[-1], c.G[0]; yf = g0[ctr]; yb = g1[ctr]
+            for _ in range(max(2, int(.9 * (c.nf + c.nb) / 2))): yf = step(yf, u); yb = step(yb, u, -1.)
+            queue += [yf, yb]
+            if SIDE:
+                for e0 in (c.c, g0[ctr], g1[ctr]):
+                    for k in range(m_): queue += [e0 + 1.9 * c.r[k] * c.e[k], e0 - 1.9 * c.r[k] * c.e[k]]
+        TT[2] += tm() - t2
+        if log: log(u, cells)
+    if E('PARDBG'): print('PARG layer %s: затравки %.1f с, рост (пул) %.1f с, фиксация %.1f с' % (u, TT[0], TT[1], TT[2]), flush=True)
+    bar.close(); return cells, idx
+def _layer(a): return (build_layer_par if PARG > 1 else build_layer)(a[0], np.random.default_rng(a[1]), None)[0]
 _PQ = None
 def _dedup(pi, hid, sc):
     """DEDUP=K (b3): на точку оставить K ячеек с наибольшим запасом до границы (min по координатам min(sc, 1-sc)) — при FRAC 1 пар на узел много (память стенсилов)."""
@@ -392,12 +503,14 @@ def _test_gpu(s, Y, pi, vv, tolc=1e-10):
     import torch
     dev = 'cuda'; CH = int(E('GCH', 1 << 21)); T = lambda a: torch.as_tensor(a, device=dev)
     s._prep()
+    if PREFK > 0 and getattr(s, 'CL', None) is not None and not hasattr(s, '_gCL'): s._gCL = T(s.CL); s._gI0 = T(s.I[:, 0].astype(np.int64))
     if getattr(s, '_gn', -1) != s.n: s._g = [T(a[:s.n] if len(a) >= s.n else a) for a in (s.X, s.LO, s.HI, s.A0, s.JI)]; s._gn = s.n; s._gsh = T(np.asarray(SH, float))
     if getattr(s, '_gy', None) is not Y: s._gy = Y; s._gY = T(Y)
     X_, LO, HI, A0, JI = s._g; MG = float(E('MG', .4)); out = []
     for a in range(0, len(pi), CH):
         p = T(pi[a:a + CH]); v = T(vv[a:a + CH]); hid = v // KSH; y = s._gY[p] - s._gsh[v % KSH]; ok = ((y >= LO[hid]) & (y <= HI[hid])).all(1); p, hid, y = p[ok], hid[ok], y[ok]
         sc = .5 + torch.einsum('kij,kj->ki', JI[hid], y - A0[hid]); ok = ((sc >= -MG) & (sc <= 1 + MG)).all(1); p, hid, y, sc = p[ok], hid[ok], y[ok], sc[ok]
+        if PREFK > 0 and getattr(s, 'CL', None) is not None and len(p): k_ = _prefk(s, p, hid, sc, True); p, hid, y, sc = p[k_], hid[k_], y[k_], sc[k_]
         if not len(p): continue
         X = X_[hid]; alive = torch.arange(len(p), device=dev)
         for it in range(8):
@@ -417,28 +530,72 @@ def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
     k = int(E('SPAR', 0))
+    if int(E('QFAST', 0)): return _dedup(*qx.query_fast(Y))
     if k <= 1 or len(Y) < 50000: return _dedup(*qx.query(Y))
     from multiprocessing import Pool
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
     return np.concatenate([r[0] + r[3] for r in R]), np.concatenate([r[1] for r in R]), np.concatenate([r[2] for r in R])
+def _viable(P, d):
+    """VIAB: есть ли u с edge_ok, после которого ещё d−1 шагов жизнеспособны (d=1 — достаточно одного допустимого шага)."""
+    ok = np.zeros(len(P), bool)
+    for u in US:
+        m = edge_ok(P, u) & ~ok
+        if d > 1 and m.any(): m[m] = _viable(wrapy(step(P[m], u)), d - 1)
+        ok |= m
+    return ok
+_SOLVE_S = None
+def _spu_work(ui):
+    s, cl_, O_ = _SOLVE_S; u = US[ui]; SBL = int(E('SBLAY', 0))
+    a, b, c_ = s.stencils(step(s.P, u))
+    if GF is not None: k_ = edge_ok(s.P, u)[a]; a, b, c_ = a[k_], b[k_], c_[k_]
+    nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
+    keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); n0 = int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
+    return a, b.astype(np.int32 if s.N < 2 ** 31 else np.int64), c_, n0
+JCOMP = int(E('JCOMP', 0))                                                                              # b11 (SPD5): чанк Якоби GPU одним fused-ядром (torch.compile) вместо ~10 временных тензоров; 0 — выкл.
+_JC = None
+def _jchunk(Vt, X, W, pe, BIGv, wthr):
+    global _JC
+    if _JC is None:
+        import torch
+        def f(Vt, X, W, pe):
+            vi = Vt[X.long()]; w_ = W.double(); ok = vi < BIGv / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).amax(1)
+            v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.)
+            return torch.where(sm < wthr, torch.full_like(v, BIGv), v)
+        _JC = torch.compile(f, dynamic=True)
+    return _JC(Vt, X, W, pe)
+_PIX = None
+def _pix_work(i):
+    h = HexIdx(); h.collect = []
+    for c in _PIX[i]: h.add(c)
+    K = np.concatenate([k for k, _ in h.collect]) if h.collect else np.zeros(0, np.int64); V = np.concatenate([v for _, v in h.collect]) if h.collect else np.zeros(0, np.int64)
+    return h.X[:h.n], h.I[:h.n], h.LO[:h.n], h.HI[:h.n], h.R, K, V
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
         if int(E('PAR', 1)):
             from multiprocessing import Pool
-            with Pool(len(US)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
+            if PARG > 1:
+                from concurrent.futures import ProcessPoolExecutor; from multiprocessing import get_context
+                with ProcessPoolExecutor(len(US), mp_context=get_context('fork')) as ex: s.layers = list(ex.map(_layer, [(u, seed + k) for k, u in enumerate(US)]))
+            else:
+                with Pool(len(US)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
         else: s.layers = [_layer((u, seed + k)) for k, u in enumerate(US)]
         s.finish()
     def finish(s):
         s.cells = [c for l in s.layers for c in l]; n_ = 0
         for c in s.cells: c.o = n_; n_ += c.G.shape[0] * M ** m_
         s.P = np.concatenate([c.G.reshape(-1, N) for c in s.cells]); s.N = n_; s.goal = ingoal(s.P); s.V = np.full(n_, BIG); s.V[s.goal] = 0.
-    def stencils(s, Y):
+    def _init_qx(s):
         if not hasattr(s, 'qx'):
             s.qx = HexIdx()
-            for c in s.cells: s.qx.add(c)
+            if int(E('PIDX', 0)) and int(E('QFAST', 0)): s.qx.add_layers_par(s.layers)
+            else:
+                for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
+            if PREFK > 0: s.qx.CL = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]).astype(np.int64)
+    def stencils(s, Y):
+        s._init_qx()
         Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
         if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
@@ -469,13 +626,22 @@ class Atlas:
             tg = np.where(np.isinf(tg) & ingoal(y) & (True if al is None else al), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
+        _ts = time.time()
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
         else:
             I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
             SBC = int(E('SBCAUS', 0)); SBL = int(E('SBLAY', 0))                                                      # п.37 (research-21; r18/solve_bucket.py SBCAUS/SBLAY): свой u — точное ребро по столбцу клетки, переключение на u2 — стенсил только по клеткам слоя u2
             SONE = int(E('SONE', 0)); SONE_CH = int(E('CHN', 400000)); SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
             if SBC or SMEAN or SONE: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
-            for ui, u in enumerate(US):
+            SPU = int(E('SPU', 0)) and not SONE and SBC                                                          # SPU=1 (b11): стенсилы четырёх u в отдельных процессах (fork до инициализации CUDA в родителе); результат — уже после SBCAUS-фильтра
+            if SPU:
+                from multiprocessing import get_context
+                s._init_qx(); global _SOLVE_S; _SOLVE_S = (s, cl_, O_)
+                with get_context('fork').Pool(len(US)) as pool: res = pool.map(_spu_work, list(range(len(US))))
+                for ui, (a, b, c_, nst_) in enumerate(res):
+                    Vg = np.minimum(Vg, s.tgoal(s.P, US[ui])); nst += nst_; I_.append(a); IDX_.append(b); W_.append(c_)
+                print('stencils built (SPU, 4 процесса) | t=%.0f с' % (time.time() - _ts), flush=True)
+            for ui, u in (enumerate(US) if not SPU else []):
                 Vg = np.minimum(Vg, s.tgoal(s.P, u))
                 if SONE:                                                                                            # п.44 (research-22, r22/18/p18.py): ОДИН (самый центральный = max наибольшего веса) стенсил на группу (узел, слой приземления), потоково по CHN узлов
                     aa, bb, cc = [], [], []; nc0 = 0
@@ -488,7 +654,7 @@ class Atlas:
                 else:
                     a, b, c_ = s.stencils(step(s.P, u))
                     if GF is not None: k_ = edge_ok(s.P, u)[a]; a, b, c_ = a[k_], b[k_], c_[k_]
-                print('stencils built for u =', u, flush=True)
+                print('stencils built for u =', u, '| t=%.0f с' % (time.time() - _ts), flush=True)
                 if SBC and not SONE:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
                     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
@@ -500,7 +666,7 @@ class Atlas:
                 ea = np.concatenate(ea)
                 if GF is not None: fr_ = free(s.P); ea = ea[fr_[ea] & fr_[ea + mm]]
                 ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
-                I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
+                I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), '| t=%.0f с' % (time.time() - _ts), flush=True)
             I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
@@ -519,6 +685,7 @@ class Atlas:
                     if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
                     if SMEAN: sg = torch.zeros(NG, dtype=torch.float64, device=dev); cg = torch.zeros(NG, dtype=torch.float64, device=dev)
                     for a in range(0, len(gI), ch):
+                        if JCOMP and PESS >= 0 and not SMEAN: v = _jchunk(Vt, gX[a:a + ch].to(dev), gW[a:a + ch].to(dev), pe, BIG, WTHR); new.scatter_reduce_(0, gI[a:a + ch], DTN + v, 'amin'); continue
                         vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double()
                         if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
                         else:
@@ -529,7 +696,7 @@ class Atlas:
                     if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
                     new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
                     if d < 1e-9: break
-                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); (_lk.close() if int(E('GPULOCK', 0)) else None); torch.cuda.empty_cache(); return s
+                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, '| solve всего %.0f с' % (time.time() - _ts), flush=True); (_lk.close() if int(E('GPULOCK', 0)) else None); torch.cuda.empty_cache(); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
@@ -567,6 +734,10 @@ class Atlas:
             if done.all(): break
             tgs = np.stack([s.tgoal(Y, u) for u in US], 1); J = np.minimum(tgs, DTN + np.stack([s.vstar(step(Y, u)) for u in US], 1))
             if GF is not None: J = np.where(np.stack([~edge_ok(Y, u) for u in US], 1), BIG, J)                            # FORB: шаг, заходящий в запрещённое, недопустим; нет допустимого — «застрял» (T = inf)
+            if GF is not None and VIAB:                                                                          # VIAB=d (b11, research-26): u допустим, только если из step(Y,u) можно прожить ещё d−1 шагов (перебор u на каждом, edge_ok); нет ни одного жизнеспособного — прежний выбор
+                Jv = J.copy()
+                for ki, ui in enumerate(US): Jv[:, ki] = np.where(_viable(wrapy(step(Y, ui)), VIAB - 1), J[:, ki], BIG)
+                J = np.where((Jv.min(1) >= BIG / 2)[:, None], J, Jv)
             k = J.argmin(1); tg = tgs[np.arange(n), k]
             if VF > 0:
                 for i in np.flatnonzero(~done & ~tried & (J.min(1) <= VF)):
