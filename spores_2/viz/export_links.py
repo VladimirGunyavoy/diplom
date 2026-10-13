@@ -87,6 +87,7 @@ def export_m3(envn, starts=None, nshow=5):
     """6D: m3d / m3gd / m3gu — споры = коридор v6 как bench/spores_6d.py (финальные конфиги из bench_6d8d.md: *_spores6d_final.json), эталон — OCP CasADi (m3d: готовые refm3d_*.npy, m3g: ocp_m3g_lib multi)"""
     import common
     cfg = dict(m3d=(12000, 1000, 3, False, '0'), m3gd=(12000, 3000, 3, True, '2'), m3gu=(12000, 3000, 3, True, '2'))[envn]; NB, NF, K, wl, neigh = cfg
+    if envn != 'm3d': os.environ['G'] = '0.3'; os.environ['DOWN' if envn == 'm3gd' else 'UP'] = '1'          # ДО импорта ocp_m3g_lib (цель C3 читается при импорте; refine_ca его тянет внутри spores_6d)
     os.environ.update(CAREF='1', TREEFAST='1', BATCHFAST='1', CAMARG='.004', CAPRE='12', NEIGH=neigh)
     sys.argv = ['spores_6d.py', envn, str(NB), str(NF), str(K), ''] + (['wlim'] if wl else [])
     sys.path.insert(0, os.path.join(BENCH)); import spores_6d as SP
@@ -109,7 +110,7 @@ def export_m3(envn, starts=None, nshow=5):
         for i in starts:
             a = np.load(os.path.join(common.DATA, 'm3d_ref', 'refm3d_m3d_q%d_G0_N50_W3.npy' % (i + 1))); T = float(a[0]); U = np.asarray(a[1:], float).reshape(50, 3) if a.size == 151 else np.asarray(a[1], float); refs[i] = (T, U)
     else:
-        os.environ['G'] = '0.3'; os.environ['DOWN' if envn == 'm3gd' else 'UP'] = '1'; import ocp_m3g_lib as OL; from multiprocessing import get_context
+        import ocp_m3g_lib as OL; assert abs(OL.C3[0] - (-np.pi / 2 if envn == 'm3gd' else np.pi / 2)) < 1e-9; from multiprocessing import get_context
         global _OL, _SOL, _E; _OL, _SOL, _E = OL, OL.make_solver(50, 4), e
         with get_context('fork').Pool(len(starts)) as pool:
             for i, best in pool.map(_refwork, starts):
