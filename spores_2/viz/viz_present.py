@@ -70,31 +70,37 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0, hide=None
     params = dict(params); params.pop('note', None)
     for k_ in ('body_r', 'wheel_base', 'car_len', 'car_wid'):                          # №23: тела мельче, чтобы не налезали на старте
         if k_ in params: params[k_] = params[k_] * bscale
-    cam = vc.Cam(fit_view(eps, data, params), (0, TOP, PW, PH - TOP))
+    cam = vc.Cam(list(params['view']) if ('links' in params and 'view' in params) else fit_view(eps, data, params), (0, TOP, PW, PH - TOP))
     col = {}; k = 0
     for e in eps:
         if is_spore(e.method): col[id(e)] = AMBER
         else: col[id(e)] = COMP[k % len(COMP)]; k += 1
     tmax = max(e.tmax for e in eps); play = min(max(tmax, 5.), 11.); mult = tmax / play
-    prelim = bool(params.get('preliminary') or data.get('preliminary'))
+    chain = params.get('chain'); prelim = bool(params.get('preliminary') or data.get('preliminary') or (chain or {}).get('preliminary') or 'preliminary' in str(data.get('title', '')).lower())
+    def seg(e, t_now):
+        """цепочка целей (m3gdg): номер текущей цели k и индексы кадров текущего перехода [a, b]; без цепочки — весь путь"""
+        if not chain: return None, 0, len(e.trail) - 1
+        ts = chain['t_switch']; k = max(j for j, x in enumerate(ts) if x <= t_now + 1e-9); a = int(round(ts[k] / e.dt)); b = int(round(ts[k + 1] / e.dt)) if k + 1 < len(ts) else len(e.trail) - 1
+        return k, a, min(b, len(e.trail) - 1)
 
     def label_pos(e):
         """подпись — рядом с серединой пути, со сдвигом от остальных подписей"""
         pts = [cam.pt(e.trail[j][0]) for j in range(len(e.trail))]; return pts
     def render(t_now):
         scr.fill((255, 255, 255)); vc.draw_obstacles(scr, cam, data, FILL, EDGE, FILL)
-        params['goal_q'] = eps[0].e.get('goal_q')
+        params['goal_q'] = eps[0].e.get('goal_q'); kg = None
+        if chain: kg = seg(eps[0], t_now)[0]; params['goal_q'] = chain['goals'][kg]                    # №25: цель ТЕКУЩЕГО перехода (зелёный контур звеньев)
         if static: static(scr, cam, params, data)
         used = []
         for e in eps:
             if not e.ok: fx, fy = cam.pt(e.trail[-1][0]); used.append(pygame.Rect(fx - 14, fy - 14, 28, 28))
         for e in eps:                                                                    # бледные полные пути
             c = col[id(e)]; w = 4 if is_spore(e.method) else 3
-            pts = [cam.pt(e.trail[j][0]) for j in range(len(e.trail))]
+            ks, sa, sb = seg(e, t_now); pts = [cam.pt(e.trail[j][0]) for j in range(sa, sb + 1)]
             if len(pts) > 1: thick(scr, pale(c), pts, w)
         for e in eps:                                                                    # пройденное + тело
             c = col[id(e)]; x, u, i = e.state(t_now); w = 8 if is_spore(e.method) else 5
-            pts = [cam.pt(e.trail[j][0]) for j in range(0, i + 1)]
+            ks, sa, sb = seg(e, t_now); pts = [cam.pt(e.trail[j][0]) for j in range(sa, min(i, sb) + 1)]
             if len(pts) > 1: thick(scr, c, pts, w)
             params['_col'] = c; params['_col_dk'] = dark(c); draw(scr, cam, params, x, u, t_now)
         params.pop('_col', None); params.pop('_col_dk', None)
@@ -120,6 +126,7 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0, hide=None
         scr.blit(fL.render(TITLES.get(sysname, data.get('title', sysname)), True, INK), (18, 14)); 
         sub = fS.render('start %s%s' % (start, ' · ×%.1f' % mult if mult > 1.05 else ''), True, (120, 126, 138)); scr.blit(sub, (PW - sub.get_width() - 18, 8))
         if prelim: pr = fS.render('preliminary', True, (190, 60, 60)); scr.blit(pr, (PW - pr.get_width() - 18, 32))
+        if chain: gk = fM.render('goal %d/%d' % (kg + 1, len(chain['goals'])), True, INK); scr.blit(gk, (PW - gk.get_width() - 18, 56))
         y = PH - 18 - 28 * len(eps); box = pygame.Rect(PW - 372, y - 8, 360, 28 * len(eps) + 12)
         for e in sorted(eps, key=lambda e: not is_spore(e.method)):
             c = col[id(e)]; pygame.draw.circle(scr, c, (PW - 352, y + 12), 8)
