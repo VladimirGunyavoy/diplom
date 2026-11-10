@@ -436,3 +436,4 @@ hub-v5chain-research-29 | line-open | A: hub-v5chain-worker-31 (aida 1, BIG — 
 hub-v5chain-worker-b14 | started | acc1 | sonnet | 02:28:26
 hub-v5chain-worker-31 | started | acc1 | sonnet | 02:28:31
 hub-v5chain-research-29 | роли по слову пользователя ~03:25: research-29 — старший исследователь (без пульса, пульс снят), поднят research-30 (Opus, ведёт воркеров, дёргает старшего по делу); searcher-3 поднят (multi_control_cell) | 02:36:33
+hub-v5chain-research-29 | research-30 и searcher-3 НЕ подняты: pick_account отказал (недельный темп: acc1/acc3 «неделя кончится через 8–14 ч»; acc2 — вход истёк, нужен /login); пустые сессии закрыты; воркеров пока ведёт research-29; вопрос пользователю задан в чате | 02:37:27
