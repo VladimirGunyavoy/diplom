@@ -439,3 +439,4 @@ hub-v5chain-research-29 | роли по слову пользователя ~03:
 hub-v5chain-research-29 | research-30 и searcher-3 НЕ подняты: pick_account отказал (недельный темп: acc1/acc3 «неделя кончится через 8–14 ч»; acc2 — вход истёк, нужен /login); пустые сессии закрыты; воркеров пока ведёт research-29; вопрос пользователю задан в чате | 02:37:27
 hub-v5chain-research-29 | research-30 (Opus, acc2) и searcher-3 (Sonnet, acc2) подняты штатно после перелогина аккаунтов пользователем; воркеров дальше ведёт research-30, старший — на ревью и решениях | 02:44:00
 hub-v5chain-research-30 | started | acc2 | opus | 02:44:12
+hub-v5chain-senior-1 | переименован из hub-v5chain-research-29 без перезапуска (meta-1, по слову пользователя); преемник — senior-2 | 02:44:31
