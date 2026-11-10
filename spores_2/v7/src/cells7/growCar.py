@@ -40,7 +40,11 @@ elif SYS == 'di4':                                                              
 elif SYS == 'car':                                                                                          # w24 (п.36, static_car.md): ẋ=v cosθ, ẏ=v sinθ, θ̇=ω, v̇=a−k v; |a|≤1.5, |ω|≤1.8; v∈[−1,2], |x|,|y|≤5; 3 диска r .7; цель — круг (4,3.6) r .45
     N = 4; PERIOD = np.array([0, 0, PI2, 0]); KV = .625; UA, UW = 1.5, 1.8; VLO, VHI = -1., 2.; XL = float(E('XL', 5.)); XLV = np.array([XL, XL, 0., 0.]); GC = np.array([4., 3.6]); GR = .45
     RHOV = np.array([GR, GR, np.pi, 1.5]); DISCS = [(0., .2, .7), (1.8, 1.5, .7), (-1.6, 2.3, .7)]; US = tuple((a, w) for a in (UA, -UA) for w in (UW, -UW)) + (((UA, 0.), (-UA, 0.)) if int(E('NL', 6)) == 6 else ())
-    def f(y, u): return np.stack([y[..., 3] * np.cos(y[..., 2]), y[..., 3] * np.sin(y[..., 2]), u[1] + 0 * y[..., 2], u[0] - KV * y[..., 3]], -1)
+    VSAT = int(E('VSAT', 0))      # b14 (ENV1, слово research-30): v ← clip(v, VLO, VHI) как в среде journal-2026 — на границе v=VHI с a−kv>0 скорость ДЕРЖИТСЯ (насыщение), а не граница поля
+    def f(y, u):
+        dv = u[0] - KV * y[..., 3]
+        if VSAT: dv = np.where(((y[..., 3] >= VHI) & (dv > 0)) | ((y[..., 3] <= VLO) & (dv < 0)), 0., dv)
+        return np.stack([y[..., 3] * np.cos(y[..., 2]), y[..., 3] * np.sin(y[..., 2]), u[1] + 0 * y[..., 2], dv], -1)
     def Bq(y): return np.diag([0., 0., UW * UW, UA * UA])
 else: raise SystemExit('SYS?')
 if SYS != 'car': DISCS = []
