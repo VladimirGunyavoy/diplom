@@ -89,3 +89,4 @@
 - [research/envs_from_journal2026.md](research/envs_from_journal2026.md) — среды journal-2026 (статик/динамик кар, подводный дрон, круг): файлы, динамика, пределы, цель, препятствия, их лучшие результаты (от hub-journal2026-research-23)
 - [research/multi_control_cell.md](research/multi_control_cell.md) — клетка на все управления: число слоёв L — главный множитель; Д1 (доля «работающих» клеток слоя), В3 один атлас по оптимальной политике, В2 модель по u в клетке, В1 воронка (гипотезы, research-29)
 - [research/lit_multi_control_cell.md](research/lit_multi_control_cell.md) — литература к клетке на все u: SL-HJB min по u в узле, TSA, режимы/explicit MPC, n≳ε^{-d/2}, SIPP/chance-constrained (searcher-3)
+- research/car_ref_arcs.md — статик кар: эталон 45% времени на v=v_max (a=1.25, нет такого слоя), край дисков ~2%, |ω|=WM ~3% (research-30)
