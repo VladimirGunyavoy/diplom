@@ -85,3 +85,5 @@
 - [research/forb_hole.md](research/forb_hole.md) — CA5: застревание спор у запрещённого = дыра покрытия шириной ~.2 gfree; FORB2a радиус клетки ≤ c·gfree
 | 8D m8: провалы 13/16, предел скорости, слой удержания (research-27) | `knowledge/research/m8_hold_limit.md` | весь |
 | Окно цели бенча и удержание цели (research-27) | `knowledge/research/goal_window_capture.md` | весь |
+- [research/dyn_obstacles.md](research/dyn_obstacles.md) — движущиеся диски: агент не знает закон, модель «гауссово ускорение», облако σ² = qτ³/3, диск раздут на κσ(τ); схемы А (граф как дальняя цена + ограничение риска) и Б (пометка узлов, локальный пересчёт V); план проверки ENV3 (research-29, гипотеза)
+- [research/envs_from_journal2026.md](research/envs_from_journal2026.md) — среды journal-2026 (статик/динамик кар, подводный дрон, круг): файлы, динамика, пределы, цель, препятствия, их лучшие результаты (от hub-journal2026-research-23)
