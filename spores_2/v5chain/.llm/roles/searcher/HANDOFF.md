@@ -1,6 +1,6 @@
 # SEARCHER_HANDOFF — глобальный журнал-хендофф роли searcher (все звенья; правила — SEARCHER_ROUTINE.md)
 ## Текущая тема
-нет. ПАУЗА линии laptop (2026-10-13 ~03:05, слово пользователя через research-6): searcher-5 остановлен, пульс не ставился, фоновых процессов нет, преемник не поднят. Следующий шаг: ждать задачу от research.
+нет (searcher-3 сдал multi_control_cell 2026-11-11). Прежде: ПАУЗА линии laptop (2026-10-13 ~03:05, слово пользователя через research-6): searcher-5 остановлен, пульс не ставился, фоновых процессов нет, преемник не поднят. Следующий шаг: ждать задачу от research.
 ## История тем
 | дата | звено | тема | заказчик | итог | статус |
 |---|---|---|---|---|---|
@@ -16,3 +16,4 @@
 | 2026-10-12 | laptop-v5chain-searcher-3 | что портировать из v5–v7 ради скорости | laptop-v5chain-research-5 | .llm/chain/knowledge/research/lit_v7_port.md | сдано (замеры aida, скрипты reports/research/s3_port) |
 | 2026-10-13 | laptop-v5chain-searcher-4 | маятник: инсайты v5–v7 (сепаратриса, стоп торца) | laptop-v5chain-research-5 | .llm/chain/knowledge/research/lit_pend_insights.md | сдано (из отчётов; код не гонял, v8-эффект флагов — оценка [Я]) |
 | 2026-10-13 | laptop-v5chain-searcher-5 | клоны ±2π; лучшая версия маятника; посев по эллипсу; адаптивные клоны/SELFOV | laptop-v5chain-research-5/6 | knowledge/research/lit_clones.md, lit_pend_best.md, lit_seed_ellipse.md, lit_adapt_clones.md | сдано |
+| 2026-11-11 | hub-v5chain-searcher-3 | клетка на все управления (HJB/SL, режимы, число узлов, движ. препятствия) | hub-v5chain-research-30 (бывш. research-29→senior-1) | .llm/chain/knowledge/research/lit_multi_control_cell.md | сдано (часть источников по аннотациям; прототипа В3 и числовых ε chance-constrained не найдено) |
