@@ -2,7 +2,7 @@
 Без аргумента — список готовых систем (viz/data/*.json). Зависимости: pygame, numpy (json — стандартный)."""
 import os, sys, json, glob, importlib, argparse
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
-MODS = ['draw_links', 'draw_mobile', 'draw_arm2']
+MODS = ['draw_links', 'draw_mobile', 'draw_arm2', 'draw_di2d']
 HIDDEN = {'m3gd'}                                                                  # не показывать (слово пользователя 2026-10-13); данные остаются в data/
 def systems():
     tab = {}

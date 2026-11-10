@@ -16,13 +16,14 @@ def pale(c): return tuple(int(v * .4 + 255 * .6) for v in c)
 
 TITLES = {'dd': 'Differential drive', 'ddobst': 'Differential drive + obstacles', 'ddobst7': 'Differential drive + obstacles', 'car': 'Car with inertia + obstacles', 'carfree': 'Car with inertia',
           'm3gdg': '6D arm: many goals', 'm3gd': '6D arm', 'm3gu': '6D arm', 'm8': '8D arm', 'm3d': '3D arm', 'manip': '2-link arm', 'manipf': '2-link arm + table + self-collision',
-          'pend': 'Pendulum swing-up', 'pend15': 'Pendulum swing-up', 'dp1': 'Double pendulum'}
+          'di2d': 'Double integrator: phase plane (x, v)', 'pend': 'Pendulum swing-up', 'pend15': 'Pendulum swing-up', 'dp1': 'Double pendulum'}
 def en_method(name):
     """имя метода для слайдов (русские имена остаются в обычном режиме)"""
     n = name.lower()
     if 'дуг' in n: return 'reference (arcs)'                                              # аналитический эталон дуг БЕЗ дисков (не OCP)
     if 'спор' in n or 'spore' in n: return 'SPORE'
     if 'sst' in n: return 'SST 60 s' if '60' in n or n.strip() == 'sst' else name
+    if 'bang' in n: return 'exact bang-bang'
     if 'ocp' in n or 'эталон' in n: return 'OCP'
     return name.replace(' с', ' s')                                                       # «RRT 60 с» → «RRT 60 s»
 
@@ -62,7 +63,7 @@ def run(sysname, mod, data, png=None, start=None, nframes=4, hold=1.0, hide=None
     if start is None: start = pick_start(eps_all)
     eps = [e for e in eps_all if e.start == start and not any(h.lower() in e.method.lower() or h.lower() in en_method(e.method).lower() for h in (hide or []))]
     if not eps: raise SystemExit('нет эпизодов со стартом %r' % (start,))
-    eps.sort(key=lambda e: (is_spore(e.method), e.method))                                  # спор рисуем последними (поверх)
+    eps.sort(key=lambda e: ((not is_spore(e.method)) if mod.get('ref_on_top') else is_spore(e.method), e.method))                                  # спор рисуем последними (поверх)
     names = 'dejavusans,arial,liberationsans,segoeui,helvetica,verdana'
     fL = pygame.font.SysFont(names, 30, bold=True); fM = pygame.font.SysFont(names, 22, bold=True); fS = pygame.font.SysFont(names, 20)
     scr = pygame.display.set_mode((PW, PH)) if not png else pygame.Surface((PW, PH))
