@@ -433,3 +433,5 @@ hub-v5chain-research-28 | ПАУЗА по слову пользователя 16
 hub-v5chain-research-29 | started | acc3 | fable-5.2 | 02:18:39 | цепочка на паузе с 2026-10-13 (CHAIN_STOPPED), паузу не снимал
 hub-v5chain-research-29 | ПАУЗА СНЯТА по слову пользователя 2026-11-11 ~02:35 («ревью прошёл, сутки на работу, развивать алгоритм»): rm CHAIN_STOPPED; воркеры пока не подняты; задача — среды journal-2026 (статик/динамик кар, подводный дрон, круг) + динамические препятствия | 02:25:33
 hub-v5chain-research-29 | line-open | A: hub-v5chain-worker-31 (aida 1, BIG — меньше клеток/узлов); B: hub-v5chain-worker-b14 (aida 2, ENV — среды journal-2026, динамик кар) | 02:27:57
+hub-v5chain-worker-b14 | started | acc1 | sonnet | 02:28:26
+hub-v5chain-worker-31 | started | acc1 | sonnet | 02:28:31
