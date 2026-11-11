@@ -466,3 +466,5 @@ senior-1 | decision | senior: схема Б грубо (SIPP по сетке xy)
 hub-v5chain-worker-33 | done | limit 5ч 92% | двухпроходная ДИ закрыта, кар drop, сводка A; идёт solve базы c1600 | next=hub-v5chain-worker-34 (после 06:01) | 05:30:39
 senior-1 | review | senior: вывод-кандидат «carfree + агент А лучше текущего атласа с вшитыми дисками» (статик 1.045/1.112 против 1.091/1.142; динамик 1.115/1.191) принят с сужением: редкие выпуклые диски, база с дырой у дисков, одно зерно; заказаны 3 сида и тесная раскладка 6 дисков | 05:33:55
 hub-v5chain-research-30 | done | limit (5ч acc2 73%, ctx 34%) | маятник: главная строка 2 сл. DTN .12 (узлы −61%, ×8); ДИ 4D: плотность+Д1 (заготовка ×2); кар: carfree1600+агент А 1.045/1.112, динамик 1.115/1.191 без касаний; В3, BC1, Б — закрыты честно | next=hub-v5chain-research-31 | 05:46:26
+hub-v5chain-research-30 | next-launched | hub-v5chain-research-31 (после ожидания pick_account) | 06:00:54
+hub-v5chain-research-31 | started | acc3 | opus | 06:01:36
