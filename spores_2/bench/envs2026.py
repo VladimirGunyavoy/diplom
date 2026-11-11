@@ -14,6 +14,22 @@ def their_step(y, u):
     a = np.clip(u[0], -UA, UA); w = np.clip(u[1], -UW, UW); th = y[2] + w * DT; v = np.clip(.95 * y[3] + a * DT, -1., 2.)
     return np.array([y[0] + v * DT * np.cos(th), y[1] + v * DT * np.sin(th), th, v])
 
+def cont_replay(x0, us, dts, sat=True, h=.01):
+    """непрерывный проверяльщик: RK4 h .01, динамика car (k .625); sat=True — v насыщается в [−1, 2] (как у них), sat=False — наш поток без клипа (v может выйти за 2). Возврат dict(ok, T, pen) — pen: макс. проникновение в диск/стену/(v вне границ при sat=False)"""
+    K = .625
+    def fl(y, a, w):
+        dv = a - K * y[3]
+        if sat and ((y[3] >= 2. and dv > 0) or (y[3] <= -1. and dv < 0)): dv = 0.
+        return np.array([y[3] * np.cos(y[2]), y[3] * np.sin(y[2]), w, dv])
+    y = np.array(x0, float); t = 0.; pen = 0.
+    for (a, w), dt in zip(us, dts):
+        k = max(1, int(np.ceil(dt / h - 1e-9))); hh = dt / k
+        for _ in range(k):
+            k1 = fl(y, a, w); k2 = fl(y + hh / 2 * k1, a, w); k3 = fl(y + hh / 2 * k2, a, w); k4 = fl(y + hh * k3, a, w); y = y + hh / 6 * (k1 + 2 * k2 + 2 * k3 + k4); t += hh
+            pen = max(pen, -dclear(y[:2]), np.abs(y[:2]).max() - 5., (y[3] - 2.) if not sat else 0., (-1. - y[3]) if not sat else 0.)
+            if np.linalg.norm(y[:2] - GOAL) <= GR: return dict(ok=pen <= 1e-3, T=t, pen=float(max(pen, 0.)))
+    return dict(ok=False, T=None, pen=float(max(pen, 0.)))
+
 def dclear(p): return float((np.linalg.norm(HZ - p, axis=1) - HR).min())
 
 def their_replay(x0, us, dts, tmax=40.):
@@ -31,8 +47,8 @@ def their_replay(x0, us, dts, tmax=40.):
     return dict(ok=ok, T=n * DT if ok else None, viol_step=vs, viol_cont=float(max(pen, 0.)), steps=n)
 
 def finish_plan(G, y, tmax=3., H=.1, NA=3):
-    """сетка ≤ NA дуг шагом H (как finish_gen.shoot_grid), но с длительностями. Цель — вписанный квадрат круга (θ, v любые, как _wcar). Возврат (T, [(u, dt)]) или (inf, None)"""
-    K = int(round(tmax / H)); R = .9 * GR / np.sqrt(2); nu = len(G.US); tj = np.arange(K + 1) * H; best = (np.inf, None)
+    """сетка ≤ NA дуг шагом H (как finish_gen.shoot_grid), но с длительностями. Цель — круг .95·GR (θ, v любые; вместо вписанного квадрата growCar — взамен отсутствующей доводки SLSQP). Возврат (T, [(u, dt)]) или (inf, None)"""
+    K = int(round(tmax / H)); R = .9 * GR; MG = float(os.environ.get('FMARG', .1)); nu = len(G.US); tj = np.arange(K + 1) * H; best = (np.inf, None)
     def traj(Y, u):
         u = np.asarray(u, float); out = [Y]
         for _ in range(K):
@@ -45,15 +61,16 @@ def finish_plan(G, y, tmax=3., H=.1, NA=3):
             m = (last != a) & (T < min(best[0], tmax))
             if not m.any(): continue
             tr = traj(S[m], G.US[a]); Tt = T[m][:, None] + tj[None]
-            ok = (np.abs(tr[..., :2] - G.GC) <= R).all(-1)
+            free = np.logical_and.accumulate(np.all([np.hypot(tr[..., 0] - cx, tr[..., 1] - cy) - r_ >= MG for cx, cy, r_ in G.DISCS] + [np.abs(tr[..., 0]) <= 5. - MG, np.abs(tr[..., 1]) <= 5. - MG], axis=0), axis=-1)
+            ok = (np.hypot(tr[..., 0] - G.GC[0], tr[..., 1] - G.GC[1]) <= R) & free
             if ok.any():
                 tt = np.where(ok, Tt, np.inf); i = np.unravel_index(tt.argmin(), tt.shape)
                 if tt[i] < best[0]:
                     top = list(TOP[m][i[0]]) + [a]; dur = list(DUR[m][i[0]]) + [float(tj[i[1]])]
                     best = (float(tt[i]), [(G.US[p], d) for p, d in zip(top, dur) if d > 1e-12])
             if lev < NA - 1:
-                n0 = int(m.sum()); nS.append(tr[:, 1:].reshape(-1, tr.shape[-1])); nT.append(Tt[:, 1:].reshape(-1))
-                nTOP.append(np.concatenate([np.repeat(TOP[m], K, 0), np.full((n0 * K, 1), a)], 1)); nDUR.append(np.concatenate([np.repeat(DUR[m], K, 0), np.tile(tj[1:], n0)[:, None]], 1)); nL.append(np.full(n0 * K, a))
+                n0 = int(m.sum()); fr = free[:, 1:].reshape(-1); nS.append(tr[:, 1:].reshape(-1, tr.shape[-1])[fr]); nT.append(Tt[:, 1:].reshape(-1)[fr])
+                nTOP.append(np.concatenate([np.repeat(TOP[m], K, 0), np.full((n0 * K, 1), a)], 1)[fr]); nDUR.append(np.concatenate([np.repeat(DUR[m], K, 0), np.tile(tj[1:], n0)[:, None]], 1)[fr]); nL.append(np.full(n0 * K, a)[fr])
         if lev == NA - 1 or not nS: break
         S, T, TOP, DUR, last = map(np.concatenate, (nS, nT, nTOP, nDUR, nL)); k = T < min(best[0], tmax); S, T, TOP, DUR, last = S[k], T[k], TOP[k], DUR[k], last[k]
         if not len(S): break
@@ -74,13 +91,32 @@ def plan(G, A, x, tmax=40., VF=1.5):
         y[:, 3] = np.clip(y[:, 3], G.VLO, G.VHI); t += h
     return None
 
+def closed_loop(G, A, x0, tmax=12.):
+    """замкнутый контур на ИХ шаге: каждые .08 с — перепланировать от их текущего состояния (plan), применить u на середине шага .08. Возврат как their_replay"""
+    y = np.array(x0, float); n = 0; vs = 0; pen = 0.; ok = False; nf = 0; last = None
+    while n * DT < tmax:
+        if np.linalg.norm(y[:2] - GOAL) <= GR: ok = True; break
+        r = plan(G, A, y)
+        if r is None:                                            # дыра V*: дорабатываем остаток прошлого плана (сдвиг на .08 с)
+            nf += 1
+            if last is None: break
+            us, dts = last; cum = np.cumsum(dts) - DT; keep = cum > 1e-9
+            if not keep.any(): break
+            us = [u for u, kk in zip(us, keep) if kk]; dts = [float(c - (cum[j - 1] if j and keep[j - 1] else 0.)) if False else float(d) for j, (d, kk) in enumerate(zip(dts, keep)) if kk]; dts[0] = float(cum[keep][0]); r = (us, dts, 0.)
+        us, dts, _ = r; last = (us, dts); cum = np.cumsum(dts); k = min(int(np.searchsorted(cum, .5 * DT)), len(us) - 1); yn = their_step(y, us[k]); n += 1
+        for s_ in np.linspace(0, 1, 21)[1:]:
+            q = y[:2] * (1 - s_) + yn[:2] * s_; pen = max(pen, -dclear(q), np.abs(q).max() - 5.)
+        if dclear(yn[:2]) < 0 or np.abs(yn[:2]).max() > 5.: vs += 1
+        y = yn
+    return dict(ok=ok, T=n * DT if ok else None, viol_step=vs, viol_cont=float(max(pen, 0.)), steps=n, noplan=nf)
+
 _A = None; _G = None
 def _one(args):
     i, x = args; t0 = time.perf_counter(); r = plan(_G, _A, x); dq = time.perf_counter() - t0
     if r is None: return dict(i=i, why='no_plan', t_query=dq)
     us, dts, Ta = r; th = their_replay(x, us, dts)
-    import common; e = common.make('car'); Tv, why = common.verify(e, x, us, dts)
-    return dict(i=i, T_agent=Ta, T_cont=Tv, why_cont=why, their=th, t_query=dq, nsteps=len(us))
+    cs = cont_replay(x, us, dts, True); cn = cont_replay(x, us, dts, False)
+    return dict(i=i, T_agent=Ta, T_cont=cs['T'] if cs['ok'] else None, cont_sat=cs, cont_nosat=cn, their=th, closed=(closed_loop(_G, _A, x) if os.environ.get('CLOSED', '1') == '1' else None), t_query=dq, nsteps=len(us))
 
 if __name__ == '__main__':
     import pickle, multiprocessing as mp, growCar as G, common
@@ -94,7 +130,7 @@ if __name__ == '__main__':
     wall = time.perf_counter() - t0; res.sort(key=lambda r: r['i'])
     n = len(res); Tc = np.array([np.nan if r.get('T_cont') is None else r['T_cont'] for r in res]); Tt = np.array([np.nan if 'their' not in r or r['their']['T'] is None else r['their']['T'] for r in res])
     okc = np.isfinite(Tc); okt = np.isfinite(Tt); cleant = np.array([('their' in r) and r['their']['ok'] and r['their']['viol_step'] == 0 for r in res]); cleanc = np.array([('their' in r) and r['their']['ok'] and r['their']['viol_step'] == 0 and r['their']['viol_cont'] <= 1e-3 for r in res])
-    S = dict(env='car2026', n=n, cells=[len(l) for l in A.layers], nodes=int(A.N), cont_reach=float(okc.mean()), cont_ratio_med=float(np.nanmedian(Tc / Tref)) if okc.any() else None,
-             their_reach=float(okt.mean()), their_clean_step=float(cleant.mean()), their_clean_cont=float(cleanc.mean()), their_ratio_med=float(np.nanmedian(Tt / Tref)) if okt.any() else None,
+    S = dict(env='car2026', n=n, cells=[len(l) for l in A.layers], nodes=int(A.N), cont_nosat_reach=float(np.mean([r.get('cont_nosat', {}).get('ok', False) for r in res])), cont_reach=float(okc.mean()), cont_ratio_med=float(np.nanmedian(Tc / Tref)) if okc.any() else None,
+             closed_reach=float(np.mean([bool(r.get('closed') and r['closed']['ok']) for r in res])), closed_clean=float(np.mean([bool(r.get('closed') and r['closed']['ok'] and r['closed']['viol_step'] == 0 and r['closed']['viol_cont'] <= 1e-3) for r in res])), closed_ratio_med=float(np.nanmedian([r['closed']['T'] / Tref[r['i']] if r.get('closed') and r['closed']['T'] else np.nan for r in res])), their_reach=float(okt.mean()), their_clean_step=float(cleant.mean()), their_clean_cont=float(cleanc.mean()), their_ratio_med=float(np.nanmedian(Tt / Tref)) if okt.any() else None,
              their_T_med_steps=float(np.nanmedian(Tt) / DT) if okt.any() else None, t_query_med=float(np.median([r['t_query'] for r in res])), wall_parallel=wall, per_start=res, Tref=Tref.tolist())
     json.dump(S, open(os.path.join(common.DATA, 'env_car2026.json'), 'w'), indent=1, default=float); print({k: v for k, v in S.items() if k not in ('per_start', 'Tref')})

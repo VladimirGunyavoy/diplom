@@ -47,7 +47,7 @@ elif SYS == 'car':                                                              
         return np.stack([y[..., 3] * np.cos(y[..., 2]), y[..., 3] * np.sin(y[..., 2]), u[1] + 0 * y[..., 2], dv], -1)
     def Bq(y): return np.diag([0., 0., UW * UW, UA * UA])
 else: raise SystemExit('SYS?')
-if SYS != 'car': DISCS = []
+if SYS != 'car' or int(E('NODISC', 0)): DISCS = []   # b14 (ENV2): NODISC=1 — атлас «carfree» без дисков (V₀ для динамических)
 def dobs(y): return np.min([np.hypot(y[..., 0] - cx, y[..., 1] - cy) - r for cx, cy, r in DISCS], 0) if DISCS else np.full(np.shape(y[..., 0]), 9.)
 m_ = N - 1; PER = PERIOD > 0; NP_ = np.flatnonzero(PER)
 SH = np.array([[0. if k not in NP_ else s_[list(NP_).index(k)] for k in range(N)] for s_ in itertools.product(*[(0., PERIOD[k], -PERIOD[k]) for k in NP_])]) if len(NP_) else np.zeros((1, N)); KSH = len(SH)
