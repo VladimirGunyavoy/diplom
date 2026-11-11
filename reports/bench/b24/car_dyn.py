@@ -175,7 +175,7 @@ if GPU:
             k_vit[nbk, tpb](ag.dJ, ag.dD, ag.dOK, ag.dGL, ag.dING, dF, a, b, ag.nP, np.float32(TAU), np.float32(KV), np.float32(BIG), ag.dW0, np.float32(ag.lim)); a, b = b, a
             if it % 4 == 3 and np.abs(a.copy_to_host() - b.copy_to_host()).max() < tol: break
         ag.dWprev = a; return a.copy_to_host(), it
-TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2))
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 20000))
 @nb.njit
 def expand(X, tau):
     n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
@@ -191,8 +191,20 @@ def tie_wq(ag, Q, ok, Wq):
     """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
     if TIE <= 0 or not ok.any(): return Wq
     w = Wq[ok]
-    if w.max() - w.min() >= TIE: return Wq
-    ag.ntie = getattr(ag, 'ntie', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    if w.max() - w.min() >= TIE: ag.streak = 0; return Wq
+    ag.ntie = getattr(ag, 'ntie', 0) + 1; ag.streak = getattr(ag, 'streak', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    if ESCN > 0 and ag.streak >= ESCN:   # b25: эскалация — луч шириной ESCB до глубины ESCD
+        ag.nesc = getattr(ag, 'nesc', 0) + 1; Wl = None
+        for lev in range(ESCD - 1):
+            cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
+            d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
+            if len(Wl) > ESCB and lev < ESCD - 2:
+                keep = np.argpartition(Wl, ESCB)[:ESCB]; cur, first, okc, Wl = cur[keep], first[keep], okc[keep], Wl[keep]
+        out = np.full(9, 1e9)
+        for f in range(9):
+            m = first == f
+            if m.any(): out[f] = Wl[m].min()
+        return out
     for _ in range(DEP - 1):
         cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
     d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
@@ -201,6 +213,7 @@ def tie_wq(ag, Q, ok, Wq):
 class AgentDyn:
     """дерево carfree (без дисков) + W0 (VI один раз); на каждом шаге: пометка узлов облаком прогноза → VI с тёплым стартом → жадный выбор + фильтр по прогнозу. Закон дисков агенту неизвестен: только наблюдения p(t), p(t−.2)."""
     def __init__(self, S, back):
+        global KV
         from scipy.spatial import cKDTree
         self.S, self.tree, self.P = S, back[5], np.asarray(back[0]); self.nP = len(self.P)
         E, self.OK, self.GL = edges(self.P, TAU); Ew = S.wrap(E.reshape(-1, 4)); d, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=-1)
@@ -210,6 +223,12 @@ class AgentDyn:
             self.dJ = cuda.to_device(np.ascontiguousarray(self.J.reshape(self.nP, 9, -1)[:, :, :KG].transpose(1, 2, 0))); self.dD = cuda.to_device(np.ascontiguousarray(self.D.reshape(self.nP, 9, -1)[:, :, :KG].transpose(1, 2, 0).astype(np.float32))); self.dOK = cuda.to_device(np.ascontiguousarray(self.OK.T)); self.dGL = cuda.to_device(np.ascontiguousarray(self.GL.T)); self.dING = cuda.to_device(self.ING); self.W0f = self.W0.astype(np.float32); self.dW0 = cuda.to_device(self.W0f); self.dWprev = cuda.to_device(self.W0f); self.dX = cuda.to_device(np.ascontiguousarray(self.P[:, 0])); self.dY = cuda.to_device(np.ascontiguousarray(self.P[:, 1]))
         i0 = np.random.default_rng(0).choice(self.nP, min(self.nP, 300000), replace=False); jj = self.J[i0 * 9 + 4, 0]; dP = S.wrap(self.P[jj] - self.P[i0]) / S.scale; dd = np.linalg.norm(dP, axis=1); fin = (self.W0[i0] < 1e2) & (self.W0[jj] < 1e2) & (dd > .05)
         self.kv_auto = float(np.quantile(np.abs(self.W0[i0] - self.W0[jj])[fin] / dd[fin], .9)); print('  KV_auto (кв.9 |ΔW0|/d по рёбрам) %.3f' % self.kv_auto, flush=True)
+        if os.environ.get('KVAUTO') == '1':   # b25: неподвижная точка KV = q.9 Липшица W0(KV)
+            for _ in range(int(os.environ.get('KVIT', 8))):
+                kn_ = min(self.kv_auto, float(os.environ.get('KVMAX', 1.0))); conv = abs(kn_ - KV) < .05 * kn_; KV = kn_
+                self.W0, it, _r = vit(self.J, self.D, self.OK, self.GL, self.ING, self.nP, TAU, KV, 300, BIG)
+                fin = (self.W0[i0] < 1e2) & (self.W0[jj] < 1e2) & (dd > .05); self.kv_auto = float(np.quantile(np.abs(self.W0[i0] - self.W0[jj])[fin] / dd[fin], .9)); print('  KVAUTO it: KV=%.3f -> kv_auto %.3f' % (KV, self.kv_auto), flush=True)
+                if conv: break
         print('  carfree: узлов %d, W0 мед %.2f макс %.2f (it %d)' % (self.nP, np.median(self.W0), self.W0.max(), it), flush=True)
     def plan(self, x, P0, Wv):
         d, j = self.tree.query(self.S.wrap(x[None]) / self.S.scale, k=min(KN * 3, self.nP)); W0x = float(np.min(self.W0[j % self.nP] + KV * d)); self.lim = W0x + LIMV; self.W0x = W0x
@@ -272,7 +291,7 @@ def tail_main():
         dnear = lambda X: ag.tree.query(S.wrap(np.atleast_2d(X)) / S.scale, k=1)[0]
         ds = dnear(A[:100]); print('k=%d: d_near стартов (масштаб. ед.) мед %.3f p90 %.3f max %.3f' % (k, np.median(ds), np.percentile(ds, 90), ds.max()), flush=True)
         for i in want[k]:
-            x0 = A[i]; nt0 = getattr(ag, 'ntie', 0); T, mn, *_ = episode(ag, x0, H); tr = np.array(ag.last_traj); dt = dnear(tr); v = np.abs(tr[:, 3]); rest = float((v < .05).mean())
+            x0 = A[i]; ag.streak = 0; nt0 = getattr(ag, "ntie", 0); T, mn, *_ = episode(ag, x0, H); tr = np.array(ag.last_traj); dt = dnear(tr); v = np.abs(tr[:, 3]); rest = float((v < .05).mean())
             xy = tr[:, :2]; pl = float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum()); sd = float(np.linalg.norm(xy[0] - GOAL))
             dc = np.array([(np.linalg.norm(H.pos(j * TAU) - xy[j], axis=1) - HR).min() for j in range(len(xy))])
             typ = 'покой' if (T is None and rest > .5) or rest > .3 else ('таймаут' if T is None else ('объезд (путь/прямая %.1f, зазор до дисков мин %.2f)' % (pl / sd, dc.min()) if dc.min() < .45 else 'медленно (путь/прямая %.1f)' % (pl / sd)))
