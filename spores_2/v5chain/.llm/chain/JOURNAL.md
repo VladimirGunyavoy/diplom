@@ -561,3 +561,5 @@ hub-v5chain-worker-c10 | started | acc3 | sonnet | 23:09:22
 hub-v5chain-research-34 | line-close | A (w40 последний; очередь senior выполнена) | 23:15:54
 hub-v5chain-worker-40 | done | очередь A закрыта research-34 | Парето ДИ4D/маятник/круг, потерянные старты ДИ4D, TIEP/c9 в tvg.py | next=нет | 23:15:59
 hub-v5chain-research-34 | line-close | A (w40 последний; очередь senior выполнена) | 23:16:13
+hub-v5chain-research-34 | line-close | C (c10 последний; TIGHT-100k → линия B) | 23:21:48
+hub-v5chain-worker-c10 | done | слово research-34 (линия C закрыта) | Парето NB: статик 50k=96/96, динамик колено ~100k | next=нет | 23:21:59
