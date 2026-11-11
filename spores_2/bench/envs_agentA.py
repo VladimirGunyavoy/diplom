@@ -78,9 +78,11 @@ if __name__ == '__main__':
     for nm, o in vars(G).items():
         if inspect.isclass(o): setattr(__main__, nm, o)
     _G = G; d = pickle.load(open(os.path.expanduser(os.environ['LOAD']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; _A = A
+    if int(os.environ.get('NODISCS', 0)): C0[:] = 50.   # b15: остаток без дисков — диски унесены за арену
     mode = os.environ.get('MODE', 'static'); e = common.make('car'); X0 = e.X0 if mode == 'static' else D.starts(20); Tref = e.Tref
+    A.stencils(np.asarray(X0[0], float)[None])   # прогрев индекса ячеек до fork (иначе каждый воркер строит его сам, ~20 с)
     jobs = [(i, mode, int(os.environ.get('SEED', 0))) for i in range(len(X0))]; t0 = time.perf_counter()
     with mp.get_context('fork').Pool(int(os.environ.get('NP', 8))) as p: res = p.map(one, jobs)
     res.sort(key=lambda r: r['i']); ok = [r for r in res if r['ok']]; rt = np.array([r['T'] / Tref[r['i']] for r in ok]) if ok else np.array([np.nan])
     print(mode, 'дошли', len(ok), '/', len(res), 'касаний', sum(r['touch'] for r in res), 'T/Tref мед %.3f p90 %.3f' % (np.median(rt), np.percentile(rt, 90)), 'мин.зазор мед %.3f' % np.median([r['clr'] for r in res]), 'мс/шаг %.0f' % np.mean([r['ms'] for r in res]), 'застряли', len(res) - len(ok), 'wall %.0f' % (time.perf_counter() - t0))
-    json.dump(dict(res=res, Tref=Tref.tolist()), open(os.path.join(common.DATA, 'env_A_%s.json' % mode), 'w'), default=float)
+    json.dump(dict(res=res, Tref=Tref.tolist()), open(os.path.join(common.DATA, 'env_A_%s%s%s.json' % (mode, '_nodisc' if int(os.environ.get('NODISCS', 0)) else '', os.environ.get('TAG', ''))), 'w'), default=float)

@@ -11,12 +11,12 @@ C0 = np.array([[0., .2], [1.8, 1.5], [-1.6, 2.3]]); HR = .70; GOAL = np.array([4
 class Hazards:
     def __init__(s, mode='fixed', seed=0):
         rng = np.random.default_rng(seed); s.mode = mode
-        s.sgn = np.array([1., -1., 1.]); s.A = .42 * s.sgn[:, None] * np.array([1., .65])[None]
+        s.sgn = np.array([1., -1., 1.]); s.A = float(os.environ.get('AMP', 1.)) * .42 * s.sgn[:, None] * np.array([1., .65])[None]
         s.phi = .35 + 2 * np.pi * np.arange(3) / 3
         if mode == 'random': s.phi = rng.uniform(0, 2 * np.pi, 3); s.A = s.A * rng.uniform(.65, 1.2, (3, 1))
     def pos(s, t):
         """центры дисков в момент t (с) — (3, 2); t может быть массивом → (len, 3, 2)"""
-        t = np.asarray(t, float); ph = 2 * np.pi * (t / DT) / 180
+        t = np.asarray(t, float); ph = 2 * np.pi * (t / DT) / 180 * float(os.environ.get('FAST', 1.))
         ox = s.A[:, 0] * np.sin(ph[..., None] + s.phi); oy = s.A[:, 1] * np.cos(.73 * ph[..., None] + 1.7 * s.phi)
         c = np.stack([C0[:, 0] + ox, C0[:, 1] + oy], -1); return np.clip(c, -(XL - HR), XL - HR)
     def vel(s, t, h=1e-3): return (s.pos(t + h) - s.pos(t - h)) / (2 * h)
