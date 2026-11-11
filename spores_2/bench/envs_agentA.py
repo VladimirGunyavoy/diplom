@@ -14,7 +14,7 @@ class StaticHaz:
     def pos(s, t): return C0.copy() if np.ndim(t) == 0 else np.broadcast_to(C0, (len(t), 3, 2))
 class AgentA:
     def __init__(s, G, A, H=2., eps=.03, pad=.1, static=False, sig0=0., q0=.01, commits=(1, 3, 6), smax=.5, look=0):
-        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.look = look; s.side = {}; s.nsw = 0; s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0
+        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.look = look; s.side = {}; s.nsw = 0; s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0; s.lsinfo = []
     def observe(s, p): s.hist.append(np.array(p, float))
     def qest(s):
         if s.static: return 0.
@@ -88,7 +88,9 @@ class AgentA:
         nst = int(round(s.H / G.DTN)); cands = [(i, c) for i in range(len(s.US)) for c in s.commits]; nc = len(cands); i0 = np.array([c[0] for c in cands]); cm = np.array([c[1] for c in cands])
         Y = np.tile(np.asarray(y, float), (nc, 1)); t_el = np.zeros(nc); done = G.ingoal(Y); viol = np.zeros(nc, bool); marg = np.full(nc, np.inf); first = i0.copy()
         blk = []; y0 = np.asarray(y, float)
-        if s.look:
+        if s.look == 5 and (s.nstep - 1) % int(os.environ.get('LSK', 12)) == 0:   # b17: Б-LS — пересчёт V области у дисков
+            import envs_ls; r = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, sig0=s.sig0, pad=s.pad, HR=HR, T_PR=float(os.environ.get('TPR', 2.)), smax=min(s.smax, .25), pe=float(os.environ.get('LSPE', .3)), ngs=int(os.environ.get('LSGS', 1)), MARG=(None if os.environ.get('MARG') == 'none' else float(os.environ.get('MARG', .3)))); s.lsinfo.append(r)
+        if s.look and s.look != 5:
             dg = GOAL - y0[:2]; Lg = np.linalg.norm(dg); ug = dg / max(Lg, 1e-9); nrm = np.array([-ug[1], ug[0]])
             for k in range(len(p)):
                 tc = min(max(np.dot(p[k] - y0[:2], ug), 0.) / 1.5, s.H); sgc = min(np.sqrt(s.sig0 ** 2 + q * tc ** 3 / 3), s.smax); c = p[k] + w[k] * tc; pr = np.dot(c - y0[:2], ug); off = np.dot(c - y0[:2], nrm)
@@ -157,9 +159,9 @@ def episode(ag, haz, x0, tmax=20., mode_dyn=True):
         for s_ in np.linspace(0, 1, 21)[1:]:
             q = y[:2] * (1 - s_) + yn[:2] * s_; c = (np.linalg.norm(haz.pos(t + s_ * DT) - q, axis=1) - HR).min(); clr = min(clr, c, 5. - np.abs(q).max())
         L += np.linalg.norm(yn[:2] - y[:2]); y = yn; t += DT; Y.append(y.copy())
-    return dict(ok=ok, T=t if ok else None, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
+    return dict(ok=ok, T=t if ok else None, lsn=ag.lsinfo[:40], touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
 
-_G = _A = None
+_G = _A = _Z = None
 def one(a):
     i, mode, seed = a; x = X0[i]; haz = StaticHaz() if mode == 'static' else D.Hazards(mode, seed)
     ag = AgentA(_G, _A, H=float(os.environ.get('H', 2.)), eps=float(os.environ.get('EPS', .03)), pad=float(os.environ.get('PAD', .1)), static=(mode == 'static'), smax=float(os.environ.get('SMAX', .5)), look=int(os.environ.get('LOOK', 0)))
@@ -170,7 +172,11 @@ if __name__ == '__main__':
         if inspect.isclass(o): setattr(__main__, nm, o)
     _G = G; d = pickle.load(open(os.path.expanduser(os.environ['LOAD']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; _A = A
     if int(os.environ.get('NODISCS', 0)): C0[:] = 50.   # b15: остаток без дисков — диски унесены за арену
-    mode = os.environ.get('MODE', 'static'); e = common.make('car'); X0 = e.X0 if mode == 'static' else D.starts(20); Tref = e.Tref
+    mode = os.environ.get('MODE', 'static')
+    if int(os.environ.get('LOOK', 0)) == 5:
+        import envs_ls; _Z = envs_ls.prep_zone(G, A, C0, HR, tube=float(os.environ.get('TUBE', .5)), cache=os.environ.get('ZCACHE')); envs_ls.prep_rev(_Z); print('обратный индекс зоны %.0f с;' % _Z['t_rev'], end=' '); print('зона %d узлов, рёбер %d, стенсилы %.0f с' % (_Z['nz'], len(_Z['X']), _Z['t_prep']), flush=True)
+    e = common.make('car'); X0 = e.X0 if mode == 'static' else D.starts(20); Tref = e.Tref
+    if os.environ.get('NST'): X0 = X0[:int(os.environ['NST'])]; Tref = Tref[:int(os.environ['NST'])]
     A.stencils(np.asarray(X0[0], float)[None])   # прогрев индекса ячеек до fork (иначе каждый воркер строит его сам, ~20 с)
     jobs = [(i, mode, int(os.environ.get('SEED', 0))) for i in range(len(X0))]; t0 = time.perf_counter()
     with mp.get_context('fork').Pool(int(os.environ.get('NP', 8))) as p: res = p.map(one, jobs)
