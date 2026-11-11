@@ -261,21 +261,26 @@ def episode(ag, x0, H, tmax=60.):
     return None, mn, float(np.mean(tms)), float(np.mean(tv)), float(np.mean(nits)), float(np.mean(tfl))
 
 if __name__ == '__main__':
-    S0 = np.load(os.path.join(HERE, 'b24', 'sel_starts.npy' if MODE == 'sel' else 'starts100.npy'))[:, :4]; NST = int(os.environ.get('NSEL', 32)) if MODE == 'sel' else 100
-    S = mkS(TS); t0 = time.perf_counter(); back = build_back(S, TAU, NB, RB); tb = time.perf_counter() - t0; print('ts %d: build %.1f с, узлов %d' % (TS, tb, len(back[0])), flush=True)
-    ag = AgentDyn(S, back); out = {}
+    import gc
+    S0 = np.load(os.path.join(HERE, 'b24', 'sel_starts.npy') if MODE == 'sel' else os.path.join(HERE, 'starts100.npy'))[:, :4]; NST = int(os.environ.get('NSEL', 32)) if MODE == 'sel' else 100; out = {}; ag = None
+    COMP = json.load(open(os.environ['COMPACT'])) if MODE == 'test' else None
     for k in range(K0, K1):
-        H = D.Hazards('random', k); ref = {r['i']: r for r in json.load(open(os.path.join(HERE, 'b24', 'dynref', 'dynref_s%d.json' % k)))} if MODE == 'sel' else None
-        res = []
+        if MODE == 'test' or ag is None:   # test: сид k = дерево k + диски k (деревья 0–19 для подбора не использовались)
+            ag = None; gc.collect(); ts_ = k if MODE == 'test' else TS; S = mkS(ts_); t0 = time.perf_counter(); back = build_back(S, TAU, NB, RB); tb = time.perf_counter() - t0; print('ts %d: build %.1f с, узлов %d' % (ts_, tb, len(back[0])), flush=True); ag = AgentDyn(S, back)
+        H = D.Hazards('random', k)
+        if MODE == 'test': ref = {r['i']: r for r in COMP[str(k)]['ref']}
+        else: ref = {r['i']: r for r in json.load(open(os.path.join(HERE, 'b24', 'dynref', 'dynref_s%d.json' % k)))}
+        res = []; dclr = 0.
         for i in range(NST):
             if os.environ.get('ONLY') and i not in [int(v) for v in os.environ['ONLY'].split(',')]: continue
-            x0 = S0[i]
-            if (np.linalg.norm(H.pos(0.) - x0[:2], axis=1) - HR).min() < 0: continue
-            tref = ref[i]['T'] if ref else None
-            if MODE == 'sel' and not tref: continue
+            x0 = S0[i]; c0 = float((np.linalg.norm(H.pos(0.) - x0[:2], axis=1) - HR).min())
+            if MODE == 'test': dclr = max(dclr, abs(c0 - ref[i]['clr0']))
+            if c0 < 0: continue
+            tref = ref[i]['T']
+            if not tref: continue
             te = time.perf_counter(); T, mn, ms, tvi, nit_, tfl_ = episode(ag, x0, H); res.append((i, T, tref, mn, ms, tvi, time.perf_counter() - te, nit_, tfl_))
-        ok = [r for r in res if r[1] is not None]; ratio = np.array([r[1] / r[2] for r in ok]) if ref else np.array([np.nan]); touch = sum(r[3] < 0 for r in res)
-        print('DYN NB=%d KV=%g RB=%g HH=%g EPS=%g Q=%g [%s] ts=%d диски k=%d: дошли %d/%d, касаний %d, T/T_ref мед %.3f p90 %.3f max %.3f, мс/шаг %.1f (из них VI %.1f, пометка %.1f, итераций %.0f), зазор мин %.3f, мс/эпизод %.0f, build %.1f с' % (
-            NB, KV, RB, HH, EPS, QC, MODE, TS, k, len(ok), len(res), touch, np.median(ratio), np.percentile(ratio, 90), ratio.max(), 1e3 * np.mean([r[4] for r in res]), 1e3 * np.mean([r[5] for r in res]), 1e3 * np.mean([r[8] for r in res]), np.mean([r[7] for r in res]), min(r[3] for r in res), 1e3 * np.mean([r[6] for r in res]), tb), flush=True)
-        print('   не дошли:', [r[0] for r in res if r[1] is None], ' T/Tref>1.5:', [(r[0], round(r[1] / r[2], 2)) for r in ok if ref and r[1] / r[2] > 1.5], flush=True); out[k] = res
-    json.dump(out, open('car_dyn_%s_%d_%d_%d_h%g_x%g.json' % (MODE, TS, K0, K1, HYST, HX), 'w'))
+        ok = [r for r in res if r[1] is not None]; ratio = np.array([r[1] / r[2] for r in ok]); touch = sum(r[3] < 0 for r in res)
+        print('DYN NB=%d KV=%g RB=%g TIE=%g DEP=%d [%s] диски k=%d: дошли %d/%d, касаний %d, T/T_ref мед %.3f p90 %.3f max %.3f, мс/шаг %.1f (VI %.1f, пометка %.1f, итераций %.0f), зазор мин %.3f, мс/эпизод %.0f, build %.1f с, макс.|clr0−ref| %.2e' % (
+            NB, KV, RB, TIE, DEP, MODE, k, len(ok), len(res), touch, np.median(ratio), np.percentile(ratio, 90), ratio.max(), 1e3 * np.mean([r[4] for r in res]), 1e3 * np.mean([r[5] for r in res]), 1e3 * np.mean([r[8] for r in res]), np.mean([r[7] for r in res]), min(r[3] for r in res), 1e3 * np.mean([r[6] for r in res]), tb, dclr), flush=True)
+        print('   не дошли:', [r[0] for r in res if r[1] is None], ' T/Tref>1.5:', [(r[0], round(r[1] / r[2], 2)) for r in ok if r[1] / r[2] > 1.5], ' тай-брейков (накоп.): %d' % getattr(ag, 'ntie', 0), flush=True); out[k] = res
+        json.dump(out, open('car_dyn_%s_%d_%d_h%g_x%g_tie%g.json' % (MODE, K0, K1, HYST, HX, TIE), 'w'))
