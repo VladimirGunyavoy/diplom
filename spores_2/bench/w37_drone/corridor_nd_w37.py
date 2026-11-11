@@ -1,3 +1,4 @@
+import os
 """Коридор на адаптивном дереве (nD): дерево даёт топологию (порядок слоёв), SLSQP — длительности (min Σdt, конец в окне).
 Кандидаты — стыки прямой спора × ближайшие обратные, в т.ч. с ПРОМАХОМ окна (score = t + промах); top-K разных топологий;
 засчитываются только допустимые решения SLSQP. Источник — research hub-research-2 (reports/research/corridor_nd.py, corridor_topk_dd.py)."""
@@ -75,6 +76,12 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None, hfun=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
+_PJ = None
+def _pw(a):   # w37: воркер параллельного дожима (fork: состояние запроса в глобале _PJ)
+    flow_, x0_, g_, clear_, wlim_, vfy_ = _PJ; p, tr = a
+    T, sqr, d, ok = refine(flow_, x0_, p, g_, tries=tr, clear=clear_, wlim=wlim_)
+    if ok and vfy_ is not None and not vfy_(sqr, d): ok = False
+    return T, sqr, d, ok
 def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None, fs=0, wlim=None, nbest=1, fb=None, vfy=None, kfb=None, _C=None):
     """fb=(NF2, K2): запас на no_path (b20) — если допустимого плана нет, повтор с большим прямым деревом/K (дрон: старт 3 доходит только при NF 6400; 19→20/20); None — выкл. (по умолчанию).
     → (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None.
@@ -89,17 +96,30 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
             Ca, na = candidates(S, x1, back, tau, fs, rho, miss, kn, hfun=hfun); pre = [(a, tau)]
             Ch += [(h, sc + tau, pre + p) for h, sc, p in Ca[:na]]; Cm += [(h, sc + tau, pre + p) for h, sc, p in Ca[na:]]
         Ch.sort(key=lambda c: c[1]); Cm.sort(key=lambda c: c[1]); C = Ch + Cm; nh = len(Ch)
+    global _PJ
+    NPAR = int(os.environ.get('PARQ', 0)); pool = None
+    if NPAR > 1:
+        import multiprocessing as _mp; _PJ = (flow, x0, g, clear, wlim, vfy); pool = _mp.get_context('fork').Pool(NPAR)
+    def _many(paths, tr):
+        if pool is not None: return pool.map(_pw, [(p, tr) for p in paths], chunksize=1)
+        out = []
+        for p in paths:
+            T, sqr, d, ok = refine(flow, x0, p, g, tries=tr, clear=clear, wlim=wlim)
+            if ok and vfy is not None and not vfy(sqr, d): ok = False
+            out.append((T, sqr, d, ok))
+        return out
+    jobs = []
     for part in (C[:nh], C[nh:]):
         seen = set()
         for _, _, p in part:
             if not p: continue
             sq = tuple(merge(p)[0])
             if sq in seen: continue
-            seen.add(sq); T, sqr, d, ok = refine(flow, x0, p, g, tries=tries, clear=clear, wlim=wlim)
-            if ok and vfy is not None and not vfy(sqr, d): ok = False   # w37: кандидат с касанием в проверке среды отбрасывается
-            if ok: oks.append((T, sqr, d))
-            if ok and (best is None or T < best[0]): best = (T, sqr, d)
+            seen.add(sq); jobs.append(p)
             if len(seen) >= K: break
+    for T, sqr, d, ok in _many(jobs, tries):
+        if ok: oks.append((T, sqr, d))
+        if ok and (best is None or T < best[0]): best = (T, sqr, d)
     oks.sort(key=lambda z: z[0]); starts = [best] + [z for z in oks[:nbest] if z[1] != best[1]][:nbest - 1] if best else []   # nbest>1: соседний поиск и от следующих лучших топологий (m3gu, w28)
     for b0 in starts:
       cur = b0
@@ -107,11 +127,10 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
         sq0, d0 = list(cur[1]), list(cur[2])
         nb = [([a] + sq0, [0.3] + d0) for a in range(S.L) if a != sq0[0]] + [(sq0 + [a], d0 + [0.3]) for a in range(S.L) if a != sq0[-1]]
         nb += [(sq0[1:], d0[1:])] if len(sq0) > 1 else []
-        for sqn, dn in nb:
-            T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1, clear=clear, wlim=wlim)
-            if ok and vfy is not None and not vfy(sqr, d): ok = False
+        for T, sqr, d, ok in _many([list(zip(sqn, dn)) for sqn, dn in nb], 1):
             if ok and T < cur[0]: cur = (T, sqr, d)
         if cur[0] < best[0]: best = cur
+    if pool is not None: pool.close(); pool.join()
     if best is None and kfb is not None and kfb > K:   # w37: ленивый K — те же кандидаты, больше топологий, только если на малом K плана нет
         return corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=kfb, kn=kn, neigh=neigh, clear=clear, tries=tries, hfun=hfun, fs=fs, wlim=wlim, nbest=nbest, fb=fb, vfy=vfy, kfb=None, _C=(C, nh))
     if best is None and fb is not None:

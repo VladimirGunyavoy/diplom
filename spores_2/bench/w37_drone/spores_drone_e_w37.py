@@ -183,7 +183,14 @@ def work(i):
     r['t_query'] = tt; r['retries'] = n; return r
 if __name__ == '__main__':
     t0 = time.perf_counter()
-    with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(X0))) as p: res = p.map(work, range(len(X0)), chunksize=1)
+    if int(os.environ.get('PROCS', 16)) <= 1:   # w37: последовательно в главном процессе (нужно для PARQ — вложенный Pool из демонического воркера нельзя); cpu = свой + дочерние
+        import resource; work(0); res = []
+        for i_ in range(len(X0)):
+            ru0 = resource.getrusage(resource.RUSAGE_SELF); rc0 = resource.getrusage(resource.RUSAGE_CHILDREN); w0 = time.perf_counter(); r_ = work(i_)
+            ru1 = resource.getrusage(resource.RUSAGE_SELF); rc1 = resource.getrusage(resource.RUSAGE_CHILDREN)
+            r_['wall'] = time.perf_counter() - w0; r_['cpu'] = (ru1.ru_utime + ru1.ru_stime - ru0.ru_utime - ru0.ru_stime) + (rc1.ru_utime + rc1.ru_stime - rc0.ru_utime - rc0.ru_stime); res.append(r_)
+    else:
+        with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(X0))) as p: res = p.map(work, range(len(X0)), chunksize=1)
     if os.environ.get('ONLY'):
         for r_, i_ in zip(res, ONLYIDX): r_['i_start'] = i_
     wall = time.perf_counter() - t0; tq = np.array([r['t_query'] for r in res]); ok = [r for r in res if r['T_verify'] is not None]; rat = np.array([r['T_verify'] / Tref[r['i']] for r in ok])
