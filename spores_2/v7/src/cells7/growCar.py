@@ -428,6 +428,22 @@ def _pix_work(i):
     K = np.concatenate([k for k, _ in h.collect]) if h.collect else np.zeros(0, np.int64); V = np.concatenate([v for _, v in h.collect]) if h.collect else np.zeros(0, np.int64)
     return h.X[:h.n], h.I[:h.n], h.LO[:h.n], h.HI[:h.n], h.R, K, V
 TM = collections.Counter()   # w35: время стадий подготовки solve (с)
+def _f_t(y, u):
+    import torch
+    dv = u[0] - KV * y[..., 3]
+    if VSAT: dv = torch.where(((y[..., 3] >= VHI) & (dv > 0)) | ((y[..., 3] <= VLO) & (dv < 0)), torch.zeros_like(dv), dv)
+    return torch.stack([y[..., 3] * torch.cos(y[..., 2]), y[..., 3] * torch.sin(y[..., 2]), u[1] + 0 * y[..., 2], dv], -1)
+def _tgoal_gpu(Y, u, n=8):
+    """w36 (TGGPU=1, только car): tgoal на GPU — те же формулы, float64."""
+    import torch
+    y = torch.as_tensor(np.ascontiguousarray(Y), dtype=torch.float64, device='cuda'); tg = torch.full((len(Y),), float('inf'), dtype=torch.float64, device='cuda'); h = DTN / n
+    for i in range(1, n + 1):
+        k1 = _f_t(y, u); k2 = _f_t(y + h / 2 * k1, u); k3 = _f_t(y + h / 2 * k2, u); k4 = _f_t(y + h * k3, u); y = y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+        ig = torch.hypot(y[..., 0] - float(GC[0]), y[..., 1] - float(GC[1])) <= GR + 1e-9; tg = torch.where(torch.isinf(tg) & ig, torch.full_like(tg, DTN * i / n), tg)
+    return tg.cpu().numpy()
+IWGPU = int(E('IWGPU', 0)) and int(E('STGPU', 0))
+if IWGPU:
+    import torch; _VOFFT = torch.as_tensor(VOFF, device='cuda')
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -456,7 +472,8 @@ class Atlas:
         IDX = np.empty((n_, 2 ** N), idt); W = np.empty((n_, 2 ** N), np.float32); CH = 1 << 21                       # чанками: 41M пар × 16 вершин × N в float64 не помещались в память (b3)
         for a in range(0, n_, CH):
             b = min(a + CH, n_); ii = s.qx.I[hid[a:b]].astype(np.int64); base = s.O[ii[:, 0]] + (ii[:, 1:] * stv).sum(1); IDX[a:b] = base[:, None] + off[None]
-            sb = sc[a:b]; W[a:b] = np.prod(np.where(VOFF[None] == 1, sb[:, None, :], 1 - sb[:, None, :]), 2)
+            if IWGPU: import torch; sbt = torch.as_tensor(sc[a:b], device='cuda'); W[a:b] = torch.where(_VOFFT[None] == 1, sbt[:, None, :], 1 - sbt[:, None, :]).prod(2).float().cpu().numpy()   # w36 IWGPU: веса стенсила на GPU (те же формулы)
+            else: sb = sc[a:b]; W[a:b] = np.prod(np.where(VOFF[None] == 1, sb[:, None, :], 1 - sb[:, None, :]), 2)
         TM['сборка IDX/W'] += time.time() - _t2
         return pi, IDX, W
     @staticmethod
@@ -470,6 +487,7 @@ class Atlas:
         if len(I): np.minimum.at(out, I, s.interp(W, s.V[IDX]))
         out[ingoal(Y)] = 0.; return out
     def tgoal(s, Y, u, n=8):
+        if int(E('TGGPU', 0)) and SYS == 'car' and len(Y) > 100000: return _tgoal_gpu(Y, u, n)   # w36: rk4 кара на GPU (float64), тот же результат, tgoal 15 с → ~1 с
         tg = np.full(len(Y), np.inf); y = Y
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
         return tg
