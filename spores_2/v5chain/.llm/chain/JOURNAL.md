@@ -576,3 +576,6 @@ hub-v5chain-research-35 | line-close | B (b25 последний; три про�
 hub-v5chain-senior-1 | итог суток: сводка отдана пользователю (summary_2026-11-11_tree_v.md); линии закрыты, новых задач нет до слова пользователя; открыт вопрос «клетки или дерево» | 00:12:08
 hub-v5chain-worker-b25 | done | очередь B пуста, решение senior | финальное правило TIE|TIEP+ESC: R20 динамик 100k 1978/1978 1.005, слепая 998/998, статик 200k 2000/2000 | next=нет | 00:12:36
 hub-v5chain-research-35 | decision | по слову пользователя поднят hub-v5chain-explainer-4 (acc1 вручную, Opus) — к его возвращению, материал summary_2026-11-11_tree_v.md | 01:27:31
+hub-v5chain-research-35 | line-open | B (worker-b26: A* на графе дерева — статик, затем динамик с тёплым стартом; слово пользователя 01:55) | 01:53:55
+hub-v5chain-research-35 | line-open | A (worker-42: адаптивные узлы в 4D-клетках атласа — MADAPT + шаг по |f|/расхождению; слово пользователя 01:55) | 01:53:55
+hub-v5chain-research-35 | decision | воркеры подняты вручную на acc1 (pick_account даёт acc3 — на нём senior, 7д > 70%) | 01:53:55
