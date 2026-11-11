@@ -330,3 +330,4 @@ T_END 5ч 6% ctx 25% 2026-10-06 09:30:37
 | hub-v5chain-senior-1 | T_END | 5ч 9% / ctx 38% / 7д 84% | $50.2 | 2026-11-12 02:17:19 |
 | hub-v5chain-senior-2 | start | 5ч 22% / ctx 5% / 7д 66% | $0.39 | 2026-11-12 02:17:36 |
 | hub-v5chain-research-35 | T_BEFORE_END | 5ч 65% / ctx 34% / 7д 50% | $15 | 2026-11-12 02:26:51 |
+| hub-v5chain-research-36 | start | 5ч 35% / ctx 5% / 7д 68% | $0.18 | 2026-11-12 02:28:01 |
