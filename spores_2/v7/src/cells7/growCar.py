@@ -455,8 +455,14 @@ class Atlas:
             try: import torch
             except ImportError: torch = None; print('SOLVEGPU: нет torch — CPU', flush=True)
             if torch is not None:
+                JAC3 = int(E('JAC3', 0))
+                if JAC3:
+                    def _je(V, X, W, pe):
+                        vi = V[X.long()]; ok = vi < BIG / 2; w = W.to(V.dtype) * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -1e30)).amax(1)
+                        v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + (1 - sm) * (mx + pe); return torch.where(sm < WTHR, torch.full_like(v, BIG), v)
+                    _jac_edge = torch.compile(_je, dynamic=True)
                 dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device='cpu' if int(E('HOSTE', 0)) else dev); gW = torch.as_tensor(W, device='cpu' if int(E('HOSTE', 0)) else dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
-                Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
+                FD = torch.float32 if JAC3 == 2 else torch.float64; Vt = torch.as_tensor(V, device=dev).to(FD); Vgt = torch.as_tensor(Vg, device=dev).to(FD); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
                 if SMEAN: uq, GI_ = np.unique(K, return_inverse=True); gGI = torch.as_tensor(GI_.astype(np.int64), device=dev); gGN = torch.as_tensor(uq // 20, device=dev); NG = len(uq); del K, uq, GI_; print('SMEAN: групп', NG, 'из', len(I), 'рёбер', flush=True)
                 ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
                 while n < it:
@@ -464,8 +470,10 @@ class Atlas:
                     if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
                     if SMEAN: sg = torch.zeros(NG, dtype=torch.float64, device=dev); cg = torch.zeros(NG, dtype=torch.float64, device=dev)
                     for a in range(0, len(gI), ch):
-                        vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double()
-                        if PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
+                        if JAC3 and PESS >= 0: v = _jac_edge(Vt, gX[a:a + ch].to(dev), gW[a:a + ch].to(dev), pe)     # r32 gj3: слияние torch.compile, int32-индексы
+                        else: vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double()
+                        if JAC3 and PESS >= 0: pass
+                        elif PESS < 0: v = (w_ * vi).sum(1); v[((w_ > 1e-6) & (vi >= BIG / 2)).any(1)] = BIG
                         else:
                             ok = vi < BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
                             v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
@@ -473,7 +481,7 @@ class Atlas:
                         else: new.scatter_reduce_(0, gI[a:a + ch], DTN + v, 'amin')
                     if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
                     new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
-                    if d < 1e-9: break
+                    if d < (1e-5 if JAC3 == 2 else 1e-9): break
                 if AMN:                                                                                  # w34: один проход по рёбрам при сошедшемся V: u ребра, достигающего V узла (мин. номер при равенстве)
                     am_ = torch.full((s.N,), 127, dtype=torch.int8, device=dev); gU = torch.as_tensor(UU)
                     for a in range(0, len(gI), ch):
@@ -481,7 +489,7 @@ class Atlas:
                         v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
                         hit = (DTN + v) <= Vt[gI[a:a + ch]] + 1e-7; ia = gI[a:a + ch][hit]; am_.scatter_reduce_(0, ia, gU[a:a + ch].to(dev)[hit], 'amin')
                     s.amin_u = am_.cpu().numpy()
-                s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); return s
+                s.V = Vt.cpu().numpy().astype(np.float64); s.n_it = n; s.edges = len(I); print("SOLVEGPU: рёбер", len(I), "проходов", n, flush=True); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
