@@ -165,7 +165,18 @@ class AgentA:
         for bi, (k, c, nr_, rr, tc) in enumerate(blk):
             sd_ = np.sign(np.einsum('ij,j->i', bpos[bi] - c, nr_)); cost = cost + 3. * (sd_ != s.side[k]) * np.isfinite(bmin[bi])
         ok = ~viol
-        if ok.any(): k = int(np.argmin(np.where(ok, cost, np.inf)))
+        if ok.any():
+            k = int(np.argmin(np.where(ok, cost, np.inf)))
+            # w37: гистерезис (флаги HYST_EPS — допуск по стоимости, HYST_HOLD — число шагов удержания нового u; по умолч. выкл.)
+            heps = float(os.environ.get('HYST_EPS', 0)); hhold = int(os.environ.get('HYST_HOLD', 0)); pv = getattr(s, 'prev_u', None)
+            if pv is not None and (heps > 0 or hhold > 0):
+                sel = ok & (first == pv)
+                if sel.any():
+                    kp = int(np.argmin(np.where(sel, cost, np.inf)))
+                    if getattr(s, 'hold_left', 0) > 0 or cost[kp] <= cost[k] + heps: k = kp
+            if pv is None or first[k] != pv: s.hold_left = hhold
+            else: s.hold_left = max(0, getattr(s, 'hold_left', 0) - 1)
+            s.prev_u = first[k]
         else: k = int(np.argmax(marg)); s.nfb += 1
         return s.US[first[k]], dict(nsw=s.nsw, feas=bool(ok.any()), cost=float(cost[k]), q=q)
 
