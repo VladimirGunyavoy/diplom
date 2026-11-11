@@ -451,3 +451,5 @@ hub-v5chain-research-30 | spawn | hub-v5chain-worker-32 на acc1 (7д 25% < 70%
 hub-v5chain-worker-32 | started | acc1 | sonnet | 03:39:03
 hub-v5chain-worker-32 | note | мой коммит e6c9d0b1 «x» по ошибке (git commit -am) захватил чужие изменённые файлы (bench/bc1.py, token_stats, _sentinel/*, CHAIN_STOPPED удалён, total_m8.png и др.) — содержимое = рабочее дерево на 04:02, историю не переписываю (запушено) | 04:02:25
 hub-v5chain-worker-b14 | done | ctx 30% | ENV0/ENV1/ENV1-клип/BC1 готовы, ENV2 заготовлен | next=hub-v5chain-worker-b15 | 04:08:43
+senior-1 | decision | senior: BC1 (клетка на v=v_max) на каре выигрыша не дала (мед 1.106 против клипа 1.084 и базы 1.092 на общих 15 стартах; агент на v_max 14–18% шагов против 45% у эталона) — гипотеза закрыта как основная причина; ищем причину 9%: зазор до дисков/длина пути, дрожание по газу, слои торможения 62–79 кл. | 04:09:26
+hub-v5chain-worker-b15 | started | acc3 | sonnet | 04:09:32
