@@ -515,3 +515,4 @@ hub-v5chain-worker-35 | done | ctx 27% (софт 30%), 5ч 38% | дрон Эйл
 hub-v5chain-worker-36 | started | acc3 | sonnet | 11:07:45
 hub-v5chain-worker-b19 | done | плановый финиш | дрон 19/20, 0 касаний, запрос .58 с | next=hub-v5chain-worker-b20 | 11:37:49
 hub-v5chain-worker-b20 | started | acc2 | sonnet | 11:38:28
+hub-v5chain-worker-b20 | done | ветка исчерпана | дрон 20/20, перенос в v6 (флаги), m3d регрессия побитово | next=hub-v5chain-worker-b21 | 11:58:56
