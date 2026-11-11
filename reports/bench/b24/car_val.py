@@ -9,7 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys
 import numpy as np, numba as nb
 from src.atlas6.adaptive_nd import SysN, build_back
 NB, KN, MODE, TS = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3], int(sys.argv[4])
-KV = float(os.environ.get('KV', 1.0)); RB = float(os.environ.get('RB', .3)); TAU = float(os.environ.get('TAU', .2)); FM = float(os.environ.get('FM', .1)); MARG = float(os.environ.get('MARG', .12)); HB = float(os.environ.get('HB', 1.0))
+KV = float(os.environ.get('KV', 1.0)); RB = float(os.environ.get('RB', .3)); TAU = float(os.environ.get('TAU', .2)); FM = float(os.environ.get('FM', .1)); HYST = float(os.environ.get('HYST', 0)); MARG = float(os.environ.get('MARG', .12)); HB = float(os.environ.get('HB', 1.0))
 SC = tuple(float(v) for v in os.environ.get('SC', '.25,.25,.4,.3').split(','))
 K, AM, WM, VL, VH, XL = .625, 1.5, 1.8, -1., 2., 5.
 HZ = np.array([[0., .2], [1.8, 1.5], [-1.6, 2.3]]); HR = .70; GOAL = np.array([4., 3.6]); GR = .45
@@ -115,7 +115,11 @@ class Agent:
         if not ok.any(): return int(np.argmax(cl))
         d, j = self.tree.query(self.S.wrap(Q) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
         Wq = np.min(self.W[j] + KV * d, axis=1)
-        return int(np.argmin(np.where(ok, Wq, 1e9)))
+        return self.hyst(np.where(ok, Wq, 1e9), ok)
+    def hyst(self, c, ok):
+        k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
+        if HYST > 0 and pv is not None and ok[pv] and c[pv] <= c[k] + HYST: k = pv   # w37-гистерезис: держать прежнее u, пока выигрыш ≤ ε
+        self.prev = k; return k
 
 @nb.njit
 def execute(x, y, th, v, a, w, dt, n):
@@ -126,7 +130,7 @@ def execute(x, y, th, v, a, w, dt, n):
         if hit < 0 and (x - GOAL[0]) ** 2 + (y - GOAL[1]) ** 2 <= GR ** 2: hit = (k + 1) * dt; break
     return x, y, th, v, mn, hit
 def episode(ag, x0, tmax=60.):
-    x = np.array(x0, float); t = 0.; mn = 9.; tms = []
+    ag.prev = None; x = np.array(x0, float); t = 0.; mn = 9.; tms = []
     while t < tmax:
         t1 = time.perf_counter(); s = ag.act(x); tms.append(time.perf_counter() - t1)
         xn, yn, thn, vn, m, hit = execute(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], .002, int(round(TAU / .002))); mn = min(mn, m); x = np.array([xn, yn, thn, vn])
