@@ -271,7 +271,7 @@ class AgentDyn:
         if HYST > 0 and pv is not None and ok[pv] and c[pv] <= c[k] + HYST: k = pv
         self.prev = k; return k
 def episode(ag, x0, H, tmax=60.):
-    ag.prev = None; x = np.array(x0, float); traj = [x.copy()]; ag.last_traj = traj; t = 0.; mn = 9.; tms = []; tv = []; Pp = H.pos(0.); nits = []; tfl = []; nsub = int(round(TAU / .002))
+    ag.streak = 0; ag.hp = []; ag.prev = None; x = np.array(x0, float); traj = [x.copy()]; ag.last_traj = traj; t = 0.; mn = 9.; tms = []; tv = []; Pp = H.pos(0.); nits = []; tfl = []; nsub = int(round(TAU / .002))
     while t < tmax:
         P0 = H.pos(t); Wv = (P0 - Pp) / TAU if t > 0 else np.zeros((3, 2)); Pp = P0
         t1 = time.perf_counter(); s = ag.act(x, P0, Wv); tms.append(time.perf_counter() - t1); tv.append(ag.tvi); nits.append(ag.nit); tfl.append(ag.tfl)
