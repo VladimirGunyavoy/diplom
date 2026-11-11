@@ -9,10 +9,10 @@ for x, y in D.C0: a.add_patch(plt.Circle((x, y), .7, color='.8'))
 a.add_patch(plt.Circle((4, 3.6), .45, color='g', alpha=.3)); Yr = np.array(loss[i]['Yr']); Ya = np.array(st[i]['Y'])
 a.plot(Yr[:, 0], Yr[:, 1], 'b', label='OCP T=%.2f' % loss[i]['ref']['T']); a.plot(Ya[:, 0], Ya[:, 1], 'r', label='агент А T=%.2f' % st[i]['T']); a.set_aspect('equal'); a.set_xlim(-5, 5); a.set_ylim(-5, 5); a.legend(); a.set_title('статик, старт q8: carfree + А')
 plt.tight_layout(); plt.savefig(P + 'agentA_static_q8.png', dpi=90); plt.close()
-j = int(sys.argv[1]) if len(sys.argv) > 1 else 5; r = fx[j]; Y = np.array(r['Y']); H = D.Hazards('fixed', 0); T = r['T']; ts = np.linspace(0, T, 4)
+j = int(sys.argv[1]) if len(sys.argv) > 1 else 5; r = fx[j]; OR = json.load(open(Dd + 'env_oracle_fixed_q5.json')); Yo = np.array(OR['Y']); Y = np.array(r['Y']); H = D.Hazards('fixed', 0); T = r['T']; ts = np.linspace(0, T, 4)
 fig, axs = plt.subplots(1, 4, figsize=(16, 4.3))
 for a, t in zip(axs, ts):
     for c, ctr in enumerate(H.pos(t)):
         a.add_patch(plt.Circle(ctr, .7, color='.75')); w = H.vel(t)[c]; kap = np.sqrt(-2 * np.log(.03)); sg = np.sqrt(.005 * 2 ** 3 / 3); m = ctr + 2 * w; a.add_patch(plt.Circle(m, .7 + kap * sg, fill=False, ls='--', color='orange'))
-    a.add_patch(plt.Circle((4, 3.6), .45, color='g', alpha=.3)); k = min(int(t / .16), len(Y) - 1); a.plot(Y[:k + 1, 0], Y[:k + 1, 1], 'r'); a.plot(*Y[k, :2], 'ro'); a.set_aspect('equal'); a.set_xlim(-5, 5); a.set_ylim(-5, 5); a.set_title('t=%.1f c' % t)
-fig.suptitle('динамик fixed, старт q%d: агент А (T=%.2f, оракул %.2f); серое — диски, оранжевое — облако на 2 с вперёд' % (r['i'], T, orc[r['i']])); plt.tight_layout(); plt.savefig(P + 'agentA_dyn_fixed.png', dpi=80)
+    a.add_patch(plt.Circle((4, 3.6), .45, color='g', alpha=.3)); k = min(int(t / .16), len(Y) - 1); a.plot(Y[:k + 1, 0], Y[:k + 1, 1], 'r'); a.plot(*Y[k, :2], 'ro'); ko = min(int(t / OR['dt']), len(Yo) - 1); a.plot(Yo[:ko + 1, 0], Yo[:ko + 1, 1], 'b'); a.plot(*Yo[ko, :2], 'bs'); a.set_aspect('equal'); a.set_xlim(-5, 5); a.set_ylim(-5, 5); a.set_title('t=%.1f c' % t)
+fig.suptitle('динамик fixed, старт q%d: агент А (T=%.2f, оракул %.2f); красный — агент, синий — оракул; серое — диски, оранжевое — облако на 2 с вперёд' % (r['i'], T, orc[r['i']])); plt.tight_layout(); plt.savefig(P + 'agentA_dyn_fixed.png', dpi=80)

@@ -13,8 +13,8 @@ HR, GOAL, GR, DT = D.HR, D.GOAL, D.GR, D.DT; C0 = D.C0
 class StaticHaz:
     def pos(s, t): return C0.copy() if np.ndim(t) == 0 else np.broadcast_to(C0, (len(t), 3, 2))
 class AgentA:
-    def __init__(s, G, A, H=2., eps=.03, pad=.1, static=False, sig0=0., q0=.01, commits=(1, 3, 6), smax=.5):
-        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0
+    def __init__(s, G, A, H=2., eps=.03, pad=.1, static=False, sig0=0., q0=.01, commits=(1, 3, 6), smax=.5, look=0):
+        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.look = look; s.side = {}; s.nsw = 0; s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0
     def observe(s, p): s.hist.append(np.array(p, float))
     def qest(s):
         if s.static: return 0.
@@ -28,6 +28,23 @@ class AgentA:
         G = s.G; s.nstep += 1; p = s.hist[-1]; w = np.zeros_like(p) if (s.static or len(s.hist) < 2) else (s.hist[-1] - s.hist[-2]) / DT; q = s.qest()
         nst = int(round(s.H / G.DTN)); cands = [(i, c) for i in range(len(s.US)) for c in s.commits]; nc = len(cands); i0 = np.array([c[0] for c in cands]); cm = np.array([c[1] for c in cands])
         Y = np.tile(np.asarray(y, float), (nc, 1)); t_el = np.zeros(nc); done = G.ingoal(Y); viol = np.zeros(nc, bool); marg = np.full(nc, np.inf); first = i0.copy()
+        blk = []; y0 = np.asarray(y, float)
+        if s.look:
+            dg = GOAL - y0[:2]; Lg = np.linalg.norm(dg); ug = dg / max(Lg, 1e-9); nrm = np.array([-ug[1], ug[0]])
+            for k in range(len(p)):
+                tc = min(max(np.dot(p[k] - y0[:2], ug), 0.) / 1.5, s.H); sgc = min(np.sqrt(s.sig0 ** 2 + q * tc ** 3 / 3), s.smax); c = p[k] + w[k] * tc; pr = np.dot(c - y0[:2], ug); off = np.dot(c - y0[:2], nrm)
+                if 0 < pr < Lg and abs(off) < HR + s.pad + s.kap * sgc + .3: blk.append((k, c, nrm, HR + s.pad + s.kap * sgc + .3, tc))
+            for k in list(s.side):
+                if k not in [b[0] for b in blk]: del s.side[k]
+            for k, c, nr_, rr, tc in blk:
+                cs = []
+                for sd in (1, -1):
+                    wp = c + sd * nr_ * rr; th = np.arctan2(*(GOAL - wp)[::-1]); vw = s.A.vstar(np.array([[wp[0], wp[1], th, 1.5]]))[0]; cs.append(np.linalg.norm(wp - y0[:2]) / 1.5 + (1e3 if vw >= G.BIG / 2 else vw))
+                new = 1 if cs[0] <= cs[1] else -1; old = s.side.get(k)
+                if old is None or (old != new and cs[(0 if old == 1 else 1)] - cs[(0 if new == 1 else 1)] > .5):
+                    if old is not None: s.nsw += 1
+                    s.side[k] = new
+        bmin = [np.full(nc, np.inf) for _ in blk]; bpos = [np.zeros((nc, 2)) for _ in blk]
         def mg(Yn, tau):
             sg = np.sqrt(s.sig0 ** 2 + q * tau ** 3 / 3); sg = min(sg, s.smax); m = p + w * tau
             return (np.linalg.norm(Yn[:, None, :2] - m[None], axis=2) - HR - s.pad - s.kap * sg).min(1)
@@ -50,12 +67,16 @@ class AgentA:
                 J = np.where(safe, J, np.inf).reshape(ng, -1); mm = m6.reshape(ng, -1); k = np.where(np.isfinite(J.min(1)), J.argmin(1), mm.argmax(1)); Ynext[g] = Yn6.reshape(ng, len(s.US), 4)[np.arange(ng), k]
             Ynext[done] = Y[done]; Ynext = G.wrapy(Ynext); Ynext[:, 3] = np.clip(Ynext[:, 3], G.VLO, G.VHI)
             act_ = ~done; mgn = np.full(nc, np.inf); mgn[act_] = mg(Ynext[act_], tau); viol |= (mgn < 0); marg = np.minimum(marg, mgn)
+            for bi, (k, c, nr_, rr, tc) in enumerate(blk):
+                dk = np.linalg.norm(Ynext[:, :2] - (p[k] + w[k] * tau), axis=1); upd = act_ & (dk < bmin[bi]); bmin[bi] = np.where(upd, dk, bmin[bi]); bpos[bi][upd] = Ynext[upd, :2]
             t_el = np.where(act_, t_el + G.DTN, t_el); Y = Ynext; done = done | G.ingoal(Y)
         V = s.A.vstar(Y); V = np.where(done, 0., V); cost = t_el + np.where(V >= G.BIG / 2, 1e3, V)
+        for bi, (k, c, nr_, rr, tc) in enumerate(blk):
+            sd_ = np.sign(np.einsum('ij,j->i', bpos[bi] - c, nr_)); cost = cost + 3. * (sd_ != s.side[k]) * np.isfinite(bmin[bi])
         ok = ~viol
         if ok.any(): k = int(np.argmin(np.where(ok, cost, np.inf)))
         else: k = int(np.argmax(marg)); s.nfb += 1
-        return s.US[first[k]], dict(feas=bool(ok.any()), cost=float(cost[k]), q=q)
+        return s.US[first[k]], dict(nsw=s.nsw, feas=bool(ok.any()), cost=float(cost[k]), q=q)
 
 def episode(ag, haz, x0, tmax=20., mode_dyn=True):
     y = np.array(x0, float); t = 0.; Y = [y.copy()]; clr = 1e9; L = 0.; ok = False; tms = []; nofeas = 0; inside = 0
@@ -66,12 +87,12 @@ def episode(ag, haz, x0, tmax=20., mode_dyn=True):
         for s_ in np.linspace(0, 1, 21)[1:]:
             q = y[:2] * (1 - s_) + yn[:2] * s_; c = (np.linalg.norm(haz.pos(t + s_ * DT) - q, axis=1) - HR).min(); clr = min(clr, c, 5. - np.abs(q).max())
         L += np.linalg.norm(yn[:2] - y[:2]); y = yn; t += DT; Y.append(y.copy())
-    return dict(ok=ok, T=t if ok else None, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, steps=len(tms), Y=np.array(Y)[::2].tolist())
+    return dict(ok=ok, T=t if ok else None, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
 
 _G = _A = None
 def one(a):
     i, mode, seed = a; x = X0[i]; haz = StaticHaz() if mode == 'static' else D.Hazards(mode, seed)
-    ag = AgentA(_G, _A, H=float(os.environ.get('H', 2.)), eps=float(os.environ.get('EPS', .03)), pad=float(os.environ.get('PAD', .1)), static=(mode == 'static'))
+    ag = AgentA(_G, _A, H=float(os.environ.get('H', 2.)), eps=float(os.environ.get('EPS', .03)), pad=float(os.environ.get('PAD', .1)), static=(mode == 'static'), smax=float(os.environ.get('SMAX', .5)), look=int(os.environ.get('LOOK', 0)))
     r = episode(ag, haz, x); r.update(i=i, mode=mode, seed=seed); return r
 if __name__ == '__main__':
     import pickle, multiprocessing as mp, growCar as G, common, inspect, __main__
