@@ -76,7 +76,9 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None, hfun=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-_PJ = None
+_PJ = None; _PJ2 = None
+def _cj():   # w37: спекулятивные кандидаты запасного прохода
+    S_, x0_, back_, tau_, nf_, rho_, miss_, kn_, hf_ = _PJ2; return candidates(S_, x0_, back_, tau_, nf_, rho_, miss_, kn_, hfun=hf_)
 def _pw(a):   # w37: воркер параллельного дожима (fork: состояние запроса в глобале _PJ)
     flow_, x0_, g_, clear_, wlim_, vfy_ = _PJ; p, tr = a
     T, sqr, d, ok = refine(flow_, x0_, p, g_, tries=tr, clear=clear_, wlim=wlim_)
@@ -97,9 +99,11 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
             Ch += [(h, sc + tau, pre + p) for h, sc, p in Ca[:na]]; Cm += [(h, sc + tau, pre + p) for h, sc, p in Ca[na:]]
         Ch.sort(key=lambda c: c[1]); Cm.sort(key=lambda c: c[1]); C = Ch + Cm; nh = len(Ch)
     global _PJ
-    NPAR = int(os.environ.get('PARQ', 0)); pool = None
+    NPAR = int(os.environ.get('PARQ', 0)); pool = None; ar = None; spec = None
     if NPAR > 1:
-        import multiprocessing as _mp; _PJ = (flow, x0, g, clear, wlim, vfy); pool = _mp.get_context('fork').Pool(NPAR)
+        import multiprocessing as _mp; _PJ = (flow, x0, g, clear, wlim, vfy); global _PJ2
+        if fb is not None and int(os.environ.get('SPECFB', 0)): _PJ2 = (S, x0, back, tau, fb[0], rho, miss, kn, hfun)
+        pool = _mp.get_context('fork').Pool(NPAR); ar = pool.apply_async(_cj) if (fb is not None and int(os.environ.get('SPECFB', 0))) else None
     def _many(paths, tr):
         if pool is not None: return pool.map(_pw, [(p, tr) for p in paths], chunksize=1)
         out = []
@@ -130,11 +134,13 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
         for T, sqr, d, ok in _many([list(zip(sqn, dn)) for sqn, dn in nb], 1):
             if ok and T < cur[0]: cur = (T, sqr, d)
         if cur[0] < best[0]: best = cur
-    if pool is not None: pool.close(); pool.join()
+    if pool is not None:
+        if best is None and ar is not None: spec = ar.get()
+        pool.terminate(); pool.join()
     if best is None and kfb is not None and kfb > K:   # w37: ленивый K — те же кандидаты, больше топологий, только если на малом K плана нет
         return corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=kfb, kn=kn, neigh=neigh, clear=clear, tries=tries, hfun=hfun, fs=fs, wlim=wlim, nbest=nbest, fb=fb, vfy=vfy, kfb=None, _C=(C, nh))
     if best is None and fb is not None:
-        return corridor_query(S, flow, x0, back, tau, fb[0], rho, g, miss, K=fb[1], kn=kn, neigh=neigh, clear=clear, tries=tries, hfun=hfun, fs=fs, wlim=wlim, nbest=nbest, vfy=vfy, kfb=kfb)
+        return corridor_query(S, flow, x0, back, tau, fb[0], rho, g, miss, K=fb[1], kn=kn, neigh=neigh, clear=clear, tries=tries, hfun=hfun, fs=fs, wlim=wlim, nbest=nbest, vfy=vfy, kfb=kfb, _C=spec)
     return best
 
 
