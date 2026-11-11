@@ -5,7 +5,7 @@ import os, sys, time, json
 os.environ.setdefault('OMP_NUM_THREADS', '1')
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, '..', 'bench')); sys.path.insert(0, os.path.join(HERE, '..', 'v6'))
 import numpy as np, numba as nb, common
-from src.atlas6.adaptive_nd import SysN, build_back
+from src.atlas6.adaptive_nd import SysN, build_back, _images, _scaled
 from scipy.spatial import cKDTree
 ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1))
@@ -77,6 +77,10 @@ class Agent:
     def __init__(self, S, back):
         global KV
         self.S, self.tree, self.P = S, back[5], np.asarray(back[0]); self.nP = len(self.P)
+        UNI = float(os.environ.get('UNI', 0))
+        if UNI > 0:   # равномерные узлы вне дерева: доля UNI от узлов дерева, случайно по полю; граф/VI общие
+            rng = np.random.default_rng(1000 + TS); n = int(UNI * self.nP); lo = np.where(env.period > 0, -env.period / 2, LO); hi = np.where(env.period > 0, env.period / 2, HI)
+            U = rng.uniform(lo, hi, (n, d)); U = U[okv(U)]; self.P = np.vstack([self.P, U]); self.nP = len(self.P); self.tree = cKDTree(_scaled(S, _images(S, self.P)))
         t0 = time.perf_counter(); E, OK, GL = edges(self.P, S); t1 = time.perf_counter()
         Ew = S.wrap(E.reshape(-1, d)); dd, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=-1)
         J = (j % self.nP).astype(np.int32); D = dd.astype(np.float64); t2 = time.perf_counter()
@@ -130,5 +134,7 @@ if __name__ == '__main__':
         k = env.keep[:ns]; T = np.array([np.nan if t is None else t for t in Ts]); ok = np.isfinite(T) & (T <= 3 * env.Tref[:ns]) & k; r = T[ok] / env.Tref[:ns][ok]
         print('%s NB=%d K=%d TAU=%g RB=%g KV=%g SC=%s ts=%d: дошли %d/%d, T/T_ref мед %.3f mean %.3f p90 %.3f max %.3f, мс/шаг %.2f, с/старт %.2f, build %.1f vi %.1f с' % (
             ENV, NB, KN, TAU, RB, KV, SC, ts, ok.sum(), k.sum(), np.median(r), r.mean(), np.percentile(r, 90), r.max(), 1e3 * np.mean(ms), tq, tb, ag.tvi), flush=True)
+        dn, _j = ag.tree.query(S.wrap(env.X0[:ns]) / S.scale, k=1); wi = np.argsort(-(T / env.Tref[:ns]))[:4] if False else np.argsort(-np.nan_to_num(T / env.Tref[:ns], nan=9))[:4]
+        print('   d_near: мед %.4f, у 4 худших стартов %s (T/Tref %s)' % (np.median(dn[k]), np.round(dn[wi], 3), np.round((T / env.Tref[:ns])[wi], 2)), flush=True)
         out[ts] = dict(T=Ts, build=tb, nodes=len(back[0]))
     json.dump(out, open('tvg_%s_%d_%g_%g_%g_%d.json' % (ENV, NB, TAU, RB, KV, TS), 'w'), default=float)
