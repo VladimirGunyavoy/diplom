@@ -105,6 +105,6 @@ def main():
         diag.append(dict(i=i, Tref=tr, W0nn_nn=a / tr, W0nn_ip=b / tr, W0dl_nn=c / tr, W0dl_ip=e / tr, T_base=out['base']['T'][i], T_ip=out['dl_ip']['T'][i]))
         print('  старт %2d Tref %.2f | W0/Tref: nn-VI %.3f (интерп %.3f) | Делоне-VI %.3f (интерп %.3f) | T/Tref база %s Делоне-ип %s' % (i, tr, a / tr, b / tr, c / tr, e / tr,
               None if out['base']['T'][i] is None else round(out['base']['T'][i] / tr, 3), None if out['dl_ip']['T'][i] is None else round(out['dl_ip']['T'][i] / tr, 3)), flush=True)
-    out['diag'] = diag; json.dump(out, open(os.path.expanduser('~/spore_v5/r35/dl_%s_%d_%g_%d.json' % (T.ENV, T.NB, T.TAU, ts)), 'w'), default=float)
+    out['diag'] = diag; json.dump(out, open(os.path.expanduser('~/spore_v5/r35/dl_%s_%d_%s_%d.json' % (T.ENV, T.NB, os.environ.get('TAUS', str(T.TAU)), ts)), 'w'), default=float)
 
 if __name__ == '__main__': main()
