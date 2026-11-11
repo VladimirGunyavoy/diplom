@@ -8,11 +8,14 @@ for n_ in dir(G):
 d = pickle.load(open(os.path.expanduser(os.environ['LOAD']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); V = d['V']; N = A.N; BIG = G.BIG
 print('nodes', N, 'layers', [len(l) for l in A.layers], 'US', G.US, flush=True)
 best = np.full((len(G.US), N), np.inf, np.float32)
+CH = int(os.environ.get('CH', 1000000))   # узлы порциями: стенсилы 4.6M×(4 idx + 4 w) целиком не влезают в RAM при загрузке aida
 for ui, u in enumerate(tqdm(G.US, desc='u', mininterval=10)):
-    a, b, c = A.stencils(G.step(A.P, u)); vi = V[b]; ok = vi < BIG / 2; w = c * ok; sm = w.sum(1); mx = np.where(ok, vi, -np.inf).max(1)
-    v = (w * np.where(ok, vi, 0)).sum(1) + np.nan_to_num((1 - sm) * (mx + max(G.PESS, 0.)), nan=0., posinf=0., neginf=0.); v[sm < G.WTHR] = BIG; val = (G.DTN + v).astype(np.float32)
-    o = np.argsort(a, kind='stable'); a, val = a[o], val[o]; st = np.flatnonzero(np.r_[True, a[1:] != a[:-1]]); best[ui, a[st]] = np.minimum.reduceat(val, st)
-    best[ui] = np.minimum(best[ui], A.tgoal(A.P, u).astype(np.float32)); print('u', u, 'узлов со стенсилом', len(st), flush=True)
+    for s0 in range(0, N, CH):
+        P = A.P[s0:s0 + CH]; a, b, c = A.stencils(G.step(P, u)); a = a + s0; vi = V[b]; ok = vi < BIG / 2; w = c * ok; sm = w.sum(1); mx = np.where(ok, vi, -np.inf).max(1)
+        v = (w * np.where(ok, vi, 0)).sum(1) + np.nan_to_num((1 - sm) * (mx + max(G.PESS, 0.)), nan=0., posinf=0., neginf=0.); v[sm < G.WTHR] = BIG; val = (G.DTN + v).astype(np.float32)
+        o = np.argsort(a, kind='stable'); a, val = a[o], val[o]; st = np.flatnonzero(np.r_[True, a[1:] != a[:-1]]); best[ui, a[st]] = np.minimum.reduceat(val, st); del a, b, c, vi, ok, w, v, val, o
+        best[ui, s0:s0 + CH] = np.minimum(best[ui, s0:s0 + CH], A.tgoal(P, u).astype(np.float32))
+    print('u', u, 'готово', flush=True)
 am = best.argmin(0); mn = best.min(0); fin = mn < BIG / 2
 cell_layer = np.concatenate([[k] * len(l) for k, l in enumerate(A.layers)]); rows = []
 for ci, c in enumerate(A.cells):
