@@ -58,9 +58,9 @@ def build_edges(G4, G3, A4, A3):
         a, b, c = A4.stencils(G4.step(lift, u)); groups.append((a + N4, b.astype(np.int64), c, DTN, 'E3')); print('E3', u, len(a), flush=True)
     return groups, Vg
 
-def solve(groups, Vg, A4, A3, G4, it=20000, PESS=1., WTHR=None):
+def solve(groups, Vg, A4, A3, G4, it=int(os.environ.get('BCIT', 1500)), PESS=1., WTHR=None):
     import torch
-    dev = 'cuda'; N = A4.N + A3.N; BIG = G4.BIG; WTHR = WTHR if WTHR is not None else float(os.environ.get('WTHR', 0.))
+    dev = 'cuda'; N = A4.N + A3.N; BIG = G4.BIG; WTHR = WTHR if WTHR is not None else float(os.environ.get('WTHR', .5))
     goal = np.r_[A4.goal, A3.goal]; V0 = np.full(N, BIG); V0[goal] = 0.; V = np.minimum(V0, Vg)
     Vt = torch.as_tensor(V, device=dev).double(); Vgt = torch.as_tensor(Vg, device=dev).double(); gl = torch.as_tensor(goal, device=dev)
     hasE = torch.zeros(N, dtype=torch.bool, device=dev); G = []
@@ -78,7 +78,8 @@ def solve(groups, Vg, A4, A3, G4, it=20000, PESS=1., WTHR=None):
                 v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + PESS), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
                 new.scatter_reduce_(0, gI[a:a + ch], gC[a:a + ch] + v, 'amin')
         new[gl] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
-        if d < 1e-9: break
+        if n % 50 == 0: print('BC1 it', n, 'd', d, 'V4 big', float((new[:A4.N] >= BIG / 2).float().mean()), 'V3 big', float((new[A4.N:] >= BIG / 2).float().mean()), flush=True)
+        if d < float(os.environ.get('BCTOL', 1e-7)): break
     print('BC1 solve: проходов', n, flush=True); return Vt.cpu().numpy(), n
 
 class Shim:
