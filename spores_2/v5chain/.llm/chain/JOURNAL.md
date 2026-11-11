@@ -551,3 +551,4 @@ hub-v5chain-worker-39 | started | acc3 | sonnet | 20:21:30
 hub-v5chain-worker-c8 | done | ctx 28% | R20 динамик кар+TIGHT, профиль кара+NBF | next=hub-v5chain-worker-c9 | 21:33:19
 hub-v5chain-worker-c9 | started | acc2 | sonnet | 21:34:18
 hub-v5chain-worker-b24 | done | ctx 27%, хвост динамика отдан | статик/динамик дерево+V, R20 динамик 1972/1978 1.026/1.232/10.3 | next=hub-v5chain-worker-b25 | 21:51:19
+hub-v5chain-worker-b25 | started | acc1 | sonnet | 21:52:02
