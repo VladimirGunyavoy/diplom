@@ -23,11 +23,12 @@ def endpoint(flow, x0, seq, dts):
 def refine(flow, x0, path, g, tries=3, seed=0, clear=None, ns=16, wlim=None):
     """flow(P, s, t); g(x) ≥ 0 внутри окна. → (T, seq, dts, ok); T — лучший ДОПУСТИМЫЙ."""
     seq, d0 = merge(path); rng = np.random.default_rng(seed); best = (np.inf, None)
+    import os; CD_ = float(os.environ.get('CLRDT', 0)); NSK = [max(4, int(np.ceil(1.5 * t / CD_))) if CD_ > 0 else ns for t in d0]   # CLRDT: точки зазора каждые ≤ CLRDT/1.5 с, число фиксировано на время SLSQP
     def gg(d):
         if clear is None and wlim is None: return np.atleast_1d(g(endpoint(flow, x0, seq, d)))
         x = np.array(x0, float); pts = []
-        for sg, t in zip(seq, d):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt); конец сегмента — последняя точка (один проход)
-            for _ in range(ns): x = flow(x, sg, t / ns); pts.append(x)      # последовательно: p_j = flow(p_{j-1}, t/ns) (×ns/2 меньше шагов rk4)
+        for sg, t, nsk in zip(seq, d, NSK):                                  # зазор до препятствий: ns точек на сегмент (фиксированное число — размерность условия не зависит от dt); конец сегмента — последняя точка (один проход)
+            for _ in range(nsk): x = flow(x, sg, t / nsk); pts.append(x)      # последовательно: p_j = flow(p_{j-1}, t/ns) (×ns/2 меньше шагов rk4)
         P = np.array(pts); out = [np.atleast_1d(g(x))]
         if clear is not None: out.append(np.ravel(clear(P)))
         if wlim is not None: out.append(np.ravel(wlim[1] - np.abs(P[:, wlim[0]])))      # физический предел |w_i| ≤ WM в ns точках каждого сегмента (слово пользователя 2026-10-01)
