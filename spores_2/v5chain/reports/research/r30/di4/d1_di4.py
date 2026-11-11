@@ -3,6 +3,7 @@
 Запуск (из v7/, env как solve_b.sh): LOAD=<dump с V> OUT=<папка> python src/.../d1_di4.py"""
 import os, sys, json, pickle, time, numpy as np
 sys.path.insert(0, os.path.join(os.getcwd(), 'src', 'cells7')); import growN as G
+import __main__; [setattr(__main__, k_, v_) for k_, v_ in vars(G).items() if isinstance(v_, type)]   # pickle слоёв ищет классы в __main__
 d = pickle.load(open(os.environ['LOAD'], 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; O = os.environ['OUT']
 US = list(G.US); N = A.N; A._init_qx(); t0 = time.time()
 def work(rng):
