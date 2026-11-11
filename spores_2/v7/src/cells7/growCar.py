@@ -547,7 +547,7 @@ if __name__ == '__main__':
     if E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
     else:
         if E('LOADL'): import pickle; A = Atlas.__new__(Atlas); A.layers = pickle.load(open(E('LOADL'), 'rb'))['layers']; A.finish()   # w24: слои из DUMPL, solve заново
-        else: A = Atlas()
+        else: A = Atlas(seed=int(E("SEED0", 0)))
         tb = time.time() - t0
         print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True)
         if E('DUMPL'): import pickle; pickle.dump(dict(layers=A.layers), open(E('DUMPL'), 'wb')); print('слои сохранены', E('DUMPL'), flush=True)   # w22: после потери 2-часового построения — слои на диск до solve
