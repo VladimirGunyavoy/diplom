@@ -13,7 +13,10 @@ s1 = s1.replace(key, key + "                    if STOPU is not None and float(S
 s2 = src.replace('def build_layer(u, rng, log=None):', 'def build_band(u, pts, bt, rho, log=None):', 1)
 old = "        p = queue.pop(0) if queue else np.array([rng.uniform(-XL, XL), rng.uniform(-WL, WL)])\n"; assert old in s2
 s2 = s2.replace(old, "        p = queue.pop(0) if queue else next(it_, None)\n        if p is None: break\n", 1).replace("        p = np.array([wrap(p[0]), p[1]])\n", "        p = np.array([wrap(p[0]), p[1]])\n        if bt.query(p)[0] > rho: continue\n", 1).replace("seeds = []; sc0", "seeds = []; it_ = iter(pts); sc0", 1).replace("bar = tqdm(desc='layer u=%+g cells' % u,", "bar = tqdm(desc='band u=%+g cells' % u,", 1)
-assert 'it_ = iter(pts)' in s2 and 'bt.query' in s2; exec(s1, G.__dict__); exec(s2, G.__dict__)
+assert 'it_ = iter(pts)' in s2 and 'bt.query' in s2; g2 = inspect.getsource(G._grow2_gen); k2 = "                rows[sg * i] = y; Wt[sg * i] = W * (i * DTN)"; assert k2 in g2 and not G.NORMFRONT
+g2 = g2.replace(k2, k2 + "   # STOPU\n                if STOPU is not None and float(STOPU(y[k0])) != u: rows.pop(sg * i); Wt.pop(sg * i); break\n", 1)   # стоп роста: u* на фронте (центр) сменился — строку не берём
+s2 = s2.replace("LIMITS(p, u) if LIMITS else (RMAX, TMAX)", "(min(RMAX, float(os.environ.get('BANDR', .15))), min(TMAX, float(os.environ.get('BANDT', 1.))))", 1); assert 'BANDT' in s2
+exec(g2, G.__dict__); exec(s1, G.__dict__); exec(s2, G.__dict__)
 def tile(P): return np.concatenate([P + np.array([sh, 0.]) for sh in (-2 * np.pi, 0., 2 * np.pi)]), np.tile(np.arange(len(P)), 3)
 def ustar_nodes(A):
     P = A.P; n = len(P); tg = A.tgoal3(P); Ys = A.step3(P); J = np.minimum(tg, G.DTN + A.vstar(Ys).reshape(len(G.US), n).T); return J.argmin(1)

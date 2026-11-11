@@ -16,8 +16,11 @@ def ustar(A):
 seed = int(os.environ.get('BSEED', 0)); tag = os.environ.get('TAG', 'b3_s%d_dtn%s_mcap%s' % (seed, os.environ.get('DTN', '.12'), os.environ.get('MCAP', '33')))
 t0 = time.perf_counter(); A0 = G.Atlas(seed=seed); tg0 = time.perf_counter() - t0; ts0 = B.solve(A0); s0, _ = B.eval100(A0)
 print('грубый:', len(A0.cells), A0.N, 't_grow %.1f t_solve %.1f' % (tg0, ts0), s0, flush=True)
-t1 = time.perf_counter(); rng = np.random.default_rng(seed + 100); cells, idx = G.build_b3(ustar(A0), rng); tg1 = time.perf_counter() - t1
-A1 = G.Atlas.__new__(G.Atlas); A1.layers = [cells]; A1.idx = [idx]; A1.finish(); ts1 = B.solve(A1); s1, _ = B.eval100(A1)
-nu = {float(u): sum(1 for c in cells if c.u == u) for u in G.US}
-r = dict(tag=tag, coarse=dict(cells=len(A0.cells), nodes=int(A0.N), t_grow=tg0, t_solve=ts0, **s0), b3=dict(cells=len(cells), nodes=int(A1.N), t_grow=tg1, t_solve=ts1, goalh_used=getattr(A1, 'goalh_used', False), cells_by_u=nu, V_fin=float((A1.V < G.BIG / 2).mean()), **s1))
+NIT = int(os.environ.get('B3IT', 1)); Ap = A0; R_ = []
+for it in range(NIT):
+    t1 = time.perf_counter(); rng = np.random.default_rng(seed + 100 * (it + 1)); cells, idx = G.build_b3(ustar(Ap), rng); tg1 = time.perf_counter() - t1
+    A1 = G.Atlas.__new__(G.Atlas); A1.layers = [cells]; A1.idx = [idx]; A1.finish(); ts1 = B.solve(A1); s1, _ = B.eval100(A1)
+    nu = {float(u): sum(1 for c in cells if c.u == u) for u in G.US}
+    R_.append(dict(iter=it + 1, cells=len(cells), nodes=int(A1.N), t_grow=tg1, t_solve=ts1, goalh_used=getattr(A1, 'goalh_used', False), cells_by_u=nu, V_fin=float((A1.V < G.BIG / 2).mean()), **s1)); print('B3 iter', it + 1, R_[-1], flush=True); Ap = A1
+r = dict(tag=tag, coarse=dict(cells=len(A0.cells), nodes=int(A0.N), t_grow=tg0, t_solve=ts0, **s0), b3=R_[0], iters=R_)
 print(json.dumps(r, default=float), flush=True); json.dump(r, open(os.path.join(os.environ['BIGOUT'], 'b3_%s.json' % tag), 'w'), indent=1, default=float)
