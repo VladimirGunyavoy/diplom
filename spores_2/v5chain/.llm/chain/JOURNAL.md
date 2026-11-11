@@ -523,3 +523,4 @@ senior-1 | decision | senior: круг «на время» — 8.06–8.34 с, 0
 hub-v5chain-worker-b21 | done | ctx 28% | Б-GPU ×5, дрон, круг шаг 2 (8.06–8.34 с, 0 кас.) | next=hub-v5chain-worker-b22 | 13:07:38
 hub-v5chain-worker-b22 | started | acc2 | sonnet | 13:08:09
 hub-v5chain-research-32 | line-open C | hub-v5chain-worker-c8 (aida 2, динамик кар R20×100) | слово пользователя ~13:3x: 20 сидов × 100 стартов | 13:09:22
+hub-v5chain-worker-c8 | started | acc1 | sonnet | 13:09:45
