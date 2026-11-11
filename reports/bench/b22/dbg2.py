@@ -1,7 +1,7 @@
 import sys,os; sys.argv=['x','300000','.3','8','sel']; os.environ['FM']='.1'; os.environ['HS']='.5'; os.environ['RB']='.3'
 import numpy as np, canal_tree as T, canal as C
-S=T.mkS(2); back=T.build_back(S,C.TAU,300000,.3); ag=T.Agent(S,back); env=C.mkenv(); t=env.unwrapped.task
-for seed in (200081,):
+S=T.mkS(1); back=T.build_back(S,C.TAU,600000,.3); ag=T.Agent(S,back); env=C.mkenv(); t=env.unwrapped.task
+for seed in (200022,):
     env.reset(seed=seed); print('start pos',np.round(t.agent.pos[:2],3),'rho',round(float(np.hypot(*t.agent.pos[:2])),3))
     for step in range(60):
         d=t.data;p=t.agent.pos;R_=t.agent.mat;th=np.arctan2(R_[1,0],R_[0,0]);th0=th-d.qpos[2];c0,s0=np.cos(th0),np.sin(th0)
