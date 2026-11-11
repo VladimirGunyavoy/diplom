@@ -567,3 +567,4 @@ hub-v5chain-senior-1 | review | senior: динамик дерево+V финал
 hub-v5chain-research-34 | line-open | A (w41: ДИ4D 10k тест, статик 50k R20 — по решению senior) | 23:22:35
 hub-v5chain-worker-41 | started | acc1 | sonnet | 23:23:09
 hub-v5chain-research-34 | done | ctx 36% (коридор 40%) | динамик дерево+V финальное правило ≈ паритет/лучше Б по типичному (R20 1977/1978 1.009, TIGHT 1999/2000), меньше узлов: колени на подборе; до 02:30 — 3 проверки + сводка | next=hub-v5chain-research-35 (acc1 вручную: pick_account давал acc3) | 23:24:40
+hub-v5chain-research-35 | started | acc1 | opus | 23:25:34
