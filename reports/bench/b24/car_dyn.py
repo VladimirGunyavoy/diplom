@@ -250,17 +250,40 @@ class AgentDyn:
         if HYST > 0 and pv is not None and ok[pv] and c[pv] <= c[k] + HYST: k = pv
         self.prev = k; return k
 def episode(ag, x0, H, tmax=60.):
-    ag.prev = None; x = np.array(x0, float); t = 0.; mn = 9.; tms = []; tv = []; Pp = H.pos(0.); nits = []; tfl = []; nsub = int(round(TAU / .002))
+    ag.prev = None; x = np.array(x0, float); traj = [x.copy()]; ag.last_traj = traj; t = 0.; mn = 9.; tms = []; tv = []; Pp = H.pos(0.); nits = []; tfl = []; nsub = int(round(TAU / .002))
     while t < tmax:
         P0 = H.pos(t); Wv = (P0 - Pp) / TAU if t > 0 else np.zeros((3, 2)); Pp = P0
         t1 = time.perf_counter(); s = ag.act(x, P0, Wv); tms.append(time.perf_counter() - t1); tv.append(ag.tvi); nits.append(ag.nit); tfl.append(ag.tfl)
         if os.environ.get('DBG') and int(t / TAU) % 5 == 0: print('  t %.1f x %s a %d W0x/Wx %.2f/%.2f Wq %s cl %s ok %s' % (t, np.round(x, 2), s, ag.W0x, ag.Wx, np.round(getattr(ag, 'Wq', np.zeros(1)), 2).tolist(), np.round(getattr(ag, 'cl', np.zeros(1)), 2).tolist(), getattr(ag, 'okc', np.zeros(1)).astype(int).tolist()), flush=True)
-        PT = H.pos(t + (np.arange(nsub) + 1) * .002); xn, yn, thn, vn, m, hit = execute_dyn(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], .002, nsub, PT); mn = min(mn, m); x = np.array([xn, yn, thn, vn])
+        PT = H.pos(t + (np.arange(nsub) + 1) * .002); xn, yn, thn, vn, m, hit = execute_dyn(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], .002, nsub, PT); mn = min(mn, m); x = np.array([xn, yn, thn, vn]); traj.append(x.copy())
         if hit >= 0: return t + hit, mn, float(np.mean(tms)), float(np.mean(tv)), float(np.mean(nits)), float(np.mean(tfl))
         t += TAU
     return None, mn, float(np.mean(tms)), float(np.mean(tv)), float(np.mean(nits)), float(np.mean(tfl))
 
+def tail_main():
+    """диагностика хвоста: TAIL='k:i,k:i,…' — перестраиваем дерево k, гоним эпизоды, печатаем тип/d_near/V(x0)/T_ref"""
+    import gc
+    COMP = json.load(open(os.environ['COMPACT'])); A = np.load(os.path.join(HERE, 'starts100.npy'))[:, :4]
+    want = {}
+    for p in os.environ['TAIL'].split(','): k_, i_ = p.split(':'); want.setdefault(int(k_), []).append(int(i_))
+    recs = []
+    for k in sorted(want):
+        S = mkS(k); back = build_back(S, TAU, NB, RB); ag = AgentDyn(S, back); H = D.Hazards('random', k); ref = {r['i']: r for r in COMP[str(k)]['ref']}
+        dnear = lambda X: ag.tree.query(S.wrap(np.atleast_2d(X)) / S.scale, k=1)[0]
+        ds = dnear(A[:100]); print('k=%d: d_near стартов (масштаб. ед.) мед %.3f p90 %.3f max %.3f' % (k, np.median(ds), np.percentile(ds, 90), ds.max()), flush=True)
+        for i in want[k]:
+            x0 = A[i]; nt0 = getattr(ag, 'ntie', 0); T, mn, *_ = episode(ag, x0, H); tr = np.array(ag.last_traj); dt = dnear(tr); v = np.abs(tr[:, 3]); rest = float((v < .05).mean())
+            xy = tr[:, :2]; pl = float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum()); sd = float(np.linalg.norm(xy[0] - GOAL))
+            dc = np.array([(np.linalg.norm(H.pos(j * TAU) - xy[j], axis=1) - HR).min() for j in range(len(xy))])
+            typ = 'покой' if (T is None and rest > .5) or rest > .3 else ('таймаут' if T is None else ('объезд (путь/прямая %.1f, зазор до дисков мин %.2f)' % (pl / sd, dc.min()) if dc.min() < .45 else 'медленно (путь/прямая %.1f)' % (pl / sd)))
+            W0x = float(np.min(ag.W0[ag.tree.query(S.wrap(x0[None]) / S.scale, k=min(KN * 3, ag.nP))[1] % ag.nP] + KV * ag.tree.query(S.wrap(x0[None]) / S.scale, k=min(KN * 3, ag.nP))[0]))
+            rec = dict(k=k, i=i, T=T, Tref=ref[i]['T'], ratio=None if T is None else T / ref[i]['T'], W0x0=W0x, W0_over_Tref=W0x / ref[i]['T'], d_start=float(dnear(x0)[0]), d_max_traj=float(dt.max()), d_med_traj=float(np.median(dt)), d_final=float(dt[-1]), rest_frac=rest, ties=getattr(ag, 'ntie', 0) - nt0, steps=len(tr), type=typ, final=np.round(tr[-1], 2).tolist())
+            recs.append(rec); print(json.dumps(rec, ensure_ascii=False), flush=True)
+        ag = None; gc.collect()
+    json.dump(recs, open('car_tail_%s.json' % os.environ.get('TAG', 'x'), 'w'), ensure_ascii=False)
+
 if __name__ == '__main__':
+    if MODE == 'tail': tail_main(); sys.exit(0)
     import gc
     S0 = np.load(os.path.join(HERE, 'b24', 'sel_starts.npy') if MODE == 'sel' else os.path.join(HERE, 'starts100.npy'))[:, :4]; NST = int(os.environ.get('NSEL', 32)) if MODE == 'sel' else 100; out = {}; ag = None
     COMP = json.load(open(os.environ['COMPACT'])) if MODE == 'test' else None
