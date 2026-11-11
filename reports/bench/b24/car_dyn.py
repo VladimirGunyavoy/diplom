@@ -175,6 +175,29 @@ if GPU:
             k_vit[nbk, tpb](ag.dJ, ag.dD, ag.dOK, ag.dGL, ag.dING, dF, a, b, ag.nP, np.float32(TAU), np.float32(KV), np.float32(BIG), ag.dW0, np.float32(ag.lim)); a, b = b, a
             if it % 4 == 3 and np.abs(a.copy_to_host() - b.copy_to_host()).max() < tol: break
         ag.dWprev = a; return a.copy_to_host(), it
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2))
+@nb.njit
+def expand(X, tau):
+    n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
+    for i in range(n):
+        for s in range(9):
+            x, y, th, v = X[i, 0], X[i, 1], X[i, 2], X[i, 3]; h = tau / 10
+            for _ in range(10):
+                x, y, th, v = rk(x, y, th, v, ACT[s, 0], ACT[s, 1], h, 1)
+                if XL - max(abs(x), abs(y)) < MARG or v < VL or v > VH: okk[i * 9 + s] = False
+            out[i * 9 + s, 0] = x; out[i * 9 + s, 1] = y; out[i * 9 + s, 2] = th; out[i * 9 + s, 3] = v
+    return out, okk
+def tie_wq(ag, Q, ok, Wq):
+    """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
+    if TIE <= 0 or not ok.any(): return Wq
+    w = Wq[ok]
+    if w.max() - w.min() >= TIE: return Wq
+    ag.ntie = getattr(ag, 'ntie', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    for _ in range(DEP - 1):
+        cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
+    d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
+    return Wl.reshape(9, -1).min(1)
+
 class AgentDyn:
     """дерево carfree (без дисков) + W0 (VI один раз); на каждом шаге: пометка узлов облаком прогноза → VI с тёплым стартом → жадный выбор + фильтр по прогнозу. Закон дисков агенту неизвестен: только наблюдения p(t), p(t−.2)."""
     def __init__(self, S, back):
@@ -185,6 +208,8 @@ class AgentDyn:
         self.W0, it, _ = vit(self.J, self.D, self.OK, self.GL, self.ING, self.nP, TAU, KV, 300, BIG); self.xy = cKDTree(self.P[:, :2]); self.nflag = 0; self.tvi = 0.; self.tfl = 0.
         if GPU:
             self.dJ = cuda.to_device(np.ascontiguousarray(self.J.reshape(self.nP, 9, -1)[:, :, :KG].transpose(1, 2, 0))); self.dD = cuda.to_device(np.ascontiguousarray(self.D.reshape(self.nP, 9, -1)[:, :, :KG].transpose(1, 2, 0).astype(np.float32))); self.dOK = cuda.to_device(np.ascontiguousarray(self.OK.T)); self.dGL = cuda.to_device(np.ascontiguousarray(self.GL.T)); self.dING = cuda.to_device(self.ING); self.W0f = self.W0.astype(np.float32); self.dW0 = cuda.to_device(self.W0f); self.dWprev = cuda.to_device(self.W0f); self.dX = cuda.to_device(np.ascontiguousarray(self.P[:, 0])); self.dY = cuda.to_device(np.ascontiguousarray(self.P[:, 1]))
+        i0 = np.random.default_rng(0).choice(self.nP, min(self.nP, 300000), replace=False); jj = self.J[i0 * 9 + 4, 0]; dP = S.wrap(self.P[jj] - self.P[i0]) / S.scale; dd = np.linalg.norm(dP, axis=1); fin = (self.W0[i0] < 1e2) & (self.W0[jj] < 1e2) & (dd > .05)
+        self.kv_auto = float(np.quantile(np.abs(self.W0[i0] - self.W0[jj])[fin] / dd[fin], .9)); print('  KV_auto (кв.9 |ΔW0|/d по рёбрам) %.3f' % self.kv_auto, flush=True)
         print('  carfree: узлов %d, W0 мед %.2f макс %.2f (it %d)' % (self.nP, np.median(self.W0), self.W0.max(), it), flush=True)
     def plan(self, x, P0, Wv):
         d, j = self.tree.query(self.S.wrap(x[None]) / self.S.scale, k=min(KN * 3, self.nP)); W0x = float(np.min(self.W0[j % self.nP] + KV * d)); self.lim = W0x + LIMV; self.W0x = W0x
@@ -218,7 +243,7 @@ class AgentDyn:
                 xe, ye, the, ve, mn, hit = cand(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], P0, Wv, KAPC, QC, SMAX, HX, HB); Q2[s] = (xe, ye, the, ve); c2[s] = mn
             ok2 = (c2 >= FM) & (Q2[:, 3] >= VL) & (Q2[:, 3] <= VH); d2, j2 = self.tree.query(self.S.wrap(Q2) / self.S.scale, k=min(KN * 3, self.nP)); Wq2 = np.min(self.W[j2 % self.nP] + KV * d2, axis=1)
             Wq = np.where(ok2 & (HX + Wq2 < TAU + Wq), HX + Wq2 - TAU, Wq)
-        self.Wq, self.cl, self.okc = Wq, cl, ok
+        Wq = tie_wq(self, Q, ok, Wq); self.Wq, self.cl, self.okc = Wq, cl, ok
         return self.hyst(np.where(ok, Wq, 1e9), ok)
     def hyst(self, c, ok):
         k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
@@ -228,8 +253,8 @@ def episode(ag, x0, H, tmax=60.):
     ag.prev = None; x = np.array(x0, float); t = 0.; mn = 9.; tms = []; tv = []; Pp = H.pos(0.); nits = []; tfl = []; nsub = int(round(TAU / .002))
     while t < tmax:
         P0 = H.pos(t); Wv = (P0 - Pp) / TAU if t > 0 else np.zeros((3, 2)); Pp = P0
-        t1 = time.perf_counter(); s = ag.act(x, P0, Wv)
-        if os.environ.get('DBG') and int(t / TAU) % 5 == 0: print('  t %.1f x %s a %d W0x/Wx %.2f/%.2f Wq %s cl %s ok %s' % (t, np.round(x, 2), s, ag.W0x, ag.Wx, np.round(getattr(ag, 'Wq', np.zeros(1)), 2).tolist(), np.round(getattr(ag, 'cl', np.zeros(1)), 2).tolist(), getattr(ag, 'okc', np.zeros(1)).astype(int).tolist()), flush=True); tms.append(time.perf_counter() - t1); tv.append(ag.tvi); nits.append(ag.nit); tfl.append(ag.tfl)
+        t1 = time.perf_counter(); s = ag.act(x, P0, Wv); tms.append(time.perf_counter() - t1); tv.append(ag.tvi); nits.append(ag.nit); tfl.append(ag.tfl)
+        if os.environ.get('DBG') and int(t / TAU) % 5 == 0: print('  t %.1f x %s a %d W0x/Wx %.2f/%.2f Wq %s cl %s ok %s' % (t, np.round(x, 2), s, ag.W0x, ag.Wx, np.round(getattr(ag, 'Wq', np.zeros(1)), 2).tolist(), np.round(getattr(ag, 'cl', np.zeros(1)), 2).tolist(), getattr(ag, 'okc', np.zeros(1)).astype(int).tolist()), flush=True)
         PT = H.pos(t + (np.arange(nsub) + 1) * .002); xn, yn, thn, vn, m, hit = execute_dyn(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], .002, nsub, PT); mn = min(mn, m); x = np.array([xn, yn, thn, vn])
         if hit >= 0: return t + hit, mn, float(np.mean(tms)), float(np.mean(tv)), float(np.mean(nits)), float(np.mean(tfl))
         t += TAU

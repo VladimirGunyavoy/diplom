@@ -86,6 +86,29 @@ def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
         if d < 1e-4: break
     return W, it, d
 
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2))
+@nb.njit
+def expand(X, tau):
+    n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
+    for i in range(n):
+        for s in range(9):
+            x, y, th, v = X[i, 0], X[i, 1], X[i, 2], X[i, 3]; h = tau / 10
+            for _ in range(10):
+                x, y, th, v = rk(x, y, th, v, ACT[s, 0], ACT[s, 1], h, 1)
+                if XL - max(abs(x), abs(y)) < MARG or v < VL or v > VH: okk[i * 9 + s] = False
+            out[i * 9 + s, 0] = x; out[i * 9 + s, 1] = y; out[i * 9 + s, 2] = th; out[i * 9 + s, 3] = v
+    return out, okk
+def tie_wq(ag, Q, ok, Wq):
+    """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
+    if TIE <= 0 or not ok.any(): return Wq
+    w = Wq[ok]
+    if w.max() - w.min() >= TIE: return Wq
+    ag.ntie = getattr(ag, 'ntie', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    for _ in range(DEP - 1):
+        cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
+    d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
+    return Wl.reshape(9, -1).min(1)
+
 class Agent:
     def __init__(self, S, back):
         from scipy.spatial import cKDTree
@@ -115,6 +138,7 @@ class Agent:
         if not ok.any(): return int(np.argmax(cl))
         d, j = self.tree.query(self.S.wrap(Q) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
         Wq = np.min(self.W[j] + KV * d, axis=1)
+        Wq = tie_wq(self, Q, ok, Wq)
         return self.hyst(np.where(ok, Wq, 1e9), ok)
     def hyst(self, c, ok):
         k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
@@ -157,6 +181,7 @@ if __name__ == '__main__':
         for i, x0, tref in st:
             te = time.perf_counter(); T, mn, ms = episode(ag, x0); res.append((i, T, tref, mn, ms, time.perf_counter() - te))
         ok = [r for r in res if r[1] is not None]; ratio = np.array([r[1] / r[2] for r in ok]); touch = sum(r[3] < 0 for r in res)
+        print('ties %d' % getattr(ag, 'ntie', 0), end=' ')
         print('NB=%d K=%d KV=%g RB=%g [%s] ts=%d: дошли %d/%d, касаний %d, T/T_ref мед %.3f p90 %.3f max %.3f среднее %.3f, мс/шаг %.1f, зазор мин %.3f, мс/эпизод %.0f, build %.1f с, vi %.1f с (CPU numba)' % (
             NB, KN, KV, RB, MODE, ts, len(ok), len(res), touch, np.median(ratio), np.percentile(ratio, 90), ratio.max(), ratio.mean(), 1e3 * np.mean([r[4] for r in res]), min(r[3] for r in res), 1e3 * np.mean([r[5] for r in res]), tb, ag.tvi), flush=True)
         out[ts] = dict(res=res, build=tb, nodes=len(back[0]))
