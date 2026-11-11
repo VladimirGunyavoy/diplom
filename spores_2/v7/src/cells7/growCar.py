@@ -388,6 +388,7 @@ def _pquery(qx, Y):
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
     return np.concatenate([r[0] + r[3] for r in R]), np.concatenate([r[1] for r in R]), np.concatenate([r[2] for r in R])
+TM = collections.Counter()   # w35: время стадий подготовки solve (с)
 class Atlas:
     def __init__(s, seed=0, log=None):
         s.layers = []
@@ -401,11 +402,13 @@ class Atlas:
         for c in s.cells: c.o = n_; n_ += c.G.shape[0] * M ** m_
         s.P = np.concatenate([c.G.reshape(-1, N) for c in s.cells]); s.N = n_; s.goal = ingoal(s.P); s.V = np.full(n_, BIG); s.V[s.goal] = 0.
     def stencils(s, Y):
+        _t0 = time.time()
         if not hasattr(s, 'qx'):
             s.qx = HexIdx()
             for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
-        Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y)
+        TM['индекс слоёв (add)'] += time.time() - _t0; _t1 = time.time()
+        Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y); TM['query (бины+_test)'] += time.time() - _t1; _t2 = time.time()
         if E('PAIRS'): print('PAIRS', len(Y), len(pi), round(len(pi) / max(len(Y), 1), 2), flush=True)
         if not len(pi): return np.zeros(0, int), np.zeros((0, 2 ** N), np.int64), np.zeros((0, 2 ** N), np.float32)
         stv = np.array([M ** (m_ - k) for k in range(N)]); off = VOFF @ stv; n_ = len(pi); idt = np.int32 if s.N < 2 ** 31 else np.int64
@@ -413,6 +416,7 @@ class Atlas:
         for a in range(0, n_, CH):
             b = min(a + CH, n_); ii = s.qx.I[hid[a:b]].astype(np.int64); base = s.O[ii[:, 0]] + (ii[:, 1:] * stv).sum(1); IDX[a:b] = base[:, None] + off[None]
             sb = sc[a:b]; W[a:b] = np.prod(np.where(VOFF[None] == 1, sb[:, None, :], 1 - sb[:, None, :]), 2)
+        TM['сборка IDX/W'] += time.time() - _t2
         return pi, IDX, W
     @staticmethod
     def interp(W, VI):
@@ -429,6 +433,7 @@ class Atlas:
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
         return tg
     def solve(s, it=20000):
+        _t_s0 = time.time()
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
         else:
             I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf); AMN = int(E('ARGMIN', 0)); U_ = []
@@ -448,7 +453,8 @@ class Atlas:
                 for c in s.cells: ea.append(c.o + np.arange((c.G.shape[0] - 1) * mm))
                 ea = np.concatenate(ea); ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
                 I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
-            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; UU = np.concatenate(U_)[o] if AMN else None; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+            _t3 = time.time(); I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; UU = np.concatenate(U_)[o] if AMN else None; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+            TM['concat+argsort рёбер'] += time.time() - _t3
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
         if int(E('SOLVEGPU', 0)):                                                                   # п.39 (research-22, r22/05_di4_gpu_jacobi/gpu.py): тот же Якоби на GPU (torch float64, чанки, scatter_reduce amin); torch нет — старый путь
@@ -464,7 +470,7 @@ class Atlas:
                 dev = 'cuda'; gI = torch.as_tensor(I.astype(np.int64), device=dev); gX = torch.as_tensor(IDX, device='cpu' if int(E('HOSTE', 0)) else dev); gW = torch.as_tensor(W, device='cpu' if int(E('HOSTE', 0)) else dev)   # int32/float32 на GPU (в 2× меньше памяти, L1600: 67M рёбер), в чанке — в int64/float64; goal = torch.as_tensor(s.goal, device=dev)
                 FD = torch.float32 if JAC3 == 2 else torch.float64; Vt = torch.as_tensor(V, device=dev).to(FD); Vgt = torch.as_tensor(Vg, device=dev).to(FD); hasE = torch.zeros(s.N, dtype=torch.bool, device=dev); hasE[gI] = True; goal = torch.as_tensor(s.goal, device=dev)
                 if SMEAN: uq, GI_ = np.unique(K, return_inverse=True); gGI = torch.as_tensor(GI_.astype(np.int64), device=dev); gGN = torch.as_tensor(uq // 20, device=dev); NG = len(uq); del K, uq, GI_; print('SMEAN: групп', NG, 'из', len(I), 'рёбер', flush=True)
-                ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.
+                ch = 1 << 22; n = 0; bar = tqdm(desc='GPU Якоби', mininterval=TQ, leave=False); pe = PESS if PESS >= 0 else 0.; _tj = time.time(); print('SOLVE: подготовка (индекс/стенсилы) %.1f с' % (_tj - _t_s0), {k: round(v, 1) for k, v in TM.items()}, flush=True)
                 while n < it:
                     new = Vt.clone()
                     if NOLATCH or SMEAN: new[hasE] = Vgt[hasE]
@@ -489,7 +495,7 @@ class Atlas:
                         v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
                         hit = (DTN + v) <= Vt[gI[a:a + ch]] + 1e-7; ia = gI[a:a + ch][hit]; am_.scatter_reduce_(0, ia, gU[a:a + ch].to(dev)[hit], 'amin')
                     s.amin_u = am_.cpu().numpy()
-                s.V = Vt.cpu().numpy().astype(np.float64); s.n_it = n; s.edges = len(I); print("SOLVEGPU: рёбер", len(I), "проходов", n, flush=True); return s
+                print('SOLVE: проходы %.1f с (%.3f с/проход)' % (time.time() - _tj, (time.time() - _tj) / max(n, 1)), flush=True); s.V = Vt.cpu().numpy().astype(np.float64); s.n_it = n; s.edges = len(I); print("SOLVEGPU: рёбер", len(I), "проходов", n, flush=True); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0
             for g0, g1 in tqdm(list(zip(g_[:-1], g_[1:])), desc='обратная карта', mininterval=TQ, leave=False):
