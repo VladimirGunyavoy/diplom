@@ -454,7 +454,7 @@ def trim_rows(c, a_, b_):
     if getattr(c, 'mrow', None) is not None and len(c.mrow) == c.G.shape[0]: d.mrow = c.mrow[a_:b_ + 1]
     d.bb = (d.G[..., 0].min() - 1e-6, d.G[..., 0].max() + 1e-6, d.G[..., 1].min() - 1e-6, d.G[..., 1].max() + 1e-6)
     d.Q = [d.G[:-1, :-1].reshape(-1, 2), d.G[:-1, 1:].reshape(-1, 2), d.G[1:, 1:].reshape(-1, 2), d.G[1:, :-1].reshape(-1, 2)]; return d
-SOLVED = []
+SOLVED = []; GOALH = float(os.environ.get('GOALH', 0))
 _GIX = None
 def _grow_one(a):                                                                             # рабочий пула: рост и сборка одной клетки против покрытия прошлых раундов (_GIX — снимок при fork)
     p, u, k = a; c = grow2(p, u, _GIX[US.index(u)], RMAX, TMAX)
@@ -675,6 +675,11 @@ class Atlas:
         I, IDX, W = s.stencils(Y); out = np.full(len(Y), BIG)
         if len(I): v = s.interp(W, s.V[IDX]); np.minimum.at(out, I, v)
         out[ingoal(Y)] = 0.; return out
+    def tgoalH(s, Y, u, H):
+        # GOALH (worker-32): время входа в цель при постоянном u на горизонте H (верхняя оценка V) — затравка у цели, чтобы квады вокруг цели не были все с BIG-вершинами
+        tg = np.full(len(Y), np.inf); y = Y; h = DTN / 4
+        for i in range(1, int(H / h + 1e-9) + 1): y = rk4(y, u, h, 1); tg = np.where(np.isinf(tg) & ingoal(y), h * i, tg)
+        return tg
     def tgoal(s, Y, u, n=8):
         tg = np.full(len(Y), np.inf); y = Y
         for i in range(1, n + 1): y = rk4(y, u, DTN / n, 1); tg = np.where(np.isinf(tg) & ingoal(y), DTN * i / n, tg)
@@ -684,7 +689,7 @@ class Atlas:
             sys.path.insert(0, os.path.expanduser('~/spore_v5/r18')); import solve_bucket as SB
             _t0 = time.time(); r = SB.solve_bucket(s, float(os.environ.get('SOLVEBD', 2 * DTN))); print('SOLVEB', r, 'вызов %.1f с' % (time.time() - _t0), flush=True); s.V = s.V_b; s.n_it = r['buckets']; s.edges = r['edges']; SOLVED.append(0.); return s
         E = []; Vg = np.full(s.N, np.inf)
-        for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u)))
+        for u in US: Vg = np.minimum(Vg, s.tgoal(s.P, u)); E.append(s.stencils(step(s.P, u))); Vg = np.minimum(Vg, s.tgoalH(s.P, u, GOALH)) if GOALH > 0 else Vg
         I = np.concatenate([e[0] for e in E]); IDX = np.concatenate([e[1] for e in E]); W = np.concatenate([e[2] for e in E]); o = np.argsort(I, kind='stable'); I, IDX, W = I[o], IDX[o], W[o]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg); dead = getattr(s, 'dead', np.zeros(s.N, bool)); V[dead] = BIG
         ea, eb, ec = [], [], []                                                               # research-16 NFEDGE: при NORMFRONT шаг DTN узла строки i не попадает в узел строки i+1 (угол строки i ещё BIG → интерполяция отравлена);
