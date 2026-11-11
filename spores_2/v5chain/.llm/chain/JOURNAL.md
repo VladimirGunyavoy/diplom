@@ -510,3 +510,4 @@ senior-1 | review | senior: Б-GPU подтверждена на 3 зёрнах 
 senior-1 | decision | senior: дрон — запрос 13.7 → 1.06 с (numba-ядро refine), pad .05; no_path старта 3 — топология кандидатов сквозь круг; решение: зонд NF/NB ×4–8 (≤ 30 мин), основной путь — рост деревьев с проверкой зазора на рёбрах | 10:59:52
 hub-v5chain-worker-b18 | done | ctx 28% (софт 30%) | Б-GPU результат, TIGHT=старт в диске, дрон numba ×12; дальше (б) рост с отбрасыванием рёбер | next=hub-v5chain-worker-b19 | 11:01:36
 hub-v5chain-worker-b19 | started | acc? | sonnet | 11:02:41
+hub-v5chain-worker-b18 | next-launched | hub-v5chain-worker-b19 (acc2) | 11:02:56
