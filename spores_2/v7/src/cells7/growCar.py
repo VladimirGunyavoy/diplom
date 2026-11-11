@@ -174,9 +174,24 @@ class HexIdx:
             for dd_ in itertools.product(*[range(a + 1) for a in sp]):
                 dd_ = np.array(dd_); k = ((i0 + dd_) <= i1).all(1)
                 if k.any(): Ks.append(s._key(i0[k] + dd_)); Vs.append(hv[k] * KSH + si)
+        if getattr(s, 'collect', None) is not None:                                                                  # PIDX (b12, порт из growN): слой в процессе — пары (ключ бина, значение) копятся списком
+            if Ks: s.collect.append((np.concatenate(Ks), np.concatenate(Vs)))
+            return
         if not Ks: return
         K = np.concatenate(Ks); V = np.concatenate(Vs); o = np.argsort(K, kind='stable'); K, V = K[o], V[o]; uk, st = np.unique(K, return_index=True); st = np.r_[st, len(K)]
         for k_, a_, b_ in zip(uk.tolist(), st[:-1], st[1:]): s.bins.setdefault(k_, []).append(V[a_:b_])
+    def add_layers_par(s, layers):
+        """PIDX=1 (b12, SPD5; нужен QFAST): индекс слоёв строится в процессах (fork), результат склеивается и сразу в CSR (словарь бинов не нужен); множество пар то же, порядок в бине — по hid."""
+        global _PIX
+        from multiprocessing import get_context
+        _PIX = layers
+        with get_context('fork').Pool(len(layers)) as pool: res = pool.map(_pix_work, range(len(layers)))
+        _PIX = None; H0 = 0; C0 = 0; Xs, Is, Ls, Hs, Ks, Vs = [], [], [], [], [], []
+        for X, I, LO, HI, R, K, V in res:
+            I = I.copy(); I[:, 0] += C0; Xs.append(X); Is.append(I); Ls.append(LO); Hs.append(HI); s.R += R; Ks.append(K); Vs.append(V + H0 * KSH); H0 += len(X); C0 += len(R)
+        s.X = np.concatenate(Xs); s.I = np.concatenate(Is); s.LO = np.concatenate(Ls); s.HI = np.concatenate(Hs); s.n = len(s.X); s.cap = s.n; s.nc = C0
+        K = np.concatenate(Ks); V = np.concatenate(Vs); o = np.argsort(K, kind='stable'); K, V = K[o], V[o]; uk, st = np.unique(K, return_index=True); ln = np.diff(np.r_[st, len(K)])
+        s._csr = ((s.n, len(s.bins)), uk, ln.astype(np.int64), np.r_[0, np.cumsum(ln)], V)
     @staticmethod
     def _key(ib):
         key = np.zeros(len(ib), np.int64)
@@ -401,11 +416,17 @@ def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
     k = int(E('SPAR', 0))
-    if k <= 1 or len(Y) < 50000: return _dedup(*(qx.query_fast(Y) if int(E('QFAST', 0)) else qx.query(Y)))     # QFAST=1 (b11): CSR бинов без Python-цикла, порт из growN
+    if k <= 1 or len(Y) < 50000: return _dedup(*(qx.query_fast(Y) if (int(E('QFAST', 0)) or int(E('PIDX', 0))) else qx.query(Y)))     # QFAST=1 (b11): CSR бинов без Python-цикла, порт из growN
     from multiprocessing import Pool
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
     return np.concatenate([r[0] + r[3] for r in R]), np.concatenate([r[1] for r in R]), np.concatenate([r[2] for r in R])
+_PIX = None
+def _pix_work(i):
+    h = HexIdx(); h.collect = []
+    for c in _PIX[i]: h.add(c)
+    K = np.concatenate([k for k, _ in h.collect]) if h.collect else np.zeros(0, np.int64); V = np.concatenate([v for _, v in h.collect]) if h.collect else np.zeros(0, np.int64)
+    return h.X[:h.n], h.I[:h.n], h.LO[:h.n], h.HI[:h.n], h.R, K, V
 TM = collections.Counter()   # w35: время стадий подготовки solve (с)
 class Atlas:
     def __init__(s, seed=0, log=None):
@@ -423,7 +444,9 @@ class Atlas:
         _t0 = time.time()
         if not hasattr(s, 'qx'):
             s.qx = HexIdx()
-            for c in s.cells: s.qx.add(c)
+            if int(E('PIDX', 0)): s.qx.add_layers_par(s.layers)
+            else:
+                for c in s.cells: s.qx.add(c)
             s.O = np.array([c.o for c in s.cells])
         TM['индекс слоёв (add)'] += time.time() - _t0; _t1 = time.time()
         Y = wrapy(Y); pi, hid, sc = _pquery(s.qx, Y); TM['query (бины+_test)'] += time.time() - _t1; _t2 = time.time()
