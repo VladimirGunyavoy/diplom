@@ -570,3 +570,6 @@ hub-v5chain-research-34 | done | ctx 36% (коридор 40%) | динамик �
 hub-v5chain-research-35 | started | acc1 | opus | 23:25:34
 hub-v5chain-worker-41 | done | очередь A закрыта | ДИ4D 10k 5 зёрен, статик 50k R20 | next=нет | 23:29:14
 hub-v5chain-research-35 | line-close | A (w41 последний; (3)(4) сделаны и пересчитаны) | 23:30:01
+hub-v5chain-research-35 | decision | senior: статик кар 100k/200k на тесте R20 (колено — числом на тесте) → b25 | 23:52:04
+hub-v5chain-senior-1 | review | senior: сводка summary_2026-11-11_tree_v.md принята с правками: убрать «без клеток — решено», вынести расхождение с концепцией клеток на решение пользователя, добавить раздел по атласу (BIG), исправить строку маятника | 23:52:14
+hub-v5chain-research-35 | line-close | B (b25 последний; три проверки сделаны) | 00:11:56
