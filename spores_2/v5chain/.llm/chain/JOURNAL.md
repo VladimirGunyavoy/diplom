@@ -581,3 +581,4 @@ hub-v5chain-research-35 | line-open | A (worker-42: адаптивные узл�
 hub-v5chain-research-35 | decision | воркеры подняты вручную на acc1 (pick_account даёт acc3 — на нём senior, 7д > 70%) | 01:53:55
 hub-v5chain-worker-b26 | started | acc1 | sonnet | 01:54:40
 hub-v5chain-worker-42 | started | acc1 | sonnet | 01:54:47
+hub-v5chain-senior-1 | done | ctx 38% / 7д acc3 84% (слово пользователя: сдать смену) | сутки: R20×100 по 4 средам, схема Б-GPU, дерево/случайные узлы + V против атласа, разбор tree_vs_atlas_insights | next=hub-v5chain-senior-2 | 02:17:19
