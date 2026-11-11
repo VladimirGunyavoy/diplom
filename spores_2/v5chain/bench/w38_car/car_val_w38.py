@@ -106,6 +106,12 @@ def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
         if d < 1e-4: break
     return W, it, d
 
+
+def kv_auto(S, tree, P, W, k=9, q=.9):
+    """квантиль q локальной Липшица V по рёбрам графа узлов (kNN в метрике S.scale): |W_i-W_j|/d_ij"""
+    dd, jj = tree.query(S.wrap(P) / S.scale, k=k, workers=-1); jj = jj % len(P); i = np.arange(len(P))[:, None]
+    m = (dd > 1e-9) & (W[:, None] < 1e2) & (W[jj] < 1e2); r = np.abs(W[:, None] - W[jj])[m] / dd[m]; return float(np.quantile(r, q))
+
 class Agent:
     def __init__(self, S, back):
         from scipy.spatial import cKDTree
@@ -114,7 +120,7 @@ class Agent:
         Ew = S.wrap(E.reshape(-1, 4)); d, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=-1)
         J = (j % self.nP).astype(np.int32); D = d.astype(np.float64); t2 = time.perf_counter()
         self.W, it, dres = vit(J, D, OK, GL, in_goal(self.P), self.nP, TAU, KV, int(os.environ.get('NIT', 300)), 1e3); t3 = time.perf_counter(); self.tvi = t3 - t2 + (t2 - t1) + (t1 - t0)
-        fin = self.W < 1e2
+        fin = self.W < 1e2; self.kva = kv_auto(S, self.tree, self.P, self.W); print('  KV_auto (q.9 Липшица V по kNN-рёбрам) = %.3f при KV=%g' % (self.kva, KV), flush=True)
         print('  узлов %d: edges %.1f, knn %.1f, vi %.1f с (it %d res %.1e); W конечных %.1f%%, мед %.2f макс %.2f; G дерева мед %.2f' % (self.nP, t1 - t0, t2 - t1, t3 - t2, it, dres, 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max(), np.median(back[1])), flush=True)
     def act(self, x0):
         best, bs, mxc, ms = 1e9, -1, -1e9, 0
