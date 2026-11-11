@@ -482,7 +482,7 @@ class Atlas:
             SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
             if SBC or SMEAN: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
             for ui, u in enumerate(US):
-                Vg = np.minimum(Vg, s.tgoal(s.P, u)); a, b, c_ = s.stencils(step(s.P, u)); print('stencils built for u =', u, flush=True)
+                _tg = time.time(); Vg = np.minimum(Vg, s.tgoal(s.P, u)); TM['tgoal'] += time.time() - _tg; _tg = time.time(); _Ys = step(s.P, u); TM['step (узлы→образы)'] += time.time() - _tg; a, b, c_ = s.stencils(_Ys); print('stencils built for u =', u, flush=True)
                 if SBC:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
                     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
