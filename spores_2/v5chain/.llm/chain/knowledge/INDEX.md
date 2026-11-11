@@ -90,3 +90,4 @@
 - [research/multi_control_cell.md](research/multi_control_cell.md) — клетка на все управления: число слоёв L — главный множитель; Д1 (доля «работающих» клеток слоя), В3 один атлас по оптимальной политике, В2 модель по u в клетке, В1 воронка (гипотезы, research-29)
 - [research/lit_multi_control_cell.md](research/lit_multi_control_cell.md) — литература к клетке на все u: SL-HJB min по u в узле, TSA, режимы/explicit MPC, n≳ε^{-d/2}, SIPP/chance-constrained (searcher-3)
 - research/car_ref_arcs.md — статик кар: эталон 45% времени на v=v_max (a=1.25, нет такого слоя), край дисков ~2%, |ω|=WM ~3% (research-30)
+- [research/scheme_b_label_setting.md](research/scheme_b_label_setting.md) — схема Б: однопроходной label-setting (Дейкстра с инкрементными суммами рёбер) пересчитывает V области 441k узлов за 0.87 с против GS 10 с, p90 смещения +.04 (+1 GS: +.007); по времени Б жива, решает p90 агента (research-31)
