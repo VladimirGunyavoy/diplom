@@ -93,7 +93,7 @@ def plan(G, A, x, tmax=40., VF=1.5):
 
 def closed_loop(G, A, x0, tmax=12.):
     """замкнутый контур на ИХ шаге: каждые .08 с — перепланировать от их текущего состояния (plan), применить u на середине шага .08. Возврат как their_replay"""
-    y = np.array(x0, float); n = 0; vs = 0; pen = 0.; ok = False; nf = 0; last = None
+    y = np.array(x0, float); n = 0; vs = 0; pen = 0.; ok = False; nf = 0; last = None; ntop = 0
     while n * DT < tmax:
         if np.linalg.norm(y[:2] - GOAL) <= GR: ok = True; break
         r = plan(G, A, y)
@@ -107,8 +107,8 @@ def closed_loop(G, A, x0, tmax=12.):
         for s_ in np.linspace(0, 1, 21)[1:]:
             q = y[:2] * (1 - s_) + yn[:2] * s_; pen = max(pen, -dclear(q), np.abs(q).max() - 5.)
         if dclear(yn[:2]) < 0 or np.abs(yn[:2]).max() > 5.: vs += 1
-        y = yn
-    return dict(ok=ok, T=n * DT if ok else None, viol_step=vs, viol_cont=float(max(pen, 0.)), steps=n, noplan=nf)
+        y = yn; ntop += int(y[3] >= 1.99)
+    return dict(ok=ok, T=n * DT if ok else None, viol_step=vs, viol_cont=float(max(pen, 0.)), steps=n, noplan=nf, v2_share=ntop / max(n, 1))
 
 _A = None; _G = None
 def _one(args):
