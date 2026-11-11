@@ -14,7 +14,7 @@ def clr(x, y):   # зазор среды (эллипс по их формуле,
     ce = -min(EA, EB) if rho < 1e-9 else (rho - 1) * np.hypot(EA * dx / (EA * rho), EB * dy / (EB * rho))
     return min(ce, np.hypot(x - CC[0], y - CC[1]) - CR)
 
-def starts(n=20, seed=0):
+def starts(n=int(os.environ.get('NSTARTS', 20)), seed=int(os.environ.get('STARTSEED', 0))):
     rng = np.random.default_rng(seed); S = []
     while len(S) < n:
         x, y = rng.uniform(-2.75, 2.75), rng.uniform(.2, 3.6)

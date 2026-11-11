@@ -6,6 +6,7 @@ import numpy as np, os, sys, json, time, itertools
 from tqdm import tqdm
 import finish_gen as FG
 E = os.environ.get
+CALIB = [] if E('CALIB') else None; CBL = []; CSEED = [0]; BENDSKIP = int(E('BENDSKIP', 0))
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1', 'race', 'race4') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
@@ -369,8 +370,12 @@ def _growN1(p, u, idx, rm, tm):
     def bend(klo, khi, ilo, ihi):
         n_ = [b - a + 1 for a, b in zip(klo, khi)]
         if max(n_) < 3: return 0.
+        if ihi - ilo < BENDSKIP: return 0.                                                                   # w34 (ENV4): при <BENDSKIP строках грамиан 2 входов ранга < 6 (λ≈1e-18) — W⁻¹-метрика даёт 1e2–1e3 на любом изгибе; критерий включаем с BENDSKIP строк
         Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Q = np.linalg.eigh(Wc); Wi = (Q / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30))) @ Q.T
         Pb = R[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d = Pb - mlin(Pb, n_)
+        if CALIB is not None:                                                                                  # w34: запись каждого вычисления критерия (+вклад мод W⁻¹ в точке максимума)
+            d2 = d.reshape(-1, N); z = d2 @ Q; q_ = z ** 2 / np.maximum(lam, 1e-12 * max(lam.max(), 1e-30)); tt = q_.sum(1); j = int(tt.argmax())
+            CBL.append(dict(seed=CSEED[0], bend=float(np.sqrt(tt[j])), rows=int(ihi - ilo), nmax=max(n_), lam=lam.tolist(), share=(q_[j] / tt[j]).tolist(), dom=[int(np.abs(Q[:, k]).argmax()) for k in range(N)]))
         return float(np.sqrt(np.max(np.einsum('...k,kl,...l->...', d, Wi, d))))
     klo = [k0 - 1] * m_; khi = [k0 + 1] * m_; ilo, ihi = 0, 0; dirs = [('a', k, sg) for k in range(m_) for sg in (1, -1)] + [('F',), ('B',)]; act = {d: True for d in dirs}; extra = {}
     def faceof(d, nk):
@@ -415,6 +420,10 @@ def _growN1(p, u, idx, rm, tm):
                 else: ilo = i
                 if d in extra: act[d] = False; STOP['tovh'] += 1
                 elif ((covget(IXR[(i - imin,) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))].reshape(-1)) if COVB else idx.covered(face)) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
+    if CALIB is not None and ihi - ilo >= 3:                                                              # w34 калибровка DELTA: критерий изгиба итоговой коробки + вклад мод W⁻¹ (по собственным векторам и компонентам состояния)
+        n_ = [b - a + 1 for a, b in zip(klo, khi)]; Wc = Wt[ihi] if ihi >= -ilo else Wt[ilo]; T_ = (ihi - ilo) * DTN; Wc = Wc * (T_ / max(max(ihi, -ilo) * DTN, 1e-9)); lam, Q = np.linalg.eigh(Wc); lam_ = np.maximum(lam, 1e-12 * max(lam.max(), 1e-30))
+        Pb = R[(slice(ilo - imin, ihi - imin + 1),) + tuple(slice(a, b + 1) for a, b in zip(klo, khi))]; d_ = (Pb - mlin(Pb, n_)).reshape(-1, N); z = d_ @ Q; q_ = (z ** 2 / lam_); tot = q_.sum(1); j = int(tot.argmax())
+        CALIB.append(dict(bend=float(np.sqrt(tot[j])), rows=int(ihi - ilo), n=n_, lam=lam.tolist(), mode_share=(q_[j] / tot[j]).tolist(), dom_state=[int(np.abs(Q[:, k]).argmax()) for k in range(N)], dmax=np.abs(d_).max(0).tolist()))
     r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
     cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.p = p.copy(); c.nf, c.nb = ihi, -ilo; return c
@@ -429,7 +438,7 @@ def goal_seeds(rng):
         k = rng.choice(N, p=ar); y = rng.uniform(-RHOV, RHOV); y[k] = rng.choice([-1., 1.]) * RHOV[k] * 1.05; out.append(wrapy(y + GC))
     return out
 def build_layer(u, rng, log=None):
-    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; nf = 0
+    cells = []; ovl = []; fails = 0; idx = HexIdx(); queue = goal_seeds(rng) if GS else []; queue = queue + [q_ for q_ in np.load(E('SEEDS'))['P']] if E('SEEDS') else queue; bar = tqdm(total=NFAIL, desc='layer u=%s' % (u,), mininterval=TQ, leave=False); ctr = (M // 2,) * m_; nf = 0
     while fails < NFAIL and len(cells) < MAXC:
         if len(cells) % 10 == 0: bar.n = fails; bar.set_postfix(cells=len(cells), queue=len(queue)); bar.refresh()
         if PREF and queue and nf == 0 and QMIX == 0:                                                            # SPD3 (b10): пакетный префильтр очереди — покрытые/вне поля/запрещённые/в цели затравки отбрасываются разом (покрытие только растёт ⇒ результат тот же, fails при непустой очереди не растут)
