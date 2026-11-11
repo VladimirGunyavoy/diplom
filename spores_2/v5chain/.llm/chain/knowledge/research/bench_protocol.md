@@ -48,6 +48,7 @@
 |---|---|---|
 | ДИ 2D, круг RHO .2 | v8 solve8 + агент commit (Q lin, слои 1/−1/0, M 5) — только чтение v8/src | T/эт мед 1.005–1.009, p90 1.02–1.05, рост 1.45 с, solve < .4 с, агент 8–10 мс (`v_kink_q.md`, `versions_compare.md`) |
 | маятник u .3 | v7 `grow_cells2d` MADAPT .001, LOOK 0 | 1.0089 при 237 клетках (`nf_curved_ends.md` п.5) |
+| маятник u .3 (★ с 2026-11-11, 5 сидов) | v7 `grow_cells2d` VARIANT 56, 2 слоя, DTN .12, MCAP 33, MADAPT .001 | узлы 34.8k (−61%), 6 с (×8), p90 1.0357 (+.5%), max 1.08 (`r30/seeds_pend.md`) |
 | дд-ромб 3D | v7 `grow3` + финиш VF | T/refbox 1.004, построение 93 с / всего 184 с (`v7/reports/grow3/results.md`) |
 | манип 4D | v7 growN g300 SONE VF2 PESS1 4×3000, GPU | 20/20, 1.056 / 1.090 / 1.50, build 280 с, solve 329 с, запрос 387 мс (`growN/results.md` п.45) |
 | потом: статик кар, дв. маятник dp1 | growCar c1600; growN SYS=dp1 | car 20/20 1.08, build 632 + solve 392 с (GPU), запрос .31 с |
