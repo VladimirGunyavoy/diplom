@@ -430,7 +430,7 @@ class Atlas:
     def solve(s, it=20000):
         if E('LOADE'): I = np.load(E('LOADE') + '_I.npy'); IDX = np.load(E('LOADE') + '_IDX.npy'); W = np.load(E('LOADE') + '_W.npy'); Vg = np.load(E('LOADE') + '_Vg.npy')   # b4: кеш рёбер (стенсилы строятся ~10 мин) — для отладки solve
         else:
-            I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf)
+            I_, IDX_, W_ = [], [], []; Vg = np.full(s.N, np.inf); AMN = int(E('ARGMIN', 0)); U_ = []
             SBC = int(E('SBCAUS', 0)); SBL = int(E('SBLAY', 0))                                                      # п.37 (research-21; r18/solve_bucket.py SBCAUS/SBLAY): свой u — точное ребро по столбцу клетки, переключение на u2 — стенсил только по клеткам слоя u2
             SMEAN = int(E('SMEAN', 0)); K_ = []; nst = 0                                                            # п.43 (research-22, r22/15): внутри группы (узел, u, слой приземления) — СРЕДНЕЕ по стенсилам, min — между группами (нужен SOLVEGPU)
             if SBC or SMEAN: cl_ = np.concatenate([[k] * len(l) for k, l in enumerate(s.layers)]); O_ = np.array([c.o for c in s.cells])
@@ -440,13 +440,14 @@ class Atlas:
                     nc_ = np.searchsorted(O_, a, 'right') - 1; vc_ = np.searchsorted(O_, b[:, 0], 'right') - 1
                     keep = np.where(cl_[nc_] == ui, vc_ != nc_, (cl_[vc_] == ui) if SBL else True); nst += int((~keep).sum()); a, b, c_ = a[keep], b[keep], c_[keep]
                 I_.append(a); IDX_.append(b.astype(np.int32 if s.N < 2 ** 31 else np.int64)); W_.append(c_)
+                if AMN: U_.append(np.full(len(a), ui, np.int8))   # w34: u каждого ребра — для argmin_u из последнего прохода GPU-solve
                 if SMEAN: K_.append(a.astype(np.int64) * 20 + ui * 4 + cl_[np.searchsorted(O_, b[:, 0], 'right') - 1])
             if SBC:
                 mm = M ** m_; ea = []
                 for c in s.cells: ea.append(c.o + np.arange((c.G.shape[0] - 1) * mm))
                 ea = np.concatenate(ea); ex = np.zeros((len(ea), 2 ** N), np.float32); ex[:, 0] = 1.; eI = np.zeros((len(ea), 2 ** N), np.int32 if s.N < 2 ** 31 else np.int64); eI[:] = (ea + mm)[:, None]
                 I_.append(ea); IDX_.append(eI); W_.append(ex); K_.append(ea.astype(np.int64) * 20 + 19) if SMEAN else None; print('SBCAUS: убрано стенсилов', nst, '| точных рёбер по столбцам', len(ea), flush=True)
-            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
+            I = np.concatenate(I_); del I_; IDX = np.concatenate(IDX_); del IDX_; W = np.concatenate(W_); del W_; o = np.argsort(I, kind='stable'); I = I[o]; IDX = IDX[o]; W = W[o]; UU = np.concatenate(U_)[o] if AMN else None; K = np.concatenate(K_)[o] if SMEAN else None; del o   # b3: по одному, с освобождением (4u × 20M пар × 16 вершин не помещались)
             if E('SAVEE'): [np.save(E('SAVEE') + k_, v_) for k_, v_ in (('_I.npy', I), ('_IDX.npy', IDX), ('_W.npy', W), ('_Vg.npy', Vg))]
         st = np.flatnonzero(np.r_[True, I[1:] != I[:-1]]); nd = I[st]; V = np.minimum(s.V, Vg)
         if int(E('SOLVEGPU', 0)):                                                                   # п.39 (research-22, r22/05_di4_gpu_jacobi/gpu.py): тот же Якоби на GPU (torch float64, чанки, scatter_reduce amin); torch нет — старый путь
@@ -472,6 +473,13 @@ class Atlas:
                     if SMEAN: new.scatter_reduce_(0, gGN, torch.where(cg > 0, sg / cg.clamp_min(1), torch.full_like(sg, BIG)), 'amin'); new = torch.minimum(new, Vgt)
                     new[goal] = 0.; d = float((new - Vt).abs().max()); Vt = new; n += 1; bar.update(1)
                     if d < 1e-9: break
+                if AMN:                                                                                  # w34: один проход по рёбрам при сошедшемся V: u ребра, достигающего V узла (мин. номер при равенстве)
+                    am_ = torch.full((s.N,), 127, dtype=torch.int8, device=dev); gU = torch.as_tensor(UU)
+                    for a in range(0, len(gI), ch):
+                        vi = Vt[gX[a:a + ch].to(dev).long()]; w_ = gW[a:a + ch].to(dev).double(); ok = vi < BIG / 2; w = w_ * ok; sm = w.sum(1); mx = torch.where(ok, vi, torch.full_like(vi, -float('inf'))).max(1).values
+                        v = (w * torch.where(ok, vi, torch.zeros_like(vi))).sum(1) + torch.nan_to_num((1 - sm) * (mx + pe), nan=0., posinf=0., neginf=0.); v[sm < WTHR] = BIG
+                        hit = (DTN + v) <= Vt[gI[a:a + ch]] + 1e-7; ia = gI[a:a + ch][hit]; am_.scatter_reduce_(0, ia, gU[a:a + ch].to(dev)[hit], 'amin')
+                    s.amin_u = am_.cpu().numpy()
                 s.V = Vt.cpu().numpy(); s.n_it = n; s.edges = len(I); print('SOLVEGPU: проходов', n, flush=True); return s
         if int(E('SOLVEB', 0)):                                                                    # п.33 (research-21, прототип r18/solve_bucket.py; b4): вёдра V — узлы в порядке V, пересчёт только рёбер владельцев, чей вход изменился (коррекция меток, та же неподвижная точка)
             Nn = s.N; G_ = len(st); stE = np.r_[st, len(I)]; gpos = np.full(Nn, -1, np.int64); gpos[nd] = np.arange(G_); ch = 1 << 20; g_ = np.unique(np.r_[np.searchsorted(st, np.arange(0, len(I), ch)), G_]); keys = []; SBSELF = int(E('SBSELF', 1)); SBTOL = float(E('SBTOL', 1e-4)); Cc = np.full(len(I), DTN); nself = 0

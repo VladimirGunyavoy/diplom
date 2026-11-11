@@ -1,0 +1,1 @@
+{"nodes_full": 2638251, "t_solve_full": 163.5044252872467, "it_full": 169, "t_prune_select": 0.06122136116027832, "agree_keep": 0.9835416666666666, "corr_own": 0.9394140509604645, "cells_kept": 5508, "nodes_kept": 1633608, "t_solve_warm": 237.24066376686096, "it_warm": 921, "t_solve_cold": 69.5540337562561, "it_cold": 168, "maxdiff_warm_cold": 3.7155495170938693}
