@@ -374,7 +374,7 @@ def _grow2_gen(p, u, idx, rm, tm, state=None):
     c = Cell(p + n * (S[klo] + S[khi]) / 2, u, (S[khi] - S[klo]) / 2 / (1 + HALO)); c.n = n; c.nf, c.nb = ihi, -ilo; c.p0 = p; c.off = (S[klo] + S[khi]) / 2; c.why = why; c.nmax = (imin, imax, ilo, ihi)
     if MADAPT > 0:                                                                            # research-19 (идея пользователя): число клонов-узлов клетки адаптивно — удваивать (5 → 9 → 17 → 33), пока ломаная торца по m узлам отходит от строки мелкой сетки больше MADAPT (в любой строке клетки)
         Sx = S[klo:khi + 1]
-        for m_ in (5, 9, 17, 33):
+        for m_ in tuple(x for x in (5, 9, 17, 33) if x <= int(os.environ.get('MCAP', 33))):   # BIG (worker-31): MCAP — потолок числа клонов
             sn_ = np.linspace(Sx[0], Sx[-1], m_); dev = 0.
             for i in range(ilo, ihi + 1):
                 R_ = rows[i][klo:khi + 1]; dev = max(dev, float(np.hypot(R_[:, 0] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 0])), R_[:, 1] - np.interp(Sx, sn_, np.interp(sn_, Sx, R_[:, 1]))).max()))
