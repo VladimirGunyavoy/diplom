@@ -33,7 +33,7 @@ def run_spores(K):
     import manip3d_dyn as M3, refine_ca, tree_fast
     from src.atlas6.adaptive_nd import SysN, build_back
     from src.atlas6.corridor_nd import corridor_query
-    tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = 12000, int(os.environ.get('NFM', 1000)), 3
+    FB = (int(os.environ['FBNF']), int(os.environ.get('FBK', 3))) if os.environ.get('FBNF') else None; tau, Rq, Rw, WM, rho = .4, .3, .6, 3., .15; NB, NF, KK = 12000, int(os.environ.get('NFM', 1000)), 3
     CAR = refine_ca.install('m3d', ms=10, maxit=60, prebuild=range(1, 14), wl=False); tree_fast.install(); flow_all = tree_fast.make_flow_all('m3d', M3.US); fl = lambda P, s, t: M3.flow(P, s, t, dt_max=.05)
     res = []; Tr = transitions(K)
     for k, (st, gl) in enumerate(Tr):
@@ -45,7 +45,7 @@ def run_spores(K):
         for _ in range(32): v = rng.uniform(-1, 1, 6); v = v / np.max(np.abs(v)) * 0.99; seeds.append(C3 + v * np.array([Rq, Rq, Rq, Rw, Rw, Rw]))
         S = SysN(fl, 8, (PI, PI, PI, WM, WM, WM), ing, seeds, per=(2 * PI, 2 * PI, 2 * PI, 0, 0, 0), ok=lambda p: np.max(np.abs(p[3:])) <= WM); S.flow_all = flow_all
         back = build_back(S, tau, NB, rho); tb = time.perf_counter() - t0; t1 = time.perf_counter()
-        b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=3, kn=8, neigh=0)
+        b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=3, kn=8, neigh=0, **({'fb': FB} if FB else {}))   # b20: FBNF=N — запас no_path (выкл. по умолчанию)
         if b is None:                                            # откат на штатный SLSQP-refine (редко; время входит в запрос)
             from src.atlas6 import corridor_nd as _C; _C.refine = CAR.orig
             try: b = corridor_query(S, fl, e.X0[0], back, tau, NF, rho, g, miss, K=KK, tries=3, kn=8, neigh=0)
