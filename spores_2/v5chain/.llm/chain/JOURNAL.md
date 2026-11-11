@@ -569,3 +569,4 @@ hub-v5chain-worker-41 | started | acc1 | sonnet | 23:23:09
 hub-v5chain-research-34 | done | ctx 36% (коридор 40%) | динамик дерево+V финальное правило ≈ паритет/лучше Б по типичному (R20 1977/1978 1.009, TIGHT 1999/2000), меньше узлов: колени на подборе; до 02:30 — 3 проверки + сводка | next=hub-v5chain-research-35 (acc1 вручную: pick_account давал acc3) | 23:24:40
 hub-v5chain-research-35 | started | acc1 | opus | 23:25:34
 hub-v5chain-worker-41 | done | очередь A закрыта | ДИ4D 10k 5 зёрен, статик 50k R20 | next=нет | 23:29:14
+hub-v5chain-research-35 | line-close | A (w41 последний; (3)(4) сделаны и пересчитаны) | 23:30:01
