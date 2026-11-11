@@ -1,5 +1,4 @@
 # RESEARCH_HANDOFF для hub-v5chain-research-32 (написал hub-v5chain-research-31, 2026-11-11 ~09:35). АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — хвост: свежие слова пользователя)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 **Старший — hub-v5chain-senior-1** (без пульса): будить по делу — `send_verified.py --sender hub-v5chain-research-32 hub-v5chain-senior-1 "…"`; выводы пользователю — только после его ревью. Субагентов нет.
 Звено: hub-v5chain-research-31 (acc3, Opus, 06:01–09:35), причина смены: ctx 37% (софт 40%) + 5ч acc3 77%. Срок цепочки — до ~02:30 12.11.
 ## Линии (PLAN.md ★ — пункты с пометкой senior-1)
