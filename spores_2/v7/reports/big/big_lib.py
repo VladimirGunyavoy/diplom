@@ -1,8 +1,8 @@
 """BIG: общие функции стенда маятника u .3 (строка «по T», VARIANT=56). Импорт из bench/ на aida: sys.path.insert(0,'.'); import big_lib.
 make_atlas() -> Atlas; sub(A, keep_idx) -> Atlas из подмножества клеток (finish+solve отдельно); evalA(A) -> dict (дошли, T/T_ref)."""
 import os, sys, copy, time
-os.environ.setdefault('VARIANT', '56'); os.environ.setdefault('GOALH', '2');   # GOALH=2 по умолчанию в скриптах BIG (слово research-30, защита связи цели)
- sys.path.insert(0, os.getcwd())
+os.environ.setdefault('VARIANT', '56');
+sys.path.insert(0, os.getcwd())
 import spores_pend as SP
 import numpy as np, common
 G = SP.G; e = common.make('pend'); Q = e.X0
@@ -20,7 +20,13 @@ def evalA(A, per=False):
         T, rec = SP.rollout_rec(A, Q[i:i+1]); us = [[r[0][0]] for r in rec if r[2][0]]; dts = [float(r[1][0]) for r in rec if r[2][0]]
         Tv, why = common.verify(e, Q[i], us, dts); Ts.append(Tv)
     s = common.summarize(e, Ts); s['T'] = [None if (t is None or not np.isfinite(t)) else float(t) for t in Ts]; return s
-def solve(A): t = time.perf_counter(); A.solve(); return time.perf_counter() - t
+def solve(A, thr=.5):
+    """solve + авто-страховка (слово research-30): если доля узлов с V<BIG < thr — пересчёт с GOALH=2 (затравка V у цели), пометка в лог и в A.goalh_used."""
+    t = time.perf_counter(); A.solve(); A.goalh_used = False; fin = float((A.V < G.BIG / 2).mean())
+    if fin < thr and G.GOALH <= 0:
+        print('GOALH-СТРАХОВКА СРАБОТАЛА: V<BIG %.1f%% < %.0f%% -> пересчёт с GOALH=2' % (100 * fin, 100 * thr), flush=True)
+        G.GOALH = 2.; A.V = np.full(A.N, G.BIG); A.V[A.goal] = 0.; A.solve(); G.GOALH = 0.; A.goalh_used = True
+    return time.perf_counter() - t
 def eval100(A):
     """100 внутренних стартов (starts_ref: rng(0), 100 точек, отфильтрованы по эталону pend_ref_T) — как status.json r18: T агента (rollout) / T_ref. mean/med/p90/max, дошли."""
     Qs, ref = G.starts_ref(); T, sw, path = A.rollout(Qs); ok = np.isfinite(T); r = T[ok] / ref[ok]
