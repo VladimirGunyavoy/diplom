@@ -25,6 +25,23 @@ for it in range(NIT):
     dl = np.abs(Vn - V).max(); V = Vn
     if dl < 1e-3: break
 t2 = time.perf_counter(); print('V: рёбра %.1f с, vi %.1f с (it %d, d %.1e); V мед %.2f макс(<60) %.2f; доля узлов V>=60: %.3f' % (t1 - t0, t2 - t1, it, dl, np.median(V), V[V < 60].max(), (V >= 60).mean()), flush=True)
+G5 = int(os.environ.get('G5', 0)); KV2 = float(os.environ.get('KV2', 1.)); KV1 = float(os.environ.get('KV1', 0.)); NG = int(os.environ.get('NG', 12)); TD = tree.data
+GR = np.zeros((nP, 6))
+if G5:
+    _dn, _jn = tree.query(Pb / S.scale, k=NG + 1, workers=-1); _jr = _jn[:, 1:]; DLn = TD[_jr] - (Pb / S.scale)[:, None, :]   # (nP,NG,6)
+    _AtA = np.einsum('nkd,nke->nde', DLn, DLn) + 1e-3 * np.eye(6); PINV = np.linalg.solve(_AtA, np.transpose(DLn, (0, 2, 1)))   # (nP,6,NG)
+    def grads(V_): Vn_ = np.minimum(V_[_jr % nP], 60.); return np.clip(np.einsum('ndk,nk->nd', PINV, Vn_ - np.minimum(V_, 60.)[:, None]), -G5CL, G5CL)
+    G5CL = float(os.environ.get('G5CL', 30.))
+    Ewf = np.array(Qw) / S.scale; DLe = Ewf[:, None, :] - TD[j]   # рёбра: Δ до KNN-узлов (nE,k,6)
+    for it2 in range(int(os.environ.get('NIT2', 40))):
+        GR = grads(V); Vq = np.min(V[J] + np.einsum('ekd,ekd->ek', GR[J], DLe) + KV2 * np.sum(DLe ** 2, -1) + KV1 * np.sqrt(np.sum(DLe ** 2, -1)), axis=1).reshape(nP, 4); Vq = np.maximum(np.where(GQ, 0., Vq), 0.)
+        c = np.where(VAL, H + Vq, 1e3); Vn = np.minimum(c.min(1), 60.); Vn[ING] = 0.; dl = np.abs(Vn - V).max(); V = Vn
+        if dl < 1e-3: break
+    GR = grads(V); print('G5: it2 %d d %.1e |g| мед %.2f' % (it2, dl, np.median(np.linalg.norm(GR, axis=1))), flush=True)
+def VH(Xw):
+    d_, j_ = tree.query(Xw / S.scale, k=KN * 3); jm = j_ % nP
+    if not G5: return np.min(V[jm] + KV * d_, axis=1)
+    dl_ = (Xw / S.scale)[:, None, :] - TD[j_]; return np.maximum(np.min(V[jm] + np.einsum('nkd,nkd->nk', GR[jm], dl_) + KV2 * np.sum(dl_ ** 2, -1) + KV1 * np.sqrt(np.sum(dl_ ** 2, -1)), axis=1), 0.)
 UP = D.US_
 DEP = int(os.environ.get('DEP', 3)); BEAM = int(os.environ.get('BEAM', 0)); NS = int(round(H / .02)); PADA = D.PAD + MARG
 def step_all(X, a):   # X (n,6) -> Xn (n,6), ok (n,) : шаг H слоем a, зазор в NS Эйлер-точках
@@ -48,9 +65,9 @@ def agent(x0, tmax=40.):
             if not Xs: break
             X = np.vstack(Xs); root = np.concatenate(Rs)
             if BEAM and len(X) > BEAM:
-                _d, _j = tree.query(S.wrap(X) / S.scale, k=KN * 3); _v = np.min(V[_j % nP] + KV * _d, axis=1); _k = np.argpartition(_v, BEAM)[:BEAM]; X = X[_k]; root = root[_k]
+                _v = VH(S.wrap(X)); _k = np.argpartition(_v, BEAM)[:BEAM]; X = X[_k]; root = root[_k]
         else:
-            Vh = np.min(V[(tree.query(S.wrap(X) / S.scale, k=KN * 3)[1]) % nP] + KV * tree.query(S.wrap(X) / S.scale, k=KN * 3)[0], axis=1) + DEP * H
+            Vh = VH(S.wrap(X)) + DEP * H
             for ri in np.unique(root): best[ri] = min(best.get(ri, 1e9), float(Vh[root == ri].min()))
         lat.append(time.perf_counter() - ta)
         if not best: why = 'stuck'; break
@@ -61,7 +78,7 @@ def agent(x0, tmax=40.):
     return seq, dts, why, lat
 res = []; ST = int(os.environ.get('SEED', 0))
 for i in range(len(X0)):
-    _d, _j = tree.query(S.wrap(X0[i][None]) / S.scale, k=KN * 3); V0 = float(np.min(V[_j[0] % nP] + KV * _d[0]))
+    V0 = float(VH(S.wrap(X0[i][None]))[0])
     if os.environ.get('VONLY'): res.append(dict(i=i, V0=V0, T=None, why='vonly', touch=False, ms=0., ms_max=0., nseg=0)); continue
     seq, dts, why, lat = agent(X0[i]); tref = 0.
     if os.environ.get('REFINE') and seq and why == 'goal':
