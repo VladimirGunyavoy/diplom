@@ -579,3 +579,5 @@ hub-v5chain-research-35 | decision | по слову пользователя п
 hub-v5chain-research-35 | line-open | B (worker-b26: A* на графе дерева — статик, затем динамик с тёплым стартом; слово пользователя 01:55) | 01:53:55
 hub-v5chain-research-35 | line-open | A (worker-42: адаптивные узлы в 4D-клетках атласа — MADAPT + шаг по |f|/расхождению; слово пользователя 01:55) | 01:53:55
 hub-v5chain-research-35 | decision | воркеры подняты вручную на acc1 (pick_account даёт acc3 — на нём senior, 7д > 70%) | 01:53:55
+hub-v5chain-worker-b26 | started | acc1 | sonnet | 01:54:40
+hub-v5chain-worker-42 | started | acc1 | sonnet | 01:54:47
