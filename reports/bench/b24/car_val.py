@@ -86,7 +86,7 @@ def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
         if d < 1e-4: break
     return W, it, d
 
-TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); TIEP = float(os.environ.get('TIEP', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 5000))
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); TIEP = float(os.environ.get('TIEP', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 5000)); ESCDISP = float(os.environ.get('ESCDISP', .05))
 @nb.njit
 def expand(X, tau):
     n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
@@ -102,9 +102,10 @@ def tie_wq(ag, Q, ok, Wq):
     """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
     if TIE <= 0 or not ok.any(): return Wq
     w = Wq[ok]
-    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; return Wq   # b25: TIEP (c9)
+    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; ag.hp = []; return Wq   # b25: TIEP (c9)
     ag.ntie = getattr(ag, 'ntie', 0) + 1; ag.streak = getattr(ag, 'streak', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
-    if ESCN > 0 and ag.streak >= ESCN:   # b25: эскалация — луч ширины ESCB до глубины ESCD
+    ag.hp = (getattr(ag, 'hp', []) + [ag.xcur])[-ESCN:] if ESCN > 0 else []
+    if ESCN > 0 and ag.streak >= ESCN and len(ag.hp) >= ESCN and np.hypot(*(ag.hp[-1] - ag.hp[0])) < ESCDISP:   # b25: настоящее застревание — N шагов тай-брейка, смещение < ESCDISP   # b25: эскалация — луч ширины ESCB до глубины ESCD
         ag.nesc = getattr(ag, 'nesc', 0) + 1; Wl = None
         for lev in range(ESCD - 1):
             cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
@@ -132,6 +133,7 @@ class Agent:
         fin = self.W < 1e2
         print('  узлов %d: edges %.1f, knn %.1f, vi %.1f с (it %d res %.1e); W конечных %.1f%%, мед %.2f макс %.2f; G дерева мед %.2f' % (self.nP, t1 - t0, t2 - t1, t3 - t2, it, dres, 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max(), np.median(back[1])), flush=True)
     def act(self, x0):
+        self.xcur = np.asarray(x0, float)[:2]
         best, bs, mxc, ms = 1e9, -1, -1e9, 0
         Q = np.zeros((9, 4)); sc = np.full(9, 1e9); cl = np.zeros(9)
         for s in range(9):
@@ -168,7 +170,7 @@ def execute(x, y, th, v, a, w, dt, n):
         if hit < 0 and (x - GOAL[0]) ** 2 + (y - GOAL[1]) ** 2 <= GR ** 2: hit = (k + 1) * dt; break
     return x, y, th, v, mn, hit
 def episode(ag, x0, tmax=60.):
-    ag.streak = 0
+    ag.streak = 0; ag.hp = []
     ag.prev = None; x = np.array(x0, float); t = 0.; mn = 9.; tms = []
     while t < tmax:
         t1 = time.perf_counter(); s = ag.act(x); tms.append(time.perf_counter() - t1)

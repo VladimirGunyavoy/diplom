@@ -175,7 +175,7 @@ if GPU:
             k_vit[nbk, tpb](ag.dJ, ag.dD, ag.dOK, ag.dGL, ag.dING, dF, a, b, ag.nP, np.float32(TAU), np.float32(KV), np.float32(BIG), ag.dW0, np.float32(ag.lim)); a, b = b, a
             if it % 4 == 3 and np.abs(a.copy_to_host() - b.copy_to_host()).max() < tol: break
         ag.dWprev = a; return a.copy_to_host(), it
-TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); ESCN = int(os.environ.get('ESCN', 0)); TIEP = float(os.environ.get('TIEP', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 20000))
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); ESCN = int(os.environ.get('ESCN', 0)); TIEP = float(os.environ.get('TIEP', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 5000)); ESCDISP = float(os.environ.get('ESCDISP', .05))
 @nb.njit
 def expand(X, tau):
     n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
@@ -191,9 +191,10 @@ def tie_wq(ag, Q, ok, Wq):
     """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
     if TIE <= 0 or not ok.any(): return Wq
     w = Wq[ok]
-    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; return Wq   # b25: TIEP (c9) — нет спада V̂ вдоль лучшего действия
+    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; ag.hp = []; return Wq   # b25: TIEP (c9) — нет спада V̂ вдоль лучшего действия
     ag.ntie = getattr(ag, 'ntie', 0) + 1; ag.streak = getattr(ag, 'streak', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
-    if ESCN > 0 and ag.streak >= ESCN:   # b25: эскалация — луч шириной ESCB до глубины ESCD
+    ag.hp = (getattr(ag, 'hp', []) + [ag.xcur])[-ESCN:] if ESCN > 0 else []
+    if ESCN > 0 and ag.streak >= ESCN and len(ag.hp) >= ESCN and np.hypot(*(ag.hp[-1] - ag.hp[0])) < ESCDISP:   # b25: настоящее застревание — N шагов тай-брейка, смещение < ESCDISP   # b25: эскалация — луч шириной ESCB до глубины ESCD
         ag.nesc = getattr(ag, 'nesc', 0) + 1; Wl = None
         for lev in range(ESCD - 1):
             cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
@@ -247,6 +248,7 @@ class AgentDyn:
         else: self.W, self.nit = vit2(self.J, self.D, self.OK, self.GL, self.ING, FL, self.W0, self.nP, TAU, KV, NITD, BIG, 2e-3)
         self.tvi = time.perf_counter() - t0; self.nflag = int(FL.sum())
     def act(self, x, P0, Wv):
+        self.xcur = np.asarray(x, float)[:2]
         self.plan(x, P0, Wv); sc = np.full(9, 1e9); cl = np.zeros(9); Q = np.zeros((9, 4))
         for s in range(9):
             xe, ye, the, ve, mn, hit = cand(x[0], x[1], x[2], x[3], ACT[s, 0], ACT[s, 1], P0, Wv, KAPC, QC, SMAX, TAU, HB); cl[s] = mn; Q[s] = (xe, ye, the, ve)
@@ -291,7 +293,7 @@ def tail_main():
         dnear = lambda X: ag.tree.query(S.wrap(np.atleast_2d(X)) / S.scale, k=1)[0]
         ds = dnear(A[:100]); print('k=%d: d_near стартов (масштаб. ед.) мед %.3f p90 %.3f max %.3f' % (k, np.median(ds), np.percentile(ds, 90), ds.max()), flush=True)
         for i in want[k]:
-            x0 = A[i]; ag.streak = 0; nt0 = getattr(ag, "ntie", 0); T, mn, *_ = episode(ag, x0, H); tr = np.array(ag.last_traj); dt = dnear(tr); v = np.abs(tr[:, 3]); rest = float((v < .05).mean())
+            x0 = A[i]; ag.streak = 0; ag.hp = []; nt0 = getattr(ag, "ntie", 0); T, mn, *_ = episode(ag, x0, H); tr = np.array(ag.last_traj); dt = dnear(tr); v = np.abs(tr[:, 3]); rest = float((v < .05).mean())
             xy = tr[:, :2]; pl = float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum()); sd = float(np.linalg.norm(xy[0] - GOAL))
             dc = np.array([(np.linalg.norm(H.pos(j * TAU) - xy[j], axis=1) - HR).min() for j in range(len(xy))])
             typ = 'покой' if (T is None and rest > .5) or rest > .3 else ('таймаут' if T is None else ('объезд (путь/прямая %.1f, зазор до дисков мин %.2f)' % (pl / sd, dc.min()) if dc.min() < .45 else 'медленно (путь/прямая %.1f)' % (pl / sd)))
@@ -324,5 +326,5 @@ if __name__ == '__main__':
         ok = [r for r in res if r[1] is not None]; ratio = np.array([r[1] / r[2] for r in ok]); touch = sum(r[3] < 0 for r in res)
         print('DYN NB=%d KV=%g RB=%g TIE=%g DEP=%d [%s] диски k=%d: дошли %d/%d, касаний %d, T/T_ref мед %.3f p90 %.3f max %.3f, мс/шаг %.1f (VI %.1f, пометка %.1f, итераций %.0f), зазор мин %.3f, мс/эпизод %.0f, build %.1f с, макс.|clr0−ref| %.2e' % (
             NB, KV, RB, TIE, DEP, MODE, k, len(ok), len(res), touch, np.median(ratio), np.percentile(ratio, 90), ratio.max(), 1e3 * np.mean([r[4] for r in res]), 1e3 * np.mean([r[5] for r in res]), 1e3 * np.mean([r[8] for r in res]), np.mean([r[7] for r in res]), min(r[3] for r in res), 1e3 * np.mean([r[6] for r in res]), tb, dclr), flush=True)
-        print('   не дошли:', [r[0] for r in res if r[1] is None], ' T/Tref>1.5:', [(r[0], round(r[1] / r[2], 2)) for r in ok if r[1] / r[2] > 1.5], ' тай-брейков (накоп.): %d' % getattr(ag, 'ntie', 0), flush=True); out[k] = res
+        print('   не дошли:', [r[0] for r in res if r[1] is None], ' T/Tref>1.5:', [(r[0], round(r[1] / r[2], 2)) for r in ok if r[1] / r[2] > 1.5], ' тай-брейков (накоп.): %d, эскалаций %d' % (getattr(ag, 'ntie', 0), getattr(ag, 'nesc', 0)), flush=True); out[k] = res
         json.dump(out, open('car_dyn_%s_%d_%d_h%g_x%g_tie%g.json' % (MODE, K0, K1, HYST, HX, TIE), 'w'))
