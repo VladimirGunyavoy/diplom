@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np, numba as nb
 import canal_tree as CT
 from canal_tree import C, build_back, cands
-GAM = float(os.environ.get('GAM', .99)); KV = float(os.environ.get('KV', 1.0)); NIT = int(os.environ.get('NIT', 400)); G5 = GAM ** 5; FB = int(os.environ.get('FB', 0)); EXTRA = int(os.environ.get('EXTRA', 0)); XV = float(os.environ.get('XV', .6))
+GAM = float(os.environ.get('GAM', .99)); KV = float(os.environ.get('KV', 1.0)); NIT = int(os.environ.get('NIT', 400)); G5 = GAM ** 5; FB = int(os.environ.get('FB', 0)); EXTRA = int(os.environ.get('EXTRA', 0)); EDGE = int(os.environ.get('EDGE', 0)); EDEP = int(os.environ.get('EDEP', 6)); ECAP = int(os.environ.get('ECAP', 40000)); XV = float(os.environ.get('XV', .6))
 @nb.njit(parallel=True)
 def edges(P, ACTS, rmaxw, vmx):
     n = P.shape[0]; E = np.zeros((n, 9, 4)); RW = np.zeros((n, 9)); OK = np.zeros((n, 9), np.bool_)
@@ -44,6 +44,20 @@ def vit(J, D, RW, OK, nP, g5, kv, nit, vbad):
 class AgentV:
     def __init__(self, S, back, KN):
         self.S, self.tree, self.nP = S, back[5], len(back[0]); self.P = np.asarray(back[0]); self.KN = KN
+        if EDGE:   # (б) покой у края: узлы-покои (ρ∈[1.0,RMAXW], v=0, α по сетке) + прямое расширение рёбрами разгона (9 действий, EDEP шагов .1, дедуп по ячейкам дерева, ≤ECAP на уровень)
+            from src.atlas6.adaptive_nd import _images
+            from scipy.spatial import cKDTree
+            rng = np.random.default_rng(555); rr, aa = np.meshgrid(np.linspace(1.0, C.RMAXW, 6), np.linspace(0, 2 * np.pi, 96, endpoint=False), indexing='ij')
+            fr = np.column_stack([rr.ravel(), aa.ravel(), np.zeros(rr.size), np.zeros(rr.size)]); allx = [fr]; cell = np.array([.3 * s_ for s_ in S.scale]); seen = set(map(tuple, np.floor(S.wrap(fr) / cell).astype(int)))
+            for dp in range(EDEP):
+                E, RW_, OK_ = edges(fr, C.ACT, C.RMAXW, C.VMX); new = S.wrap(E[OK_]); k = np.floor(new / cell).astype(int); keep = []
+                for i, kk in enumerate(map(tuple, k)):
+                    if kk not in seen: seen.add(kk); keep.append(i)
+                new = new[keep]
+                if len(new) > ECAP: new = new[rng.choice(len(new), ECAP, replace=False)]
+                allx.append(new); fr = new
+            X = np.vstack(allx); print('  EDGE-узлов %d' % len(X), flush=True)
+            self.P = np.vstack([self.P, X]); self.nP = len(self.P); self.tree = cKDTree(_images(S, self.P) / S.scale)
         if EXTRA:   # стратифицированный досев малых скоростей: узлы — просто выборка пространства (итерация ценностей не требует происхождения узлов)
             from scipy.spatial import cKDTree
             from src.atlas6.adaptive_nd import _images
@@ -94,4 +108,4 @@ if __name__ == '__main__':
         ag = AgentV(S, back, KN); seeds = list(seeds_by[MODE]); rs = [episode2(env, ag, s) for s in seeds]; ret = np.array([r[0] for r in rs])
         print('GAM=%g KV=%g NB=%d K=%d ts=%d [%s]: return %.2f±%.2f cost %d обрывов %d нат.cost %g мин.зазор %.3f t_build %.1f с мс/шаг %.2f' % (GAM, KV, NB, KN, ts, MODE, ret.mean(), ret.std(), sum(r[1] for r in rs), sum(r[2] for r in rs), sum(r[5] for r in rs), min(r[4] for r in rs), tb, 1e3 * np.mean([r[3] for r in rs])), flush=True)
         out[ts] = dict(seeds=seeds, ret=ret.tolist(), cost=sum(r[1] for r in rs), term=sum(r[2] for r in rs), ncost=[r[5] for r in rs], margin=[r[4] for r in rs])
-    json.dump(out, open('canal_val_%s_%g_%g_fb%d_x%d_%s.json' % (MODE, GAM, KV, FB, EXTRA, os.environ.get('T0', '')), 'w'))
+    json.dump(out, open('canal_val_%s_%g_%g_fb%d_x%d_e%d_%s.json' % (MODE, GAM, KV, FB, EXTRA, EDGE, os.environ.get('T0', '')), 'w'))
