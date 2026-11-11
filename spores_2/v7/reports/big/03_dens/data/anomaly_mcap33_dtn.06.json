@@ -1,0 +1,38 @@
+{
+ "MCAP": "33",
+ "DTN": 0.06,
+ "cells": 114,
+ "nodes": 56293,
+ "goal_nodes": 37,
+ "goal_cells": [
+  [
+   45,
+   -0.3,
+   5,
+   29,
+   12
+  ],
+  [
+   74,
+   0.3,
+   5,
+   17,
+   21
+  ],
+  [
+   107,
+   0.3,
+   5,
+   10,
+   4
+  ]
+ ],
+ "V_finite_frac": 0.9780789796244649,
+ "n_it": 629,
+ "edges": 449116,
+ "starts_with_V_finite": 100,
+ "layer0_cells": 55,
+ "layer0_V_finite": 0.9810491425277418,
+ "layer1_cells": 59,
+ "layer1_V_finite": 0.9751901040754108
+}

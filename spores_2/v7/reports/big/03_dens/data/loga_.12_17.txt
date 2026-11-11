@@ -1,0 +1,3 @@
+layer u=-0.3 cells: 0cell [00:00, ?cell/s]layer u=-0.3 cells: 57cell [00:00, 72.44cell/s, fails=399, queue=0]
+layer u=+0.3 cells: 0cell [00:00, ?cell/s]layer u=+0.3 cells: 62cell [00:00, 71.51cell/s, fails=399, queue=0]
+value iteration:   0%|          | 0/20000 [00:00<?, ?it/s]                                                          {"MCAP": "17", "DTN": 0.12, "cells": 119, "nodes": 23122, "goal_nodes": 24, "goal_cells": [[1, -0.3, 17, 63, 3], [19, -0.3, 9, 15, 17], [57, 0.3, 17, 62, 2], [69, 0.3, 5, 14, 1], [70, 0.3, 5, 8, 1]], "V_finite_frac": 0.9631087276187181, "n_it": 284, "edges": 165261, "starts_with_V_finite": 100, "layer0_cells": 57, "layer0_V_finite": 0.9653257027436458, "layer1_cells": 62, "layer1_V_finite": 0.9607651245551602}
