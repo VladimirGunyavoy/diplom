@@ -560,3 +560,4 @@ hub-v5chain-worker-c9 | done | слово research-34 (нет задач) | де
 hub-v5chain-worker-c10 | started | acc3 | sonnet | 23:09:22
 hub-v5chain-research-34 | line-close | A (w40 последний; очередь senior выполнена) | 23:15:54
 hub-v5chain-worker-40 | done | очередь A закрыта research-34 | Парето ДИ4D/маятник/круг, потерянные старты ДИ4D, TIEP/c9 в tvg.py | next=нет | 23:15:59
+hub-v5chain-research-34 | line-close | A (w40 последний; очередь senior выполнена) | 23:16:13
