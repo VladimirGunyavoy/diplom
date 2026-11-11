@@ -6,14 +6,16 @@ import os, sys, json, time
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 K, AM, WM, VL, VH, XL = .625, 1.5, 1.8, -1., 2., 5.
-C0 = np.array([[0., .2], [1.8, 1.5], [-1.6, 2.3]]); HR = .70; GOAL = np.array([4., 3.6]); GR = .45; DT = .08; PERIOD_S = 180 * DT   # 14.4 с
+C0 = np.array([[0., .2], [1.8, 1.5], [-1.6, 2.3]])
+if int(os.environ.get('TIGHT', 0)): C0 = np.array([[-2.4, -2.4], [0., -2.4], [-2.4, 0.], [0., 0.], [2.4, 0.], [1.2, 2.4]])   # b16: «тесная» раскладка — 6 дисков, зазор между краями ~1 м
+HR = .70; GOAL = np.array([4., 3.6]); GR = .45; DT = .08; PERIOD_S = 180 * DT   # 14.4 с
 
 class Hazards:
     def __init__(s, mode='fixed', seed=0):
         rng = np.random.default_rng(seed); s.mode = mode
-        s.sgn = np.array([1., -1., 1.]); s.A = float(os.environ.get('AMP', 1.)) * .42 * s.sgn[:, None] * np.array([1., .65])[None]
-        s.phi = .35 + 2 * np.pi * np.arange(3) / 3
-        if mode == 'random': s.phi = rng.uniform(0, 2 * np.pi, 3); s.A = s.A * rng.uniform(.65, 1.2, (3, 1))
+        nD = len(C0); s.sgn = np.array([(1., -1.)[i % 2] for i in range(nD)]); s.A = float(os.environ.get('AMP', 1.)) * .42 * s.sgn[:, None] * np.array([1., .65])[None]
+        s.phi = .35 + 2 * np.pi * np.arange(nD) / nD
+        if mode == 'random': s.phi = rng.uniform(0, 2 * np.pi, nD); s.A = s.A * rng.uniform(.65, 1.2, (nD, 1))
     def pos(s, t):
         """центры дисков в момент t (с) — (3, 2); t может быть массивом → (len, 3, 2)"""
         t = np.asarray(t, float); ph = 2 * np.pi * (t / DT) / 180 * float(os.environ.get('FAST', 1.))
