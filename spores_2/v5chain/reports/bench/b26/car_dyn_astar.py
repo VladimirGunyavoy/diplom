@@ -46,15 +46,23 @@ class AgentDynA(cd.AgentDyn):
             if hit >= 0 and mn >= FM: sc[s] = hit
         ok = (cl >= FM) & (Q[:, 3] >= VL) & (Q[:, 3] <= VH)
         d0, j0 = self.tree.query(self.S.wrap(np.asarray(x, float)[None]) / self.S.scale, k=min(KN * 3, self.nP)); self.Wx = float(np.min(self.W[j0 % self.nP] + cd.KV * d0))
-        if (sc < 1e9).any(): self.plan_states = []; return int(np.argmin(sc))
-        if not ok.any(): self.plan_states = []; return int(np.argmax(cl))
+        if (sc < 1e9).any(): self.plan_acts = []; return int(np.argmin(sc))
+        if not ok.any(): self.plan_acts = []; return int(np.argmax(cl))
         hq = self.hh(Q); heap = []; best = {}; cnt = 0; leaf = {}
         for s in range(9):
             if not ok[s]: continue
-            kk = key(Q[s]); best[kk] = TAU; heapq.heappush(heap, (TAU + HW * hq[s], cnt, TAU, s, Q[s], ())); cnt += 1
+            kk = key(Q[s]); best[kk] = TAU; heapq.heappush(heap, (TAU + HW * hq[s], cnt, TAU, s, Q[s], (s,))); cnt += 1
         self.warm_used = 0
-        if WARMA and getattr(self, 'plan_states', None):   # тёплый старт: прошлый план, сдвинутый на шаг; состояния кладём с g=время от текущего момента, первое действие — по проверке первого шага
-            pass
+        self.warm_n = 0
+        pa = getattr(self, 'plan_acts', None)
+        if WARMA and pa and len(pa) > 1:   # тёплый старт: прошлый план без 1-го действия, по свежему прогнозу
+            cur = np.array([x], float); g = 0.; first = pa[1]
+            for a in pa[1:]:
+                out, okk, hit = expand_dyn(np.ascontiguousarray(cur), np.array([g]), np.ascontiguousarray(P0), np.ascontiguousarray(Wv), cd.KAPC, cd.QC, cd.SMAX, TAU, FM, HZN)
+                if not okk[a] or hit[a] >= 0 or not ok[first]: break
+                g += TAU; cur = out[a:a + 1]; kk = key(cur[0])
+                if best.get(kk, 1e18) <= g: continue
+                best[kk] = g; self.warm_n += 1; heapq.heappush(heap, (g + HW * float(self.hh(cur)[0]), cnt, g, first, cur[0].copy(), tuple(pa[1:1 + self.warm_n]))); cnt += 1
         while heap and self.nexp < LIM:
             batch = []
             while heap and len(batch) < BAT: batch.append(heapq.heappop(heap))
@@ -62,18 +70,21 @@ class AgentDynA(cd.AgentDyn):
             out, okk, hit = expand_dyn(X, G, np.ascontiguousarray(P0), np.ascontiguousarray(Wv), cd.KAPC, cd.QC, cd.SMAX, TAU, FM, HZN)
             hm = (hit >= 0) & okk
             if hm.any():
-                gg = np.where(hm, np.repeat(G, 9) + hit, 1e9); i = int(np.argmin(gg)); self.plan_states = []; return int(batch[i // 9][3])
+                gg = np.where(hm, np.repeat(G, 9) + hit, 1e9); i = int(np.argmin(gg)); self.plan_acts = list(batch[i // 9][5]) + [i % 9]; return int(batch[i // 9][3])
             idx = np.where(okk)[0]
             if len(idx) == 0: continue
             hh = self.hh(out[idx])
             for m, i in enumerate(idx):
                 b = batch[i // 9]; g = b[2] + TAU; kk = key(out[i])
                 if best.get(kk, 1e18) <= g: continue
-                best[kk] = g; heapq.heappush(heap, (g + HW * hh[m], cnt, g, b[3], out[i], ())); cnt += 1
-        self.nit = getattr(self, 'nit', 0)
+                best[kk] = g; heapq.heappush(heap, (g + HW * hh[m], cnt, g, b[3], out[i], b[5] + (int(idx[m] % 9),))); cnt += 1
+        self.nit = getattr(self, 'nit', 0); self.nw = getattr(self, 'nw', 0) + (self.warm_n > 0); self.ns = getattr(self, 'ns', 0) + 1
         if not heap: return int(np.argmin(np.where(ok, hq, 1e9)))
-        return int(min(heap)[3])
+        it_ = min(heap); self.plan_acts = list(it_[5]); return int(it_[3])
 
+_ep = cd.episode
+def _episode(ag, *a, **k): ag.plan_acts = []; return _ep(ag, *a, **k)
+cd.episode = _episode
 if __name__ == '__main__':
     cd.AgentDyn = AgentDynA
     src = open(cd.__file__).read(); body = src.split("if __name__ == '__main__':\n", 1)[1]
