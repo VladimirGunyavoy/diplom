@@ -8,6 +8,7 @@ from tqdm import tqdm
 import finish_gen as FG
 E = os.environ.get
 SYS = E('SYS', 'dd'); M = int(E('M', 5)); BIG = 1e3; HALO = .1; EPSJ = 1e-5; PI2 = 2 * np.pi
+RANIS = np.array([float(v) for v in str(E('RANIS', '1,1,1')).split(',')])   # анизотропия боковых осей клетки (порядок осей basis: по убыванию чувствительности потока; у кара последняя — боковой сдвиг ⟂ f): rm по оси k = RANIS[k]·rm
 DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'car') else 41))
 OVH = float(E('OVH', 2.)); FRAC = float(E('FRAC', .95)); RMIN = float(E('RMIN', .02)); MINROWS = int(E('MINROWS', 1)); GNEAR = float(E('GNEAR', .7)); NFAIL = int(E('NFAIL', 400)); QB = float(E('QB', .25))
 BEPS = float(E('BEPS', .01)); GOALB = int(E('GOALB', 1)); GLIM = float(E('GLIM', .25)); TQ = float(E('TQDM_MI', 10)); MAXC = int(E('MAXC', 10 ** 9)); GS = int(E('GS', 300 if SYS in ('manip', 'car') else 0)); PESS = float(E('PESS', -1)); WTHR = float(E('WTHR', .5)); VF = float(E('VF', 0.)); FTMAX = float(E('FTMAX', 2.5))   # VF > 0: финиш стрельбой ≤3 дуг (finish_gen, research-17) один раз на старт при V* ≤ VF
@@ -258,7 +259,7 @@ def mlin(Pb, n_):
 import collections; STOP = collections.Counter()                                                          # w22: причины остановки роста (STOPS=1 печатает по слою)
 def growN(p, u, idx, rm, tm):
     """клетка = ящик индексов; направление (ось k ±, F, B) растёт, пока: в поле, изгиб в эллипсоиде ≤ DELTA, не барьер; упёрлось в соседа (грань покрыта > FRAC) — добираем OVH·h и стоп."""
-    e = basis(p, u); S = np.linspace(-rm, rm, KF); k0 = KF // 2; nmax = int(tm / DTN + 1e-9); lat = np.stack(np.meshgrid(*([S] * m_), indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
+    e = basis(p, u); SS = [np.linspace(-rm * a_, rm * a_, KF) for a_ in RANIS]; k0 = KF // 2; nmax = int(tm / DTN + 1e-9); lat = np.stack(np.meshgrid(*SS, indexing='ij'), -1); base = p + lat @ e; rows = {0: base}; Wt = {0: np.zeros((N, N))}
     for sg in (1, -1):
         y = base; yc = p.copy(); W = np.zeros((N, N))
         for i in range(1, nmax + 1):
@@ -299,9 +300,9 @@ def growN(p, u, idx, rm, tm):
                 else: ilo = i
                 if d in extra: act[d] = False; STOP['tovh'] += 1
                 elif (idx.covered(face) | ~inbox_g(face)).mean() > FRAC: extra[d] = 1
-    r = np.array([(S[b] - S[a]) / 2 for a, b in zip(klo, khi)]); near = np.linalg.norm(wrapy(p)) < GNEAR
+    r = np.array([(SS[k][khi[k]] - SS[k][klo[k]]) / 2 for k in range(m_)]); near = np.linalg.norm(wrapy(p)) < GNEAR
     if ihi - ilo < (1 if near else MINROWS) or r.min() < (.02 if near else RMIN): return None
-    cen = p + sum(e[k] * (S[klo[k]] + S[khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
+    cen = p + sum(e[k] * (SS[k][klo[k]] + SS[k][khi[k]]) / 2 for k in range(m_)); c = Cell(cen, u, r / (1 + HALO), e); c.nf, c.nb = ihi, -ilo; return c
 def glimits(p, u):
     d = float(np.hypot(p[0] - GC[0], p[1] - GC[1]) + .05) if SYS == 'car' else float(np.linalg.norm(wrapy(p))); return float(np.clip(GLIM * d, .04, RMAX)), float(np.clip(2 * d, .3, TMAX))
 LIMITS = glimits if GLIM > 0 else None
