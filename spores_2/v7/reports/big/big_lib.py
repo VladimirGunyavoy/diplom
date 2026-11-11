@@ -1,7 +1,8 @@
 """BIG: общие функции стенда маятника u .3 (строка «по T», VARIANT=56). Импорт из bench/ на aida: sys.path.insert(0,'.'); import big_lib.
 make_atlas() -> Atlas; sub(A, keep_idx) -> Atlas из подмножества клеток (finish+solve отдельно); evalA(A) -> dict (дошли, T/T_ref)."""
 import os, sys, copy, time
-os.environ.setdefault('VARIANT', '56'); sys.path.insert(0, os.getcwd())
+os.environ.setdefault('VARIANT', '56'); os.environ.setdefault('GOALH', '2');   # GOALH=2 по умолчанию в скриптах BIG (слово research-30, защита связи цели)
+ sys.path.insert(0, os.getcwd())
 import spores_pend as SP
 import numpy as np, common
 G = SP.G; e = common.make('pend'); Q = e.X0
