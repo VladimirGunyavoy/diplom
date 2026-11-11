@@ -121,9 +121,13 @@ def _one(args):
 if __name__ == '__main__':
     import pickle, multiprocessing as mp, growCar as G, common
     import __main__, inspect
-    for nm, o in vars(G).items():
-        if inspect.isclass(o): setattr(__main__, nm, o)   # дамп сделан growCar как __main__
-    _G = G; d = pickle.load(open(os.path.expanduser(os.environ['LOAD']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; _A = A
+    if os.environ.get('BC'):                                   # BC1: объединённая V (4D + 3D поверхность v = 2); LOAD = слои 4D, BCL3 = слои 3D, BC = дамп V из bc1.py
+        import bc1; G = bc1.load_mod('growCar', 'car'); G3 = bc1.load_mod('growCarS', 'carsurf'); A4 = bc1.load_atlas(G, os.environ['LOAD']); A3 = bc1.load_atlas(G3, os.environ['BCL3']); Vb = pickle.load(open(os.path.expanduser(os.environ['BC']), 'rb'))['V']
+        A = bc1.BCAtlas(G, G3, A4, A3, Vb); _G = bc1.Shim(G); _A = A; A.layers = A4.layers; A.N = A4.N + A3.N
+    else:
+        for nm, o in vars(G).items():
+            if inspect.isclass(o): setattr(__main__, nm, o)   # дамп сделан growCar как __main__
+        _G = G; d = pickle.load(open(os.path.expanduser(os.environ['LOAD']), 'rb')); A = G.Atlas.__new__(G.Atlas); A.layers = d['layers']; A.finish(); A.V = d['V']; _A = A
     e = common.make('car'); X0 = e.X0; Tref = e.Tref
     t0 = time.perf_counter()
     with mp.get_context('fork').Pool(int(os.environ.get('NP', 20))) as p: res = p.map(_one, list(enumerate(X0)))
@@ -133,4 +137,4 @@ if __name__ == '__main__':
     S = dict(env='car2026', n=n, cells=[len(l) for l in A.layers], nodes=int(A.N), cont_nosat_reach=float(np.mean([r.get('cont_nosat', {}).get('ok', False) for r in res])), cont_reach=float(okc.mean()), cont_ratio_med=float(np.nanmedian(Tc / Tref)) if okc.any() else None,
              closed_reach=float(np.mean([bool(r.get('closed') and r['closed']['ok']) for r in res])), closed_clean=float(np.mean([bool(r.get('closed') and r['closed']['ok'] and r['closed']['viol_step'] == 0 and r['closed']['viol_cont'] <= 1e-3) for r in res])), closed_ratio_med=float(np.nanmedian([r['closed']['T'] / Tref[r['i']] if r.get('closed') and r['closed']['T'] else np.nan for r in res])), their_reach=float(okt.mean()), their_clean_step=float(cleant.mean()), their_clean_cont=float(cleanc.mean()), their_ratio_med=float(np.nanmedian(Tt / Tref)) if okt.any() else None,
              their_T_med_steps=float(np.nanmedian(Tt) / DT) if okt.any() else None, t_query_med=float(np.median([r['t_query'] for r in res])), wall_parallel=wall, per_start=res, Tref=Tref.tolist())
-    json.dump(S, open(os.path.join(common.DATA, 'env_car2026.json'), 'w'), indent=1, default=float); print({k: v for k, v in S.items() if k not in ('per_start', 'Tref')})
+    json.dump(S, open(os.path.join(common.DATA, os.environ.get('OUTJ', 'env_car2026.json')), 'w'), indent=1, default=float); print({k: v for k, v in S.items() if k not in ('per_start', 'Tref')})

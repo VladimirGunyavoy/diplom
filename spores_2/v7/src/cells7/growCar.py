@@ -67,9 +67,9 @@ _FL = ~PER
 def inbox(y):
     if SYS == 'car': return (np.abs(y[..., 0]) <= XLV[0]) & (np.abs(y[..., 1]) <= XLV[0]) & (y[..., 3] >= VLO) & (y[..., 3] <= VHI) & (dobs(y) > 0)
     return (np.abs(y[..., _FL]) <= XLV[_FL]).all(-1)
-GM = float(E('GM', 0.)); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200))
-def inbox_g(y):
-    if SYS == 'car': return (np.abs(y[..., 0]) <= XLV[0] + GM) & (np.abs(y[..., 1]) <= XLV[0] + GM) & (y[..., 3] >= VLO - GM) & (y[..., 3] <= VHI + GM) & (dobs(y) > 0)
+GM = float(E('GM', 0.)); GMV = float(E('GMV', E('GM', 0.))); SIDE = int(E('SIDE', 1)); COVTOL = float(E('COVTOL', 0.)); COVN = int(E('COVN', 20)); COVP = int(E('COVP', 200))
+def inbox_g(y):   # GMV (b14, BC1): допуск роста по v отдельно от GM; GMV=0 — жёсткая граница v ≤ 2
+    if SYS == 'car': return (np.abs(y[..., 0]) <= XLV[0] + GM) & (np.abs(y[..., 1]) <= XLV[0] + GM) & (y[..., 3] >= VLO - GMV) & (y[..., 3] <= VHI + GMV) & (dobs(y) > 0)
     return (np.abs(y[..., _FL]) <= XLV[_FL] + GM).all(-1)                                       # w22 (r17 GM): клетки растут за край поля на GM, посев — только внутри
 def jac(x, u): return np.stack([(f(x + EPSJ * e, u) - f(x - EPSJ * e, u)) / (2 * EPSJ) for e in np.eye(N)], 1)
 def wstep(W, A, Bm, h, sg):
