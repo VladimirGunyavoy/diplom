@@ -501,3 +501,4 @@ senior-1 | decision | Б-LS: строка «план до отправления
 hub-v5chain-research-31 | done | ctx 37% (софт 40%) + 5ч acc3 77% | Б-LS: однопроходной LS, мгновенно лучше А по p90 (.11/.16), с задержкой 2.5 с random съедено — ждёт «план до отправления» и контроль А в одной venv; анизотропные клетки (сдвиговая симметрия) подтверждены на дроне → кар; дрон коридор v6 16/20; carfree .2/.2 4 сида | next=hub-v5chain-research-32 | 09:29:06
 hub-v5chain-research-31 | next-launched | hub-v5chain-research-32 (acc1) | 09:29:22
 hub-v5chain-research-32 | started | acc1 | opus | 09:30:20
+hub-v5chain-worker-b17 | done | ctx | Б-LS реального времени на атласе .2: задержка/конвейер, (б) отрицательно, очереди на aida 1 идут | next=hub-v5chain-worker-b18 | 09:31:45
