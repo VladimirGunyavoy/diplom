@@ -95,6 +95,14 @@ if NREF:
     drone_nb.install(DP)
 S = SysN(flow, 4, (3., 2., np.pi, VM, VM, WM), ing, seeds, per=(0, 0, 2 * np.pi, 0, 0, 0), ok=okf, blocked=blocked)
 d = json.load(open(os.path.join(HERE, '..', 'v7', 'reports', 'env4', 'data', 'env4_ref_all.json'))); ks = sorted(d, key=int); X0 = np.array([d[k]['x0'] for k in ks]); X0[:, 2] = wr(X0[:, 2]); Tref = np.array([d[k]['T'] for k in ks])
+NSTARTS = int(os.environ.get('NSTARTS', 0))   # b21: >0 — N стартов по распределению env4_ref.starts (seed STARTSEED), без эталона OCP (Tref=1: «дошёл» = verify, T/Tref не имеет смысла)
+if NSTARTS:
+    _r = np.random.default_rng(int(os.environ.get('STARTSEED', 0))); _S = []
+    while len(_S) < NSTARTS:
+        _x, _y = _r.uniform(-2.75, 2.75), _r.uniform(.2, 3.6)
+        if clr(np.array([_x, _y])) < .1: continue
+        _S.append(np.array([_x, _y, _r.uniform(0, 2 * np.pi), *_r.normal(0, .2, 3)]))
+    X0 = np.array(_S); X0[:, 2] = wr(X0[:, 2]); Tref = np.ones(NSTARTS)
 VTOL = float(os.environ.get('VTOL', 0))
 def verify(x0, seq, dts, dt=.02, tmax=40.):
     """ИХ шаг (underwaterdrone.step): Эйлер dt .02, кусочно-постоянное u по времени плана, касание = зазор центра < 0, успех = центр в лунке (y ≥ 4, |x| ≤ .4)."""
