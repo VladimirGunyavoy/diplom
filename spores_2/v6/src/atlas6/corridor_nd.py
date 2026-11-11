@@ -75,8 +75,9 @@ def candidates(S, x0, back, tau, NF, rho, miss, kn=8, dt=None, hfun=None):
     out.sort(key=lambda c: (c[0], c[1])); return out, sum(1 for c in out if c[0] == 0)
 
 
-def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None, fs=0, wlim=None, nbest=1):
-    """→ (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None.
+def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2, clear=None, tries=3, hfun=None, fs=0, wlim=None, nbest=1, fb=None):
+    """fb=(NF2, K2): запас на no_path (b20) — если допустимого плана нет, повтор с большим прямым деревом/K (дрон: старт 3 доходит только при NF 6400; 19→20/20); None — выкл. (по умолчанию).
+    → (T, seq, dts): лучший допустимый среди K разных топологий-попаданий и K разных топологий-промахов, либо None.
     wlim=(слайс/индексы скоростей, WM): жёсткий предел |w| вдоль пути.
     fs>0: ещё прямые деревья с принудительным первым сегментом каждого слоя (NF=fs на ветку) — разные ветви раскачки/2π (hub-worker-9)."""
     C, nh = candidates(S, x0, back, tau, NF, rho, miss, kn, hfun=hfun); best = None; oks = []
@@ -109,6 +110,8 @@ def corridor_query(S, flow, x0, back, tau, NF, rho, g, miss, K=5, kn=8, neigh=2,
             T, sqr, d, ok = refine(flow, x0, list(zip(sqn, dn)), g, tries=1, clear=clear, wlim=wlim)
             if ok and T < cur[0]: cur = (T, sqr, d)
         if cur[0] < best[0]: best = cur
+    if best is None and fb is not None:
+        return corridor_query(S, flow, x0, back, tau, fb[0], rho, g, miss, K=fb[1], kn=kn, neigh=neigh, clear=clear, tries=tries, hfun=hfun, fs=fs, wlim=wlim, nbest=nbest)
     return best
 
 
