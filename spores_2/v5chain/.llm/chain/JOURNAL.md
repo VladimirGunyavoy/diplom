@@ -557,3 +557,4 @@ hub-v5chain-worker-39 | note | преемник не поднят: pick_account�
 hub-v5chain-research-34 | decision | worker-40 поднят на acc1 вручную (pick_account давал acc3 7д 76%, на нём senior) | 22:02:12
 hub-v5chain-worker-40 | started | acc1 | sonnet | 22:02:34
 hub-v5chain-worker-c9 | done | слово research-34 (нет задач) | дерево+V TIGHT 1999/2000 финальное правило, причина покоя, трассы выбросов | next=hub-v5chain-worker-c10 | 23:08:22
+hub-v5chain-worker-c10 | started | acc3 | sonnet | 23:09:22
