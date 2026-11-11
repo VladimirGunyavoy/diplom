@@ -261,6 +261,21 @@ def refresh(Z, G, A, y, p, w, q, sig0=0., pad=.1, HR=.7, T_PR=2., smax=.25, pe=.
     if 'rev_e' not in Z:
         Z['cnt'], Z['rev_e'], Z['rev_j'] = build_rev(Z['loc'], Z['X'], Z['W'], Z['nz']); Z['ownz'] = np.repeat(Z['nd'], np.diff(Z['st'])).astype(np.int32)
         E = len(Z['X']); Z['bs'], Z['bsm'], Z['bmx'] = np.empty(E), np.empty(E), np.empty(E); T['rev_once'] = pc() - t0; t0 = pc()
+    if os.environ.get('LSGPU') == '1':   # b18: Якоби на GPU-сервере (ls_gpu_server.py, sb3-venv); область = маска inreg, 20 проходов от BIG, без GS; t_LS = весь refresh (включая обмен)
+        from multiprocessing.connection import Client
+        if '_gc' not in Z: Z['_gc'] = Client(os.environ['LSGPUSOCK'], family='AF_UNIX')
+        Z['_gc'].send((inreg, forb)); Vg, tg = Z['_gc'].recv(); T['gpu'] = tg; t0 = pc()
+        chk = {}
+        if os.environ.get('LSGPUCHK') == '1':   # диагностика: тот же пересчёт LS (run7) и разность на области
+            if 'bS' not in Z: Z['bS'] = np.empty((len(Z['X']), 3), np.float32)
+            Vl, _ = run7(V0, Z['loc'], Z['X'], Z['W'], Z['nd'], Z['st'], Z['ownz'], Z['cnt'], Z['rev_e'], Z['rev_j'], Z['Vg_n'], inreg, forb, Z['goal'], Z['bS'], G.BIG, G.DTN, G.WTHR, pe)
+            a_, b_ = Vg[r] < G.BIG / 2, Vl[r] < G.BIG / 2; bo = a_ & b_; dd = Vg[r][bo] - Vl[r][bo]
+            chk = dict(c_gpu=int(a_.sum()), c_ls=int(b_.sum()), c_only_gpu=int((a_ & ~b_).sum()), c_only_ls=int((~a_ & b_).sum()), c_med=float(np.median(dd)) if len(dd) else 0., c_p90=float(np.percentile(np.abs(dd), 90)) if len(dd) else 0., c_max=float(np.abs(dd).max()) if len(dd) else 0.); t0 = pc()
+        V = V0.copy(); V[Z['zl'][r]] = Vg[r]; T['write'] = pc() - t0
+        A.V = V; va2 = float(A.vstar(np.asarray(y, float)[None])[0])
+        if not install: A.V = cur
+        T['tot'] = pc() - t00
+        return dict(n=len(r), nf=int(forb.sum()), npop=0, va=va, va2=va2, _V=V, **chk, **T)
     if os.environ.get('LS32') == '1':
         if 'bS' not in Z: Z['bS'] = np.empty((len(Z['X']), 3), np.float32)
         Vr, npop = run7(V0, Z['loc'], Z['X'], Z['W'], Z['nd'], Z['st'], Z['ownz'], Z['cnt'], Z['rev_e'], Z['rev_j'], Z['Vg_n'], inreg, forb, Z['goal'], Z['bS'], G.BIG, G.DTN, G.WTHR, pe); T['ls'] = pc() - t0; t0 = pc()

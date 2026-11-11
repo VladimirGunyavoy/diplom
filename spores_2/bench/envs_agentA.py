@@ -101,7 +101,9 @@ class AgentA:
                     if Vn1 is not None:
                         tl1 = r1['n'] * float(os.environ.get('LSNODEUS', 2.3e-6)); d1 = max(1, int(np.ceil(tl1 / DT))); s.pend = (s.nstep + d1, Vn1); s.lastst = s.nstep; s.tl_prev = tl1; r1['delay'] = d1; r1['tl'] = tl1; r1['coarse'] = 1
                     s.lsinfo.append(r1)
-                if s.pend is not None and s.nstep >= s.pend[0]: s.A.V = s.pend[1]; s.pend = None; s.inst.append(s.nstep)
+                if s.pend is not None and s.nstep >= s.pend[0]:
+                    if not int(os.environ.get("LSNOINST", 0)): s.A.V = s.pend[1]   # b18: LSNOINST=1 — пересчёты идут, V_Б не устанавливается (контроль)
+                    s.pend = None; s.inst.append(s.nstep)
                 if s.pend is None and (pipe or s.nstep - s.lastst >= kk):
                     r = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, install=False, tshift=(getattr(s, 'tl_prev', float(os.environ.get('LSTL0', 5.))) if int(os.environ.get('LSB', 0)) else 0.), **kw); Vn = r.pop('_V', None)
                     if Vn is not None:
@@ -176,7 +178,7 @@ def episode(ag, haz, x0, tmax=20., mode_dyn=True):
         for s_ in np.linspace(0, 1, 21)[1:]:
             q = y[:2] * (1 - s_) + yn[:2] * s_; c = (np.linalg.norm(haz.pos(t + s_ * DT) - q, axis=1) - HR).min(); clr = min(clr, c, 5. - np.abs(q).max())
         L += np.linalg.norm(yn[:2] - y[:2]); y = yn; t += DT; Y.append(y.copy())
-    return dict(ok=ok, T=t if ok else None, lsn=ag.lsinfo[:40], inst=ag.inst, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
+    return dict(ok=ok, T=t if ok else None, lsn=ag.lsinfo[:40], nref=len(ag.lsinfo), inst=ag.inst, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
 
 _G = _A = _Z = None
 def one(a):

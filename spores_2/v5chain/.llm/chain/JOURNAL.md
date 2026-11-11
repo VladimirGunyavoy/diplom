@@ -503,3 +503,5 @@ hub-v5chain-research-31 | next-launched | hub-v5chain-research-32 (acc1) | 09:29
 hub-v5chain-research-32 | started | acc1 | opus | 09:30:20
 hub-v5chain-worker-b17 | done | ctx | Б-LS реального времени на атласе .2: задержка/конвейер, (б) отрицательно, очереди на aida 1 идут | next=hub-v5chain-worker-b18 | 09:31:45
 hub-v5chain-worker-b18 | started | acc1 | sonnet | 09:32:17
+senior-1 | review | senior: схема Б — «план до отправления» не вернул p90 (fixed 1.199, random 1.234; с подготовкой хуже А), на TIGHT касаний не снимает; подозрение на побочный эффект кода Б — до контроля «Б-выкл = А» все числа Б неподтверждены; рамка: 2 проверки + 1 повтор, затем решение | 09:36:21
+hub-v5chain-worker-b18 | done-part | п.1 Б-выкл побитово, п.2 LSGPU fixed 1.027/1.075 random 1.031/1.106 t_LS .20 с | 10:01:12
