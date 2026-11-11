@@ -8,6 +8,9 @@ import numpy as np
 import tvg_vt as T
 from tvg_dl import Interp, vit_dl, run_agent
 env, d = T.env, T.d
+if os.environ.get("S100") == "1":   # research-36: 100 стартов атласа (grow_cells2d.starts_ref: rng(0)), эталон pend_ref_T.npy как у строки атласа big.md
+    _rq = np.random.default_rng(0); env.X0 = np.stack([_rq.uniform(-np.pi, np.pi, 100), _rq.uniform(-2, 2, 100)], 1)
+    _rf = np.load("/home/random/spore_v5/r30/spores_2/v7/src/cells7/pend_ref_T.npy"); env.Tref = _rf[:, 0] if _rf.ndim == 2 else _rf; env.keep = np.isfinite(env.Tref) & (env.Tref > .05)
 NB0 = int(os.environ.get('NB0', 70000)); ROUNDS = int(os.environ.get('ROUNDS', 3)); ADD = float(os.environ.get('ADD', .1)); NIT = 3000
 
 def solve(S, P):
@@ -40,6 +43,8 @@ def main():
     P = rng.uniform(lo_, hi_, (2 * NB0, d)); P = P[T.okv(P)][:NB0]; out = dict(rounds=[]); t0 = time.perf_counter()
     for r in range(ROUNDS + 1):
         W, ip = solve(S, P); C, e, es = residual(S, P, W, ip)
+        if os.environ.get("NOEVAL") == "1" and r < ROUNDS:
+            k = int(ADD * len(P)); top = np.argpartition(-e, k)[:k]; P = np.vstack([P, S.wrap(C[top])]); print("раунд %d: %d узлов, t %.1f с" % (r, len(P), time.perf_counter() - t0), flush=True); continue
         ag = AgentR(S, P, W, ip); Ts, s = run_agent(ag, ns); w0 = [wat(ag, env.X0[i]) / env.Tref[i] for i in range(ns)]
         rec = dict(round=r, nodes=len(P), t=time.perf_counter() - t0, e_med=float(np.median(e)), e_p99=float(np.quantile(e, .99)), frac_over=float((es > 0).mean()), W0=w0, T=Ts, **s)
         out['rounds'].append(rec)
@@ -48,6 +53,6 @@ def main():
         if r == ROUNDS: break
         k = int(ADD * len(P)); top = np.argpartition(-e, k)[:k]; P = np.vstack([P, S.wrap(C[top])])
     np.savez_compressed(os.path.expanduser("~/spore_v5/r35/refP_%d.npz" % ts), P=P, W=W, n0=NB0) if os.environ.get("DUMP") else None
-    json.dump(out, open(os.path.expanduser('~/spore_v5/r35/ref_%s_%d_%s_%d.json' % (T.ENV, NB0, os.environ.get('TAUS', str(T.TAU)), ts)), 'w'), default=float)
+    json.dump(out, open(os.path.expanduser(('~/spore_v5/r35/ref_%s_%d_%s_%d' + ('_s100' if os.environ.get('S100')=='1' else '') + '.json') % (T.ENV, NB0, os.environ.get('TAUS', str(T.TAU)), ts)), 'w'), default=float)
 
 if __name__ == '__main__': main()

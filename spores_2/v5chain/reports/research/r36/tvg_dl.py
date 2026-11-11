@@ -7,6 +7,9 @@ import numpy as np, numba as nb
 import tvg_vt as T
 from scipy.spatial import Delaunay
 env, d = T.env, T.d
+if os.environ.get("S100") == "1":   # research-36: 100 стартов атласа (grow_cells2d.starts_ref: rng(0)), эталон pend_ref_T.npy как у строки атласа big.md
+    _rq = np.random.default_rng(0); env.X0 = np.stack([_rq.uniform(-np.pi, np.pi, 100), _rq.uniform(-2, 2, 100)], 1)
+    _rf = np.load("/home/random/spore_v5/r30/spores_2/v7/src/cells7/pend_ref_T.npy"); env.Tref = _rf[:, 0] if _rf.ndim == 2 else _rf; env.keep = np.isfinite(env.Tref) & (env.Tref > .05)
 NIT = int(os.environ.get('NITDL', 3000)); MARG = float(os.environ.get('MARG', .5))
 
 def periodic_pts(P):
@@ -105,6 +108,6 @@ def main():
         diag.append(dict(i=i, Tref=tr, W0nn_nn=a / tr, W0nn_ip=b / tr, W0dl_nn=c / tr, W0dl_ip=e / tr, T_base=out['base']['T'][i], T_ip=out['dl_ip']['T'][i]))
         print('  старт %2d Tref %.2f | W0/Tref: nn-VI %.3f (интерп %.3f) | Делоне-VI %.3f (интерп %.3f) | T/Tref база %s Делоне-ип %s' % (i, tr, a / tr, b / tr, c / tr, e / tr,
               None if out['base']['T'][i] is None else round(out['base']['T'][i] / tr, 3), None if out['dl_ip']['T'][i] is None else round(out['dl_ip']['T'][i] / tr, 3)), flush=True)
-    out['diag'] = diag; json.dump(out, open(os.path.expanduser('~/spore_v5/r35/dl_%s_%d_%s_%d.json' % (T.ENV, T.NB, os.environ.get('TAUS', str(T.TAU)), ts)), 'w'), default=float)
+    out['diag'] = diag; json.dump(out, open(os.path.expanduser(('~/spore_v5/r35/dl_%s_%d_%s_%d' + ('_s100' if os.environ.get('S100')=='1' else '') + '.json') % (T.ENV, T.NB, os.environ.get('TAUS', str(T.TAU)), ts)), 'w'), default=float)
 
 if __name__ == '__main__': main()
