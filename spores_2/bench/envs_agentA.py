@@ -195,6 +195,7 @@ if __name__ == '__main__':
     if int(os.environ.get('LOOK', 0)) == 5:
         import envs_ls; _Z = envs_ls.prep_zone(G, A, C0, HR, tube=float(os.environ.get('TUBE', .5)), cache=os.environ.get('ZCACHE')); envs_ls.prep_rev(_Z); print('обратный индекс зоны %.0f с;' % _Z['t_rev'], end=' '); print('зона %d узлов, рёбер %d, стенсилы %.0f с' % (_Z['nz'], len(_Z['X']), _Z['t_prep']), flush=True)
     e = common.make('car'); X0 = e.X0 if mode == 'static' else D.starts(20); Tref = e.Tref
+    if os.environ.get('STARTS'): _d = np.load(os.path.expanduser(os.environ['STARTS'])); X0 = _d[:, :4]; Tref = _d[:, 4]   # R20×100 (w36): 100 стартов seed 1000 + OCP-эталон (nan — не сошёлся)
     if os.environ.get('NST'): X0 = X0[:int(os.environ['NST'])]; Tref = Tref[:int(os.environ['NST'])]
     A.stencils(np.asarray(X0[0], float)[None])   # прогрев индекса ячеек до fork (иначе каждый воркер строит его сам, ~20 с)
     if int(os.environ.get('LOOK', 0)) == 5: A.V = _Z['V0']; envs_ls.refresh(_Z, G, A, np.asarray(X0[0], float), C0.copy(), np.zeros_like(C0), 0., install=False); A.V = _Z['V0']; print('прогрев numba ok', flush=True)
