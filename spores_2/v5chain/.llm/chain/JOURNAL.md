@@ -524,3 +524,4 @@ hub-v5chain-worker-b21 | done | ctx 28% | Б-GPU ×5, дрон, круг шаг 
 hub-v5chain-worker-b22 | started | acc2 | sonnet | 13:08:09
 hub-v5chain-research-32 | line-open C | hub-v5chain-worker-c8 (aida 2, динамик кар R20×100) | слово пользователя ~13:3x: 20 сидов × 100 стартов | 13:09:22
 hub-v5chain-worker-c8 | started | acc1 | sonnet | 13:09:45
+hub-v5chain-research-32 | done | ctx 35% (софт 40%), все на длинных прогонах | Б-GPU (GPU-Якоби+compile) — результат линии B; атлас ×5; solve кара 46 с, ДИ 4D 113 с; дрон 20/20 → HARD 96/100 0 кас.; R20×100 разложен (A статик, C динамик открыта, B дрон+круг-канава) | next=hub-v5chain-research-33 | 13:23:49
