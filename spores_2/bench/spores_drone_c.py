@@ -51,7 +51,7 @@ miss = lambda X: np.maximum(np.abs(X[..., 0]) - HW, 0) + np.maximum(YG - X[..., 
 g = lambda x: np.array([HW ** 2 - x[0] ** 2, x[1] - YG])
 blocked = lambda P: clr(np.asarray(P)) < PAD
 okf = lambda p: (abs(p[0]) <= XM) and (-.0 <= p[1] <= YG + .1) and (abs(p[3]) <= VM) and (abs(p[4]) <= VM) and (abs(p[5]) <= WM)
-rng = np.random.default_rng(0); seeds = []
+rng = np.random.default_rng(int(os.environ.get('SEED', 0))); seeds = []
 while len(seeds) < 32:
     p = np.array([rng.uniform(-HW + .05, HW - .05), rng.uniform(YG, YG + .08), rng.uniform(-np.pi, np.pi), *rng.uniform(-.99 * VM, .99 * VM, 2), rng.uniform(-.99 * WM, .99 * WM)])
     if not blocked(p): seeds.append(p)
@@ -219,8 +219,16 @@ def work(i):
     while RETRY and (r['T_verify'] is None or r['touch']) and n < RETRY:
         n += 1; r2 = _one(i, EXTRA * n, XG * n); tt += r2['t_query']
         if r2['T_verify'] is not None and (r['T_verify'] is None or (r['touch'] and not r2['touch'])): r = r2
+    FB = int(os.environ.get('FBNF', 0))   # b20: запас на no_path — повтор с большим NF/K (старт 3 доходит только при NF>=6400)
+    if FB and r['T_verify'] is None and r['why'] == 'no_path':
+        global NF, K; nf0, k0 = NF, K; NF, K = FB, int(os.environ.get('FBK', 10)); r2 = _one(i, 0., 0.); NF, K = nf0, k0; tt += r2['t_query']
+        if r2['T_verify'] is not None: r = r2; r['fb'] = 1
     r['t_query'] = tt; r['retries'] = n; return r
 if __name__ == '__main__':
+    if NREF:   # b20: прогрев numba ДО fork (иначе JIT ~1.5 с в каждом воркере на первом запросе — это и был p90 запроса b19)
+        _x = np.array(X0[0], float); _sq = np.array([0, 1], np.int64); _dd = np.array([.3, .3]); _Lm = ((2. * _dd + .2) / .02).astype(np.int64) + 3
+        _A = (_x, _sq, _dd, _Lm, CD, M_, I_, G_, LAT, EC[0], EC[1], EA, EB, CC[0], CC[1], CR, PAD, HW, YG)
+        _cons(*_A); _ksc(*_A, 300.); _ksjac(*_A, 300.); flow(X0[0], 0, .1)
     t0 = time.perf_counter()
     with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(X0))) as p: res = p.map(work, range(len(X0)), chunksize=1)
     wall = time.perf_counter() - t0; tq = np.array([r['t_query'] for r in res]); ok = [r for r in res if r['T_verify'] is not None]; rat = np.array([r['T_verify'] / Tref[r['i']] for r in ok])
