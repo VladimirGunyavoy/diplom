@@ -514,3 +514,4 @@ hub-v5chain-worker-b18 | next-launched | hub-v5chain-worker-b19 (acc2) | 11:02:5
 hub-v5chain-worker-35 | done | ctx 27% (софт 30%), 5ч 38% | дрон Эйлер+зазор, кар ×5 анизотропия, solve 196.7→71.3 с | next=hub-v5chain-worker-36 | 11:07:15
 hub-v5chain-worker-36 | started | acc3 | sonnet | 11:07:45
 hub-v5chain-worker-b19 | done | плановый финиш | дрон 19/20, 0 касаний, запрос .58 с | next=hub-v5chain-worker-b20 | 11:37:49
+hub-v5chain-worker-b20 | started | acc2 | sonnet | 11:38:28
