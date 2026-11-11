@@ -24,6 +24,65 @@ class AgentA:
         for k in range(max(1, len(P) - W - L), len(P) - L):
             w = (P[k] - P[k - 1]) / DT; e.append(P[k + L] - P[k] - w * L * DT)
         e = np.array(e); return float(max((3 * (e ** 2).mean((0, 1)) / (L * DT) ** 3).max(), 1e-4)) if len(e) else s.q0
+    def sipp_sides(s, y0, p, w, q, cell=.3, dt=.25, nl=100, vmax=1.2):
+        """b16 схема Б (грубый SIPP): достижимость по слоям времени на сетке xy (ожидание разрешено), диск — m(τ)=p+wτ, радиус R+pad+κσ(τ)+cell/2;
+        кратчайший по времени путь к цели → сторона каждого диска (знак относительно нормали к линии цели в точке наибольшего сближения). None — пути нет."""
+        n = int(10 / cell) + 1; ax = -5. + cell * np.arange(n); XX, YY = np.meshgrid(ax, ax, indexing='ij'); P = np.stack([XX, YY], -1)
+        i0 = tuple(np.clip(np.round((y0[:2] + 5.) / cell).astype(int), 0, n - 1)); goal = np.linalg.norm(P - GOAL, axis=-1) <= GR
+        R = np.zeros((n, n), bool); R[i0] = True; layers = [R]; jg = None
+        for j in range(1, nl + 1):
+            tau = j * dt; sg = min(np.sqrt(s.sig0 ** 2 + q * tau ** 3 / 3), s.smax); m = p + w * tau; occ = np.zeros((n, n), bool)
+            for k in range(len(m)): occ |= np.linalg.norm(P - m[k], axis=-1) < HR + s.pad + s.kap * sg + cell / 2
+            Rn = R.copy(); r = int(vmax * dt / cell + .999) if False else 1
+            for di in (-1, 0, 1):
+                for dj in (-1, 0, 1):
+                    if di == 0 and dj == 0: continue
+                    sh = np.zeros_like(R); sh[max(di, 0):n + min(di, 0), max(dj, 0):n + min(dj, 0)] = R[max(-di, 0):n + min(-di, 0), max(-dj, 0):n + min(-dj, 0)]; Rn |= sh
+            R = Rn & ~occ; layers.append(R)
+            if (R & goal).any(): jg = j; break
+            if not R.any(): return None
+        if jg is None: return None
+        c = np.argwhere(layers[jg] & goal)[0]; path = [c]
+        for j in range(jg - 1, -1, -1):
+            best = None
+            for di in (-1, 0, 1):
+                for dj in (-1, 0, 1):
+                    u = (c[0] + di, c[1] + dj)
+                    if 0 <= u[0] < n and 0 <= u[1] < n and layers[j][u]:
+                        d_ = abs(di) + abs(dj)
+                        if best is None or d_ < best[0]: best = (d_, u)
+            c = np.array(best[1]); path.append(c)
+        path = path[::-1]; pts = np.array([P[tuple(c)] for c in path]); out = {}
+        dg = GOAL - y0[:2]; ug = dg / max(np.linalg.norm(dg), 1e-9); nr = np.array([-ug[1], ug[0]])
+        for k in range(len(p)):
+            d = np.array([np.linalg.norm(pts[j] - (p[k] + w[k] * j * dt)) for j in range(len(pts))]); j = int(d.argmin()); out[k] = 1 if np.dot(pts[j] - (p[k] + w[k] * j * dt), nr) >= 0 else -1
+        return out
+    def delay_field(s, p, w, q, cell=.3, dt=.25, N=80):
+        """b16 схема Б (обратный DP по времени на сетке xy, ожидание разрешено, все диски): Tg[j][ячейка] — мин. остаток времени до цели из (ячейка, слой j);
+        возвращает функцию задержки dl(xy, j) = Tg[j] − Tg0 (Tg0 — без дисков). σ ≤ smax (облако κσ(τ))."""
+        n = int(10 / cell) + 1
+        if not hasattr(s, '_g'):
+            ax = -5. + cell * np.arange(n); XX, YY = np.meshgrid(ax, ax, indexing='ij'); P = np.stack([XX, YY], -1); goal = np.linalg.norm(P - GOAL, axis=-1) <= GR
+            def relax(T):
+                Tp = np.pad(T, 1, constant_values=np.inf); best = T.copy()
+                for di in (-1, 0, 1):
+                    for dj in (-1, 0, 1): best = np.minimum(best, Tp[1 + di:1 + di + n, 1 + dj:1 + dj + n])
+                return best
+            T0 = np.where(goal, 0., np.inf)
+            for _ in range(2 * n):
+                Tn = np.where(goal, 0., relax(T0) + dt)
+                if np.array_equal(Tn, T0): break
+                T0 = Tn
+            s._g = (P, goal, relax, T0)
+        P, goal, relax, T0 = s._g; Tg = [None] * (N + 1); Tg[N] = T0.copy(); inf = np.inf
+        for j in range(N - 1, -1, -1):
+            tau = (j + 1) * dt; sg = min(np.sqrt(s.sig0 ** 2 + q * tau ** 3 / 3), s.smax); m = p + w * tau; occ = np.zeros((n, n), bool)
+            for k in range(len(m)): occ |= np.linalg.norm(P - m[k], axis=-1) < HR + s.pad + s.kap * sg + cell / 2
+            Tg[j] = np.where(goal, 0., np.where(occ, inf, relax(Tg[j + 1]) + dt))
+        def dl(xy, j):
+            ij = np.clip(np.round((xy + 5.) / cell).astype(int), 0, n - 1); d = Tg[min(j, N)][ij[:, 0], ij[:, 1]] - T0[ij[:, 0], ij[:, 1]]
+            return np.where(np.isfinite(d), np.maximum(d, 0.), 20.)
+        return dl
     def act(s, y, t_unused=0.):
         G = s.G; s.nstep += 1; p = s.hist[-1]; w = np.zeros_like(p) if (s.static or len(s.hist) < 2) else (s.hist[-1] - s.hist[-2]) / DT; q = s.qest()
         nst = int(round(s.H / G.DTN)); cands = [(i, c) for i in range(len(s.US)) for c in s.commits]; nc = len(cands); i0 = np.array([c[0] for c in cands]); cm = np.array([c[1] for c in cands])
@@ -39,12 +98,18 @@ class AgentA:
                 if inb: blk.append((k, c, nrm, rr_, tc))
             for k in list(s.side):
                 if k not in [b[0] for b in blk]: del s.side[k]
+            plan = None
             for k, c, nr_, rr, tc in blk:
                 cs = []
                 for sd in (1, -1):
                     wp = c + sd * nr_ * rr; th = np.arctan2(*(GOAL - wp)[::-1]); vw = s.A.vstar(np.array([[wp[0], wp[1], th, 1.5]]))[0]; cs.append(np.linalg.norm(wp - y0[:2]) / 1.5 + (1e3 if vw >= G.BIG / 2 else vw))
                 new = 1 if cs[0] <= cs[1] else -1; old = s.side.get(k)
-                if old is None or (s.look != 2 and old != new and cs[(0 if old == 1 else 1)] - cs[(0 if new == 1 else 1)] > .5):
+                if s.look == 3:
+                    if plan is None and k == blk[0][0]: plan = s.sipp_sides(y0, p, w, q) or {}
+                    if k in plan:
+                        if old is not None and old != plan[k]: s.nsw += 1
+                        s.side[k] = plan[k]; continue
+                if old is None or (s.look != 2 and s.look != 3 and old != new and cs[(0 if old == 1 else 1)] - cs[(0 if new == 1 else 1)] > .5):
                     if old is not None: s.nsw += 1
                     s.side[k] = new
         bmin = [np.full(nc, np.inf) for _ in blk]; bpos = [np.zeros((nc, 2)) for _ in blk]
@@ -74,6 +139,8 @@ class AgentA:
                 dk = np.linalg.norm(Ynext[:, :2] - (p[k] + w[k] * tau), axis=1); upd = act_ & (dk < bmin[bi]); bmin[bi] = np.where(upd, dk, bmin[bi]); bpos[bi][upd] = Ynext[upd, :2]
             t_el = np.where(act_, t_el + G.DTN, t_el); Y = Ynext; done = done | G.ingoal(Y)
         V = s.A.vstar(Y); V = np.where(done, 0., V); cost = t_el + np.where(V >= G.BIG / 2, 1e3, V)
+        if s.look == 4 and not s.static:
+            dl = s.delay_field(p, w, q); cost = cost + float(os.environ.get('DW', 1.)) * np.where(done, 0., dl(Y[:, :2], int(round(s.H / .25))))
         for bi, (k, c, nr_, rr, tc) in enumerate(blk):
             sd_ = np.sign(np.einsum('ij,j->i', bpos[bi] - c, nr_)); cost = cost + 3. * (sd_ != s.side[k]) * np.isfinite(bmin[bi])
         ok = ~viol
