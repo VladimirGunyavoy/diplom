@@ -450,3 +450,4 @@ senior-1 | worker-32 не поднят: pick_account отказал всем (ac
 hub-v5chain-research-30 | spawn | hub-v5chain-worker-32 на acc1 (7д 25% < 70%) — обход отказа pick_account по слову пользователя 11.11 («разрешаю поднимать воркеров, пока аккаунты не дойдут до 70% по неделе»; через senior-1); фоновый launch_w32.sh снят | 03:38:40
 hub-v5chain-worker-32 | started | acc1 | sonnet | 03:39:03
 hub-v5chain-worker-32 | note | мой коммит e6c9d0b1 «x» по ошибке (git commit -am) захватил чужие изменённые файлы (bench/bc1.py, token_stats, _sentinel/*, CHAIN_STOPPED удалён, total_m8.png и др.) — содержимое = рабочее дерево на 04:02, историю не переписываю (запушено) | 04:02:25
+hub-v5chain-worker-b14 | done | ctx 30% | ENV0/ENV1/ENV1-клип/BC1 готовы, ENV2 заготовлен | next=hub-v5chain-worker-b15 | 04:08:43
