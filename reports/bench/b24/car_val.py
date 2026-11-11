@@ -86,7 +86,7 @@ def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
         if d < 1e-4: break
     return W, it, d
 
-TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2))
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); TIEP = float(os.environ.get('TIEP', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 5000))
 @nb.njit
 def expand(X, tau):
     n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
@@ -102,8 +102,20 @@ def tie_wq(ag, Q, ok, Wq):
     """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
     if TIE <= 0 or not ok.any(): return Wq
     w = Wq[ok]
-    if w.max() - w.min() >= TIE: return Wq
-    ag.ntie = getattr(ag, 'ntie', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; return Wq   # b25: TIEP (c9)
+    ag.ntie = getattr(ag, 'ntie', 0) + 1; ag.streak = getattr(ag, 'streak', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
+    if ESCN > 0 and ag.streak >= ESCN:   # b25: эскалация — луч ширины ESCB до глубины ESCD
+        ag.nesc = getattr(ag, 'nesc', 0) + 1; Wl = None
+        for lev in range(ESCD - 1):
+            cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
+            d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
+            if len(Wl) > ESCB and lev < ESCD - 2:
+                keep = np.argpartition(Wl, ESCB)[:ESCB]; cur, first, okc, Wl = cur[keep], first[keep], okc[keep], Wl[keep]
+        out = np.full(9, 1e9)
+        for f in range(9):
+            m = first == f
+            if m.any(): out[f] = Wl[m].min()
+        return out
     for _ in range(DEP - 1):
         cur, okn = expand(np.ascontiguousarray(cur), TAU); first = np.repeat(first, 9); okc = np.repeat(okc, 9) & okn
     d, j = ag.tree.query(ag.S.wrap(cur) / ag.S.scale, k=min(KN * 3, ag.nP)); Wl = np.min(ag.W[j % ag.nP] + KV * d, axis=1); Wl[~okc] = 1e9
@@ -138,6 +150,8 @@ class Agent:
         if not ok.any(): return int(np.argmax(cl))
         d, j = self.tree.query(self.S.wrap(Q) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
         Wq = np.min(self.W[j] + KV * d, axis=1)
+        if TIEP > 0:
+            d0, j0 = self.tree.query(self.S.wrap(np.asarray(x0, float)[None]) / self.S.scale, k=min(KN * 3, len(self.tree.data))); self.Wx = float(np.min(self.W[j0 % self.nP] + KV * d0))
         Wq = tie_wq(self, Q, ok, Wq)
         return self.hyst(np.where(ok, Wq, 1e9), ok)
     def hyst(self, c, ok):
@@ -154,6 +168,7 @@ def execute(x, y, th, v, a, w, dt, n):
         if hit < 0 and (x - GOAL[0]) ** 2 + (y - GOAL[1]) ** 2 <= GR ** 2: hit = (k + 1) * dt; break
     return x, y, th, v, mn, hit
 def episode(ag, x0, tmax=60.):
+    ag.streak = 0
     ag.prev = None; x = np.array(x0, float); t = 0.; mn = 9.; tms = []
     while t < tmax:
         t1 = time.perf_counter(); s = ag.act(x); tms.append(time.perf_counter() - t1)

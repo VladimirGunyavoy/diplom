@@ -175,7 +175,7 @@ if GPU:
             k_vit[nbk, tpb](ag.dJ, ag.dD, ag.dOK, ag.dGL, ag.dING, dF, a, b, ag.nP, np.float32(TAU), np.float32(KV), np.float32(BIG), ag.dW0, np.float32(ag.lim)); a, b = b, a
             if it % 4 == 3 and np.abs(a.copy_to_host() - b.copy_to_host()).max() < tol: break
         ag.dWprev = a; return a.copy_to_host(), it
-TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 20000))
+TIE = float(os.environ.get('TIE', 0)); DEP = int(os.environ.get('DEP', 2)); ESCN = int(os.environ.get('ESCN', 0)); TIEP = float(os.environ.get('TIEP', 0)); ESCD = int(os.environ.get('ESCD', 7)); ESCB = int(os.environ.get('ESCB', 20000))
 @nb.njit
 def expand(X, tau):
     n = X.shape[0]; out = np.empty((n * 9, 4)); okk = np.ones(n * 9, np.bool_)
@@ -191,7 +191,7 @@ def tie_wq(ag, Q, ok, Wq):
     """ТАЙ-БРЕЙК: разброс V̂ по допустимым действиям < TIE (гребень у покоя) → поиск вперёд DEP шагов (9^DEP листьев), V̂ листа; возвращает Wq по первому действию (листья дальше стены/|v| отброшены; безопасность — только на 1-м шаге)"""
     if TIE <= 0 or not ok.any(): return Wq
     w = Wq[ok]
-    if w.max() - w.min() >= TIE: ag.streak = 0; return Wq
+    if w.max() - w.min() >= TIE and not (TIEP > 0 and w.min() > ag.Wx - TIEP * TAU): ag.streak = 0; return Wq   # b25: TIEP (c9) — нет спада V̂ вдоль лучшего действия
     ag.ntie = getattr(ag, 'ntie', 0) + 1; ag.streak = getattr(ag, 'streak', 0) + 1; cur = Q; first = np.arange(9); okc = ok.copy()
     if ESCN > 0 and ag.streak >= ESCN:   # b25: эскалация — луч шириной ESCB до глубины ESCD
         ag.nesc = getattr(ag, 'nesc', 0) + 1; Wl = None
