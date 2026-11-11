@@ -8,7 +8,7 @@ import numpy as np, numba as nb, common
 from src.atlas6.adaptive_nd import SysN, build_back
 from scipy.spatial import cKDTree
 ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
-TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0))
+TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1))
 env = common.make(ENV); d = env.n
 SC = tuple(float(v) for v in os.environ.get('SC', ','.join(['1'] * d)).split(','))
 if d == 4 and os.environ.get('NU3', '1') == '1': ACT = np.array([[a, b] for a in (-1., 0., 1.) for b in (-1., 0., 1.)])
@@ -97,7 +97,13 @@ class Agent:
         if (sc < 1e9).any(): return int(np.argmin(sc)), True
         if not OK.any(): return 0, False
         dd, j = self.tree.query(self.S.wrap(E) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
-        Wq = TAU + (self.W[j] + KV * dd).min(1); c = np.where(OK, Wq, 1e9); k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
+        Wq = TAU + (self.W[j] + KV * dd).min(1); c = np.where(OK, Wq, 1e9)
+        if DEP >= 2:   # поиск вперёд на 2 шага (L² листьев): c[a] = min_b [τ + (hit или τ + Ŵ)]
+            idx = np.flatnonzero(OK); E2, OK2, GL2 = edges(E[idx], self.S)   # (n,L,d)
+            d2, j2 = self.tree.query(self.S.wrap(E2.reshape(-1, d)) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j2 = j2 % self.nP
+            W2 = (self.W[j2] + KV * d2).min(1).reshape(len(idx), L); leaf = np.where(GL2 > 0, GL2, TAU + W2); leaf = np.where(OK2, leaf, 1e9)
+            c2 = TAU + leaf.min(1); c = np.full(L, 1e9); c[idx] = np.minimum(c2, Wq[idx] + TAU)
+        k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
         if HYST > 0 and pv is not None and OK[pv] and c[pv] <= c[k] + HYST: k = pv
         self.prev = k; return k, False
 
