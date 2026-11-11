@@ -306,13 +306,14 @@ def tail_main():
 if __name__ == '__main__':
     if MODE == 'tail': tail_main(); sys.exit(0)
     import gc
-    S0 = np.load(os.path.join(HERE, 'b24', 'sel_starts.npy') if MODE == 'sel' else os.path.join(HERE, 'starts100.npy'))[:, :4]; NST = int(os.environ.get('NSEL', 32)) if MODE == 'sel' else 100; out = {}; ag = None
+    S0 = np.load(os.environ.get('STARTS') or (os.path.join(HERE, 'b24', 'sel_starts.npy') if MODE == 'sel' else os.path.join(HERE, 'starts100.npy')))[:, :4]; NST = int(os.environ.get('NSEL', 32)) if MODE == 'sel' else 100; out = {}; ag = None
     COMP = json.load(open(os.environ['COMPACT'])) if MODE == 'test' else None
     for k in range(K0, K1):
-        if MODE == 'test' or ag is None:   # test: сид k = дерево k + диски k (деревья 0–19 для подбора не использовались)
-            ag = None; gc.collect(); ts_ = k if MODE == 'test' else TS; S = mkS(ts_); t0 = time.perf_counter(); back = build_back(S, TAU, NB, RB); tb = time.perf_counter() - t0; print('ts %d: build %.1f с, узлов %d' % (ts_, tb, len(back[0])), flush=True); ag = AgentDyn(S, back)
+        if MODE in ('test', 'blind') or ag is None:   # test: сид k = дерево k + диски k (деревья 0–19 для подбора не использовались)
+            ag = None; gc.collect(); ts_ = k if MODE in ('test', 'blind') else TS; S = mkS(ts_); t0 = time.perf_counter(); back = build_back(S, TAU, NB, RB); tb = time.perf_counter() - t0; print('ts %d: build %.1f с, узлов %d' % (ts_, tb, len(back[0])), flush=True); ag = AgentDyn(S, back)
         H = D.Hazards('random', k)
-        if MODE == 'test': ref = {r['i']: r for r in COMP[str(k)]['ref']}
+        if MODE == 'blind': ref = None   # b25: слепая проверка — без эталона, T абсолютное
+        elif MODE == 'test': ref = {r['i']: r for r in COMP[str(k)]['ref']}
         else: ref = {r['i']: r for r in json.load(open(os.path.join(HERE, 'b24', 'dynref', 'dynref_s%d.json' % k)))}
         res = []; dclr = 0.
         for i in range(NST):
@@ -320,7 +321,7 @@ if __name__ == '__main__':
             x0 = S0[i]; c0 = float((np.linalg.norm(H.pos(0.) - x0[:2], axis=1) - HR).min())
             if MODE == 'test': dclr = max(dclr, abs(c0 - ref[i]['clr0']))
             if c0 < 0: continue
-            tref = ref[i]['T']
+            tref = 1.0 if MODE == 'blind' else ref[i]['T']
             if not tref: continue
             te = time.perf_counter(); T, mn, ms, tvi, nit_, tfl_ = episode(ag, x0, H); res.append((i, T, tref, mn, ms, tvi, time.perf_counter() - te, nit_, tfl_))
         ok = [r for r in res if r[1] is not None]; ratio = np.array([r[1] / r[2] for r in ok]); touch = sum(r[3] < 0 for r in res)
