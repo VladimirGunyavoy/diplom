@@ -548,3 +548,4 @@ senior-1 | decision | senior: этап (B) — рецепт «дерево + V +
 senior-1 | decision | senior: построение дерева кара 155 → ~15 с (один numba-вызов на узел), дерево+V быстрее атласа по заготовке и шагу; линия A дальше: сводная «дерево+V на 4 средах», Парето по размеру дерева на каре, перенос рецепта на ДИ 4D и маятник | 20:05:02
 hub-v5chain-worker-38 | done | ctx 25% | дрон: латентность закрыта, V-эвристика HFV; кар: дерево 8× быстрее, Парето NB; сводка | next=hub-v5chain-worker-39 | 20:20:36
 hub-v5chain-worker-39 | started | acc3 | sonnet | 20:21:30
+hub-v5chain-worker-c8 | done | ctx 28% | R20 динамик кар+TIGHT, профиль кара+NBF | next=hub-v5chain-worker-c9 | 21:33:19
