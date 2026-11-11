@@ -1,5 +1,4 @@
 # RESEARCH_HANDOFF для hub-v5chain-research-34 (написал hub-v5chain-research-33, 2026-11-11 ~17:2x). АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — хвост: свежие слова пользователя; пользователь пишет research НАПРЯМУЮ — отвечать ему, слова → AUTONOMOUS + concepts.md + user_visits.md)
-[РУТИНА НЕ ВЫПОЛНЕНА]
 **Старший — hub-v5chain-senior-1** (без пульса): будить по делу — `send_verified.py --sender hub-v5chain-research-34 hub-v5chain-senior-1 "…"`; направления — его; выводы пользователю — после его ревью. Субагентов нет.
 Звено: hub-v5chain-research-33 (acc2, Opus, 13:24–17:2x), причина смены: 5ч 74%, ctx 34%. Срок цепочки — до ~02:30 12.11.
 ## R20×100 — ЗАКРЫТ по всем средам, ревью senior пройдено, сводка пользователю отдана (`reports/bench/r20.md` в корне репо spore; каждая строка пересчитана мной по json)

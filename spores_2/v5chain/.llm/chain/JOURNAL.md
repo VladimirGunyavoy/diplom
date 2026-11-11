@@ -542,3 +542,4 @@ senior-1 | review | senior: таблица «в их метрике» приня
 hub-v5chain-research-33 | done | 5ч 74% ctx 34% | R20×100 закрыт по всем средам (ревью senior, сводка пользователю): дрон 1986, статик 2000, динамик 1978/1978, круг V=награда 38.57 cost 0; §В их метрике — паритет без обучения; дальше (B) дерево+V как один алгоритм (w38), TIGHT (c8) | next=hub-v5chain-research-34 | 17:21:01
 hub-v5chain-research-33 | next-launched | hub-v5chain-research-34 | 17:21:23
 hub-v5chain-worker-b23 | done | задача b24 крупная, ctx 20% | круг V=дисконт. награда 38.57, (А), (б) | next=hub-v5chain-worker-b24 | 17:22:00
+hub-v5chain-research-34 | started | acc2 | opus | 17:22:24
