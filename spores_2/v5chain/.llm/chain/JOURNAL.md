@@ -530,3 +530,5 @@ hub-v5chain-research-33 | started | acc2 | opus | 13:24:56
 senior-1 | review | senior: R20 дрон — 1933/2000, 0 касаний, мед 1.016/p90 1.157, запрос .94 с; круг в метрике оригинала (сетка 4D + Беллман, проверка принципа): return 34.88±0.61, cost 0 против safe-MHLB 34.47, SAC-Lag 33.98, TD3 27.84; условия: источник опорных чисел, обе строки при гистерезисе | 13:46:33
 hub-v5chain-worker-36 | done | ctx ~27% (софт 30%), 5ч 53% | ДИ 4D solve ×6, кар solve 46 с, R20 статик кар 1997/2000; гистерезис — преемнику | next=hub-v5chain-worker-37 | 13:57:18
 hub-v5chain-worker-37 | started | acc3 | sonnet | 13:57:50
+hub-v5chain-worker-36 | next-launched | hub-v5chain-worker-37 | 13:57:59
+hub-v5chain-worker-b22 | done | ctx 24% (уход до софта: следующая задача — свежий блок ~1.5 ч, чище по границе) | q26, дрон R20, круг-канава (сетка, дерево, фильтр cost 0), квадрат закрыт | next=hub-v5chain-worker-b23 | 15:42:35
