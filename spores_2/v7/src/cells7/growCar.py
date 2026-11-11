@@ -197,6 +197,24 @@ class HexIdx:
         if PI: out.append(s._test(Y, np.concatenate(PI), np.concatenate(VV)))
         if not out: return z
         return [np.concatenate(a) for a in zip(*out)]
+    def query_fast(s, Y):
+        """QFAST=1 (b11, SPD5): query без цикла по бинам Python — CSR бинов (кеш на s.n; индекс заморожен: фаза стенсилов) + векторная раздача пар; множество пар то же."""
+        z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
+        if s.n == 0 or not len(Y): return z
+        c_ = getattr(s, '_csr', None)
+        if c_ is None or c_[0] != (s.n, len(s.bins)):
+            ks = np.fromiter(s.bins.keys(), np.int64, len(s.bins)); o = np.argsort(ks); L = [np.concatenate(l) if len(l) > 1 else l[0] for l in s.bins.values()]; ln = np.array([len(l) for l in L], np.int64)[o]
+            vals = np.concatenate([L[i] for i in o]) if len(L) else np.zeros(0, np.int64); offs = np.r_[0, np.cumsum(ln)]; s._csr = c_ = ((s.n, len(s.bins)), ks[o], ln, offs, vals)
+        _, keys, ln, offs, vals = c_
+        kk = s._key(np.floor(Y / QB).astype(np.int64)); pos = np.minimum(np.searchsorted(keys, kk), max(len(keys) - 1, 0)); hit = (keys[pos] == kk) if len(keys) else np.zeros(len(kk), bool)
+        cnt = np.where(hit, ln[pos] if len(keys) else 0, 0); cum = np.cumsum(cnt); LIM = int(float(E('QLIM', 8e6))); out = []; a = 0
+        while a < len(Y):
+            b = max(int(np.searchsorted(cum, (cum[a - 1] if a else 0) + LIM, 'right')), a + 1); b = min(b, len(Y)); c = cnt[a:b]; ip = np.flatnonzero(c)
+            if len(ip):
+                cc = c[ip]; tot = int(cc.sum()); pi = np.repeat(ip + a, cc); within = np.arange(tot) - np.repeat(np.cumsum(cc) - cc, cc); vv = vals[np.repeat(offs[pos[ip + a]], cc) + within]; out.append(s._test(Y, pi, vv))
+            a = b
+        if not out: return z
+        return [np.concatenate(x) for x in zip(*out)]
     def _test_orig(s, Y, pi, vv):
         hid = vv // KSH; y = Y[pi] - SH[vv % KSH]; ok = ((y >= s.LO[hid]) & (y <= s.HI[hid])).all(1); pi, hid, y = pi[ok], hid[ok], y[ok]
         z = (np.zeros(0, int), np.zeros(0, int), np.zeros((0, N)))
@@ -383,7 +401,7 @@ def _pquery(qx, Y):
     """SPAR=k (b3): запрос индекса чанками в fork-пуле (стенсилы последовательны: 4 u × ~3M точек в одном процессе); без SPAR — как раньше."""
     global _PQ
     k = int(E('SPAR', 0))
-    if k <= 1 or len(Y) < 50000: return _dedup(*qx.query(Y))
+    if k <= 1 or len(Y) < 50000: return _dedup(*(qx.query_fast(Y) if int(E('QFAST', 0)) else qx.query(Y)))     # QFAST=1 (b11): CSR бинов без Python-цикла, порт из growN
     from multiprocessing import Pool
     _PQ = qx; ch = np.array_split(np.arange(len(Y)), 4 * k)
     with Pool(k) as pool: R = pool.map(_pq_work, [(c[0], Y[c]) for c in ch if len(c)])
