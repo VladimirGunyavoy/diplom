@@ -8,7 +8,7 @@ import numpy as np, numba as nb, common
 from src.atlas6.adaptive_nd import SysN, build_back, _images, _scaled
 from scipy.spatial import cKDTree
 ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
-TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1))
+TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1)); TIEP = float(os.environ.get('TIEP', 0)); DEPB = int(os.environ.get('DEPB', 1))
 env = common.make(ENV); d = env.n
 SC = tuple(float(v) for v in os.environ.get('SC', ','.join(['1'] * d)).split(','))
 if d == 4 and os.environ.get('NU3', '1') == '1': ACT = np.array([[a, b] for a in (-1., 0., 1.) for b in (-1., 0., 1.)])
@@ -93,6 +93,18 @@ class Agent:
             self.tvi = time.perf_counter() - t0
         fin = self.W < 1e2; self.kva = kv_auto(S, self.tree, self.P, self.W); print('  KV_auto (q.9 Липшица V по kNN-рёбрам) = %.3f при KV=%g' % (self.kva, KV), flush=True)
         print('  узлов %d: edges %.1f, knn %.1f, vi %.1f с (it %d res %.1e); W конечных %.1f%%, мед %.2f макс %.2f' % (self.nP, t1 - t0, t2 - t1, t3 - t2, it, res, 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max()), flush=True)
+    def _w(self, x):
+        d_, j_ = self.tree.query(self.S.wrap(np.asarray(x, float)[None]) / self.S.scale, k=min(KN * 3, self.nP)); return float((self.W[j_ % self.nP] + KV * d_).min())
+    def _cost(self, X, dep):
+        """X (n,d) -> (n,): min_a [GL>0 ? GL : TAU + (dep==1 ? W^(E_a) : cost(E_a,dep-1))]"""
+        E2, OK2, GL2 = edges(X, self.S); n = len(X)
+        if dep == 1:
+            d2, j2 = self.tree.query(self.S.wrap(E2.reshape(-1, d)) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j2 = j2 % self.nP
+            sub = (self.W[j2] + KV * d2).min(1).reshape(n, L)
+        else:
+            sub = np.full((n, L), 1e9); m = OK2 & (GL2 <= 0)
+            if m.any(): sub[m] = self._cost(E2[m], dep - 1)
+        leaf = np.where(GL2 > 0, GL2, TAU + sub); return np.where(OK2, leaf, 1e9).min(1)
     def act(self, x0):
         E, OK, GL = edges(np.asarray(x0, float)[None], self.S); E, OK, GL = E[0], OK[0], GL[0]
         sc = np.full(L, 1e9)
@@ -102,11 +114,14 @@ class Agent:
         if not OK.any(): return 0, False
         dd, j = self.tree.query(self.S.wrap(E) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
         Wq = TAU + (self.W[j] + KV * dd).min(1); c = np.where(OK, Wq, 1e9)
-        if DEP >= 2:   # поиск вперёд на 2 шага (L² листьев): c[a] = min_b [τ + (hit или τ + Ŵ)]
-            idx = np.flatnonzero(OK); E2, OK2, GL2 = edges(E[idx], self.S)   # (n,L,d)
-            d2, j2 = self.tree.query(self.S.wrap(E2.reshape(-1, d)) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j2 = j2 % self.nP
-            W2 = (self.W[j2] + KV * d2).min(1).reshape(len(idx), L); leaf = np.where(GL2 > 0, GL2, TAU + W2); leaf = np.where(OK2, leaf, 1e9)
-            c2 = TAU + leaf.min(1); c = np.full(L, 1e9); c[idx] = np.minimum(c2, Wq[idx] + TAU)
+        dep = DEP
+        if TIEP > 0:   # c9 TIEP: lookahead DEP только если ни одно действие не даёт прогресса: min_a W^(конец) >= W^(x) - TIEP*tau
+            wx = self._w(x0); wend = np.where(OK, Wq - TAU, 1e9).min(); self.nst = getattr(self, 'nst', 0) + 1
+            if wend >= wx - TIEP * TAU: self.ntie = getattr(self, 'ntie', 0) + 1
+            else: dep = DEPB
+        if dep >= 2:   # поиск вперёд на dep шагов: c[a] = TAU + cost(E_a, dep-1)
+            idx = np.flatnonzero(OK); c = np.full(L, 1e9); c[idx] = TAU + self._cost(E[idx], dep - 1)
+            c[idx] = np.minimum(c[idx], Wq[idx] + TAU)
         k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
         if HYST > 0 and pv is not None and OK[pv] and c[pv] <= c[k] + HYST: k = pv
         self.prev = k; return k, False
@@ -136,5 +151,6 @@ if __name__ == '__main__':
             ENV, NB, KN, TAU, RB, KV, SC, ts, ok.sum(), k.sum(), np.median(r), r.mean(), np.percentile(r, 90), r.max(), 1e3 * np.mean(ms), tq, tb, ag.tvi), flush=True)
         dn, _j = ag.tree.query(S.wrap(env.X0[:ns]) / S.scale, k=1); wi = np.argsort(-(T / env.Tref[:ns]))[:4] if False else np.argsort(-np.nan_to_num(T / env.Tref[:ns], nan=9))[:4]
         print('   d_near: мед %.4f, у 4 худших стартов %s (T/Tref %s)' % (np.median(dn[k]), np.round(dn[wi], 3), np.round((T / env.Tref[:ns])[wi], 2)), flush=True)
+        print('   TIEP=%g DEP=%d DEPB=%d: доля шагов с lookahead %.3f (%d/%d)' % (TIEP, DEP, DEPB, getattr(ag, 'ntie', 0) / max(1, getattr(ag, 'nst', 0)), getattr(ag, 'ntie', 0), getattr(ag, 'nst', 0)), flush=True)
         out[ts] = dict(T=Ts, build=tb, nodes=len(back[0]))
-    json.dump(out, open('tvg_%s_%d_%g_%g_%g_%d.json' % (ENV, NB, TAU, RB, KV, TS), 'w'), default=float)
+    json.dump(out, open('tvg_%s_%d_%g_%g_%g_%d_dep%d_tiep%g_%d.json' % (ENV, NB, TAU, RB, KV, TS, DEP, TIEP, DEPB), 'w'), default=float)
