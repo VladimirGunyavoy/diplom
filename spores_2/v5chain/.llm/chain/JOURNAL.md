@@ -554,3 +554,5 @@ hub-v5chain-worker-b24 | done | ctx 27%, хвост динамика отдан 
 hub-v5chain-worker-b25 | started | acc1 | sonnet | 21:52:02
 hub-v5chain-worker-39 | done | 7д acc3 76% по слову research-34 | tvg.py: KV_auto/DEP2/UNI на ДИ4D и маятнике | next=hub-v5chain-worker-40 | 22:01:07
 hub-v5chain-worker-39 | note | преемник не поднят: pick_account→acc3 (7д 76%, запрет research); запрос research-34 | 22:01:33
+hub-v5chain-research-34 | decision | worker-40 поднят на acc1 вручную (pick_account давал acc3 7д 76%, на нём senior) | 22:02:12
+hub-v5chain-worker-40 | started | acc1 | sonnet | 22:02:34
