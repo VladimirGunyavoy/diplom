@@ -8,7 +8,7 @@ import numpy as np, numba as nb, common
 from src.atlas6.adaptive_nd import SysN, build_back, _images, _scaled
 from scipy.spatial import cKDTree
 ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
-TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1)); TIEP = float(os.environ.get('TIEP', 0)); DEPB = int(os.environ.get('DEPB', 1))
+TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1)); TIEP = float(os.environ.get('TIEP', 0)); DEPB = int(os.environ.get('DEPB', 1)); TIE = float(os.environ.get('TIE', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 5)); ESCB = int(os.environ.get('ESCB', 200)); ESCDISP = float(os.environ.get('ESCDISP', .05))
 env = common.make(ENV); d = env.n
 SC = tuple(float(v) for v in os.environ.get('SC', ','.join(['1'] * d)).split(','))
 if d == 4 and os.environ.get('NU3', '1') == '1': ACT = np.array([[a, b] for a in (-1., 0., 1.) for b in (-1., 0., 1.)])
@@ -93,6 +93,19 @@ class Agent:
             self.tvi = time.perf_counter() - t0
         fin = self.W < 1e2; self.kva = kv_auto(S, self.tree, self.P, self.W); print('  KV_auto (q.9 Липшица V по kNN-рёбрам) = %.3f при KV=%g' % (self.kva, KV), flush=True)
         print('  узлов %d: edges %.1f, knn %.1f, vi %.1f с (it %d res %.1e); W конечных %.1f%%, мед %.2f макс %.2f' % (self.nP, t1 - t0, t2 - t1, t3 - t2, it, res, 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max()), flush=True)
+    def _beam(self, E, OK):
+        """луч ESCB до глубины ESCD: состояния (x, первое действие, g=накопл. время); f = g + W^(x); попадание в цель: g + GL"""
+        first = np.flatnonzero(OK); cur = E[first]; g = np.full(len(first), TAU); out = np.full(L, 1e9)
+        for lev in range(ESCD - 1):
+            E2, OK2, GL2 = edges(cur, self.S); n = len(cur); f_ = np.repeat(first, L); g_ = np.repeat(g, L) + TAU; ok = OK2.reshape(-1); gl = GL2.reshape(-1)
+            hit = ok & (gl > 0)
+            if hit.any(): np.minimum.at(out, f_[hit], (g_ - TAU + gl)[hit])
+            keep = ok & ~hit; cur = E2.reshape(-1, d)[keep]; first = f_[keep]; g = g_[keep]
+            if len(cur) == 0: return out
+            dd_, jj = self.tree.query(self.S.wrap(cur) / self.S.scale, k=min(KN * 3, len(self.tree.data))); Wl = g + (self.W[jj % self.nP] + KV * dd_).min(1)
+            if len(Wl) > ESCB and lev < ESCD - 2:
+                kp = np.argpartition(Wl, ESCB)[:ESCB]; cur, first, g, Wl = cur[kp], first[kp], g[kp], Wl[kp]
+        np.minimum.at(out, first, Wl); return out
     def _w(self, x):
         d_, j_ = self.tree.query(self.S.wrap(np.asarray(x, float)[None]) / self.S.scale, k=min(KN * 3, self.nP)); return float((self.W[j_ % self.nP] + KV * d_).min())
     def _cost(self, X, dep):
@@ -114,12 +127,17 @@ class Agent:
         if not OK.any(): return 0, False
         dd, j = self.tree.query(self.S.wrap(E) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
         Wq = TAU + (self.W[j] + KV * dd).min(1); c = np.where(OK, Wq, 1e9)
-        dep = DEP
-        if TIEP > 0:   # c9 TIEP: lookahead DEP только если ни одно действие не даёт прогресса: min_a W^(конец) >= W^(x) - TIEP*tau
-            wx = self._w(x0); wend = np.where(OK, Wq - TAU, 1e9).min(); self.nst = getattr(self, 'nst', 0) + 1
-            if wend >= wx - TIEP * TAU: self.ntie = getattr(self, 'ntie', 0) + 1
-            else: dep = DEPB
-        if dep >= 2:   # поиск вперёд на dep шагов: c[a] = TAU + cost(E_a, dep-1)
+        dep = DEP; esc = False
+        if TIEP > 0 or TIE > 0:   # правило c9/b25: тай (разброс V^ по действиям < TIE | нет спада V^ на TIEP*tau) -> lookahead DEP; застревание ESCN шагов со смещением < ESCDISP -> луч ESCB x ESCD
+            wx = self._w(x0); w_ = np.where(OK, Wq, 1e9); wend = w_.min() - TAU; self.nst = getattr(self, 'nst', 0) + 1
+            spread = w_[OK].max() - w_[OK].min()
+            tie = (TIE > 0 and spread < TIE) or (TIEP > 0 and wend >= wx - TIEP * TAU)
+            if tie:
+                self.ntie = getattr(self, 'ntie', 0) + 1; self.streak = getattr(self, 'streak', 0) + 1; self.hist = (getattr(self, 'hist', []) + [np.asarray(x0, float)[:2].copy()])[-ESCN:] if ESCN > 0 else []
+                if ESCN > 0 and self.streak >= ESCN and len(self.hist) >= ESCN and np.hypot(*(self.hist[-1] - self.hist[0])) < ESCDISP: esc = True; self.nesc = getattr(self, 'nesc', 0) + 1
+            else: dep = DEPB; self.streak = 0; self.hist = []
+        if esc: c = self._beam(E, OK)
+        elif dep >= 2:   # поиск вперёд на dep шагов: c[a] = TAU + cost(E_a, dep-1)
             idx = np.flatnonzero(OK); c = np.full(L, 1e9); c[idx] = TAU + self._cost(E[idx], dep - 1)
             c[idx] = np.minimum(c[idx], Wq[idx] + TAU)
         k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
@@ -127,13 +145,14 @@ class Agent:
         self.prev = k; return k, False
 
 def episode(ag, x0, tmax=40.):
-    ag.prev = None; x = np.array(x0, float); us = []; dts = []; tms = []; t = 0.
+    ag.prev = None; ag.streak = 0; ag.hist = []; ag.nt0 = getattr(ag, 'ntie', 0); ag.ne0 = getattr(ag, 'nesc', 0); x = np.array(x0, float); us = []; dts = []; tms = []; t = 0.
     while t < tmax:
         t1 = time.perf_counter(); s, fin = ag.act(x); tms.append(time.perf_counter() - t1); us.append(ACT[s]); dts.append(TAU)
         x = env.step(x[None], ACT[s][None], TAU)[0] if ENV == 'di4' else flow(x, s, TAU)
         t += TAU
         if fin or in_goal(x): break
     Tv, why = common.verify(env, x0, us, dts)
+    ag.info = dict(x0=np.round(np.asarray(x0, float), 3).tolist(), xend=np.round(x, 3).tolist(), steps=len(us), ties=getattr(ag, 'ntie', 0) - ag.nt0, esc=getattr(ag, 'nesc', 0) - ag.ne0, why=str(why), T=Tv)
     return Tv, why, float(np.mean(tms))
 
 if __name__ == '__main__':
@@ -144,6 +163,7 @@ if __name__ == '__main__':
         for i in range(ns):
             if not env.keep[i]: Ts.append(None); ms.append(0); continue
             T, why, m = episode(ag, env.X0[i]); Ts.append(T); ms.append(m)
+            if T is None or T > 3 * env.Tref[i]: print('   НЕ ДОШЁЛ/хвост: старт %d %s' % (i, ag.info), 'Tref', round(float(env.Tref[i]), 2), flush=True)
         tq = (time.perf_counter() - te) / max(1, env.keep[:ns].sum())
         sm = common.summarize(env, Ts + [None] * (len(env.X0) - ns)) if ns == len(env.X0) else None
         k = env.keep[:ns]; T = np.array([np.nan if t is None else t for t in Ts]); ok = np.isfinite(T) & (T <= 3 * env.Tref[:ns]) & k; r = T[ok] / env.Tref[:ns][ok]
