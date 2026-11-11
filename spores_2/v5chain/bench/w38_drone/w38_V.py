@@ -26,7 +26,7 @@ for it in range(NIT):
     if dl < 1e-3: break
 t2 = time.perf_counter(); print('V: рёбра %.1f с, vi %.1f с (it %d, d %.1e); V мед %.2f макс(<60) %.2f; доля узлов V>=60: %.3f' % (t1 - t0, t2 - t1, it, dl, np.median(V), V[V < 60].max(), (V >= 60).mean()), flush=True)
 UP = D.US_
-DEP = int(os.environ.get('DEP', 3)); NS = int(round(H / .02)); PADA = D.PAD + MARG
+DEP = int(os.environ.get('DEP', 3)); BEAM = int(os.environ.get('BEAM', 0)); NS = int(round(H / .02)); PADA = D.PAD + MARG
 def step_all(X, a):   # X (n,6) -> Xn (n,6), ok (n,) : шаг H слоем a, зазор в NS Эйлер-точках
     P = X; ok = np.ones(len(X), bool)
     for _ in range(NS):
@@ -47,6 +47,8 @@ def agent(x0, tmax=40.):
                 if keep.any(): Xs.append(Xn[keep]); Rs.append(r[keep])
             if not Xs: break
             X = np.vstack(Xs); root = np.concatenate(Rs)
+            if BEAM and len(X) > BEAM:
+                _d, _j = tree.query(S.wrap(X) / S.scale, k=KN * 3); _v = np.min(V[_j % nP] + KV * _d, axis=1); _k = np.argpartition(_v, BEAM)[:BEAM]; X = X[_k]; root = root[_k]
         else:
             Vh = np.min(V[(tree.query(S.wrap(X) / S.scale, k=KN * 3)[1]) % nP] + KV * tree.query(S.wrap(X) / S.scale, k=KN * 3)[0], axis=1) + DEP * H
             for ri in np.unique(root): best[ri] = min(best.get(ri, 1e9), float(Vh[root == ri].min()))
