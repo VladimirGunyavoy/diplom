@@ -1,0 +1,4 @@
+layer u=-0.3 cells: 0cell [00:00, ?cell/s]layer u=-0.3 cells: 55cell [00:01, 29.68cell/s, fails=399, queue=0]
+layer u=+0 cells: 0cell [00:00, ?cell/s]layer u=+0 cells: 103cell [00:02, 40.90cell/s, fails=399, queue=0]
+layer u=+0.3 cells: 0cell [00:00, ?cell/s]layer u=+0.3 cells: 91cell [00:02, 42.99cell/s, fails=399, queue=0]
+value iteration:   0%|          | 0/20000 [00:00<?, ?it/s]                                                          agent rollout 100 starts:   0%|          | 0/500 [00:00<?, ?it/s]                                                                 {'base': 'all', 'rk': 4, 'cm': 5, 'cells': 249, 'nodes_before': 78684, 'nodes': 7705, 't_solve': 0.38921748707070947, 'n': 100, 'reached': 0.0, 'mean': None, 'med': None, 'p90': None, 'max': None, 'ratio20_med': None, 'reached20': 0.0}

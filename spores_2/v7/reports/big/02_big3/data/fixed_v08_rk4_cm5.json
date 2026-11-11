@@ -1,0 +1,17 @@
+{
+ "base": "v08",
+ "rk": 4,
+ "cm": 5,
+ "cells": 25,
+ "nodes_before": 81104,
+ "nodes": 4400,
+ "t_solve": 0.28329927404411137,
+ "n": 100,
+ "reached": 0.0,
+ "mean": null,
+ "med": null,
+ "p90": null,
+ "max": null,
+ "ratio20_med": null,
+ "reached20": 0.0
+}
