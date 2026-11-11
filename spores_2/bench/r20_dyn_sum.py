@@ -2,14 +2,14 @@
 Класс 1: старт внутри диска при t=0 (зазор<0) — невалиден, исключён отовсюду (знаменатель = пары − такие).
 Класс 2: старт валиден, OCP не сошёлся — в дошли/касания считается, из T/T_ref исключён, перечисляется отдельно."""
 import os, sys, json, glob, numpy as np
-D = os.path.expanduser('~/spore_v5/c8'); DD = D + '/reports/bench/data/'; S = np.load(D + '/r20/starts100.npy')
-ks = list(map(int, sys.argv[1:])) or sorted(k for k in range(20) if all(os.path.exists(DD + 'env_A_random_r20s%d_%s.json' % (k, m)) for m in 'AB'))
+T = int(os.environ.get('TIGHT', 0)); D = os.path.expanduser('~/spore_v5/c8'); DD = D + '/reports/bench/data/'; S = np.load(D + '/r20/starts100%s.npy' % ('_tight' if T else '')); PT = 'ts' if T else 's'; ST = '_tight' if T else ''
+ks = list(map(int, sys.argv[1:])) or sorted(k for k in range(20) if all(os.path.exists(DD + 'env_A_random_r20%s%d_%s.json' % (PT, k, m)) for m in 'AB'))
 inv = []; noref = []; acc = {m: dict(n=0, ok=0, tch=[], rt=[], ms=[], clr=[]) for m in 'AB'}; rows = []
 for k in ks:
-    ref = {r['i']: r for r in json.load(open(DD + 'r20_ref_s%d.json' % k))}
+    ref = {r['i']: r for r in json.load(open(DD + 'r20_ref_s%d%s.json' % (k, ST)))}
     inv += [(k, i, round(r['clr0'], 4)) for i, r in ref.items() if r['clr0'] < 0]; noref += [(k, i) for i, r in ref.items() if r['clr0'] >= 0 and not r['T']]
     for m in 'AB':
-        res = json.load(open(DD + 'env_A_random_r20s%d_%s.json' % (k, m)))['res']
+        res = json.load(open(DD + 'env_A_random_r20%s%d_%s.json' % (PT, k, m)))['res']
         assert sorted(r['i'] for r in res) == list(range(100)) and all(r['seed'] == k and np.array_equal(np.asarray(r['Y'][0], float)[:4], S[r['i'], :4]) for r in res), (k, m)
         v = [r for r in res if ref[r['i']]['clr0'] >= 0]; a = acc[m]; ok = [r for r in v if r['ok']]; rt = [r['T'] / ref[r['i']]['T'] for r in ok if ref[r['i']]['T']]
         t = [(k, r['i']) for r in v if r['touch']]; a['n'] += len(v); a['ok'] += len(ok); a['tch'] += t; a['rt'] += rt; a['ms'] += [r['ms'] for r in v]; a['clr'] += [r['clr'] for r in v]
