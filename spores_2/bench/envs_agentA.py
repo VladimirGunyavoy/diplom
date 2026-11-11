@@ -14,7 +14,7 @@ class StaticHaz:
     def pos(s, t): return C0.copy() if np.ndim(t) == 0 else np.broadcast_to(C0, (len(t), 3, 2))
 class AgentA:
     def __init__(s, G, A, H=2., eps=.03, pad=.1, static=False, sig0=0., q0=.01, commits=(1, 3, 6), smax=.5, look=0):
-        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.look = look; s.side = {}; s.nsw = 0; s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0; s.lsinfo = []
+        s.G, s.A, s.H, s.pad, s.static, s.sig0, s.q0, s.commits, s.smax = G, A, H, pad, static, sig0, q0, commits, smax; s.kap = np.sqrt(-2 * np.log(eps)); s.look = look; s.side = {}; s.nsw = 0; s.hist = []; s.US = np.array(G.US, float); s.nfb = 0; s.nstep = 0; s.lsinfo = []; s.inst = []
     def observe(s, p): s.hist.append(np.array(p, float))
     def qest(s):
         if s.static: return 0.
@@ -88,8 +88,25 @@ class AgentA:
         nst = int(round(s.H / G.DTN)); cands = [(i, c) for i in range(len(s.US)) for c in s.commits]; nc = len(cands); i0 = np.array([c[0] for c in cands]); cm = np.array([c[1] for c in cands])
         Y = np.tile(np.asarray(y, float), (nc, 1)); t_el = np.zeros(nc); done = G.ingoal(Y); viol = np.zeros(nc, bool); marg = np.full(nc, np.inf); first = i0.copy()
         blk = []; y0 = np.asarray(y, float)
-        if s.look == 5 and (s.nstep - 1) % int(os.environ.get('LSK', 12)) == 0:   # b17: Б-LS — пересчёт V области у дисков
-            import envs_ls; r = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, sig0=s.sig0, pad=s.pad, HR=HR, T_PR=float(os.environ.get('TPR', 2.)), smax=min(s.smax, .25), pe=float(os.environ.get('LSPE', .3)), ngs=int(os.environ.get('LSGS', 1)), MARG=(None if os.environ.get('MARG') == 'none' else float(os.environ.get('MARG', .3)))); s.lsinfo.append(r)
+        if s.look == 5:   # b17: Б-LS — пересчёт V области. LSDELAY=1/LSPIPE=1: моделированная задержка (V состояния шага t доступна с шага t+ceil(t_LS/DT); LSTLS — подмена t_LS, с)
+            import envs_ls; kk = int(os.environ.get('LSK', 12)); pipe = int(os.environ.get('LSPIPE', 0)); dly = int(os.environ.get('LSDELAY', 0)) or pipe
+            kw = dict(sig0=s.sig0, pad=s.pad, HR=HR, T_PR=float(os.environ.get('TPR', 2.)), smax=min(s.smax, .25), pe=float(os.environ.get('LSPE', .3)), ngs=int(os.environ.get('LSGS', 1)), MARG=(None if os.environ.get('MARG') == 'none' else float(os.environ.get('MARG', .3))))
+            if not dly:
+                if (s.nstep - 1) % kk == 0: r = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, **kw); r.pop('_V', None); s.lsinfo.append(r)
+            else:
+                if not hasattr(s, 'pend'): s.pend = None; s.lastst = -10 ** 9
+                if int(os.environ.get('LSPRE', 0)) and s.nstep == 1: r0 = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, install=True, **kw); r0.pop('_V', None); r0['pre'] = 1; s.lsinfo.append(r0)   # b17: план до отправления — V_Б по состоянию t=0 до старта (в T не входит)
+                if int(os.environ.get('LSCOARSE', 0)) and s.nstep == 1:   # b17: старт по А + грубая первая V_Б (оболочка T_пр LSCTPR, t_LS = узлы × LSNODEUS)
+                    kw1 = dict(kw); kw1['T_PR'] = float(os.environ.get('LSCTPR', 1.)); r1 = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, install=False, **kw1); Vn1 = r1.pop('_V', None)
+                    if Vn1 is not None:
+                        tl1 = r1['n'] * float(os.environ.get('LSNODEUS', 2.3e-6)); d1 = max(1, int(np.ceil(tl1 / DT))); s.pend = (s.nstep + d1, Vn1); s.lastst = s.nstep; s.tl_prev = tl1; r1['delay'] = d1; r1['tl'] = tl1; r1['coarse'] = 1
+                    s.lsinfo.append(r1)
+                if s.pend is not None and s.nstep >= s.pend[0]: s.A.V = s.pend[1]; s.pend = None; s.inst.append(s.nstep)
+                if s.pend is None and (pipe or s.nstep - s.lastst >= kk):
+                    r = envs_ls.refresh(_Z, G, s.A, y0, p, w, q, install=False, tshift=(getattr(s, 'tl_prev', float(os.environ.get('LSTL0', 5.))) if int(os.environ.get('LSB', 0)) else 0.), **kw); Vn = r.pop('_V', None)
+                    if Vn is not None:
+                        tl = float(os.environ['LSTLS']) if os.environ.get('LSTLS') else r['tot']; d = int(np.ceil(tl / DT)); s.pend = (s.nstep + d, Vn); s.lastst = s.nstep; s.tl_prev = tl; r['delay'] = d; r['tl'] = tl
+                    s.lsinfo.append(r)
         if s.look and s.look != 5:
             dg = GOAL - y0[:2]; Lg = np.linalg.norm(dg); ug = dg / max(Lg, 1e-9); nrm = np.array([-ug[1], ug[0]])
             for k in range(len(p)):
@@ -159,7 +176,7 @@ def episode(ag, haz, x0, tmax=20., mode_dyn=True):
         for s_ in np.linspace(0, 1, 21)[1:]:
             q = y[:2] * (1 - s_) + yn[:2] * s_; c = (np.linalg.norm(haz.pos(t + s_ * DT) - q, axis=1) - HR).min(); clr = min(clr, c, 5. - np.abs(q).max())
         L += np.linalg.norm(yn[:2] - y[:2]); y = yn; t += DT; Y.append(y.copy())
-    return dict(ok=ok, T=t if ok else None, lsn=ag.lsinfo[:40], touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
+    return dict(ok=ok, T=t if ok else None, lsn=ag.lsinfo[:40], inst=ag.inst, touch=bool(clr < -1e-3), clr=float(clr), L=float(L), ms=float(np.mean(tms) * 1e3) if tms else 0., nofeas=nofeas, nsw=ag.nsw, steps=len(tms), Y=np.array(Y)[::2].tolist())
 
 _G = _A = _Z = None
 def one(a):
@@ -178,6 +195,7 @@ if __name__ == '__main__':
     e = common.make('car'); X0 = e.X0 if mode == 'static' else D.starts(20); Tref = e.Tref
     if os.environ.get('NST'): X0 = X0[:int(os.environ['NST'])]; Tref = Tref[:int(os.environ['NST'])]
     A.stencils(np.asarray(X0[0], float)[None])   # прогрев индекса ячеек до fork (иначе каждый воркер строит его сам, ~20 с)
+    if int(os.environ.get('LOOK', 0)) == 5: A.V = _Z['V0']; envs_ls.refresh(_Z, G, A, np.asarray(X0[0], float), C0.copy(), np.zeros_like(C0), 0., install=False); A.V = _Z['V0']; print('прогрев numba ok', flush=True)
     jobs = [(i, mode, int(os.environ.get('SEED', 0))) for i in range(len(X0))]; t0 = time.perf_counter()
     with mp.get_context('fork').Pool(int(os.environ.get('NP', 8))) as p: res = p.map(one, jobs)
     res.sort(key=lambda r: r['i']); ok = [r for r in res if r['ok']]; rt = np.array([r['T'] / Tref[r['i']] for r in ok]) if ok else np.array([np.nan])
