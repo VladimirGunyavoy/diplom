@@ -33,7 +33,10 @@ class AgentA:
             dg = GOAL - y0[:2]; Lg = np.linalg.norm(dg); ug = dg / max(Lg, 1e-9); nrm = np.array([-ug[1], ug[0]])
             for k in range(len(p)):
                 tc = min(max(np.dot(p[k] - y0[:2], ug), 0.) / 1.5, s.H); sgc = min(np.sqrt(s.sig0 ** 2 + q * tc ** 3 / 3), s.smax); c = p[k] + w[k] * tc; pr = np.dot(c - y0[:2], ug); off = np.dot(c - y0[:2], nrm)
-                if 0 < pr < Lg and abs(off) < HR + s.pad + s.kap * sgc + .3: blk.append((k, c, nrm, HR + s.pad + s.kap * sgc + .3, tc))
+                rr_ = HR + s.pad + s.kap * sgc + .3; inb = 0 < pr < Lg and abs(off) < rr_
+                if s.look == 2 and k in s.side:   # b16: фиксация стороны — держится, пока диск не остался позади по проекции на линию к цели
+                    inb = np.dot(p[k] - y0[:2], ug) > -(HR + s.pad)
+                if inb: blk.append((k, c, nrm, rr_, tc))
             for k in list(s.side):
                 if k not in [b[0] for b in blk]: del s.side[k]
             for k, c, nr_, rr, tc in blk:
@@ -41,7 +44,7 @@ class AgentA:
                 for sd in (1, -1):
                     wp = c + sd * nr_ * rr; th = np.arctan2(*(GOAL - wp)[::-1]); vw = s.A.vstar(np.array([[wp[0], wp[1], th, 1.5]]))[0]; cs.append(np.linalg.norm(wp - y0[:2]) / 1.5 + (1e3 if vw >= G.BIG / 2 else vw))
                 new = 1 if cs[0] <= cs[1] else -1; old = s.side.get(k)
-                if old is None or (old != new and cs[(0 if old == 1 else 1)] - cs[(0 if new == 1 else 1)] > .5):
+                if old is None or (s.look != 2 and old != new and cs[(0 if old == 1 else 1)] - cs[(0 if new == 1 else 1)] > .5):
                     if old is not None: s.nsw += 1
                     s.side[k] = new
         bmin = [np.full(nc, np.inf) for _ in blk]; bpos = [np.zeros((nc, 2)) for _ in blk]
