@@ -14,7 +14,16 @@ US_ = np.array([(1., .5), (1., -.5), (-1., .5), (-1., -.5)])
 def f6(y, u):
     th, vx, vy, w = y[..., 2], y[..., 3], y[..., 4], y[..., 5]; c, s = np.cos(th), np.sin(th); sp = np.sqrt(vx ** 2 + vy ** 2)
     return np.stack([vx, vy, w, (c * u[0] - s * u[1] - CD * sp * vx) / M_, (s * u[0] + c * u[1] - CD * sp * vy - G_) / M_, LAT * u[1] / I_ + 0 * th], -1)
+EULER = int(os.environ.get('EULER', 0))   # 1: план на модели среды — явный Эйлер dt .02 (как underwaterdrone.step), вместо RK4
 def flow(P, s, t, dt_max=.05):
+    if EULER:   # сегмент t = n полных шагов .02 + остаток (непрерывно по t — для SLSQP); порядок как в underwaterdrone.step: v += a h; x += v_new h
+        P = np.array(P, float); u = US_[s]; sg = 1. if t >= 0 else -1.; n = int(abs(t) / .02 + 1e-9); hs = [sg * .02] * n + [t - sg * .02 * n]
+        for h in hs:
+            if h == 0: continue
+            a = f6(P, u)[..., 3:]; P = P.copy(); P[..., 3:] += a * h; P[..., 0] += P[..., 3] * h; P[..., 1] += P[..., 4] * h; P[..., 2] += P[..., 5] * h
+        return P
+    return _flow_rk4(P, s, t, dt_max)
+def _flow_rk4(P, s, t, dt_max=.05):
     P = np.array(P, float); n = max(1, int(np.ceil(abs(t) / dt_max))); h = t / n; u = US_[s]
     for _ in range(n): k1 = f6(P, u); k2 = f6(P + h / 2 * k1, u); k3 = f6(P + h / 2 * k2, u); k4 = f6(P + h * k3, u); P = P + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
     return P
@@ -54,7 +63,10 @@ t0 = time.perf_counter(); back = build_back(S, .4, NB, RHOB); t_build = time.per
 def work(i):
     t1 = time.perf_counter(); b = corridor_query(S, flow, X0[i], back, .4, NF, RHOF, g, miss, K=K, tries=3, kn=8, neigh=2, nbest=1, clear=lambda P: clr(P) - PAD, wlim=None); dt_ = time.perf_counter() - t1
     if b is None: return dict(i=i, T_agent=None, t_query=dt_, T_verify=None, why='no_path', touch=False)
-    Tv, why, tch = verify(X0[i], list(b[1]), list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt_, T_verify=Tv, why=why, touch=bool(tch), nseg=len(b[1]))
+    seq, dts = list(b[1]), np.array(b[2], float)
+    if int(os.environ.get('QUANT', 0)):   # концы сегментов — на сетку их шага .02 (их u переключается по времени на сетке)
+        e = np.round(np.cumsum(dts) / .02) * .02; dq = np.diff(np.concatenate([[0.], e])); k_ = dq > 1e-9; seq = [q for q, kk in zip(seq, k_) if kk]; dts = dq[k_]
+    Tv, why, tch = verify(X0[i], seq, list(dts)); return dict(i=i, T_agent=float(b[0]), t_query=dt_, T_verify=Tv, why=why, touch=bool(tch), nseg=len(b[1]))
 if __name__ == '__main__':
     t0 = time.perf_counter()
     with mp.get_context('fork').Pool(min(int(os.environ.get('PROCS', 16)), len(X0))) as p: res = p.map(work, range(len(X0)), chunksize=1)
