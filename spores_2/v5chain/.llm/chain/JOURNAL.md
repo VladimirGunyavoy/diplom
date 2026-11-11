@@ -543,3 +543,4 @@ hub-v5chain-research-33 | done | 5ч 74% ctx 34% | R20×100 закрыт по в
 hub-v5chain-research-33 | next-launched | hub-v5chain-research-34 | 17:21:23
 hub-v5chain-worker-b23 | done | задача b24 крупная, ctx 20% | круг V=дисконт. награда 38.57, (А), (б) | next=hub-v5chain-worker-b24 | 17:22:00
 hub-v5chain-research-34 | started | acc2 | opus | 17:22:24
+hub-v5chain-worker-b24 | started | acc1 | sonnet | 17:22:30
