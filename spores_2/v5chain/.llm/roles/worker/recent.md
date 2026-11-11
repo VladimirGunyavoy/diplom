@@ -1,3 +1,11 @@
+## hub-v5chain-worker-35 (acc2, sonnet, 09:12–11:10, линия A) — ctx 27%
+Сделано: ENV4 дрон (τ_max, no_path, план Эйлер+непрерывный зазор: 16/20, 0 кас.); кар: анизотропные клетки ×5 по боковой оси (при одном покрытии .70 узлов −54% к рабочей базе, build −60%, сиды 0–3 p90 1.074–1.094), разбивка t_build, solve кара 196.7→71.3 с (JAC3=2+QFAST+PIDX+HOSTE=0). Всё в PLAN «ХОД worker-35», big.md, env4.md.
+Стоп на / следующий шаг: очередь A в PLAN (ХОД worker-35: (1) ДИ 4D с новым solve в growNq.py, (2) «прочее» 20 с + query 25 с solve кара, (3) дрон plan_end/no_path, (4) seedtr1k — низший приоритет). Ничего из моего не идёт на aida (всё завершено).
+Грабли: aida 1 код `~/spore_v5/a31/spores_2/{bench,v7,v6}` (rsync по полному пути файла; я перезаписывал growCar.py, corridor_nd.py, spores_drone.py — локальные = актуальные); python `~/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python`, casadi — `PYTHONPATH=~/spore_v5/r5/pylib python3`; GPU под `flock /tmp/gpu.lock` (держит b17/другие — очереди долгие); pkill -f запрещён классификатором — убивать по PID; скрипты кара `~/spore_v5/a34/{tp.sh,tp2.sh(JAC3=2 HOSTE=0),anis*.sh,cov.sh}`; cProfile -m ломает pickle (Cell из __main__) — таймеры TM в growCar; stdout tqdm — не cat лога целиком (88 КБ).
+Решения цепочки: ×1-COV хуже базы — открытый вопрос в big.md; шаблон+сдвиг t_build не делать; доп. сиды ×1-COV не гонять.
+Коммиты: git log (последние [hub-v5chain-worker-35]).
+Токены: T_START 5ч 12%/ctx 5% / T_BEFORE_END 5ч 38%/ctx 27%
+
 ## hub-v5chain-worker-25 (acc1, Sonnet, 08:30–16:25, линия A) — ctx 28%
 Сделано: п.26 di4 pool отрицательно (C=∞); di4 Lfull+V_Lfull(r22/18)+FINGRID 53/53 в поле, T/эт rho35 мед 1.048 (2ea9046); п.25 dp1: SYS=dp1 в growN (9ff9268; BUILDONLY/LOADL/GPULOCK), 4×1500 8/20 мед 1.247; п.49 [A] v8: GrowView/LiveStepper/DemoStepper + main.py N/M/C/G (9ba95b6, 3 теста), GUI не проверен (нет дисплея).
 Стоп на / следующий шаг: идёт на aida dp1 4×2000 (PID через ps | grep w25; лог journals/w25/dp1_solve2000.log, GPULOCK, стенсилы CPU 2/4 на 16:20) → V → rollout 20 стартов r23/dp1_ref_ocp_20.npy; результат (последняя строка-JSON) записать в results.md §п.25. Дальше см. PLAN [w25→w26]: чанки GPU-solve (просьба B) или подмножество слоёв. Новых dp1-прогонов — по слову research.
@@ -24,8 +32,4 @@
 ## hub-v5chain-worker-22 (линия A, acc2, Sonnet, 09:30–19:05, ctx 29%)
 Сделано: grow3 закрыт (старт 51, профиль HexIdx, финиш VF5/NA4/VFR1; свободный 1.004, диски 60/60 ≈1.005); п.24 блок SYS=di4 в growN.py. Стоп: дождаться di4_r400/r700 на aida (`~/spore_v5/w21/v7/reports/growN/`), записать в results.md и PLAN п.24; затем п.26, п.25. Грабли: чужой kill по шаблону убил прогоны; pkill -f убивает свой shell; память aida 60 ГБ; 4D: FRAC=1, GLIM=0, GM .25, M=3.
 
-
-## hub-v5chain-worker-21 (линия A, acc2, Sonnet, 03:31–09:40, ctx 25%)
-Сделано: п.17б–17е: `v7/src/cells7/grow3.py` дд-ромб 3D растущими клетками (RS3, GM1, финиш стрельбой, диски OBST=1): свободный 60/60 T/refbox 1.0153 (1528 клеток/260k/147 с), +2 диска 59/60 (1.0122). Отчёт `v7/reports/grow3/results.md`.
-Стоп: PLAN «ОТКРЫТО после w21» (старт 51 дыра у диска; CUT/REFINE; профиль 17ж; диски 17з). Грабли: запуск только фоном на aida (`~/spore_v5/w21/v7`), `pkill -f` убивает свой shell, ожидание >1 мин = глухота к пульсу, git без user (-c user.name=w21 -c user.email=a@b), пуш запрещён TASK.
 

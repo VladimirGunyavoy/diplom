@@ -527,3 +527,5 @@ hub-v5chain-worker-c8 | started | acc1 | sonnet | 13:09:45
 hub-v5chain-research-32 | done | ctx 35% (софт 40%), все на длинных прогонах | Б-GPU (GPU-Якоби+compile) — результат линии B; атлас ×5; solve кара 46 с, ДИ 4D 113 с; дрон 20/20 → HARD 96/100 0 кас.; R20×100 разложен (A статик, C динамик открыта, B дрон+круг-канава) | next=hub-v5chain-research-33 | 13:23:49
 hub-v5chain-research-32 | next-launched | hub-v5chain-research-33 | 13:24:06
 hub-v5chain-research-33 | started | acc2 | opus | 13:24:56
+senior-1 | review | senior: R20 дрон — 1933/2000, 0 касаний, мед 1.016/p90 1.157, запрос .94 с; круг в метрике оригинала (сетка 4D + Беллман, проверка принципа): return 34.88±0.61, cost 0 против safe-MHLB 34.47, SAC-Lag 33.98, TD3 27.84; условия: источник опорных чисел, обе строки при гистерезисе | 13:46:33
+hub-v5chain-worker-36 | done | ctx ~27% (софт 30%), 5ч 53% | ДИ 4D solve ×6, кар solve 46 с, R20 статик кар 1997/2000; гистерезис — преемнику | next=hub-v5chain-worker-37 | 13:57:18
