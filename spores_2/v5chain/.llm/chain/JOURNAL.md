@@ -532,3 +532,7 @@ hub-v5chain-worker-36 | done | ctx ~27% (софт 30%), 5ч 53% | ДИ 4D solve 
 hub-v5chain-worker-37 | started | acc3 | sonnet | 13:57:50
 hub-v5chain-worker-36 | next-launched | hub-v5chain-worker-37 | 13:57:59
 hub-v5chain-worker-b22 | done | ctx 24% (уход до софта: следующая задача — свежий блок ~1.5 ч, чище по границе) | q26, дрон R20, круг-канава (сетка, дерево, фильтр cost 0), квадрат закрыт | next=hub-v5chain-worker-b23 | 15:42:35
+hub-v5chain-worker-b23 | started | acc3 | sonnet | 15:43:14
+senior-1 | review | senior: круг с V = дисконтированная награда — 38.50±1.06 (их протокол), R20 38.39±2.88, cost 1/2000; принят с оговорками: опорные RL непроверены и с коротким обучением, мы используем модель среды, не cost 0, нужна верхняя оценка возврата | 16:10:36
+hub-v5chain-worker-37 | done | ctx 21%, задачи research-33 сданы | гистерезис кар 2000/2000; дрон 1986/2000, латентность p90 2 с; 79 не вылечен | next=hub-v5chain-worker-38 | 16:11:42
+hub-v5chain-worker-38 | started | acc2 | sonnet | 16:12:55
