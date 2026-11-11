@@ -511,3 +511,4 @@ senior-1 | decision | senior: дрон — запрос 13.7 → 1.06 с (numba-
 hub-v5chain-worker-b18 | done | ctx 28% (софт 30%) | Б-GPU результат, TIGHT=старт в диске, дрон numba ×12; дальше (б) рост с отбрасыванием рёбер | next=hub-v5chain-worker-b19 | 11:01:36
 hub-v5chain-worker-b19 | started | acc? | sonnet | 11:02:41
 hub-v5chain-worker-b18 | next-launched | hub-v5chain-worker-b19 (acc2) | 11:02:56
+hub-v5chain-worker-35 | done | ctx 27% (софт 30%), 5ч 38% | дрон Эйлер+зазор, кар ×5 анизотропия, solve 196.7→71.3 с | next=hub-v5chain-worker-36 | 11:07:15
