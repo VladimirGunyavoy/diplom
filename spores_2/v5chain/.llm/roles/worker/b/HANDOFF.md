@@ -1,10 +1,10 @@
-# Session Handoff — линия B (ENV, aida 1; ведёт hub-v5chain-research-32; автономный режим: пользователя не спрашивать)
+# Session Handoff — линия B (ENV, aida 1/2; ведёт hub-v5chain-research-32; автономный режим: пользователя не спрашивать)
 [РУТИНА НЕ ВЫПОЛНЕНА]
-Звено: hub-v5chain-worker-b20 (acc2, sonnet, 11:38–~12:25), причина смены: ветка задач исчерпана (ctx ~15%)
-Сделано: p90 запроса дрона 3.1 с был JIT numba в каждом воркере → прогрев до fork: мед .47/p90 .63 с. Старт 3: fb (при no_path повтор NF6400 K5) → 20/20, 0 касаний. Перенос в v6 (по поручению research-32): v6/src/atlas6/drone_nb.py + fb в corridor_query, всё под флагами; дрон через v6 = 20/20 идентично; m3d ВЫКЛ побитово, ВКЛ без эффекта; NB3000/6000/12000 при RETRY=3: 20/20, 20/20, 19/20. Отчёт reports/bench/envs2026.md §b20 (в spore/reports/bench).
-Стоп на / следующий шаг: NB12000 старт 18 (plan_end+касание, RETRY=3 не лечит); другие NF/NB для статьи; бенч дрона через v6 — bench/spores_drone_d.py (запуск как в c + NREF=1 FBNF=6400 FBK=5 RETRY=3).
-Грабли: aida 2 НЕ ТРОГАТЬ; GPU под flock; интерпретатор ../../../r31/venv/bin/python (теперь с casadi); отчёты данных — файл data/drone_spores6d<TAG>.json (без «_» перед тегом); pkill -f убивает свою оболочку; ssh+heredoc съедает кавычки — через scp. numba-глобалы замораживаются при компиляции (CEIL передаётся аргументом).
-Решения цепочки (автономный режим): fb и drone_nb — под флагами, по умолчанию выкл.
-Коммиты: 50bc645a, 59c6a930, ea048eb0
-Токены: T_START 5ч 44% / ctx 5% (11:38) → T_BEFORE_END 5ч ~51% / ctx ~15%
-NEXT_LINK: hub-v5chain-worker-b21   NEXT_MODEL: sonnet
+Звено: hub-v5chain-worker-b21 (acc3, sonnet, 11:59–~13:15), причина смены: ctx ~28% (софт 30%)
+Сделано: Б-GPU на атласе ×5 (fixed/random s0–2, TIGHT) отправлено; сводка §Итог; дрон NB12000 ст.18 20/20 (CEIL=1) + 36 прогонов NB×NF×зерно + 100 стартов; ENV5: точная модель точки (мм), шаг 2 круг: 8 ворот 8.06–8.34 с, 0 кас. MuJoCo, OCP 7.07/8.43 — всё в reports/bench/envs2026.md §b21 и отправлено research-32.
+Стоп на / следующий шаг: (1) **q26 идёт на aida 1** (`~/spore_v5/b17/q26.log`, ETA ~13:55: атласы ×5-COV SEED0 1..3, А и Б-GPU async fixed+random s0; теги e5s{1,2,3}{A,B}_{fixed,random}) — собрать 12 строк в таблицу §b21 (T/Tref мед/p90, касания, шаг мс), отправить research-32 через send_verified; (2) круг: ускорить запрос (1.2–6.7 с на ворота, python SLSQP; numba-refine как drone_nb), робастность (другие старты/ворота/сид деревьев), OCP-траектории прогнать в MuJoCo; (3) всё новое тяжёлое — на aida 2 (ssh -p 2223 aida@127.0.0.1; ≤2 процесса с атласом, free -g, гасить только свои PID).
+Грабли: круг запускать `bench/runpc.sh скрипт args` (r31/venv + site-packages mj-venv `~/spore_v5/mj/venv` в конец sys.path; numba только в r31); скрипты круга — `reports/bench/b21/` (на aida `~/spore_v5/b17/spores_2/bench/`); коммитить `reports/bench/...` из корня репо `~/claude-work/projects/spore` (не из v5chain); sleep >~30 с в foreground блокируется — until-цикл в фоне; пульс-журнал `journals/worker/hub-v5chain-worker-b21.log`; редуцированная 5D модель ошибается 1–3 см/слой, 6.7 см на сложных планах (компенсирует PAD .07); жадность упирается в стену — конус скорости на воротах (CONE .5, VN .25).
+Решения цепочки (автономный режим): круг — 5D+алгебр. ω вместо 6D (обратный поток 6D неустойчив), конус скорости на воротах (тот же для OCP-пары).
+Коммиты: git log --oneline -3
+Токены: T_START 5ч 9% / ctx 5% (11:59) → T_BEFORE_END 5ч ~30% / ctx ~28%
+NEXT_LINK: hub-v5chain-worker-b22   NEXT_MODEL: sonnet
