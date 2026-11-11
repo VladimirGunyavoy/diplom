@@ -87,6 +87,15 @@ def _tree_e(S, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
     return P, G, par, lay
 if ECHK: _and._tree = _tree_e; _cnd._tree = _tree_e
 
+# w37: кэш прямого дерева между проходами одного старта (дерево не зависит от pad_x/gm_x; результат побитово тот же), TCACHE=1
+TCACHE = int(os.environ.get('TCACHE', 0)); _TC = {}
+if TCACHE:
+    _t0 = _cnd._tree
+    def _tree_c(S_, tau, starts, N, rho, sw_w, fwd, hist_on=True, hfun=None):
+        key = (np.asarray(starts[0], float).tobytes(), N, rho, sw_w, fwd, hfun is None)
+        if key not in _TC: _TC[key] = _t0(S_, tau, starts, N, rho, sw_w, fwd, hist_on, hfun)
+        return _TC[key]
+    _cnd._tree = _tree_c
 # b20: numba-refine — теперь в v6/src/atlas6/drone_nb.py (под флагом NREF=1; install до fork)
 NREF = int(os.environ.get('NREF', 0)); CEIL = int(os.environ.get('CEIL', 0)); _XP = [0., 0.]; KSR = float(os.environ.get('KSRHO', 300))
 if NREF:
@@ -147,7 +156,7 @@ def _one(i, pad_x, gm_x):
         if int(os.environ.get('QUANT', 0)):
             e = np.round(np.cumsum(dts) / .02) * .02; dq = np.diff(np.concatenate([[0.], e])); k_ = dq > 1e-9; seq = [q for q, kk in zip(seq, k_) if kk]; dts = dq[k_]
         Tv, why, tch = verify(X0[i], seq, list(dts)); return Tv is not None and not tch
-    t1 = time.perf_counter(); b = corridor_query(S, flow, X0[i], back, .4, NF, RHOF, gx, mx, K=K, hfun=HF, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), nbest=1, clear=lambda P: clr(P) - PAD - pad_x, wlim=None, fb=FB, vfy=(_vfy if int(os.environ.get('VFY', 0)) else None)); dt_ = time.perf_counter() - t1
+    t1 = time.perf_counter(); b = corridor_query(S, flow, X0[i], back, .4, NF, RHOF, gx, mx, K=K, hfun=HF, tries=int(os.environ.get('TRIES', 3)), kn=8, neigh=int(os.environ.get('NEIGH', 2)), nbest=1, clear=lambda P: clr(P) - PAD - pad_x, wlim=None, fb=FB, vfy=(_vfy if int(os.environ.get('VFY', 0)) else None), kfb=(int(os.environ['KFB']) if os.environ.get('KFB') else None)); dt_ = time.perf_counter() - t1
     if b is None:
         dgn = None
         if os.environ.get('DIAG'):
@@ -166,6 +175,7 @@ def _one(i, pad_x, gm_x):
     if HARD and tch: Tv, why = None, 'touch'   # жёсткий отказ: план с касанием = не дошёл
     return dict(i=i, T_agent=float(b[0]), t_query=dt_, T_verify=Tv, why=why, touch=bool(tch), nseg=len(b[1]), diag=dg, pad_x=pad_x)
 def work(i):
+    _TC.clear()
     r = _one(i, 0., 0.); n = 0; tt = r['t_query']
     while RETRY and (r['T_verify'] is None or r['touch']) and n < RETRY and not (HARD and r['T_verify'] is not None):
         n += 1; r2 = _one(i, EXTRA * n, XG * n); tt += r2['t_query']
