@@ -1,15 +1,10 @@
-# Session Handoff (линия C — bench)
-**ПАУЗА по слову пользователя (14:52, research-27): новых прогонов не запускать; идущие досчитать, результаты записать.** c7: сделаны (1) ДИ 4D b12 53/53 1.015, (2) total_m8.png+HYB; идут на aida: лабиринт цели (3,1)/(5,3) — solve+агент (PID 2679796, 2686051, лог ~/spore_v5/c1/mazeb/solve_*.log, JSON maze_spores_g*.json → записать в table_maze_goals.md «замер 2 целей, ×20 — оценка») и SAC dp1 сиды 1,2 (~/spore_v5/c1/spores_2/bench/sac_dp1_s*.log → table_dp1).
-**Лабиринт: solve_3_1 упал AttributeError finish_gen.shoot_grid (SRC_DIR=b12/cells7 несёт старый finish_gen.py), V потерян (DUMP не было); (5,3) упадёт так же. НЕ перезапускать до слова; слои L_3_1.pkl/L_5_3.pkl целы (~/spore_v5/c1/mazeb), перед solve синхронизировать finish_gen.py из v7/src; в bench/spores_maze.py локально (не синхр.) добавлены подмена finish_gen из manip_src и DUMPV.**
-Звено: hub-v5chain-worker-c6 (acc3 sonnet, 07:50–14:10), причина смены: ctx ~27% (софт 30%). Ведущий — hub-v5chain-research-26. Автономный режим.
-Протокол: knowledge/research/bench_protocol.md; код spores_2/bench/ (sync.sh → aida ~/spore_v5/c1/spores_2/; pull.sh ← данные); сводки reports/bench/.
-## Сделано (всё в git)
-- MAZE 4D (дд с инерцией, x,y,θ,v): maze4.py, блок SYS=maze4 (mk_maze4_src.py копирует v7 и вставляет блок), spores_maze4.py, prm_maze4.py (PRM*+преследование), diag_maze4.py, cover_m4.sh, make_maze4_report.py → table_maze4.md. Споры 4×3000 0–6%, 4×10000 (FORB2=0 FORB2B=1 VIAB=1) 24% (заготовка 6446 с); SST/RRT 0%; PRM*+преследование 90%. Диагноз: клетки у цели, старты не покрыты.
-- MAZE (б) K=20: prm_maze_goals.py, table_maze_goals.md (PRM* 65 с total, 100%; споры — оценка, не измерено).
-- SAC SB3 dp1 (ppo_run.py RL_ALGO=SAC): 100%, 1.39. compare.md исправлен по explainer-3 (CA4 745/K*31/39, manipf FORB2b, ДИ 4D b12 215 с + колонка ресурсов).
-## Дальше
-(1) измерить retarget спор на лабиринте (режим б); (2) 8D в compare после table_m8 от w29; (3) B9 36k клеток; (4) SAC dp1 сиды 1–2; (5) RACE последним.
-## Грабли
-GPU-замок — только GPULOCK=1 в growN (в скриптах бенча замка нет; внешний flock не использовать — слово research-26). FORB2=.5 душит радиус клеток в 4D (FORB2=0 — клетки ×3.4, рост в 6 раз быстрее). aida venv-sb3: /home/random/Calf_Barrier_Safe_MHLB_Code/.venv-sb3/bin/python; OMPL: ~/venv-ompl. Мониторы Monitor живут 30 мин — перевзводить. make_maze4_report.py перезаписывает table_maze4.md целиком (вывод внутри скрипта). table_di4/dp1 — строки b12/SAC добавлены вручную (make_report их не знает).
-Идёт на aida: ничего моего.
-NEXT_LINK: hub-v5chain-worker-c7   NEXT_MODEL: sonnet
+# HANDOFF линии C для hub-v5chain-worker-c8 (написал hub-v5chain-research-32, 2026-11-11 ~13:4x). АВТОНОМНЫЙ РЕЖИМ (journals/_sentinel/AUTONOMOUS — хвост: свежие слова пользователя)
+Линия C открыта заново (старое до 13.10 — HANDOFF_2026-10-13.md, не брать). Ведущий — hub-v5chain-research-32 (и его преемники research-N), старший — hub-v5chain-senior-1. Субагентов нет. Воркер — Sonnet.
+## Задача линии C — ДИНАМИК КАР в итоговом прогоне R20×100 (слово пользователя ~13:3x: «каждая среда на 20 сидах по 100 стартов, чтобы показать, что рил пашет; с памятью аккуратно»)
+Спецификация — `.llm/chain/PLAN.md` §R20×100. Машина — **aida 2** (`ssh -p 2223 aida@127.0.0.1`, 32 ядра, RTX 5080 16 ГБ; слово пользователя 13:15: считать можно — ≤ 2 тяжёлых процесса с атласом, free -g перед каждым запуском, занято ≤ ~40 ГБ, гасить только свои PID; диск 97% — 47 ГБ свободно, `df -h` перед записью кэшей).
+- Метод = «атлас ×5 + агент Б-GPU async» (итог дня, `knowledge/research/scheme_b_label_setting.md` §Атлас ×5 + Б-GPU, `reports/bench/envs2026.md` §b21) и для сравнения агент А на том же атласе. Код: `spores_2/bench/envs_agentA.py` (LOOK=5 = Б), `envs_ls.py` (LSGPU, LSASYNC/LSREAL), `ls_gpu_server.py` (сервер в venv с torch); запуски b21 — q-скрипты на aida 1 `~/spore_v5/b17/` (спроси hub-v5chain-worker-b21, он владелец этого кода — ты код не правишь без согласования, свои обёртки — `bench/r20_dyn*.py`/`.sh`).
+- Сид k (0..19) = атлас ×5-COV SEED0 k (строит worker-36 на aida 1, копирует на aida 2) + диски random seed k. Обычная раскладка, 100 стартов (генератор seed 1000 — общий с worker-36), А и Б-GPU. TIGHT — 20 сидов по стартам вне диска (зазор при t=0 ≥ 0).
+- Эталон — OCP-ясновидец со знанием дисков на каждую пару (сид, старт) = 2000 OCP (CasADi, как r21/ref_car.py / env_oracle; CPU-параллельно, ≤ 24 процесса, без атласа).
+- Окружение aida 2: venv `~/spore_v5/venv` (py3.13, numpy/scipy/numba/casadi/torch, CUDA) — от b14; код `~/spore_v5/spores_2/` — синхронизировать с git (свежий bench/).
+- Отчёт: `reports/bench/r20.md` §Динамик кар (строка на сид + итог: дошли N/2000, касаний, T/T_ref мед/p90/max, мс/шаг, t_LS); каждое число — строкой research (send_verified.py).
+Порядок: (1) окружение aida 2 + смоук «Б-GPU на атласе ×5 SEED 0, 20 стартов» = строка b21 (1.063/1.092 fixed) — проверка переноса; (2) генератор 100 стартов + OCP-эталоны; (3) сиды по мере поступления атласов.
