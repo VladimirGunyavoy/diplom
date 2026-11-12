@@ -1,0 +1,1 @@
+{"env": "pend", "nodes": 112735, "active": 110091, "eps": 0.01, "regions": 4927, "k95": 1127, "size_med": 1.0, "size_max": 4187, "singletons": 3328, "stored_cells": 9016, "stored_nodes": 313758, "compress": 34.80013309671695, "frac_boundary": 0.4580301750370148, "refined_frac": 0.3881788702073739, "refined_frac_on_boundary": 0.6588398611799703, "t": 1.401075443951413}

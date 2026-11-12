@@ -11,7 +11,7 @@ from tvg_lp import AgentLP
 from tvg_dl import run_agent
 env, d = T.env, T.d
 NFIN = int(os.environ.get('NFIN', 30000)); ROUNDS = int(os.environ.get('ROUNDS', 5)); ADD = float(os.environ.get('ADD', .1)); PROBE = float(os.environ.get('PROBE', 1.))
-VCAP = float(os.environ.get('VCAP', 40))
+VCAP = float(os.environ.get('VCAP', 40)); STRICT = os.environ.get('STRICT') == '1'
 
 def box(rng, n):
     lo_ = np.where(env.period > 0, -env.period / 2, T.LO); hi_ = np.where(env.period > 0, env.period / 2, T.HI)
@@ -24,9 +24,12 @@ def mkag(S, P):
 def residual(S, ag, C):
     Wc = np.minimum(ag.W, VCAP)
     J, lam, ok = ag.ip.weights(C); wi = (lam * Wc[J]).sum(1)
-    good = ok & (wi < VCAP - 1) & ~T.in_goal(C); C, wi = C[good], wi[good]
+    good = ok & (wi < VCAP - 1) & ~T.in_goal(C)
+    if STRICT: good &= (Wc[J] < VCAP - 1).all(1)   # все вершины симплекса — достижимые (не у потолка)
+    C, wi = C[good], wi[good]
     E, OK, GL = T.edges(C, S); L2 = OK.shape[1]; J, lam, ins = ag.ip.weights(E.reshape(-1, d))
     sub = (lam * Wc[J]).sum(1).reshape(-1, L2); bad = ~ins.reshape(-1, L2)
+    if STRICT: bad |= ~(Wc[J] < VCAP - 1).all(1).reshape(-1, L2)
     cand = np.where(GL > 0, GL, T.TAUV[None] + sub); cand[~OK | ((GL <= 0) & bad)] = 1e9; wb = cand.min(1); m = wb < VCAP - 1
     return C[m], np.abs(wi[m] - wb[m]), wi[m] - wb[m]
 

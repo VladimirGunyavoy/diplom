@@ -1,0 +1,1 @@
+{"env": "di4", "nodes": 100000, "active": 87035, "eps": 0.1, "regions": 7280, "k95": 2929, "size_med": 1.0, "size_max": 1257, "singletons": 6193, "stored_cells": 55651, "stored_nodes": 413415, "compress": 7.428707480548418, "frac_boundary": 0.8973401505141609, "refined_frac": 0.0, "refined_frac_on_boundary": 0.0, "t": 0.5851527999620885}
