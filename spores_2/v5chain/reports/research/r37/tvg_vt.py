@@ -10,6 +10,9 @@ from scipy.spatial import cKDTree
 ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
 TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1)); TIEP = float(os.environ.get('TIEP', 0)); DEPB = int(os.environ.get('DEPB', 1)); TIE = float(os.environ.get('TIE', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 5)); ESCB = int(os.environ.get('ESCB', 200)); ESCDISP = float(os.environ.get('ESCDISP', .05))
 env = common.make(ENV); d = env.n
+if os.environ.get('STARTS'):   # research-37: свежие старты (di4_ref_fresh.py), keep — как в DI4
+    _a = np.load(os.path.expanduser(os.environ['STARTS'])); env.X0 = _a[:, :4].copy(); env.Tref = _a[:, 6].copy(); _Q = env.X0
+    env.keep = np.abs(np.c_[_Q[:, 0] + _Q[:, 2] * np.abs(_Q[:, 2]) / 2, _Q[:, 1] + _Q[:, 3] * np.abs(_Q[:, 3]) / 2]).max(1) <= 2.5
 SC = tuple(float(v) for v in os.environ.get('SC', ','.join(['1'] * d)).split(','))
 if d == 4 and os.environ.get('NU3', '1') == '1': ACT = np.array([[a, b] for a in (-1., 0., 1.) for b in (-1., 0., 1.)])
 elif d == 4: ACT = np.array([[a, b] for a in (-1., 1.) for b in (-1., 1.)])
@@ -72,7 +75,7 @@ def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
 
 def kv_auto(S, tree, P, W, k=9, q=.9):
     """квантиль q локальной Липшица V по рёбрам графа узлов (kNN в метрике S.scale): |W_i-W_j|/d_ij"""
-    dd, jj = tree.query(S.wrap(P) / S.scale, k=k, workers=-1); jj = jj % len(P); i = np.arange(len(P))[:, None]
+    dd, jj = tree.query(S.wrap(P) / S.scale, k=k, workers=int(os.environ.get('KDW', -1))); jj = jj % len(P); i = np.arange(len(P))[:, None]
     m = (dd > 1e-9) & (W[:, None] < 1e2) & (W[jj] < 1e2); r = np.abs(W[:, None] - W[jj])[m] / dd[m]; return float(np.quantile(r, q))
 
 class Agent:
@@ -84,7 +87,7 @@ class Agent:
             rng = np.random.default_rng(1000 + TS); n = int(UNI * self.nP); lo = np.where(env.period > 0, -env.period / 2, LO); hi = np.where(env.period > 0, env.period / 2, HI)
             U = rng.uniform(lo, hi, (n, d)); U = U[okv(U)]; self.P = np.vstack([self.P, U]); self.nP = len(self.P); self.tree = cKDTree(_scaled(S, _images(S, self.P)))
         t0 = time.perf_counter(); E, OK, GL = edges(self.P, S); t1 = time.perf_counter()
-        Ew = S.wrap(E.reshape(-1, d)); dd, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=-1)
+        Ew = S.wrap(E.reshape(-1, d)); dd, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=int(os.environ.get('KDW', -1)))
         J = (j % self.nP).astype(np.int32); D = dd.astype(np.float64); t2 = time.perf_counter()
         self.W, it, res = vit(J, D, OK, GL, in_goal(self.P), self.nP, TAUV, KV, int(os.environ.get('NIT', 300)), 1e3); t3 = time.perf_counter(); self.tvi = t3 - t0
         if os.environ.get('KVAUTO') == '1':

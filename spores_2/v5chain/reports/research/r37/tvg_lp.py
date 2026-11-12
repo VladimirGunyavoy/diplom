@@ -67,7 +67,7 @@ def lp_batch(NB_, Qs):
 class InterpLP:
     def __init__(self, S, tree, nP): self.S, self.tree, self.nP = S, tree, nP
     def weights(self, Q):
-        Qs = self.S.wrap(np.asarray(Q, float)) / self.S.scale; dd, jj = self.tree.query(Qs, k=KLP, workers=-1)
+        Qs = self.S.wrap(np.asarray(Q, float)) / self.S.scale; dd, jj = self.tree.query(Qs, k=KLP, workers=int(os.environ.get('KDW', -1)))
         NB_ = self.tree.data[jj]; Jl, L, ok = lp_batch(np.ascontiguousarray(NB_), np.ascontiguousarray(Qs))
         J = np.take_along_axis(jj, Jl, 1) % self.nP; return J.astype(np.int64), L, ok
 
