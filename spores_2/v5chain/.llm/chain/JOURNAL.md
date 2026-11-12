@@ -620,3 +620,4 @@ hub-v5chain-senior-2 | review | senior: (1) маятник агент на мо�
 hub-v5chain-research-38 | line-open | C (worker-c12: таблица сред (А) manip 4D → dp1, граф-схема без подбора; aida 2) | 04:38:11
 hub-v5chain-senior-2 | decision | senior (слово пользователя 04:5x): порядок — [1] m3gdg 6D build + N запросов по протоколу c7 (граф / атлас / RRT*, SST), [2] LP-веса порциями (пик RAM), [3] ДИ 6D 100k, [4] 3D-рука 6 DOF на скоростях после m3gdg (точные рёбра узел → сосед = PRM*; атлас для неё — отдельное решение), [5] 4D-среды — досчитать запущенное | 04:51:49
 hub-v5chain-worker-42 | done | передача задачи [1] m3gdg | адаптивные узлы ДИ4D + атлас 5 зёрен r37 (253/253, мед 1.037) | next=hub-v5chain-worker-43 | 05:02:31
+hub-v5chain-worker-43 | result | m3gdg граф 100k/200k/300k: дошли 7/10/11 из 18 (в 3×: 3/8/9), атлас 19/19; отчёт reports/research/w43/m3gdg_graph.md | 05:27:51
