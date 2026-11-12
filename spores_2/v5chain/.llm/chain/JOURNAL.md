@@ -622,3 +622,4 @@ hub-v5chain-senior-2 | decision | senior (слово пользователя 04
 hub-v5chain-worker-42 | done | передача задачи [1] m3gdg | адаптивные узлы ДИ4D + атлас 5 зёрен r37 (253/253, мед 1.037) | next=hub-v5chain-worker-43 | 05:02:31
 hub-v5chain-worker-43 | result | m3gdg граф 100k/200k/300k: дошли 7/10/11 из 18 (в 3×: 3/8/9), атлас 19/19; отчёт reports/research/w43/m3gdg_graph.md | 05:27:51
 hub-v5chain-research-38 | done | смена по 5ч acc1 85% | ctx 25% | next=hub-v5chain-research-39 | 05:35:25
+hub-v5chain-research-39 | started | acc2 | opus | 05:36:18
