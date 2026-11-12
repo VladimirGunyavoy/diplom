@@ -776,7 +776,9 @@ def starts_ref():
     """(Q, эталон T)."""
     if SYS == 'dd': rng = np.random.default_rng(1); Q = np.c_[rng.uniform(-2, 2, (60, 2)), rng.uniform(-np.pi, np.pi, 60)]; return Q, np.load(os.path.join(REF, 'dd_ref_60.npy'))
     if SYS == 'di4':                                                                                        # research-17: T* = max(T₁*, T₂*) в коробку ±.05 (r17/di4_ref.py)
-        d_ = np.load(os.path.join(REF, E('DI4REF', 'r17/di4_ref_60.npy'))); Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4]); return Q, d_[:, 6]   # п.41: для RHO .35 — DI4REF=r22/di4_ref_60_rho35.npy (эталон в коробку ±RHO; по умолч. ±.05 занижает T/эталон ~17%)
+        d_ = np.load(os.path.join(REF, E('DI4REF', 'r17/di4_ref_60.npy'))); Q = d_[:, :4].copy()
+        if not E('DI4FRESH'): Q = np.random.default_rng(1).uniform(-2, 2, (60, 4)); assert np.allclose(Q, d_[:, :4])   # DI4FRESH=1 (w42, r37): старты из файла как есть (300 шт., rng(7)), без assert на rng(1)
+        return Q, d_[:, 6]   # п.41: для RHO .35 — DI4REF=r22/di4_ref_60_rho35.npy (эталон в коробку ±RHO; по умолч. ±.05 занижает T/эталон ~17%)
     if SYS == 'dp1':                                                                                       # п.25: эталон OCP 20 стартов r23/dp1_ref_ocp_20.npy (x(4) в обычных координатах, T), rng(0) как manip; без файла — один старт «висит → вверх» (OCP 5.098)
         if E('DP1REF'): a_ = np.load(os.path.join(REF, E('DP1REF'))); return a_[:, :4] - np.array([np.pi / 2, 0, 0, 0]), a_[:, 4]
         return np.array([[-np.pi / 2 - np.pi / 2, 0., 0., 0.]]), np.array([5.098])
@@ -789,12 +791,15 @@ def starts_ref():
         return Q, ref
     rq = np.random.default_rng(0); Q = np.stack([rq.uniform(-np.pi, np.pi, 100), rq.uniform(-2, 2, 100)], 1); fb = os.path.join(REF, 'pend_ref_best_u%s.npy' % E('UM', '0.3'))
     return Q, np.load(fb if os.path.exists(fb) else os.path.join(HERE, 'pend_ref_T.npy'))
+_solve0 = Atlas.solve
+def _solve_t(s, *a, **k): t = time.time(); r = _solve0(s, *a, **k); s.t_solve = time.time() - t; return r
+Atlas.solve = _solve_t
 if __name__ == '__main__':
     t0 = time.time()
     if E('LOADL'): import pickle; d_ = pickle.load(open(E('LOADL'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); tb = 0.; print('слои загружены', [len(l) for l in A.layers], 'узлов', A.N, flush=True); A.solve(); Q, ref = starts_ref(); pickle.dump(dict(layers=A.layers, V=A.V), open(E('DUMP'), 'wb')) if E('DUMP') else None   # w25: слои с диска (DUMPL) → solve (под flock) → rollout
     elif E('LOAD'): import pickle; d_ = pickle.load(open(E('LOAD'), 'rb')); A = Atlas.__new__(Atlas); A.layers = d_['layers']; A.finish(); A.V = d_['V']; A.n_it = 0; A.edges = 0; tb = 0.; Q, ref = starts_ref()   # LOAD: атлас с V из DUMP — только rollout (напр. с VF)
     else:
-        A = Atlas(); tb = time.time() - t0
+        A = Atlas(seed=int(E('SEED', 0))); tb = time.time() - t0
         print('построено', [len(l) for l in A.layers], 'узлов', A.N, round(tb), 'с', flush=True)
         if E('DUMPL'): import pickle; pickle.dump(dict(layers=A.layers), open(E('DUMPL'), 'wb')); print('слои сохранены', E('DUMPL'), flush=True)
         if int(E('BUILDONLY', 0)): sys.exit(0)   # w22: после потери 2-часового построения — слои на диск до solve
@@ -803,3 +808,4 @@ if __name__ == '__main__':
     T, sw, _ = A.rollout(Q); fz = np.isfinite(T) & np.isfinite(ref); r = T[fz] / ref[fz]
     print(json.dumps(dict(SYS=SYS, DTN=DTN, RMAX=RMAX, TMAX=TMAX, DELTA=DELTA, cells=[len(l) for l in A.layers], nodes=int(A.N), iters=int(A.n_it), big_nodes=round(float((A.V >= BIG / 2).mean()), 3), reach=round(float(np.isfinite(T).mean()), 3),
                           T_over_ref=dict(mean=round(float(r.mean()), 4), med=round(float(np.median(r)), 4), max=round(float(r.max()), 3), min=round(float(r.min()), 3)) if fz.any() else None, sec_build=round(tb, 1), sec=round(time.time() - t0, 1))), flush=True)
+    if E('TJSON'): json.dump(dict(T=[None if not np.isfinite(x) else float(x) for x in T], ref=[float(x) for x in ref], nodes=int(A.N), iters=int(A.n_it), t_build=tb, t_solve=getattr(A, 't_solve', None), t_total=time.time() - t0, reach=int(np.isfinite(T).sum()), n=len(T), mean=float(r.mean()), med=float(np.median(r)), p90=float(np.quantile(r, .9)), max=float(r.max()), seed=int(E('SEED', 0)), ADAPT=ADAPT), open(E('TJSON'), 'w'))
