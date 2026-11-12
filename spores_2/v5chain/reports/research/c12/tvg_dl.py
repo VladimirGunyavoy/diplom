@@ -85,22 +85,24 @@ class AgentDL(T.Agent):
 
 _AG = None
 def _ep1(i):
-    if not env.keep[i]: return (None, 0)
-    Tv, why, m = T.episode(_AG, env.X0[i]); return (Tv, m)
+    if not env.keep[i]: return (None, 0, 'skip')
+    Tv, why, m = T.episode(_AG, env.X0[i]); return (Tv, m, str(why))
 
 def run_agent(ag, ns):
-    Ts = []; ms = []; NPR = int(os.environ.get("NPROC", 1))
+    Ts = []; ms = []; whys = []; NPR = int(os.environ.get("NPROC", 1))
     if NPR > 1:   # research-38: старты параллельно, fork после VI (W/дерево общие copy-on-write)
         import multiprocessing as mp
         global _AG; _AG = ag
         with mp.get_context("fork").Pool(NPR) as pool: rr = pool.map(_ep1, range(ns), chunksize=1)
-        Ts = [r[0] for r in rr]; ms = [r[1] for r in rr]
+        Ts = [r[0] for r in rr]; ms = [r[1] for r in rr]; whys = [r[2] for r in rr]
     else:
       for i in range(ns):
-        if not env.keep[i]: Ts.append(None); ms.append(0); continue
-        Tv, why, m = T.episode(ag, env.X0[i]); Ts.append(Tv); ms.append(m)
+        if not env.keep[i]: Ts.append(None); ms.append(0); whys.append('skip'); continue
+        Tv, why, m = T.episode(ag, env.X0[i]); Ts.append(Tv); ms.append(m); whys.append(str(why))
     Tt = np.array([np.nan if t is None else t for t in Ts]); k = env.keep[:ns]; ok = np.isfinite(Tt) & (Tt <= 3 * env.Tref[:ns]) & k; r = Tt[ok] / env.Tref[:ns][ok]
-    return Ts, dict(reach=int(ok.sum()), n=int(k.sum()), med=float(np.median(r)), mean=float(r.mean()), p90=float(np.percentile(r, 90)), max=float(r.max()), ms=1e3 * float(np.mean(ms)))
+    W_ = np.array(whys)[:ns]; viol = dict(viol_box=int(((W_ == 'box') & k).sum()), viol_nogoal=int(((W_ == 'no_goal') & k).sum()), viol_slow=int(((W_ == 'ok') & ~ok & k).sum()))   # нарушения (common.verify): выход за коробку / не дошёл за tmax / дошёл, но > 3 T_ref
+    if ok.sum() == 0: return Ts, dict(reach=0, n=int(k.sum()), med=float('nan'), mean=float('nan'), p90=float('nan'), max=float('nan'), ms=1e3 * float(np.mean(ms)), **viol)
+    return Ts, dict(reach=int(ok.sum()), n=int(k.sum()), med=float(np.median(r)), mean=float(r.mean()), p90=float(np.percentile(r, 90)), max=float(r.max()), ms=1e3 * float(np.mean(ms)), **viol)
 
 def main():
     ts = T.TS; ns = len(env.X0); S = T.mkS(ts)
