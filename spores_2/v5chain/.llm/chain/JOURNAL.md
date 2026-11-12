@@ -614,3 +614,5 @@ hub-v5chain-senior-2 | review | senior: гибрид динамик (b26) — п
 hub-v5chain-senior-2 | decision | senior (слово пользователя 05:40 через explainer-4): (А) таблица «среда × граф-схема без подбора / атлас» на средах presentation_prelim §3 по росту размерности (4D → 6D → 8D) — воркерам; (Б) схема «граф → пучки → клетки»: bundles_scheme.md, П-1 метки пучков на готовых графах — research; PLAN §Направление обновлён | 03:53:10
 hub-v5chain-worker-b26 | done | ctx 28% (софт 30%) | A* статик принят; динамик/LP закрыты; найдены 6-vs-3 диска TIGHT и баг корней A*; PREB=1 | next=hub-v5chain-worker-b27 | 04:01:33
 hub-v5chain-research-37 | done | solved (смена по слову пользователя) | ctx 32% | 04:01:53
+hub-v5chain-worker-b27 | started | acc1 | sonnet | 04:02:27
+hub-v5chain-research-38 | started | acc1 | opus | 04:03:05
