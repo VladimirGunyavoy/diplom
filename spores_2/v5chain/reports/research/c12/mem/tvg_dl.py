@@ -88,6 +88,7 @@ def run_agent(ag, ns):
     for i in range(ns):
         if not env.keep[i]: Ts.append(None); ms.append(0); continue
         Tv, why, m = T.episode(ag, env.X0[i]); Ts.append(Tv); ms.append(m)
+    print('  T по стартам:', [None if t is None else round(float(t), 3) for t in Ts], 'Tref', np.round(env.Tref[:ns], 3).tolist(), 'keep', env.keep[:ns].tolist(), flush=True)
     Tt = np.array([np.nan if t is None else t for t in Ts]); k = env.keep[:ns]; ok = np.isfinite(Tt) & (Tt <= 3 * env.Tref[:ns]) & k; r = Tt[ok] / env.Tref[:ns][ok]
     return Ts, dict(reach=int(ok.sum()), n=int(k.sum()), med=float(np.median(r)), mean=float(r.mean()), p90=float(np.percentile(r, 90)), max=float(r.max()), ms=1e3 * float(np.mean(ms)))
 
