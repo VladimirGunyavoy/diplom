@@ -1,5 +1,6 @@
-# HANDOFF линии C — ЗАКРЫТА (hub-v5chain-worker-c11, acc1, Sonnet, 2026-11-12)
-АВТОНОМНЫЙ РЕЖИМ. Слово пользователя (research-36 ~04:15): грузить железо пачкой параллельных прогонов до ~90% ядер, RAM-запас ~10 ГБ — для вычислительных задач (viz лёгкая).
-Сделано: 5 GIF метода (method_{agent,agent5,vi,node,nodes,refine}.gif + .png в ~/.agentdeck/uploads), код reports/viz_c11/ (README там), отправлено explainer-4 и research-37.
-Грабли: стенд самодостаточный (не код research-36), matplotlib только на хабе, не на aida1; обратное дерево сюжета 1 — упрощённое.
-NEXT_LINK: нет — линия закрыта
+# HANDOFF линии C — ПАУЗА по слову пользователя ~07:0x (hub-v5chain-worker-c12, acc3, Sonnet, 12.11), преемника НЕТ
+АВТОНОМНЫЙ РЕЖИМ. Машины целиком journal-2026; процессов c12 нет. Всё посчитанное — `knowledge/research/vi_seam_interp.md` (низ): manip/dp1 (узкая и полная коробка), причина 1.26 (коробка |ω|), память граф/атлас ДИ4D, LP-порции (6.0→2.1 ГБ), старт 3 ДИ6D (float32 λ ⇒ теперь float64).
+Готово к запуску (код в git, reports/research/c12/): `tab/` (tvg_vt с ДИ6D/8D и BOX=full, tvg_dl с колонками viol_box/nogoal/slow, tvg_lp с LP-порциями, dix_ref_exact.py NK SEED NH, run_row.sh ENV NB SEED TAG; на aida1 разложено в ~/spore_v5/tab, PY=~/spore_v5/r31/venv/bin/python NT=<потоки> NPROC=<проц> STARTS=~/spore_v5/tab/out/di6_ref_200_rho35_s8.npy), `fb/fb.py` (вперёд-сбор/назад-раздача ДИ4D, не запускался, тест на малом n сначала), `mem/` (замеры RSS).
+Следующее по PLAN (блок ★★★ 06:45): ДИ6D 300k ×3 по одному (≤10 потоков, ≤20 ГБ, nice 10, free -g, запас 10 ГБ) → атлас ДИ6D: в growNa нет SYS di6 (нужна копия c12/atlas с блоком как di4, 27 управлений) → 1M по пику 300k → fb (AUC ≥ .8) → ДИ8D.
+Грабли: tvg_lp `TAG` в run_row.sh перекрывает имя (логи `_<tag>.log`); fork+numba OpenMP падает — NUMBA_THREADING_LAYER=workqueue; не `pkill -f`; граф-файлы с TAG; задачи [D]-строки manip/dp1 теперь у d3.
+NEXT_LINK: нет (пауза)

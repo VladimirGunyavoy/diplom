@@ -70,7 +70,7 @@ class InterpLP:
         """порциями по ch точек (по умолчанию из LPCH_MB: ~ MB на порцию), J int32, lam float32; пик ≈ хранимое + одна порция"""
         Q = np.asarray(Q, float); n = len(Q); K = d + 1
         if ch is None: ch = max(1000, int(float(os.environ.get('LPCH_MB', 300)) * 1e6 / (KLP * d * 8 * 3)))
-        J = np.empty((n, K), np.int32) if J_out is None else J_out; L = np.empty((n, K), np.float64 if os.environ.get('LAM64') == '1' else np.float32) if L_out is None else L_out; ok = np.empty(n, bool)
+        J = np.empty((n, K), np.int32) if J_out is None else J_out; L = np.empty((n, K), np.float32 if os.environ.get('LAM32') == '1' else np.float64) if L_out is None else L_out; ok = np.empty(n, bool)
         for a in range(0, n, ch):
             b = min(n, a + ch); Qs = self.S.wrap(Q[a:b]) / self.S.scale; dd, jj = self.tree.query(Qs, k=KLP, workers=int(os.environ.get('KDW', -1)))
             Jl, Lc, okc = lp_batch(np.ascontiguousarray(self.tree.data[jj]), np.ascontiguousarray(Qs))
@@ -81,7 +81,7 @@ class AgentLP(T.Agent):
     def __init__(self, S, back):
         T.Agent.__init__(self, S, back); self.Wnn = self.W.copy(); self.kvnn = T.KV
         t0 = time.perf_counter(); self.ip = InterpLP(S, self.tree, self.nP); n = len(self.P); L2 = len(T.TAUV); K = d + 1
-        J = np.empty((n * L2, K), np.int32); LAM = np.empty((n * L2, K), np.float64 if os.environ.get('LAM64') == '1' else np.float32); OK = np.empty((n, L2), bool); GL = np.empty((n, L2)); ins = np.empty((n, L2), bool)
+        J = np.empty((n * L2, K), np.int32); LAM = np.empty((n * L2, K), np.float32 if os.environ.get('LAM32') == '1' else np.float64); OK = np.empty((n, L2), bool); GL = np.empty((n, L2)); ins = np.empty((n, L2), bool)
         nch = max(1, int(float(os.environ.get('EDGCH', 5000))))   # узлов в порции рёбер
         for a in range(0, n, nch):
             b = min(n, a + nch); E, OK[a:b], GL[a:b] = T.edges(self.P[a:b], S)
