@@ -94,3 +94,4 @@
 - [research/scheme_b_label_setting.md](research/scheme_b_label_setting.md) — схема Б: однопроходной label-setting (Дейкстра с инкрементными суммами рёбер) пересчитывает V области 441k узлов за 0.87 с против GS 10 с, p90 смещения +.04 (+1 GS: +.007); по времени Б жива, решает p90 агента (research-31)
 - [research/why_tree_better.md](research/why_tree_better.md) — почему дерево+V лучше атласа в 4D и что будет в высокой d (прикидка; механизм редких фейлов)
 - [research/tree_vs_atlas_insights.md](research/tree_vs_atlas_insights.md) — где и почему дерево + V выиграло у атласа: кратность 1, нет геометрии клетки, оценка V сверху, свежая V; проигрыш — нет плотной области; предложение «дерево-скелет + клетки-трубки (область доверия)», проверки П1–П4 (senior-1, гипотезы)
+- [research/lit_novelty_graph.md](research/lit_novelty_graph.md) — новизна граф-схемы: что уже есть (Junge–Schreiber, Alla–Oliveira–Santin, Nikovski, Atkeson, iMDP), кандидаты в claim с уверенностью

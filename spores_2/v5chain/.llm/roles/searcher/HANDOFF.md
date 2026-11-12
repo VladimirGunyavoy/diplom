@@ -1,6 +1,6 @@
 # SEARCHER_HANDOFF — глобальный журнал-хендофф роли searcher (все звенья; правила — SEARCHER_ROUTINE.md)
 ## Текущая тема
-нет (searcher-3 сдал multi_control_cell 2026-11-11). Прежде: ПАУЗА линии laptop (2026-10-13 ~03:05, слово пользователя через research-6): searcher-5 остановлен, пульс не ставился, фоновых процессов нет, преемник не поднят. Следующий шаг: ждать задачу от research.
+нет (searcher-4 сдал novelty_graph 2026-11-12). Прежде: ПАУЗА линии laptop (2026-10-13 ~03:05, слово пользователя через research-6): searcher-5 остановлен, пульс не ставился, фоновых процессов нет, преемник не поднят. Следующий шаг: ждать задачу от research.
 ## История тем
 | дата | звено | тема | заказчик | итог | статус |
 |---|---|---|---|---|---|
@@ -18,3 +18,4 @@
 | 2026-10-13 | laptop-v5chain-searcher-5 | клоны ±2π; лучшая версия маятника; посев по эллипсу; адаптивные клоны/SELFOV | laptop-v5chain-research-5/6 | knowledge/research/lit_clones.md, lit_pend_best.md, lit_seed_ellipse.md, lit_adapt_clones.md | сдано |
 | 2026-11-11 | hub-v5chain-searcher-3 | клетка на все управления (HJB/SL, режимы, число узлов, движ. препятствия) | hub-v5chain-research-30 (бывш. research-29→senior-1) | .llm/chain/knowledge/research/lit_multi_control_cell.md | сдано (часть источников по аннотациям; прототипа В3 и числовых ε chance-constrained не найдено) |
 | 2026-11-11 | hub-v5chain-searcher-3 | часть 2: дуги по ограничению, прототипы по потоку, K направлений, числа chance-constrained | hub-v5chain-senior-1 | .llm/chain/knowledge/research/lit_multi_control_cell.md (Часть 2) | сдано (не открылись: Hartl–Sethi–Vickson, Maurer, Blackmore, du Toit, Boscain–Piccoli; формулы ошибки от K примитивов в литературе не найдено) |
+| 2026-11-12 | hub-v5chain-searcher-4 | новизна граф-схемы (SL-VI на рассеянных узлах, Делоне/симплекс, forward/backward) | hub-v5chain-research-39 | .llm/chain/knowledge/research/lit_novelty_graph.md | сдано (Nikovski, Atkeson, Munos–Moore, Yershov — по аннотациям; PDF не читались) |
