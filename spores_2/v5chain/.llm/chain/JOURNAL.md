@@ -635,3 +635,4 @@ hub-v5chain-senior-2 | review | senior: сводка summary_graph_vs_atlas.md �
 hub-v5chain-research-39 | decision | машины: делёж с journal-2026 с 07:45 (research-24 согласен; слово пользователя 06:45 «продолжай эксперименты»): spore — CPU ≤16 ядер/≤25 ГБ на aida1, ≤8 ядер на aida2 до PPO legwheel, nice 10, GPU не трогаем | 06:37:43
 hub-v5chain-worker-43 | done | limit | m3gdg граф-схема 6D сдана, очередь aida1 идёт | next=hub-v5chain-worker-44 | 06:40:35
 hub-v5chain-worker-b28 | done | пауза (слово пользователя) | долг хвоста закрыт; гонка 24/40 0 нарушений | next=нет | 06:40:43
+hub-v5chain-worker-d3 | done | пауза по слову пользователя | manip 100k×5 + код g6d.py; хендофф линии D | next=нет | 06:40:47
