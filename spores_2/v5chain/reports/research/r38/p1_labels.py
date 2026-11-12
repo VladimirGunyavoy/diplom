@@ -25,18 +25,24 @@ def main():
     if os.environ.get('SIM', '1') == '1':   # честный путь: точка летит по argmin-ребру из СВОЕЙ позиции (W в конце — LP-интерполяция)
         rng = np.random.default_rng(ts); ia = np.where(act)[0]; ia = rng.choice(ia, min(int(os.environ.get('NS', 5000)), len(ia)), replace=False)
         act = np.zeros(n, bool); act[ia] = True; seq = np.full((n, LMAX), -1, np.int16); X = P[ia].copy(); alive = np.ones(len(ia), bool); uu = u[ia].copy(); aa = a[ia]
-        Eall = E
+        Eall = E; HY = float(os.environ.get('HYST', 0)); Tp = np.zeros(len(ia))
         for t in range(LMAX):
             seq[ia[alive], t] = uu[alive]; idx = np.where(alive)[0]
+            gh = (GL[ia[idx], aa[idx]] if t == 0 else gl[idx, aa[idx]]); Tp[idx] += np.where(gh > 0, gh, T.TAUV[aa[idx]])
             g = (GL[ia[idx], aa[idx]] if t == 0 else gl[idx, aa[idx]]) > 0
             Xn = Ecur[idx, aa[idx]] if t > 0 else Eall[ia[idx], aa[idx]]
             X[idx] = Xn; alive[idx[g]] = False; alive &= ~T.in_goal(X)
             if not alive.any(): break
             Ecur, OKc, glc = T.edges(X, S); Jc, lc, insc = ip.weights(Ecur.reshape(-1, d)); Jc = Jc % n
             sc = (lc * W[Jc]).sum(1).reshape(len(X), L2); cc = np.where(glc > 0, glc, T.TAUV[None] + sc); cc[~OKc | ((glc <= 0) & ~insc.reshape(len(X), L2))] = 1e9
-            aa = np.argmin(cc, 1); uu = T.SIDX[aa]; gl = glc
+            an = np.argmin(cc, 1)
+            if HY > 0:   # гистерезис: прежнее базовое управление, если его лучший τ в пределах HY от минимума
+                cp = np.where(T.SIDX[None, :] == uu[:, None], cc, 1e9); ap = np.argmin(cp, 1); bst = cc[np.arange(len(X)), an]
+                an = np.where(cp[np.arange(len(X)), ap] <= bst + HY, ap, an)
+            aa = an; uu = T.SIDX[aa]; gl = glc
             alive &= cc[np.arange(len(X)), aa] < 1e8
         unfin = np.zeros(n, bool); unfin[ia] = alive; alive = unfin
+        rt = Tp[~unfin[ia]] / np.maximum(W[ia][~unfin[ia]], 1e-9); print('путь/W(старт): мед %.4f p90 %.4f max %.3f (HYST %g)' % (np.median(rt), np.quantile(rt, .9), rt.max(), HY), flush=True)
     else:
       term = (GL[np.arange(n), a] > 0) | ~act
       jj = J[np.arange(n), a]; ll = lam[np.arange(n), a]; succ = jj[np.arange(n), np.argmax(ll, 1)]; succ[term] = -1
@@ -59,7 +65,7 @@ def main():
         ch = np.flatnonzero(np.diff(v)) + 1; st = np.r_[0, ch]; ln = np.diff(np.r_[st, len(v)]); w = v[st]
         k = ln >= MINRUN; k[0] = k[-1] = True; w = w[k]; return tuple(w[np.r_[True, w[1:] != w[:-1]]].tolist())
     jnt = collections.Counter(); ax = [collections.Counter() for _ in range(m)]; prod = collections.Counter()
-    np.savez_compressed(os.path.expanduser('~/spore_v5/r37/p1seq_%s_%d_%d.npz' % (T.ENV, n, ts)), seq=seq[act], idx=np.where(act)[0])
+    np.savez_compressed(os.path.expanduser('~/spore_v5/r37/p1seq_%s_%d_%d%s.npz' % (T.ENV, n, ts, os.environ.get('TAG', ''))), seq=seq[act], idx=np.where(act)[0])
     for i in np.where(act)[0]:
         s_ = seq[i]; s_ = s_[s_ >= 0]; jnt[runs(s_)] += 1; Av = A[s_]
         lab = tuple(runs(np.sign(Av[:, k]).astype(int)) for k in range(m)); prod[lab] += 1
