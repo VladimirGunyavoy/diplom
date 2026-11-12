@@ -76,6 +76,7 @@ class AgentLP(T.Agent):
         T.Agent.__init__(self, S, back); self.Wnn = self.W.copy(); self.kvnn = T.KV
         t0 = time.perf_counter(); self.ip = InterpLP(S, self.tree, self.nP); E, OK, GL = T.edges(self.P, S); L2 = OK.shape[1]
         J, LAM, ins = self.ip.weights(E.reshape(-1, d)); ins = ins.reshape(-1, L2); OKd = (OK & ins) | (OK & (GL > 0)); t1 = time.perf_counter()
+        self.Eout = E.reshape(-1, d)[(OK & ~ins & (GL <= 0)).ravel()] if os.environ.get('ADDHULL') else None
         print('  LP-веса (k=%d): %.1f с, рёбер вне оболочки соседей %.3f%%' % (KLP, t1 - t0, 100 * (OK & ~ins & (GL <= 0)).sum() / max(1, (OK & (GL <= 0)).sum())), flush=True)
         self.W, it, res = vit_dl(J, LAM, OKd, GL, T.in_goal(self.P), self.nP, T.TAUV, NIT, 1e3, float(os.environ.get("VCAP", 0))); self.tdl = time.perf_counter() - t0
         fin = self.W < 1e2; print('  VI-LP: %.1f с, it %d res %.1e; [у потолка %.1f%%] W конечных %.1f%%, мед %.2f макс %.2f' % (self.tdl, it, res, 100 * (self.W >= float(os.environ.get('VCAP', 1e9)) - 1e-9).mean(), 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max()), flush=True)
@@ -95,7 +96,12 @@ def main():
         back = (P_, np.zeros(len(P_)), None, None, None, T.cKDTree(T._scaled(S, T._images(S, P_))))
     else: back = T.build_back(S, T.TAU, T.NB, T.RB)
     print('build %.1f с, узлов %d' % (time.perf_counter() - t0, len(back[0])), flush=True)
-    ag = AgentLP(S, back); out = dict(nodes=len(back[0]), tlp=ag.tdl); Wd, kvd = ag.W, T.KV
+    ag = AgentLP(S, back)
+    if os.environ.get('ADDHULL'):   # research-38: досев в точки прилёта вне оболочки соседей, второй проход
+        M = int(os.environ['ADDHULL']); Eo = ag.Eout; rng2 = np.random.default_rng(77 + ts)
+        add = Eo[rng2.choice(len(Eo), min(M, len(Eo)), replace=False)]; P2 = np.vstack([back[0], add]); print('  ADDHULL: вне оболочки %d, досеяно %d' % (len(Eo), len(add)), flush=True)
+        back = (P2, np.zeros(len(P2)), None, None, None, T.cKDTree(T._scaled(S, T._images(S, P2)))); del ag; ag = AgentLP(S, back)
+    out = dict(nodes=len(back[0]), tlp=ag.tdl); Wd, kvd = ag.W, T.KV
     if os.environ.get('SKIPBASE') != '1':
         ag.W, T.KV, ag.mode = ag.Wnn, ag.kvnn, 'nn'; Ts, s = run_agent(ag, ns); out['base'] = dict(T=Ts, **s); print('БАЗА nn+KV: %s' % s, flush=True)
     ag.W, T.KV, ag.mode = Wd, kvd, 'ip'; Ts, s = run_agent(ag, ns); out['lp_ip'] = dict(T=Ts, **s); print('W_lp, V̂ LP-интерп: %s' % s, flush=True)
