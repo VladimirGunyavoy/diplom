@@ -83,9 +83,20 @@ class AgentDL(T.Agent):
         nn = float((W[jq] + kv * dq[0]).min()); J, lam, ok = self.ip.weights(x0[None]); it = float((lam[0] * W[J[0]]).sum()) if ok[0] else np.nan
         return nn, it
 
+_AG = None
+def _ep1(i):
+    if not env.keep[i]: return (None, 0)
+    Tv, why, m = T.episode(_AG, env.X0[i]); return (Tv, m)
+
 def run_agent(ag, ns):
-    Ts = []; ms = []
-    for i in range(ns):
+    Ts = []; ms = []; NPR = int(os.environ.get("NPROC", 1))
+    if NPR > 1:   # research-38: старты параллельно, fork после VI (W/дерево общие copy-on-write)
+        import multiprocessing as mp
+        global _AG; _AG = ag
+        with mp.get_context("fork").Pool(NPR) as pool: rr = pool.map(_ep1, range(ns), chunksize=1)
+        Ts = [r[0] for r in rr]; ms = [r[1] for r in rr]
+    else:
+      for i in range(ns):
         if not env.keep[i]: Ts.append(None); ms.append(0); continue
         Tv, why, m = T.episode(ag, env.X0[i]); Ts.append(Tv); ms.append(m)
     Tt = np.array([np.nan if t is None else t for t in Ts]); k = env.keep[:ns]; ok = np.isfinite(Tt) & (Tt <= 3 * env.Tref[:ns]) & k; r = Tt[ok] / env.Tref[:ns][ok]
