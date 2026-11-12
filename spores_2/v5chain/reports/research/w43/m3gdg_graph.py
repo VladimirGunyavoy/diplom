@@ -82,8 +82,10 @@ class Graph:
         s.t_build = time.perf_counter() - t0; s.rss_build = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
         print('граф: узлов %d, дерево %.1f с, рёбра %.1f с, LP-веса %.1f с (вне оболочки %.2f%% допустимых), всего %.1f с, RSS пик %.1f ГБ' % (s.nP, s.t_nodes, s.t_edges, s.t_lp, 100 * (s.OK & ~s.INS).sum() / max(1, s.OK.sum()), s.t_build, s.rss_build), flush=True)
     def weights(s, Q):
-        Qs = S.wrap(np.asarray(Q, float)); dd, jj = s.tree.query(Qs, k=KLP, workers=-1); NBh = s.tree.data[jj]; Jl, L, ok = lp_batch(np.ascontiguousarray(NBh), np.ascontiguousarray(Qs))
-        return np.take_along_axis(jj, Jl, 1) % s.nP, L, ok
+        Qs = S.wrap(np.asarray(Q, float)); n = len(Qs); m = Jl_ = None; CH = 300000; Js = []; Ls = []; Os = []
+        for a0 in range(0, n, CH):
+            q = Qs[a0:a0 + CH]; dd, jj = s.tree.query(q, k=KLP, workers=int(os.environ.get('KDW', -1))); Jl, L, ok = lp_batch(np.ascontiguousarray(s.tree.data[jj]), np.ascontiguousarray(q)); Js.append(np.take_along_axis(jj, Jl, 1) % s.nP); Ls.append(L); Os.append(ok)
+        return np.concatenate(Js), np.concatenate(Ls), np.concatenate(Os)
     def vi(s, qs):
         t0 = time.perf_counter(); GL = goal_hits(s.Zs, qs); OKd = (s.OK & s.INS) | (s.OK & (GL > 0)); ING = in_goal(s.P, qs); W, it, res = vit_dl(s.J, s.LAM, OKd, GL, ING, s.nP, TAUV, NIT, 1e3, VCAP); return W, time.perf_counter() - t0, it, res
 
@@ -95,14 +97,16 @@ def vhat(G, W, Q):
     if bad.any(): w[bad] = nn_v(G, W, np.asarray(Q)[bad])
     return w
 
+M_STOP = ['']
 def episode(G, W, x0, qs, tmax=14.):
+    M_STOP[0] = ''
     x = np.array(x0, float); us = []; dts = []; t = 0.; tm = []
     while t < tmax:
         t1 = time.perf_counter(); Zs, ok = edges(x[None]); Zs = Zs[0]; ok = ok[0]; GL = goal_hits(Zs[None], qs)[0]; c = np.full(L2, 1e9); fin = ok & (GL > 0); c[fin] = GL[fin]
         if fin.any(): a = int(np.argmin(c))
         else:
             m = np.flatnonzero(ok)
-            if len(m) == 0: break
+            if len(m) == 0: M_STOP[0] = 'dead_end'; break
             if DEP >= 2:
                 E1 = Zs[m, -1].astype(float); Z2, ok2 = edges(E1); GL2 = goal_hits(Z2, qs); n1 = len(m); c2 = np.full((n1, L2), 1e9); f2 = ok2 & (GL2 > 0); c2[f2] = GL2[f2]; rest = ok2 & ~f2
                 if rest.any(): c2[rest] = TAUV[None, :].repeat(n1, 0)[rest] + vhat(G, W, Z2[:, :, -1].astype(float)[rest])
@@ -121,7 +125,7 @@ if __name__ == '__main__':
     for k, (st, gl) in enumerate(Tr[:nk]):
         e = MGoal(gl, st); qs = np.asarray(gl, float); W, tv, it, res = G.vi(qs); w0 = float(vhat(G, W, np.r_[st, 0., 0., 0.][None])[0] if True else 0)
         t1 = time.perf_counter(); us, dts, tm = episode(G, W, np.r_[st, 0., 0., 0.], qs); tq = time.perf_counter() - t1; Tv, why = common.verify(e, e.X0[0], us, dts); Tr_ = ref[k]['T']
-        r = dict(k=k, T=Tv, why=str(why), Tref=Tr_, ratio=None if (Tv is None or not Tr_) else Tv / Tr_, t_vi=tv, vi_it=int(it), t_query=tq, steps=len(us), ms_step=1e3 * float(np.mean(tm)) if tm else None, W0=w0, fin=float((W < VCAP - 1).mean()), rss=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
+        r = dict(k=k, T=Tv, why=str(why), Tref=Tr_, ratio=None if (Tv is None or not Tr_) else Tv / Tr_, t_vi=tv, vi_it=int(it), t_query=tq, steps=len(us), stop=M_STOP[0], ms_step=1e3 * float(np.mean(tm)) if tm else None, W0=w0, fin=float((W < VCAP - 1).mean()), rss=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
         out['res'].append(r); print(r, flush=True)
     rr = np.array([x['ratio'] for x in out['res'] if x['ratio'] is not None and x['ratio'] <= 3]); nt = sum(1 for x in out['res'] if x['Tref'])
     if len(rr): print('ИТОГ: дошли %d/%d, T/Tref мед %.3f ср %.3f p90 %.3f max %.3f; VI мед %.1f с, запрос мед %.2f с' % (len(rr), nt, np.median(rr), rr.mean(), np.percentile(rr, 90), rr.max(), np.median([x['t_vi'] for x in out['res']]), np.median([x['t_query'] for x in out['res']])), flush=True)
