@@ -107,7 +107,8 @@ def main():
     else: back = T.build_back(S, T.TAU, T.NB, T.RB)
     print('build %.1f с, узлов %d' % (time.perf_counter() - t0, len(back[0])), flush=True)
     ag = AgentLP(S, back); out = dict(nodes=len(back[0]), tlp=ag.tdl); Wd, kvd = ag.W, T.KV
-    ag.W, T.KV, ag.mode = ag.Wnn, ag.kvnn, 'nn'; Ts, s = run_agent(ag, ns); out['base'] = dict(T=Ts, **s); print('БАЗА nn+KV: %s' % s, flush=True)
+    if os.environ.get('SKIPBASE') != '1':
+        ag.W, T.KV, ag.mode = ag.Wnn, ag.kvnn, 'nn'; Ts, s = run_agent(ag, ns); out['base'] = dict(T=Ts, **s); print('БАЗА nn+KV: %s' % s, flush=True)
     ag.W, T.KV, ag.mode = Wd, kvd, 'ip'; Ts, s = run_agent(ag, ns); out['lp_ip'] = dict(T=Ts, **s); print('W_lp, V̂ LP-интерп: %s' % s, flush=True)
     import resource; out['rss_gb'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6; np.save(os.path.expanduser('~/spore_v5/c12/memout/W_%s_%d_%s.npy' % (T.ENV, T.NB, os.environ.get('TAG', ''))), ag.W)
     json.dump(out, open(os.path.expanduser('~/spore_v5/c12/memout/lp_%s_%d_%g_%s_%d' + os.environ.get('TAG', '') + '.json') % (T.ENV, T.NB, T.TAU, 'rnd' if os.environ.get('RNDN') == '1' else 'tree', ts), 'w'), default=float)
