@@ -10,7 +10,7 @@ from lp_core import lp_batch, vit_cap
 from scipy.spatial import cKDTree
 from src.atlas6.adaptive_nd import _images, _scaled
 KLP = int(os.environ.get('KLP', 20)); NITL = int(os.environ.get('NITDL', 3000)); VCAP = float(os.environ.get('VCAP', 40)); HOLE = os.environ.get('HOLE', 'none')
-TAUS = np.array([float(v) for v in os.environ.get('TAUS', '.2').split(',')]); RNDN = int(os.environ.get('RNDN', 0))
+TAUS = np.array([float(v) for v in os.environ.get('TAUS', '.2').split(',')]); RNDN = int(os.environ.get('RNDN', 0)); NNMODE = int(os.environ.get('NNMODE', 0))
 
 @nb.njit(parallel=True)
 def edges_v(P, taus):
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     from tqdm import tqdm
     for ts in range(TS, int(sys.argv[5]) if len(sys.argv) > 5 else TS + 1):
         S = mkS(ts); t0 = time.perf_counter(); back = make_back(S, ts); tb = time.perf_counter() - t0
-        ag = AgentLP2(S, back); X0 = np.array([s[1] for s in st], float); tr = np.array([s[2] for s in st]); v0 = ag.vlp_(X0)
+        ag = (ca.AAgent(S, back) if NNMODE else AgentLP2(S, back)); ag.tlp = 0. if NNMODE else ag.tlp; ag.holes = 0. if NNMODE else ag.holes; X0 = np.array([s[1] for s in st], float); tr = np.array([s[2] for s in st]); v0 = ag.h(X0)[0]
         print('ts %d: build %.1f с; V̂(x0)/T_ref мед LP %.3f (p10–p90 %.3f–%.3f)' % (ts, tb, np.median(v0 / tr), np.percentile(v0 / tr, 10), np.percentile(v0 / tr, 90)), flush=True)
         res = []
         for i, x0, tref in tqdm(st, desc='ts%d' % ts, mininterval=10):
