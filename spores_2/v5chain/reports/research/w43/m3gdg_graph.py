@@ -10,7 +10,7 @@ from src.atlas6.adaptive_nd import SysN, _images, _scaled
 from scipy.spatial import cKDTree
 from lpcore import lp_batch, vit_dl
 K = int(sys.argv[1]); SEED = int(sys.argv[2]); NB = int(os.environ.get('NB', 100000)); KLP = int(os.environ.get('KLP', 20)); VCAP = float(os.environ.get('VCAP', 40)); NIT = int(os.environ.get('NIT', 3000))
-TAUS = np.array([float(v) for v in os.environ.get('TAUS', '.1,.2,.4').split(',')]); NS = 5; WM = 3.; WBOX = 3.05; CL = float(os.environ.get('CL', .03)); Rq, Rw = .28, .58
+TAUS = np.array([float(v) for v in os.environ.get('TAUS', '.1,.2,.4').split(',')]); NS = 5; WM = 3.; WBOX = 3.05; CL = float(os.environ.get('CL', .03)); Rq, Rw = float(os.environ.get('RQ', .28)), float(os.environ.get('RW', .58))
 ACT = np.array(G3.LAYERS6, float); LA = len(ACT); LT = len(TAUS); L2 = LA * LT; SIDX = np.repeat(np.arange(LA), LT); TAUV = np.tile(TAUS, LA); d = 6
 e0 = MGoal(goals(K)[0], goals(K)[1]); A = e0.A; Ai = e0.Ai; Bm = np.linalg.inv(A.T); Sm = e0.S; gw = e0.gw
 PER = np.array([2 * PI] * 3 + [0.] * 3); S = SysN(None, LA, np.ones(d), lambda P: np.zeros(len(P), bool), np.zeros((1, d)), per=PER)
