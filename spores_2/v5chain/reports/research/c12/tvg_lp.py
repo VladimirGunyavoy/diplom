@@ -96,10 +96,15 @@ def main():
     else: back = T.build_back(S, T.TAU, T.NB, T.RB)
     print('build %.1f с, узлов %d' % (time.perf_counter() - t0, len(back[0])), flush=True)
     ag = AgentLP(S, back); out = dict(nodes=len(back[0]), tlp=ag.tdl); Wd, kvd = ag.W, T.KV
-    ag.W, T.KV, ag.mode = ag.Wnn, ag.kvnn, 'nn'; Ts, s = run_agent(ag, ns); out['base'] = dict(T=Ts, **s); print('БАЗА nn+KV: %s' % s, flush=True)
+    if os.environ.get('SKIPBASE') != '1':
+        ag.W, T.KV, ag.mode = ag.Wnn, ag.kvnn, 'nn'; Ts, s = run_agent(ag, ns); out['base'] = dict(T=Ts, **s); print('БАЗА nn+KV: %s' % s, flush=True)
     ag.W, T.KV, ag.mode = Wd, kvd, 'ip'; Ts, s = run_agent(ag, ns); out['lp_ip'] = dict(T=Ts, **s); print('W_lp, V̂ LP-интерп: %s' % s, flush=True)
+    if os.environ.get('TRACE') == '1':
+        Tt = np.array([np.nan if t is None else t for t in Ts]); rr = Tt / env.Tref[:ns]; out['trace'] = {}
+        for i in np.argsort(-np.nan_to_num(rr, nan=9))[:3]:
+            T.episode(ag, env.X0[i]); us, dts = ag.last; out['trace'][int(i)] = dict(T=float(Tt[i]), Tref=float(env.Tref[i]), u=us.tolist(), dt=dts.tolist(), x0=env.X0[i].tolist())
     import resource; out['rss_gb'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
-    np.savez_compressed(os.path.expanduser('~/spore_v5/c12/out/graph_%s_%d_%s_%d.npz' % (T.ENV, T.NB, 'rnd' if os.environ.get('RNDN') == '1' else 'tree', ts)), P=ag.P, W_lp=Wd, W_nn=ag.Wnn, taus=T.TAUS)
+    np.savez_compressed(os.path.expanduser('~/spore_v5/c12/out/graph_%s_%d_%s_%d%s.npz' % (T.ENV, T.NB, 'rnd' if os.environ.get('RNDN') == '1' else 'tree', ts, os.environ.get('TAG', ''))), P=ag.P, W_lp=Wd, W_nn=ag.Wnn, taus=T.TAUS)
     json.dump(out, open(os.path.expanduser('~/spore_v5/c12/out/lp_%s_%d_%g_%s_%d' + os.environ.get('TAG', '') + '.json') % (T.ENV, T.NB, T.TAU, 'rnd' if os.environ.get('RNDN') == '1' else 'tree', ts), 'w'), default=float)
 
 if __name__ == '__main__': main()

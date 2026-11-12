@@ -31,6 +31,7 @@ def in_goal(P):
     P = np.asarray(P); return (np.abs(common.wrap(P, env.period)) <= env.half - .02).all(-1)
 LO, HI = env.lo.copy(), env.hi.copy()
 if d == 4: LO, HI = env.fl_lo - .25, env.fl_hi + .25
+if os.environ.get('BOX') == 'full': LO, HI = env.lo.copy(), env.hi.copy()   # c12: полная коробка атласа (|ω| ≤ 3), а не рабочая fl±.25
 def okv(P): P = np.asarray(P); return ~(((P < LO) | (P > HI)) & (env.period == 0)).any(-1)
 def mkS(seed):
     rng = np.random.default_rng(seed); n = 300; hw = env.half - .02
@@ -171,6 +172,7 @@ def episode(ag, x0, tmax=40.):
         t += te_
         if fin or in_goal(x): break
     Tv, why = common.verify(env, x0, us, dts)
+    ag.last = (np.array(us), np.array(dts))
     ag.info = dict(x0=np.round(np.asarray(x0, float), 3).tolist(), xend=np.round(x, 3).tolist(), steps=len(us), ties=getattr(ag, 'ntie', 0) - ag.nt0, esc=getattr(ag, 'nesc', 0) - ag.ne0, why=str(why), T=Tv)
     return Tv, why, float(np.mean(tms))
 
