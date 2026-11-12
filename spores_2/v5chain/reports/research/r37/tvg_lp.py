@@ -1,4 +1,4 @@
-"""research-36: В-шов в любой размерности — выпуклые веса по k ближайшим через малый LP:
+"""research-36 (+ research-39: LP-веса порциями c12 LPCH_MB/EDGCH, J int32/lam float32; ADDHULL/SKIPBASE research-38 сохранены): В-шов в любой размерности — выпуклые веса по k ближайшим через малый LP:
 min Σλ_j |x_j−q|²  s.t. Σλ_j x_j = q, Σλ_j = 1, λ ≥ 0  (по поднятию на параболоид = симплекс Делоне среди k соседей).
 Пакетно в numba (Big-M симплекс, правило Бланда). q вне оболочки соседей → ребра нет (VI) / фолбэк nn (агент).
 Запуск: RNDN=1 KVAUTO=1 RB=.03 TAU=.2 KLP=12 python3 tvg_lp.py pend 100000 8 0   (ENV di4 — 4D)"""
@@ -66,17 +66,30 @@ def lp_batch(NB_, Qs):
 
 class InterpLP:
     def __init__(self, S, tree, nP): self.S, self.tree, self.nP = S, tree, nP
-    def weights(self, Q):
-        Qs = self.S.wrap(np.asarray(Q, float)) / self.S.scale; dd, jj = self.tree.query(Qs, k=KLP, workers=int(os.environ.get('KDW', -1)))
-        NB_ = self.tree.data[jj]; Jl, L, ok = lp_batch(np.ascontiguousarray(NB_), np.ascontiguousarray(Qs))
-        J = np.take_along_axis(jj, Jl, 1) % self.nP; return J.astype(np.int64), L, ok
+    def weights(self, Q, ch=None, J_out=None, L_out=None):
+        """порциями по ch точек (по умолчанию из LPCH_MB: ~ MB на порцию), J int32, lam float32; пик ≈ хранимое + одна порция"""
+        Q = np.asarray(Q, float); n = len(Q); K = d + 1
+        if ch is None: ch = max(1000, int(float(os.environ.get('LPCH_MB', 300)) * 1e6 / (KLP * d * 8 * 3)))
+        J = np.empty((n, K), np.int32) if J_out is None else J_out; L = np.empty((n, K), np.float32) if L_out is None else L_out; ok = np.empty(n, bool)
+        for a in range(0, n, ch):
+            b = min(n, a + ch); Qs = self.S.wrap(Q[a:b]) / self.S.scale; dd, jj = self.tree.query(Qs, k=KLP, workers=int(os.environ.get('KDW', -1)))
+            Jl, Lc, okc = lp_batch(np.ascontiguousarray(self.tree.data[jj]), np.ascontiguousarray(Qs))
+            J[a:b] = np.take_along_axis(jj, Jl, 1) % self.nP; L[a:b] = Lc; ok[a:b] = okc; del dd, jj, Jl, Lc
+        return J, L, ok
 
 class AgentLP(T.Agent):
     def __init__(self, S, back):
         T.Agent.__init__(self, S, back); self.Wnn = self.W.copy(); self.kvnn = T.KV
-        t0 = time.perf_counter(); self.ip = InterpLP(S, self.tree, self.nP); E, OK, GL = T.edges(self.P, S); L2 = OK.shape[1]
-        J, LAM, ins = self.ip.weights(E.reshape(-1, d)); ins = ins.reshape(-1, L2); OKd = (OK & ins) | (OK & (GL > 0)); t1 = time.perf_counter()
-        self.Eout = E.reshape(-1, d)[(OK & ~ins & (GL <= 0)).ravel()] if os.environ.get('ADDHULL') else None
+        t0 = time.perf_counter(); self.ip = InterpLP(S, self.tree, self.nP); n = len(self.P); L2 = len(T.TAUV); K = d + 1
+        J = np.empty((n * L2, K), np.int32); LAM = np.empty((n * L2, K), np.float32); OK = np.empty((n, L2), bool); GL = np.empty((n, L2)); ins = np.empty((n, L2), bool); EO = []
+        nch = max(1, int(float(os.environ.get('EDGCH', 5000))))   # узлов в порции рёбер
+        for a in range(0, n, nch):
+            b = min(n, a + nch); E, OK[a:b], GL[a:b] = T.edges(self.P[a:b], S)
+            _, _, okc = self.ip.weights(E.reshape(-1, d), J_out=J[a * L2:b * L2], L_out=LAM[a * L2:b * L2]); ins[a:b] = okc.reshape(-1, L2)
+            if os.environ.get('ADDHULL'): EO.append(E.reshape(-1, d)[(OK[a:b] & ~ins[a:b] & (GL[a:b] <= 0)).ravel()])
+            del E
+        OKd = (OK & ins) | (OK & (GL > 0)); t1 = time.perf_counter()
+        self.Eout = np.vstack(EO) if os.environ.get('ADDHULL') else None   # research-39: ADDHULL research-38 поверх порций c12
         print('  LP-веса (k=%d): %.1f с, рёбер вне оболочки соседей %.3f%%' % (KLP, t1 - t0, 100 * (OK & ~ins & (GL <= 0)).sum() / max(1, (OK & (GL <= 0)).sum())), flush=True)
         self.W, it, res = vit_dl(J, LAM, OKd, GL, T.in_goal(self.P), self.nP, T.TAUV, NIT, 1e3, float(os.environ.get("VCAP", 0))); self.tdl = time.perf_counter() - t0
         fin = self.W < 1e2; print('  VI-LP: %.1f с, it %d res %.1e; [у потолка %.1f%%] W конечных %.1f%%, мед %.2f макс %.2f' % (self.tdl, it, res, 100 * (self.W >= float(os.environ.get('VCAP', 1e9)) - 1e-9).mean(), 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max()), flush=True)
