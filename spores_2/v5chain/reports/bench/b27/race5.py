@@ -130,7 +130,7 @@ class Agent:
         for s in range(9):
             r = step_chk(x0[0], x0[1], x0[2], x0[3], x0[4], s, TAU, NSUB); Q[s] = r[:5]; mn = r[5]; sl = r[6]
             if HB > 0 and r[7] < 0:   # восстановимость: после шага тормоз + руль в 0 на HB с
-                bx = r[:5].copy()
+                bx = np.array(r[:5])
                 for _ in range(int(HB / .05)):
                     sk = -1. if bx[4] > 0 else 1.; res = rk(bx[0], bx[1], bx[2], bx[3], bx[4], sk, -1., .05, 1); bx = np.array(res); mn = min(mn, sdfp(bx[0], bx[1])); sl = max(sl, bx[3] ** 2 * abs(bx[4]) / MUG)
             cl[s] = mn - 2 * max(0., sl - SLIPM); okm[s] = (mn >= FM) and (sl <= SLIPM) and Q[s, 3] >= 0 and Q[s, 3] <= VMAX
