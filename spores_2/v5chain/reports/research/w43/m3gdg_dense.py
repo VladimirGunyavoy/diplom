@@ -30,6 +30,8 @@ if __name__ == '__main__':
         r = dict(k=k, T=Tv, why=str(why), Tref=Tr_, ratio=None if (Tv is None or not Tr_) else Tv / Tr_, W0=w0, fin=float((W < VCAP - 1).mean()), t_tree=t2 - t1, t_edges=time.perf_counter() - t2 - (t4 - t3) - tv - tq - (t5 - t4 - tv) if False else None, t_graph=t4 - t2, t_vi=tv, t_goal_total=t5 - t1, t_query=tq, steps=len(us), stop=M.M_STOP[0], n_tree=len(Pt), rss=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
         out['res'].append(r); print({kk: (round(v, 3) if isinstance(v, float) else v) for kk, v in r.items()}, flush=True)
         del G, J, LAM
+    nn_ = NU + NT; out['stored_mb'] = (nn_ * 6 * 4 + nn_ * L2 * 7 * 8 + nn_ * L2) / 1e6; out['violations'] = sum(1 for x in out['res'] if x['Tref'] and x['why'] == 'box'); out['rss_peak'] = max(x['rss'] for x in out['res'])
+    print('нарушений (verify): %d; хранимое ≈ %.0f МБ (узлы float32 + J int32 + LAM float32 на 200k×24 рёбер на цель); RSS пик %.1f ГБ' % (out['violations'], out['stored_mb'], out['rss_peak']), flush=True)
     R = [x for x in out['res'] if x['Tref']]; ok = [x for x in R if x['T'] is not None and x['why'] == 'ok']; ra = np.array([x['T'] / x['Tref'] for x in ok])
     if len(ra): print('ИТОГ: дошли %d/%d, T/Tref мед %.3f p90 %.3f max %.3f; W0/Tref мед %.1f; fin мед %.2f; на цель %.0f с' % (len(ok), len(R), np.median(ra), np.percentile(ra, 90), ra.max(), np.median([x['W0'] / x['Tref'] for x in R]), np.median([x['fin'] for x in R]), np.median([x['t_goal_total'] for x in R])), flush=True)
     os.makedirs('out', exist_ok=True); json.dump(out, open('out/m3gdg_dense_%d_%d_%d%s.json' % (NU, NT, SEED, os.environ.get('TAG', '')), 'w'), default=float)

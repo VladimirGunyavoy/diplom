@@ -91,7 +91,7 @@ class Graph:
 
 def nn_v(G, W, Q):
     dd, j = G.tree.query(S.wrap(Q), k=9); j = j % G.nP; return (W[j] + KVN * dd).min(1)
-KVN = 1.; DEP = int(os.environ.get('DEP', 1)); DEPPEN = float(os.environ.get('DEPPEN', 0))
+KVN = 1.; VIAB = int(os.environ.get('VIAB', 0)); DEP = int(os.environ.get('DEP', 1)); DEPPEN = float(os.environ.get('DEPPEN', 0))
 def vhat(G, W, Q):
     J, lam, ok = G.weights(Q); w = (lam * W[J]).sum(1); bad = ~ok | (W[J] >= VCAP - 1e-9).any(1)
     if bad.any(): w[bad] = nn_v(G, W, np.asarray(Q)[bad])
@@ -111,6 +111,7 @@ def episode(G, W, x0, qs, tmax=14.):
                 E1 = Zs[m, -1].astype(float); Z2, ok2 = edges(E1); GL2 = goal_hits(Z2, qs); n1 = len(m); c2 = np.full((n1, L2), 1e9); f2 = ok2 & (GL2 > 0); c2[f2] = GL2[f2]; rest = ok2 & ~f2
                 if rest.any(): c2[rest] = TAUV[None, :].repeat(n1, 0)[rest] + vhat(G, W, Z2[:, :, -1].astype(float)[rest])
                 c[m] = TAUV[m] + np.minimum(c2.min(1), vhat(G, W, E1) + DEPPEN)
+                if VIAB: c[m[~ok2.any(1)]] = 1e9      # VIAB: тупик (у конца нет ни одного допустимого действия) — запрещён
             else: c[m] = TAUV[m] + vhat(G, W, Zs[m, -1].astype(float))
             a = int(np.argmin(c))
         tm.append(time.perf_counter() - t1); us.append(ACT[SIDX[a]]); dts.append(float(TAUV[a])); t += TAUV[a]
@@ -129,4 +130,5 @@ if __name__ == '__main__':
         out['res'].append(r); print(r, flush=True)
     rr = np.array([x['ratio'] for x in out['res'] if x['ratio'] is not None and x['ratio'] <= 3]); nt = sum(1 for x in out['res'] if x['Tref'])
     if len(rr): print('ИТОГ: дошли %d/%d, T/Tref мед %.3f ср %.3f p90 %.3f max %.3f; VI мед %.1f с, запрос мед %.2f с' % (len(rr), nt, np.median(rr), rr.mean(), np.percentile(rr, 90), rr.max(), np.median([x['t_vi'] for x in out['res']]), np.median([x['t_query'] for x in out['res']])), flush=True)
+    out['violations'] = sum(1 for x in out['res'] if x['Tref'] and x['why'] == 'box'); print('нарушений (verify: касание дисков / выход |w|): %d из %d; хранимое %.0f МБ, RSS пик %.1f ГБ' % (out['violations'], nt, out['stored_mb'], out['rss_build']), flush=True)
     os.makedirs('out', exist_ok=True); json.dump(out, open('out/m3gdg_graph_%d_%d%s.json' % (NB, SEED, os.environ.get('TAG', '')), 'w'), default=float)
