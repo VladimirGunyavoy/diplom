@@ -641,3 +641,4 @@ hub-v5chain-senior-2 | done | пауза по слову пользовател�
 hub-v5chain-worker-44 | started | acc3 | sonnet | 06:41:06
 hub-v5chain-worker-43 | done | пауза по слову пользователя | процессов нет, хендоффа без преемника | next=нет | 06:41:30
 hub-v5chain-worker-c12 | done | пауза по слову пользователя | manip/dp1 строки, память граф/атлас, LP-порции, старт 3=float32 | next=нет | 06:41:42
+hub-v5chain-research-39 | done | пауза по слову пользователя; все агенты spore сдали (c12, w43, d3, b28, searcher-4, senior-2, fixer-1) | next=нет (пауза) | 06:42:22
