@@ -113,3 +113,29 @@ def vit_dx(J, LAM, EXT, OK, GL, ING, nP, tau, nit, big):
         dd = np.max(np.abs(Wn - W)); W = Wn
         if dd < 1e-5: break
     return W, it, dd
+
+
+@nb.njit(parallel=True)
+def vit_cap(J, LAM, EXT, OK, GT, ING, nP, tau, nit, vcap):
+    """VI-LP с потолком VCAP (r37): W инициализируется vcap, чтение w=min(w,vcap) — рёбра не выбрасываются; tau[a] — цена ребра a (переменный τ), GT[i,a]>0 — вход в цель (цена GT)"""
+    W = np.full(nP, vcap); L_ = OK.shape[1]; K_ = J.shape[1]
+    for i in range(nP):
+        if ING[i]: W[i] = 0.
+    dd = 0.; it = 0
+    for it in range(nit):
+        Wn = np.empty(nP)
+        for i in nb.prange(nP):
+            if ING[i]: Wn[i] = 0.; continue
+            best = vcap
+            for a in range(L_):
+                if not OK[i, a]: continue
+                if GT[i, a] > 0: c = GT[i, a]
+                else:
+                    r = i * L_ + a; s = 0.
+                    for k in range(K_): s += LAM[r, k] * min(W[J[r, k]], vcap)
+                    c = tau[a] + s + EXT[r]
+                if c < best: best = c
+            Wn[i] = best
+        dd = np.max(np.abs(Wn - W)); W = Wn
+        if dd < 1e-5: break
+    return W, it, dd
