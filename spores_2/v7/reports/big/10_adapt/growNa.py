@@ -153,7 +153,7 @@ def nearb(P): return np.zeros(len(P), bool) if not GOALB else goal_dist(P) < BEP
 def edge_ok(P, u):                                                                                       # FORB: узел свободен и шаг DTN (середина и конец) не заходит в запрещённое
     return np.ones(len(P), bool) if GF is None else free(P) & free(rk4(P, u, DTN / 2, 1)) & free(step(P, u))
 LAT = (slice(None),) * m_
-ADAPT = int(E('ADAPT', 0)); FREF = float(E('FREF', 3.)); PF = float(E('PF', 1.)); HC = float(E('HC', 2.)); DIVE = float(E('DIVE', .2))
+ADAPT = int(E('ADAPT', 0)); BND = float(E('BND', 1.5)); BNDV = float(E('BNDV', 1.5)); FREF = float(E('FREF', 3.)); PF = float(E('PF', 1.)); HC = float(E('HC', 2.)); DIVE = float(E('DIVE', .2))
 def _ext(Y): return max(float(np.linalg.norm(np.take(Y, -1, axis=a) - np.take(Y, 0, axis=a), axis=-1).max()) for a in range(m_))
 def _hstep(y, yc, u, sg):
     """адаптивный шаг строки (время): бит 1 — по |f| (равный путь: h = DTN·(FREF/|f|)^PF), бит 2 — по расхождению патча (λ = |d ln ρ/dt|, ρ = макс. размах патча по боковым осям; h = DIVE/λ); зажим [DTN/HC, DTN·HC]; оба — min."""
@@ -162,6 +162,7 @@ def _hstep(y, yc, u, sg):
     if ADAPT & 2:
         hp = DTN / 8; r0 = _ext(y); r1 = _ext(rk4(y, u, sg * hp / 2, 2)); lam = abs(np.log(max(r1, 1e-12) / max(r0, 1e-12))) / hp
         h = min(h, DIVE / max(lam, 1e-9))
+    if ADAPT & 8 and (np.abs(yc).max() > BND or np.abs(yc[2:]).max() > BNDV): h = min(h, DTN)          # бит 8 (w42): у границы поля (|x|>BND или |v|>BNDV) строки не разрежаем (h ≤ DTN), сгущать можно
     return float(np.clip(h, DTN / HC, DTN * HC))
 class Cell:
     def __init__(s, c, u, r, e): s.c, s.u, s.r, s.e = np.array(c, float), u, np.array(r, float), e; s.nb = 0; s.nf = 0
