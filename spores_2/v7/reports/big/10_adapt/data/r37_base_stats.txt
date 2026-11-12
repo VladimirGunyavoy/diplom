@@ -1,0 +1,11 @@
+keep 253 из 300
+r37_base_s0 | nodes 1537677 | iters 69 | keep: дошли 253/253 mean 1.054 мед 1.036 p90 1.093 max 1.627 | all: дошли 262/300 mean 1.054 мед 1.036 p90 1.093 max 1.627
+   потеряны(keep): []  t_build 1229 t_solve 460
+r37_base_s1 | nodes 1528335 | iters 70 | keep: дошли 253/253 mean 1.055 мед 1.037 p90 1.092 max 1.953 | all: дошли 264/300 mean 1.055 мед 1.037 p90 1.093 max 1.953
+   потеряны(keep): []  t_build 1387 t_solve 1463
+r37_base_s2 | nodes 1538811 | iters 70 | keep: дошли 253/253 mean 1.063 мед 1.037 p90 1.088 max 2.075 | all: дошли 260/300 mean 1.062 мед 1.037 p90 1.085 max 2.075
+   потеряны(keep): []  t_build 1388 t_solve 496
+r37_base_s3 | nodes 1543752 | iters 72 | keep: дошли 253/253 mean 1.054 мед 1.038 p90 1.093 max 1.586 | all: дошли 260/300 mean 1.053 мед 1.038 p90 1.092 max 1.586
+   потеряны(keep): []  t_build 1387 t_solve 505
+r37_base_s4 | nodes 1552986 | iters 68 | keep: дошли 253/253 mean 1.053 мед 1.037 p90 1.091 max 1.586 | all: дошли 260/300 mean 1.052 мед 1.037 p90 1.089 max 1.586
+   потеряны(keep): []  t_build 1230 t_solve 460
