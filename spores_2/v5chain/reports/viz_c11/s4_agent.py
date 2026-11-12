@@ -30,7 +30,7 @@ for k in range(nfr + 1):
         axs[0].plot([], [], 'D', color='magenta', mec='k', label='старт'); axs[0].legend(loc='lower left', fontsize=11, framealpha=.9).set_zorder(30)
     else:
         axs[0].legend(handles=[plt.Line2D([], [], color=COL[s], lw=3, label=UNAME[s]) for s in range(3)], loc='lower left', fontsize=11, framealpha=.9).set_zorder(30)
-    fig.suptitle('Агент пробует 3 дуги, берёт ту, где τ + V(конец) меньше.  Фон = V: светлое — близко к цели, тёмное — далеко', fontsize=13, y=.97)
+    fig.suptitle('Агент пробует 3 дуги, берёт ту, где τ + V(конец) меньше.  Фон = V: светлое — близко, тёмное — далеко, белое — V не определена', fontsize=13, y=.97)
     frames.append(fig_to_img(fig))
 frames[0].save('/tmp/c11_s4_first_%d.png' % i0)
 save_gif(frames, '/tmp/c11_method_agent_%d.gif' % i0, fps=5, hold_last=12)

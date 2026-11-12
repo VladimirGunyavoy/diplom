@@ -15,6 +15,6 @@ for k, h in enumerate(sel):
         gx, gy, V = grid_V(S, 'dl'); ax.contour(gx, gy, V, levels=np.arange(1, 14, 1.), colors='k', linewidths=.6, zorder=6); tt = 'Готово: итоговая V с линиями уровня (каждые 1 с)'
     else: tt = 'Итерация %d: узлы, откуда цель уже достижима, получили оценку W' % it
     ax.set_title(tt, loc='left'); fig.colorbar(sc, cax=cax).set_label('W — время до цели, с')
-    ax.text(.02, .96, 'W(узел) = min по u [ τ + W(конец дуги) ], цель: W = 0', transform=ax.transAxes, va='top', fontsize=12, bbox=dict(fc='w', ec='k', alpha=.9), zorder=20)
+    ax.text(.02, .96, 'W(узел) = min по u [ τ + W(конец дуги) ], цель: W = 0\nбелое/серое — W не определена (цель недостижима)', transform=ax.transAxes, va='top', fontsize=12, bbox=dict(fc='w', ec='k', alpha=.9), zorder=20)
     frames.append(fig_to_img(fig))
 frames[0].save('/tmp/c11_s3_first.png'); frames[-1].save('/tmp/c11_s3_last.png'); save_gif(frames, '/tmp/c11_method_vi.gif', fps=6, hold_last=14)
