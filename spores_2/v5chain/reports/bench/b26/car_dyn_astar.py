@@ -5,7 +5,7 @@ import heapq, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import car_dyn6 as cd
 from car_dyn6 import np, nb, time, rk, ACT, TAU, FM, HR, XL, GOAL, GR, VL, VH, AM, HB, KN, cand
-LIM = int(os.environ.get('LIM', 300)); BAT = int(os.environ.get('BAT', 8)); GC = float(os.environ.get('GC', .5)); HW = float(os.environ.get('HW', 1.5)); KVA = float(os.environ.get('KVA', .3)); HYB = int(os.environ.get('HYB', 0)); WARMA = int(os.environ.get('WARMA', 0)); HZN = float(os.environ.get('HZN', .4))
+LIM = int(os.environ.get('LIM', 300)); BAT = int(os.environ.get('BAT', 8)); GC = float(os.environ.get('GC', .5)); HW = float(os.environ.get('HW', 1.5)); KVA = float(os.environ.get('KVA', .3)); PREB = int(os.environ.get('PREB', 1)); HYB = int(os.environ.get('HYB', 0)); WARMA = int(os.environ.get('WARMA', 0)); HZN = float(os.environ.get('HZN', .4))
 CELL = np.array(cd.SC) * GC; PER = int(round(2 * np.pi / CELL[2]))
 
 @nb.njit
@@ -48,6 +48,8 @@ class AgentDynA(cd.AgentDyn):
         d0, j0 = self.tree.query(self.S.wrap(np.asarray(x, float)[None]) / self.S.scale, k=min(KN * 3, self.nP)); self.Wx = float(np.min(self.W[j0 % self.nP] + cd.KV * d0))
         if (sc < 1e9).any(): self.plan_acts = []; return int(np.argmin(sc))
         if not ok.any(): self.plan_acts = []; return int(np.argmax(cl))
+        if PREB:   # b26: корни A* — состояние ПОСЛЕ шага τ (до торможения); cand возвращает состояние после торможения (V̂ жадного — в точке остановки)
+            for s_ in range(9): Q[s_] = rk(x[0], x[1], x[2], x[3], ACT[s_, 0], ACT[s_, 1], TAU / 10, 10)
         hq = self.hh(Q); heap = []; best = {}; cnt = 0; leaf = {}
         for s in range(9):
             if not ok[s]: continue
