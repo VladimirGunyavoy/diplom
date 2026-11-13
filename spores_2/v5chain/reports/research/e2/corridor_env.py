@@ -52,6 +52,7 @@ def setup():
     global CAR
     if os.environ.get('CA4'):   # IPOPT-доводчик (refine_ca4.py) вместо SLSQP: плотная проверка |w| в MS точках, предел WM-WMARG
         import refine_ca4; CAR = refine_ca4.install(name, ms=int(os.environ.get('CAMS', 64)), maxit=int(os.environ.get('CAIT', 60)), wmc=WM - WMARG)
+    if os.environ.get('NQSUB'): _ix = [int(v) for v in os.environ['NQSUB'].split(',')]; e.X0 = e.X0[_ix]; e.Tref = np.asarray(e.Tref)[_ix]; e.keep = np.asarray(e.keep)[_ix]   # e3: подвыборка стартов для проб
     return e, S, US, flow, g, miss, wl
 
 def init_w(pk):
@@ -61,8 +62,8 @@ def work(i):
     E.nf = 0; t1 = time.perf_counter()
     if CAR is not None: CAR.stat.clear(); CAR.stat.update(n=0, t=0., it=0)
     b = corridor_query(S, FL, E.X0[i], BACK, tau, NF, rho, G, MISS, K=K, tries=3, kn=8, neigh=2, nbest=1, wlim=WLIM); dt = time.perf_counter() - t1
-    if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
-    us = [US[s] for s in b[1]]; Tv, why = common.verify(E, E.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us), cstat=(dict(CAR.stat) if CAR is not None else None))
+    if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path', cstat=(dict(CAR.stat) if CAR is not None else None), st=(dict(CAR.st) if CAR is not None else None))
+    us = [US[s] for s in b[1]]; Tv, why = common.verify(E, E.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us), cstat=(dict(CAR.stat) if CAR is not None else None), st=(dict(CAR.st) if CAR is not None else None))
 
 if __name__ == '__main__':
     e, S, US, FL, G, MISS, WLIM = setup(); t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с, узлов %d' % (NB, t_build, len(back[0])), flush=True)

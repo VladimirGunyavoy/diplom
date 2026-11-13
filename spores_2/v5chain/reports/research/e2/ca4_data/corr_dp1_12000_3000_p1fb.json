@@ -1,0 +1,425 @@
+{
+ "n": 20,
+ "excluded": 0,
+ "reached": 1.0,
+ "ratio_med": 1.0082040777985783,
+ "ratio_mean": 1.0527578256659116,
+ "ratio_p90": 1.1538250804313073,
+ "ratio_max": 1.3467648353449775,
+ "env": "dp1",
+ "method": "\u043a\u043e\u0440\u0438\u0434\u043e\u0440 v6 NB12000 NF3000 K3 wlim (SLSQP)",
+ "t_build": 36.798476258991286,
+ "t_query_med": 33.981383391539566,
+ "t_query_p90": 50.01976359423716,
+ "t_wall_parallel": 676.2745608680416,
+ "box_viol": 0,
+ "no_path": 0,
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": 5.3659357900652385,
+   "t_query": 49.66603782703169,
+   "T_verify": 5.365935790065214,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.496095838025212,
+    "it": 1619,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 23,
+    "Infeasible_Problem_Detected": 9
+   }
+  },
+  {
+   "i": 1,
+   "T_agent": 4.18988165724575,
+   "t_query": 33.91010797396302,
+   "T_verify": 4.189881657245746,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.8792438318487257,
+    "it": 1524,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 38,
+    "Infeasible_Problem_Detected": 26
+   }
+  },
+  {
+   "i": 2,
+   "T_agent": 0.248985427348082,
+   "t_query": 13.474207071121782,
+   "T_verify": 0.248985427348082,
+   "why": "ok",
+   "nseg": 3,
+   "cstat": {
+    "n": 32,
+    "t": 0.5418991129845381,
+    "it": 502,
+    "fb": 2
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 38,
+    "Infeasible_Problem_Detected": 33,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 3,
+   "T_agent": 3.7351621874508223,
+   "t_query": 27.56286717695184,
+   "T_verify": 3.7351621874507908,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.831991697428748,
+    "it": 1348,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 52,
+    "Infeasible_Problem_Detected": 51,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 4,
+   "T_agent": 2.8068759349638737,
+   "t_query": 22.87363220588304,
+   "T_verify": 2.8068759349638777,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.6373448465019464,
+    "it": 1408,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 61,
+    "Infeasible_Problem_Detected": 74,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 5,
+   "T_agent": 2.539288261793713,
+   "t_query": 42.622872120002285,
+   "T_verify": 2.539288261793705,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.269457617774606,
+    "it": 1607,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 75,
+    "Infeasible_Problem_Detected": 92,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 6,
+   "T_agent": 3.9608037817404362,
+   "t_query": 35.9779434108641,
+   "T_verify": 3.9608037817404114,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 5.094404008938,
+    "it": 1846,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 100,
+    "Infeasible_Problem_Detected": 99,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 7,
+   "T_agent": 4.593545500394663,
+   "t_query": 45.7678521219641,
+   "T_verify": 4.593545500394649,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.831217166269198,
+    "it": 1446,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 116,
+    "Infeasible_Problem_Detected": 115,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 8,
+   "T_agent": 2.741685635666183,
+   "t_query": 25.562248066067696,
+   "T_verify": 2.7416856356661756,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 4.143407059600577,
+    "it": 1496,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 133,
+    "Infeasible_Problem_Detected": 130,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 9,
+   "T_agent": 3.3908140293098157,
+   "t_query": 53.20329549908638,
+   "T_verify": 3.3908140293097264,
+   "why": "ok",
+   "nseg": 7,
+   "cstat": {
+    "n": 32,
+    "t": 6.3925576254259795,
+    "it": 1679,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 157,
+    "Infeasible_Problem_Detected": 138,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 10,
+   "T_agent": 2.742272292091973,
+   "t_query": 27.40406555379741,
+   "T_verify": 2.742272292091992,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 4.236504090717062,
+    "it": 1280,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 165,
+    "Infeasible_Problem_Detected": 162,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 11,
+   "T_agent": 3.7602008374470275,
+   "t_query": 37.280510301934555,
+   "T_verify": 3.7602008374470026,
+   "why": "ok",
+   "nseg": 4,
+   "cstat": {
+    "n": 32,
+    "t": 4.0062949494458735,
+    "it": 1637,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 188,
+    "Infeasible_Problem_Detected": 171,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 12,
+   "T_agent": 4.750758491449145,
+   "t_query": 29.141857496928424,
+   "T_verify": 4.750758491449123,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 4.027275300351903,
+    "it": 1615,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 207,
+    "Infeasible_Problem_Detected": 184,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 13,
+   "T_agent": 2.100731860137179,
+   "t_query": 21.69728094805032,
+   "T_verify": 2.100731860137184,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 2.793105853255838,
+    "it": 1087,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 211,
+    "Infeasible_Problem_Detected": 212,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 14,
+   "T_agent": 2.621379729114933,
+   "t_query": 34.05265880911611,
+   "T_verify": 2.6213797291149294,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.8904130114242435,
+    "it": 1374,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 226,
+    "Infeasible_Problem_Detected": 229,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 15,
+   "T_agent": 3.20905807573646,
+   "t_query": 20.76915997103788,
+   "T_verify": 3.2090580757364786,
+   "why": "ok",
+   "nseg": 3,
+   "cstat": {
+    "n": 32,
+    "t": 2.298828907776624,
+    "it": 1354,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 239,
+    "Infeasible_Problem_Detected": 248,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 16,
+   "T_agent": 3.694216867647598,
+   "t_query": 35.93519439804368,
+   "T_verify": 3.694216867647583,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.27438435703516,
+    "it": 1557,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 262,
+    "Infeasible_Problem_Detected": 257,
+    "Solve_Succeeded": 25
+   }
+  },
+  {
+   "i": 17,
+   "T_agent": 3.997034350705301,
+   "t_query": 23.476595746120438,
+   "T_verify": 3.997034350705308,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.9479606559034437,
+    "it": 1422,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 276,
+    "Infeasible_Problem_Detected": 273,
+    "Solve_Succeeded": 27
+   }
+  },
+  {
+   "i": 18,
+   "T_agent": 4.472133756081805,
+   "t_query": 35.08689119108021,
+   "T_verify": 4.472133756081813,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.34442334366031,
+    "it": 1542,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 299,
+    "Infeasible_Problem_Detected": 282,
+    "Solve_Succeeded": 27
+   }
+  },
+  {
+   "i": 19,
+   "T_agent": 5.195493554440124,
+   "t_query": 60.185074941953644,
+   "T_verify": 5.19549355444015,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 6.01552941929549,
+    "it": 1559,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 321,
+    "Infeasible_Problem_Detected": 292,
+    "Solve_Succeeded": 27
+   }
+  }
+ ],
+ "Tref": [
+  5.0992,
+  3.9631,
+  0.2196,
+  3.5804,
+  2.7965,
+  2.534,
+  3.7842,
+  3.4108,
+  2.736,
+  3.3853,
+  2.7393,
+  4.1353,
+  4.6362,
+  2.0891,
+  2.6182,
+  3.1955,
+  3.6546,
+  3.9909,
+  3.3526,
+  4.841
+ ],
+ "weight": {
+  "elems": 588000,
+  "bytes": 4704000
+ },
+ "nodes_back": 12000,
+ "procs": 1
+}

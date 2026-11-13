@@ -1,0 +1,414 @@
+{
+ "n": 20,
+ "excluded": 0,
+ "reached": 1.0,
+ "ratio_med": 1.0094247561045213,
+ "ratio_mean": 1.0310939236968277,
+ "ratio_p90": 1.1259711529506071,
+ "ratio_max": 1.4070831341281818,
+ "env": "dp1",
+ "method": "\u043a\u043e\u0440\u0438\u0434\u043e\u0440 v6 NB12000 NF3000 K3 wlim (SLSQP)",
+ "t_build": 36.7074093259871,
+ "t_query_med": 30.701487096957862,
+ "t_query_p90": 50.66057251763996,
+ "t_wall_parallel": 175.4640560299158,
+ "box_viol": 0,
+ "no_path": 0,
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": 1.871200082212777,
+   "t_query": 15.75561492308043,
+   "T_verify": 1.8712001022674547,
+   "why": "ok",
+   "nseg": 7,
+   "cstat": {
+    "n": 32,
+    "t": 1.8721079973038286,
+    "it": 681
+   },
+   "st": {
+    "Solve_Succeeded": 32
+   }
+  },
+  {
+   "i": 1,
+   "T_agent": 4.212027848344878,
+   "t_query": 48.95166592905298,
+   "T_verify": 4.212027848344867,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.524112373124808,
+    "it": 1750,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 26,
+    "Infeasible_Problem_Detected": 6
+   }
+  },
+  {
+   "i": 2,
+   "T_agent": 3.8074590551899625,
+   "t_query": 28.223338956013322,
+   "T_verify": 3.8074590551899328,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 3.954438812099397,
+    "it": 1463,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 16,
+    "Infeasible_Problem_Detected": 16
+   }
+  },
+  {
+   "i": 3,
+   "T_agent": 3.6281790377782244,
+   "t_query": 23.86287827207707,
+   "T_verify": 3.6281790377782377,
+   "why": "ok",
+   "nseg": 4,
+   "cstat": {
+    "n": 32,
+    "t": 3.694577949354425,
+    "it": 1498,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 21,
+    "Infeasible_Problem_Detected": 11
+   }
+  },
+  {
+   "i": 4,
+   "T_agent": 0.11172240084977764,
+   "t_query": 54.295079736970365,
+   "T_verify": 0.11172240084977764,
+   "why": "ok",
+   "nseg": 7,
+   "cstat": {
+    "n": 32,
+    "t": 3.322529719909653,
+    "it": 939,
+    "fb": 5
+   },
+   "st": {
+    "Solve_Succeeded": 49,
+    "Maximum_Iterations_Exceeded": 9,
+    "Infeasible_Problem_Detected": 6
+   }
+  },
+  {
+   "i": 5,
+   "T_agent": 4.038250932497197,
+   "t_query": 47.776429176097736,
+   "T_verify": 4.038250932497219,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 6.292586794355884,
+    "it": 1850,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 48,
+    "Infeasible_Problem_Detected": 16
+   }
+  },
+  {
+   "i": 6,
+   "T_agent": 2.996628295491899,
+   "t_query": 30.830710174981505,
+   "T_verify": 2.996628295491901,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 4.693943399935961,
+    "it": 1405,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 28,
+    "Infeasible_Problem_Detected": 36
+   }
+  },
+  {
+   "i": 7,
+   "T_agent": 4.473852178118664,
+   "t_query": 55.237255171872675,
+   "T_verify": 4.473852178118701,
+   "why": "ok",
+   "nseg": 4,
+   "cstat": {
+    "n": 32,
+    "t": 4.460017035482451,
+    "it": 1778,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 49,
+    "Infeasible_Problem_Detected": 15
+   }
+  },
+  {
+   "i": 8,
+   "T_agent": 3.7767774526192657,
+   "t_query": 31.616700037149712,
+   "T_verify": 3.776777452619267,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.02914674510248,
+    "it": 1610,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 45,
+    "Infeasible_Problem_Detected": 51
+   }
+  },
+  {
+   "i": 9,
+   "T_agent": 0.8692731817131552,
+   "t_query": 12.775822215015069,
+   "T_verify": 0.8692731867457993,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 0.850327153224498,
+    "it": 571,
+    "fb": 1
+   },
+   "st": {
+    "Solve_Succeeded": 76,
+    "Maximum_Iterations_Exceeded": 10,
+    "Infeasible_Problem_Detected": 10
+   }
+  },
+  {
+   "i": 10,
+   "T_agent": 3.3668581255767513,
+   "t_query": 35.568172110943124,
+   "T_verify": 3.3668581255767442,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.367259830469266,
+    "it": 1607,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 69,
+    "Infeasible_Problem_Detected": 27
+   }
+  },
+  {
+   "i": 11,
+   "T_agent": 3.971803140526758,
+   "t_query": 28.133753372123465,
+   "T_verify": 3.971803140526723,
+   "why": "ok",
+   "nseg": 4,
+   "cstat": {
+    "n": 32,
+    "t": 3.3166566223371774,
+    "it": 1475,
+    "fb": 6
+   },
+   "st": {
+    "Solve_Succeeded": 76,
+    "Maximum_Iterations_Exceeded": 27,
+    "Infeasible_Problem_Detected": 25
+   }
+  },
+  {
+   "i": 12,
+   "T_agent": 5.324191802339304,
+   "t_query": 34.19376340205781,
+   "T_verify": 5.324191802339296,
+   "why": "ok",
+   "nseg": 4,
+   "cstat": {
+    "n": 32,
+    "t": 4.272372917504981,
+    "it": 1688,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 68,
+    "Infeasible_Problem_Detected": 58,
+    "Solve_Succeeded": 2
+   }
+  },
+  {
+   "i": 13,
+   "T_agent": 3.8683812843021648,
+   "t_query": 26.86841733311303,
+   "T_verify": 3.868381284302203,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 4.249852615175769,
+    "it": 1513,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 70,
+    "Infeasible_Problem_Detected": 26
+   }
+  },
+  {
+   "i": 14,
+   "T_agent": 1.6754810185474733,
+   "t_query": 23.012901755049825,
+   "T_verify": 1.6754810270782323,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 1.7702050730586052,
+    "it": 938,
+    "fb": 5
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 72,
+    "Infeasible_Problem_Detected": 40,
+    "Solve_Succeeded": 16
+   }
+  },
+  {
+   "i": 15,
+   "T_agent": 4.7375941396197705,
+   "t_query": 18.681372510967776,
+   "T_verify": 4.7375941251145175,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 3.412175444420427,
+    "it": 1104,
+    "fb": 3
+   },
+   "st": {
+    "Solve_Succeeded": 96,
+    "Maximum_Iterations_Exceeded": 33,
+    "Infeasible_Problem_Detected": 31
+   }
+  },
+  {
+   "i": 16,
+   "T_agent": 3.689444311943982,
+   "t_query": 50.2567383821588,
+   "T_verify": 3.689444311943975,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.289050507126376,
+    "it": 1780,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 89,
+    "Infeasible_Problem_Detected": 69,
+    "Solve_Succeeded": 2
+   }
+  },
+  {
+   "i": 17,
+   "T_agent": 4.052958295157094,
+   "t_query": 40.767939381999895,
+   "T_verify": 4.052958295157118,
+   "why": "ok",
+   "nseg": 6,
+   "cstat": {
+    "n": 32,
+    "t": 5.61382251069881,
+    "it": 1765,
+    "fb": 6
+   },
+   "st": {
+    "Solve_Succeeded": 96,
+    "Maximum_Iterations_Exceeded": 57,
+    "Infeasible_Problem_Detected": 39
+   }
+  },
+  {
+   "i": 18,
+   "T_agent": 4.5804748193244675,
+   "t_query": 30.57226401893422,
+   "T_verify": 4.580474819324452,
+   "why": "ok",
+   "nseg": 3,
+   "cstat": {
+    "n": 32,
+    "t": 2.530046764528379,
+    "it": 1370,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 84,
+    "Infeasible_Problem_Detected": 60,
+    "Solve_Succeeded": 16
+   }
+  },
+  {
+   "i": 19,
+   "T_agent": 3.9190803866716917,
+   "t_query": 26.590966928983107,
+   "T_verify": 3.919080386671692,
+   "why": "ok",
+   "nseg": 5,
+   "cstat": {
+    "n": 32,
+    "t": 4.835981106385589,
+    "it": 1615,
+    "fb": 6
+   },
+   "st": {
+    "Maximum_Iterations_Exceeded": 95,
+    "Infeasible_Problem_Detected": 33
+   }
+  }
+ ],
+ "Tref": [
+  1.8485,
+  3.1972,
+  3.4466,
+  3.8906,
+  0.0794,
+  3.7909,
+  2.9802,
+  4.4607,
+  3.687,
+  0.8636,
+  4.0301,
+  3.9606,
+  4.859,
+  3.865,
+  1.6415,
+  4.6746,
+  3.6381,
+  4.9851,
+  4.5691,
+  4.1491
+ ],
+ "weight": {
+  "elems": 588000,
+  "bytes": 4704000
+ },
+ "nodes_back": 12000,
+ "procs": 4
+}
