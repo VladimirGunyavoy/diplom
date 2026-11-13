@@ -675,3 +675,4 @@ hub-v5chain-senior-4 | decision | senior (автономный режим): от
 hub-v5chain-worker-e2 | done | ctx 30% | e2 дела на aida идут (run_blind), CA4/VEC код готов | next=hub-v5chain-worker-e3 | 20:30:44
 hub-v5chain-worker-e3 | started | acc3 | sonnet | 20:31:15
 hub-v5chain-worker-c14 | done | ctx 29% ≈ софт | блоки 6–11 приняты, блок 12 (проход времени) идёт на aida (runT.sh) | next=hub-v5chain-worker-c15 | 21:15:05
+hub-v5chain-worker-c15 | started | acc2 | sonnet | 21:15:35
