@@ -1,4 +1,9 @@
 # fixer — последние смены (новые сверху)
+## hub-v5chain-fixer-1 (2026-11-12) — сервис aida, pick_account, графана
+- aida 2: туннель :2223 падал 11-11 07:42/15:3x и 11-12 03:3x — мёртвая сессия на хабе держит порт, сторож сам переподключается за ≈5 мин, хост не падал (README aida-2). Доступ: `ssh -p 2223 aida@127.0.0.1` (user aida; `random` = aida 1, порт 2222).
+- aida 1: venv `~/spore_v5/venv_casadi` (r31/venv + casadi), `~/spore_v5/mj/venv` (mujoco + safety-gymnasium, патч dataclass под py3.12 в пакете).
+- pick_account: кэш держал старый максимум после досрочного сброса лимита (тот же resets_at). Сессии одного аккаунта пишут протухшие снимки (7д acc1 27/37/44/25/22 при 64), поэтому при расхождении с кэшем ≥15 п.п. судья — newest запись лога с движением cost_usd (`fresh_pct`). Тест в test_pick_account.py.
+- Графана (~/grafana, вне git): таблица «Лимиты» — по строке на аккаунт×окно, сначала 5ч потом 7д; панель расхода 7д (`week_rate`, полураспад WEEK_HALFLIFE_MIN=90); прогноз 7д по сглаженной скорости. Урок: `pkill -f` убивает свою оболочку — только по PID.
 ## 2026-10-12 вечер laptop-v5chain-fixer-1 — аккаунты ноута
 - Нумерация аккаунтов единая на хабе и ноуте (слово пользователя): 1 vladimirgun26 (ноут: `.claude`, он же `.claude-vladimirgun26` — дубль того же логина), 2 gun.vladimir26 (ноут: `.claude-gunvladimir26`, залогинен пользователем `claude auth login`), 3 romaha. Файл `~/claude-work/system/accounts/accounts.json` вне git; на хабе алиасы `machine_aliases.yoga`.
 - Токен входа в git не хранится — на новой машине аккаунт надо залогинить руками. Новая папка аккаунта: скопировать settings.json (statusLine, autoMode), в `.claude.json` — hasCompletedOnboarding + trust проектов; `move_session.py <tmux> gun|romaha|default|<путь>`.
