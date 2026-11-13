@@ -44,6 +44,8 @@ def setup():
         from src.atlas6 import corridor_nd as _C
         if not getattr(_C, '_ns_patched', False):
             _ref0 = _C.refine; _C.refine = lambda flow, x0, path, g, tries=3, seed=0, clear=None, ns=16, wlim=None, _r=_ref0: _r(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=NSW, wlim=wlim); _C._ns_patched = True
+    if os.environ.get('EXJ'):   # e3: SLSQP с точным якобианом (refine_ex.py), значения ограничений те же
+        import refine_ex; refine_ex.install(name, US, hw, per, NSW)
     if os.environ.get('VEC'):   # c14 tree_vec: векторизованное прямое дерево (порядок раскрытия прежний); ok_batch — та же коробка, что ok
         import tree_vec, sys as _s
         S.ok_batch = lambda E_: ~(((np.asarray(E_) < e.lo) | (np.asarray(E_) > e.hi)) & (per == 0)).any(-1)
