@@ -1,0 +1,25 @@
+   Ordered by: cumulative time
+   List reduced from 227 to 22 due to restriction <22>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.048    0.048    2.583    2.583 ../v1/prof_b4.py:10(work)
+        1    0.000    0.000    2.535    2.535 /home/random/spore_v5/c13/b4/stitch.py:46(arm_local)
+        1    0.662    0.662    2.188    2.188 /home/random/spore_v5/c13/b4/stitch.py:9(cand)
+        1    0.009    0.009    0.650    0.650 /home/random/spore_v5/c13/v1/tree_vec.py:10(_tree)
+    10000    0.414    0.000    0.546    0.000 /home/random/spore_v5/a31/spores_2/bench/../v6/src/atlas6/adaptive_nd.py:133(tree_query)
+    10000    0.009    0.000    0.527    0.000 /home/random/spore_v5/c13/v1/tree_vec.py:34(children)
+      185    0.065    0.000    0.498    0.003 /home/random/spore_v5/c13/v1/tree_vec.py:16(kids)
+   181072    0.161    0.000    0.354    0.000 /home/random/spore_v5/c13/spd6/spores_di.py:39(<lambda>)
+   231040    0.208    0.000    0.208    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   181620    0.045    0.000    0.184    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:2586(all)
+        1    0.175    0.175    0.177    0.177 /home/random/spore_v5/c13/b4/stitch.py:36(fdist)
+       20    0.000    0.000    0.170    0.009 /home/random/spore_v5/c13/b4/stitch.py:43(_try)
+       20    0.001    0.000    0.170    0.008 /home/random/spore_v5/a31/spores_2/bench/../v6/src/atlas6/corridor_nd.py:23(refine)
+       40    0.000    0.000    0.168    0.004 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_minimize.py:54(minimize)
+       40    0.004    0.000    0.166    0.004 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_slsqp_py.py:220(_minimize_slsqp)
+    20058    0.007    0.000    0.159    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:3049(max)
+    20058    0.010    0.000    0.152    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:66(_wrapreduction)
+    20732    0.135    0.000    0.141    0.000 /home/random/spore_v5/c13/spd6/spores_di.py:29(flow)
+   182128    0.075    0.000    0.140    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:86(_wrapreduction_any_all)
+    10028    0.014    0.000    0.094    0.000 /home/random/spore_v5/c13/spd6/spores_di.py:32(<lambda>)
+     5410    0.004    0.000    0.082    0.000 /home/random/spore_v5/a31/spores_2/bench/../v6/src/atlas6/corridor_nd.py:27(gg)
