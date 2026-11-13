@@ -1,0 +1,2 @@
+8a9
+> sys.path.insert(0, os.path.expanduser("~/spore_v5/c13/b5")); import bs; build_back = bs.build_back_bs   # c13 блок 5: cKDTree(boxsize) вместо 81 образа

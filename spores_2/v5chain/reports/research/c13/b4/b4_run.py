@@ -14,7 +14,7 @@ def work(i):
     elif ARM == 'fallback':   # база; если пути нет — рука (б)
         b = corridor_query(S, flow, e.X0[i], back, tau, NF, rho, g, miss, K=K, tries=3, kn=8, neigh=0, nbest=1)
         if b is None: b, info = stitch.arm_local(S, flow, e.X0[i], back, tau, NF, rho, g, miss, K=20); info['fb'] = 1
-    elif ARM == 'local': b, info = stitch.arm_local(S, flow, e.X0[i], back, tau, NF, rho, g, miss, K=20)
+    elif ARM == 'local': b, info = stitch.arm_local(S, flow, e.X0[i], back, tau, NF, rho, g, miss, K=int(os.environ.get('KP', 20)), glob_tries=int(os.environ.get('GT', 2)), macc=int(os.environ.get('MACC', 1)))
     else: b, info = stitch.arm_nof(S, flow, e.X0[i], back, tau, g, K=20, rho=rho)
     dt = time.perf_counter() - t1
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path', info=info)

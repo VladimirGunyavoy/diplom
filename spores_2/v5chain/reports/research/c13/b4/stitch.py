@@ -43,11 +43,11 @@ def _gloc(S, target, tol):
 def _try(flow, x0, path, g, tries=1, wlim=None):
     T, sq, d, ok = refine(flow, x0, path, g, tries=tries, wlim=wlim); return T, sq, d, ok
 
-def arm_local(S, flow, x0, back, tau, NF, rho, g, miss, K=20, qf=2, qb=2, tol=None, wlim=None, glob_tries=2):
+def arm_local(S, flow, x0, back, tau, NF, rho, g, miss, K=20, qf=2, qb=2, tol=None, wlim=None, glob_tries=2, macc=1):
     """(б) → (T, seq, dts) или None; доп. поля статистики возвращаются во втором значении"""
     tol = .3 * rho if tol is None else tol
     C, nh, (Pf, Gf, parf, layf) = cand(S, x0, back, tau, NF, rho, miss, 8); Pb, Gb, parb, layb, seqs, tree = back
-    d, jb = fdist(S, back, Pf); order = np.argsort(d); info = dict(pairs=0, local_ok=0, hits_before=nh, dmin=float(d.min()) if len(d) else None)
+    d, jb = fdist(S, back, Pf); order = np.argsort(d); info = dict(pairs=0, local_ok=0, hits_before=nh, dmin=float(d.min()) if len(d) else None); accepted = []
     for i in order[:K]:
         i = int(i); b = int(jb[i]); info['pairs'] += 1
         j = i; tail = []
@@ -65,7 +65,11 @@ def arm_local(S, flow, x0, back, tau, NF, rho, g, miss, K=20, qf=2, qb=2, tol=No
         if not ok: continue
         info['local_ok'] += 1; full = prefix + list(zip(sq, dd)) + rest
         T2, sq2, d2, ok2 = refine(flow, x0, full, g, tries=glob_tries, wlim=wlim)
-        if ok2: info['pair_i'] = i; return (T2, sq2, d2), info
+        if ok2:
+            accepted.append((T2, sq2, d2)); info['pair_i'] = i
+            if len(accepted) >= macc: break
+    info['accepted'] = len(accepted)
+    if accepted: return min(accepted, key=lambda z: z[0]), info
     return None, info
 
 def arm_nof(S, flow, x0, back, tau, g, K=20, qc=8, tol=None, rho=.15, wlim=None, glob_tries=2):
