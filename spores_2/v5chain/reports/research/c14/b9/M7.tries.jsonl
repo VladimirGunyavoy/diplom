@@ -1,0 +1,672 @@
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.990484882028702], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.2226], [1, "Solve_Succeeded", 22, 0.2282], [2, "Solve_Succeeded", 51, 0.5236]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.887795467489268], [1, "best", 2.8877954674892474], [2, "worse"]], "R": [[0, "Solve_Succeeded", 20, 0.1965], [1, "Solve_Succeeded", 23, 0.2412], [2, "Solve_Succeeded", 30, 0.3278]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.876962600023532], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 17, 0.2135], [1, "Solve_Succeeded", 23, 0.2562], [2, "Solve_Succeeded", 28, 0.2963]], "pid": 4174415}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.669619312447589], [1, "best", 3.6696193124475536], [2, "worse"]], "R": [[0, "Solve_Succeeded", 19, 0.2124], [1, "Solve_Succeeded", 24, 0.2658], [2, "Solve_Succeeded", 26, 0.2723]], "pid": 4174412}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.7088846256389636], [1, "best", 2.7088846256389605], [2, "worse"]], "R": [[0, "Solve_Succeeded", 19, 0.1755], [1, "Solve_Succeeded", 31, 0.3417], [2, "Solve_Succeeded", 24, 0.2442]], "pid": 4174413}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.145226825922806], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 44, 0.4746], [1, "Maximum_Iterations_Exceeded", 60, 0.6787], [2, "Solve_Succeeded", 47, 0.5627]], "pid": 4174409}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 17, 0.0241], [1, "Infeasible_Problem_Detected", 17, 0.0231], [2, "Infeasible_Problem_Detected", 18, 0.0223]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.6780685529608332], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 23, 0.3115], [1, "Solve_Succeeded", 33, 0.405], [2, "Solve_Succeeded", 30, 0.3689]], "pid": 4174414}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.858335605424666], [1, "fail"], [2, "best", 3.85833560542134]], "R": [[0, "Solve_Succeeded", 28, 0.2989], [1, "Maximum_Iterations_Exceeded", 60, 0.8093], [2, "Solve_Succeeded", 38, 0.4324]], "pid": 4174415}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.471475760395578], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.2927], [1, "Maximum_Iterations_Exceeded", 60, 0.9593], [2, "Solve_Succeeded", 25, 0.3894]], "pid": 4174412}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 39, 0.0917], [1, "Infeasible_Problem_Detected", 39, 0.0968], [2, "Infeasible_Problem_Detected", 17, 0.0404]], "pid": 4174409}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 26, 0.0764], [1, "Infeasible_Problem_Detected", 34, 0.0768], [2, "Infeasible_Problem_Detected", 28, 0.0645]], "pid": 4174415}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 21, 0.0246], [1, "Infeasible_Problem_Detected", 23, 0.0255], [2, "Infeasible_Problem_Detected", 23, 0.0249]], "pid": 4174415}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 14, 0.0327], [1, "Infeasible_Problem_Detected", 17, 0.0385], [2, "Infeasible_Problem_Detected", 18, 0.041]], "pid": 4174415}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 53, 0.1306], [1, "Maximum_Iterations_Exceeded", 60, 0.1449], [2, "Maximum_Iterations_Exceeded", 60, 0.1294]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.692960158405082], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.2734], [1, "Solve_Succeeded", 30, 0.3643], [2, "Solve_Succeeded", 35, 0.4234]], "pid": 4174413}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.941701303967883], [1, "worse"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 28, 0.3825], [1, "Solve_Succeeded", 48, 0.6126], [2, "Maximum_Iterations_Exceeded", 60, 0.7304]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.840692302719865]], "R": [[0, "Solve_Succeeded", 39, 0.6279]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.8857129086702478], [1, "worse"], [2, "best", 2.8857129086702447]], "R": [[0, "Solve_Succeeded", 36, 0.4551], [1, "Solve_Succeeded", 29, 0.3548], [2, "Solve_Succeeded", 35, 0.4526]], "pid": 4174414}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.995231635979331], [1, "best", 2.9952316359793305], [2, "worse"]], "R": [[0, "Solve_Succeeded", 20, 0.2333], [1, "Solve_Succeeded", 31, 0.3733], [2, "Solve_Succeeded", 24, 0.2866]], "pid": 4174413}
+{"tries0": 3, "n": 2, "ok": true, "L": [[0, "best", 1.22806819199686], [1, "best", 1.2280681919942547], [2, "worse"]], "R": [[0, "Solve_Succeeded", 11, 0.0312], [1, "Solve_Succeeded", 12, 0.0242], [2, "Solve_Succeeded", 25, 0.048]], "pid": 4174410}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 14, 0.0221], [1, "Infeasible_Problem_Detected", 14, 0.018], [2, "Infeasible_Problem_Detected", 12, 0.0164]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1411]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.876986724351234]], "R": [[0, "Solve_Succeeded", 30, 0.4879]], "pid": 4174409}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 15, 0.0802], [1, "Infeasible_Problem_Detected", 22, 0.0907], [2, "Infeasible_Problem_Detected", 33, 0.1363]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.583910460784829], [1, "best", 2.5839104607848284], [2, "best", 2.583910460784826]], "R": [[0, "Solve_Succeeded", 26, 0.407], [1, "Solve_Succeeded", 27, 0.3915], [2, "Solve_Succeeded", 38, 0.5566]], "pid": 4174411}
+{"tries0": 3, "n": 3, "ok": true, "L": [[0, "best", 1.217478182070288], [1, "best", 1.2174781820525251], [2, "worse"]], "R": [[0, "Solve_Succeeded", 14, 0.0556], [1, "Solve_Succeeded", 13, 0.0504], [2, "Solve_Succeeded", 17, 0.0713]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781836798332]], "R": [[0, "Solve_Succeeded", 16, 0.1167]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 14, 0.0856]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.5532]], "pid": 4174409}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 17, 0.0834], [1, "Infeasible_Problem_Detected", 27, 0.1153], [2, "Infeasible_Problem_Detected", 46, 0.213]], "pid": 4174411}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1654856559402635]], "R": [[0, "Solve_Succeeded", 22, 0.1355]], "pid": 4174410}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.3205], [1, "Maximum_Iterations_Exceeded", 60, 0.2888], [2, "Maximum_Iterations_Exceeded", 60, 0.2726]], "pid": 4174413}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.943156812454425], [1, "fail"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 20, 0.3047], [1, "Maximum_Iterations_Exceeded", 60, 0.9492], [2, "Maximum_Iterations_Exceeded", 60, 1.0392]], "pid": 4174412}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1741003302156572]], "R": [[0, "Solve_Succeeded", 21, 0.1244]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 16, 0.0493], [1, "Infeasible_Problem_Detected", 18, 0.0474], [2, "Infeasible_Problem_Detected", 18, 0.0439]], "pid": 4174413}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 27, 0.0689], [1, "Infeasible_Problem_Detected", 24, 0.0501], [2, "Infeasible_Problem_Detected", 27, 0.0544]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0983]], "pid": 4174415}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.1721]], "pid": 4174410}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0906], [1, "Infeasible_Problem_Detected", 30, 0.1348], [2, "Infeasible_Problem_Detected", 47, 0.2078]], "pid": 4174411}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.8007915556300826], [1, "worse"], [2, "best", 2.80079155563008]], "R": [[0, "Solve_Succeeded", 34, 0.4476], [1, "Solve_Succeeded", 35, 0.4923], [2, "Solve_Succeeded", 35, 0.4818]], "pid": 4174414}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 32, 0.0675], [1, "Infeasible_Problem_Detected", 27, 0.052], [2, "Infeasible_Problem_Detected", 42, 0.0913]], "pid": 4174412}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "fail"], [1, "fail"], [2, "best", 4.012115346792571]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.859], [1, "Maximum_Iterations_Exceeded", 60, 0.9211], [2, "Solve_Succeeded", 39, 0.5481]], "pid": 4174416}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 44, 0.2397]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 25, 0.0541], [1, "Infeasible_Problem_Detected", 29, 0.0598], [2, "Infeasible_Problem_Detected", 22, 0.0485]], "pid": 4174412}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781874426404]], "R": [[0, "Solve_Succeeded", 21, 0.1167]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9392]], "pid": 4174409}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 21, 0.1328], [1, "Infeasible_Problem_Detected", 20, 0.1182], [2, "Infeasible_Problem_Detected", 39, 0.2315]], "pid": 4174414}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 13, 0.0184], [1, "Infeasible_Problem_Detected", 13, 0.0154], [2, "Infeasible_Problem_Detected", 12, 0.0139]], "pid": 4174414}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.2181]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.217478187754966]], "R": [[0, "Solve_Succeeded", 52, 0.2972]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1209]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0684]], "pid": 4174415}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 30, 0.187], [1, "Infeasible_Problem_Detected", 25, 0.1604], [2, "Infeasible_Problem_Detected", 29, 0.1931]], "pid": 4174414}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.339]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0872]], "pid": 4174409}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6127], [1, "Maximum_Iterations_Exceeded", 60, 0.6233], [2, "Infeasible_Problem_Detected", 38, 0.36]], "pid": 4174411}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.3643]], "pid": 4174410}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3502]], "pid": 4174412}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.3655]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1447]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1188]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0668]], "pid": 4174414}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 50, 0.2845]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 41, 0.237]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9937]], "pid": 4174409}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781815193105]], "R": [[0, "Solve_Succeeded", 34, 0.1995]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1316]], "pid": 4174411}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.7162790131252192], [1, "fail"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 45, 0.7031], [1, "Maximum_Iterations_Exceeded", 60, 0.946], [2, "Maximum_Iterations_Exceeded", 60, 0.8753]], "pid": 4174416}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 12, 0.0726]], "pid": 4174410}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 14, 0.0213], [1, "Infeasible_Problem_Detected", 14, 0.0187], [2, "Infeasible_Problem_Detected", 14, 0.0178]], "pid": 4174416}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 16, 0.0885]], "pid": 4174410}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 14, 0.0168], [1, "Infeasible_Problem_Detected", 15, 0.0176], [2, "Infeasible_Problem_Detected", 12, 0.016]], "pid": 4174416}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 14, 0.0801]], "pid": 4174410}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3399]], "pid": 4174412}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781859932258]], "R": [[0, "Solve_Succeeded", 22, 0.1316]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 29, 0.084], [1, "Infeasible_Problem_Detected", 26, 0.0678], [2, "Infeasible_Problem_Detected", 24, 0.0594]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.002]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0016]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9763]], "pid": 4174414}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1362188660225105]], "R": [[0, "Solve_Succeeded", 17, 0.0897]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 16, 0.0909]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 16, 0.088]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781813713509]], "R": [[0, "Solve_Succeeded", 22, 0.1278]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9688]], "pid": 4174409}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2164880764592663]], "R": [[0, "Solve_Succeeded", 21, 0.1237]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.992]], "pid": 4174411}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 24, 0.1431]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 22, 0.1258]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2135665531433464]], "R": [[0, "Solve_Succeeded", 15, 0.0922]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9621]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9396]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0004]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9853]], "pid": 4174414}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1885581919142876]], "R": [[0, "Solve_Succeeded", 15, 0.0871]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 16, 0.0954]], "pid": 4174410}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3161]], "pid": 4174412}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 16, 0.0892]], "pid": 4174410}
+{"tries0": 1, "n": 2, "ok": false, "L": [[0, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0479]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9499]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0166]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9277]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.931]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8836]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9289]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9337]], "pid": 4174409}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2708]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0054]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8797]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9807]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0279]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0027]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.904]], "pid": 4174409}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1242]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9907]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8742]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9595]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9822]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.997]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8937]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8725]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0183]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1559]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0331]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9959]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0076]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.902]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.844]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9837]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1051]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8928]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0296]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0338]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1272]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8952]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0143]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8741]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9515]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0905]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0082]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9931]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9034]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9249]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.01]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0843]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0453]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9763]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8959]], "pid": 4174414}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1489]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.3858]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.983]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.46]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8719]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.016]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9653]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9904]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.887795468392248]], "R": [[0, "Solve_Succeeded", 30, 0.4397]], "pid": 4174409}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1481]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9713]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4503]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8654]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.923]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9987]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4514]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0149]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1301]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8583356105618396]], "R": [[0, "Solve_Succeeded", 29, 0.5159]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.4425]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0352]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8888]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.85833560928755]], "R": [[0, "Solve_Succeeded", 28, 0.433]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4568]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9741]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0154]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 32, 0.4704]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.887640393944821]], "R": [[0, "Solve_Succeeded", 29, 0.4745]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9872]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1742]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8853]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8800089697420437]], "R": [[0, "Solve_Succeeded", 29, 0.4469]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8847345088644483]], "R": [[0, "Solve_Succeeded", 29, 0.4776]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9982]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780632243378353]], "R": [[0, "Solve_Succeeded", 28, 0.4271]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9951]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.887795503784511]], "R": [[0, "Solve_Succeeded", 30, 0.4437]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685630496626]], "R": [[0, "Solve_Succeeded", 30, 0.4424]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 28, 0.4625]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9946]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 44, 0.7261]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2422]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.7915275376080144]], "R": [[0, "Solve_Succeeded", 34, 0.519]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601616498378]], "R": [[0, "Solve_Succeeded", 23, 0.3931]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9855]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6631287837675006]], "R": [[0, "Solve_Succeeded", 37, 0.5525]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 40, 0.7161]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 28, 0.4796]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8612924371607673]], "R": [[0, "Solve_Succeeded", 34, 0.5133]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0014]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.677090856743165]], "R": [[0, "Solve_Succeeded", 41, 0.6082]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 26, 0.382]], "pid": 4174409}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1528]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.6206]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910460973546]], "R": [[0, "Solve_Succeeded", 32, 0.5122]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 40, 0.6554]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1899]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.4076]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6773833249051386]], "R": [[0, "Solve_Succeeded", 34, 0.492]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.4709]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.692960162664096]], "R": [[0, "Solve_Succeeded", 32, 0.5006]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.5738]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8877954716742162]], "R": [[0, "Solve_Succeeded", 26, 0.3865]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6752926068601446]], "R": [[0, "Solve_Succeeded", 37, 0.5291]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.5225]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6924333754414964]], "R": [[0, "Solve_Succeeded", 32, 0.5035]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0091]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2593]], "pid": 4174412}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 54, 0.5969]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.707281713605192]], "R": [[0, "Solve_Succeeded", 38, 0.6298]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6760951747241846]], "R": [[0, "Solve_Succeeded", 37, 0.5303]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910462989375]], "R": [[0, "Solve_Succeeded", 30, 0.4795]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.4526]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 24, 0.3894]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 35, 0.4475]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7056668086525146]], "R": [[0, "Solve_Succeeded", 37, 0.5829]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 24, 0.3817]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 52, 0.8194]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.4782]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.5454]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 35, 0.4645]], "pid": 4174414}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.4846]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.5439180508656474]], "R": [[0, "Solve_Succeeded", 28, 0.4597]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.547]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.710013078974777]], "R": [[0, "Solve_Succeeded", 47, 0.7626]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 38, 0.4955]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 48, 0.7854]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 25, 0.4008]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.5673470036882593]], "R": [[0, "Solve_Succeeded", 27, 0.4114]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601611601437]], "R": [[0, "Solve_Succeeded", 30, 0.4699]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.4756]], "pid": 4174414}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.463]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7071511070858243]], "R": [[0, "Solve_Succeeded", 47, 0.7406]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.5758]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 54, 0.851]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.5205]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.678068554295232]], "R": [[0, "Solve_Succeeded", 35, 0.4595]], "pid": 4174414}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.4872]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8757537161942013]], "R": [[0, "Solve_Succeeded", 27, 0.4148]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 32, 0.5078]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685539991085]], "R": [[0, "Solve_Succeeded", 36, 0.4681]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.6531]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757601367467]], "R": [[0, "Solve_Succeeded", 27, 0.4347]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.858335608083725]], "R": [[0, "Solve_Succeeded", 29, 0.4657]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 51, 0.8225]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601621735975]], "R": [[0, "Solve_Succeeded", 29, 0.4741]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685544933425]], "R": [[0, "Solve_Succeeded", 37, 0.4681]], "pid": 4174414}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.4156]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910465030248]], "R": [[0, "Solve_Succeeded", 36, 0.589]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8506972789883998]], "R": [[0, "Solve_Succeeded", 40, 0.6073]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.67806855419719]], "R": [[0, "Solve_Succeeded", 33, 0.408]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.5186]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757642697744]], "R": [[0, "Solve_Succeeded", 31, 0.4967]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 56, 0.8898]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 38, 0.5955]], "pid": 4174411}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5004]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6196]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 32, 0.505]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475760806603]], "R": [[0, "Solve_Succeeded", 27, 0.419]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.4199]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 52, 0.7665]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757670131644]], "R": [[0, "Solve_Succeeded", 30, 0.454]], "pid": 4174412}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.541]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.3952]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757635499893]], "R": [[0, "Solve_Succeeded", 28, 0.4384]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 38, 0.497]], "pid": 4174411}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 53, 0.7256]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475766743108]], "R": [[0, "Solve_Succeeded", 24, 0.3598]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.4513]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475763279939]], "R": [[0, "Solve_Succeeded", 24, 0.3506]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 51, 0.684]], "pid": 4174416}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5167]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757660233193]], "R": [[0, "Solve_Succeeded", 24, 0.3648]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.787]], "pid": 4174416}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6665]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6882933632418666]], "R": [[0, "Solve_Succeeded", 59, 0.7782]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7577]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7728]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.716279021221437]], "R": [[0, "Solve_Succeeded", 50, 0.6628]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7162790203132863]], "R": [[0, "Solve_Succeeded", 58, 0.7739]], "pid": 4174416}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.8682534459298044], [1, "worse"], [2, "best", 3.8682534459298035]], "R": [[0, "Solve_Succeeded", 32, 0.3415], [1, "Solve_Succeeded", 37, 0.3883], [2, "Solve_Succeeded", 48, 0.4935]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7162790213081194]], "R": [[0, "Solve_Succeeded", 50, 0.6296]], "pid": 4174416}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 3.7162790128581933]], "R": [[0, "Solve_Succeeded", 47, 0.4047]], "pid": 4174416}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.7905718645566564], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.3994], [1, "Solve_Succeeded", 48, 0.4932], [2, "Solve_Succeeded", 46, 0.4803]], "pid": 4174410}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 4.16597906664225], [1, "worse"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 17, 0.1537], [1, "Solve_Succeeded", 56, 0.4843], [2, "Maximum_Iterations_Exceeded", 60, 0.5021]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 15, 0.029], [1, "Infeasible_Problem_Detected", 15, 0.0285], [2, "Infeasible_Problem_Detected", 13, 0.0243]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 17, 0.0314], [1, "Infeasible_Problem_Detected", 20, 0.0363], [2, "Infeasible_Problem_Detected", 27, 0.0482]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 31, 0.0574], [1, "Infeasible_Problem_Detected", 31, 0.0582], [2, "Infeasible_Problem_Detected", 51, 0.0947]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8481]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7812]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8195]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7774]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.784]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7321]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7676]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7776]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 1.8834583878668532], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 17, 0.1673], [1, "Solve_Succeeded", 18, 0.1806], [2, "Solve_Succeeded", 21, 0.209]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7967]], "pid": 4174410}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.680456596858167], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 14, 0.1125], [1, "Solve_Succeeded", 14, 0.1166], [2, "Solve_Succeeded", 16, 0.1351]], "pid": 4174409}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.5453587065608616], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 15, 0.1265], [1, "Solve_Succeeded", 17, 0.14], [2, "Solve_Succeeded", 17, 0.1393]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.805]], "pid": 4174410}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 1.6999806977216891], [1, "best", 1.6999806977216418], [2, "worse"]], "R": [[0, "Solve_Succeeded", 19, 0.1239], [1, "Solve_Succeeded", 20, 0.1279], [2, "Solve_Succeeded", 22, 0.1433]], "pid": 4174409}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 1.515030626419443], [1, "best", 1.5150306264194278], [2, "worse"]], "R": [[0, "Solve_Succeeded", 19, 0.1218], [1, "Solve_Succeeded", 21, 0.134], [2, "Solve_Succeeded", 23, 0.1443]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8516]], "pid": 4174410}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.3099465033725313], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 26, 0.338], [1, "Solve_Succeeded", 35, 0.4743], [2, "Solve_Succeeded", 34, 0.4599]], "pid": 4174414}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 51, 0.1806], [1, "Infeasible_Problem_Detected", 46, 0.1516], [2, "Maximum_Iterations_Exceeded", 60, 0.1946]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 4.7316234116768365]], "R": [[0, "Solve_Succeeded", 50, 0.6834]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.4991]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.496]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7615]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5014]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 52, 0.7144]], "pid": 4174410}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.5226789247683277], [1, "best", 3.5226789247683272], [2, "best", 3.5226789247683263]], "R": [[0, "Solve_Succeeded", 38, 0.5222], [1, "Solve_Succeeded", 57, 0.7749], [2, "Solve_Succeeded", 40, 0.5466]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 53, 0.4784]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.2346]], "pid": 4174409}
+{"tries0": 3, "n": 9, "ok": true, "L": [[0, "best", 3.8243914516062456], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.5224], [1, "Maximum_Iterations_Exceeded", 60, 0.9715], [2, "Solve_Succeeded", 34, 0.5671]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7858876098024354]], "R": [[0, "Solve_Succeeded", 33, 0.4646]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 17, 0.0335], [1, "Infeasible_Problem_Detected", 19, 0.0371], [2, "Infeasible_Problem_Detected", 20, 0.0386]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.790571865080672]], "R": [[0, "Solve_Succeeded", 32, 0.4384]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5147]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718731313462]], "R": [[0, "Solve_Succeeded", 38, 0.5347]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5954]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.5393211875973973], [1, "fail"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 25, 0.2721], [1, "Maximum_Iterations_Exceeded", 60, 0.7047], [2, "Maximum_Iterations_Exceeded", 60, 0.7584]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.4805]], "pid": 4174410}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.381464267417207], [1, "best", 3.381464267417158], [2, "worse"]], "R": [[0, "Solve_Succeeded", 41, 0.5666], [1, "Solve_Succeeded", 58, 0.8065], [2, "Solve_Succeeded", 45, 0.599]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5483]], "pid": 4174409}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6887], [1, "Maximum_Iterations_Exceeded", 60, 0.6633], [2, "Maximum_Iterations_Exceeded", 60, 0.6127]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 45, 0.614]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.549]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.362030745709106], [1, "best", 3.362030745708813], [2, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.3187], [1, "Solve_Succeeded", 29, 0.3421], [2, "Solve_Succeeded", 32, 0.3881]], "pid": 4174413}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.151], [1, "Infeasible_Problem_Detected", 40, 0.2975], [2, "Maximum_Iterations_Exceeded", 60, 0.4725]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5689]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.790571867193028]], "R": [[0, "Solve_Succeeded", 43, 0.6128]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5823]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.75920880109657]], "R": [[0, "Solve_Succeeded", 48, 0.6888]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.779012883106447], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.2371], [1, "Maximum_Iterations_Exceeded", 60, 0.6977], [2, "Solve_Succeeded", 27, 0.308]], "pid": 4174412}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5563], [1, "Infeasible_Problem_Detected", 47, 0.5], [2, "Maximum_Iterations_Exceeded", 60, 0.548]], "pid": 4174415}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 49, 0.466]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.5506]], "pid": 4174410}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.619], [1, "Maximum_Iterations_Exceeded", 60, 0.5903], [2, "Maximum_Iterations_Exceeded", 60, 0.5924]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6028]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "fail"], [1, "fail"], [2, "best", 3.5435172534706547]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7745], [1, "Maximum_Iterations_Exceeded", 60, 0.7882], [2, "Solve_Succeeded", 37, 0.4827]], "pid": 4174413}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 14, 0.0176], [1, "Infeasible_Problem_Detected", 16, 0.0193], [2, "Infeasible_Problem_Detected", 14, 0.0165]], "pid": 4174413}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 16, 0.0187], [1, "Infeasible_Problem_Detected", 17, 0.0193], [2, "Infeasible_Problem_Detected", 17, 0.0186]], "pid": 4174413}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 19, 0.038], [1, "Infeasible_Problem_Detected", 16, 0.0325], [2, "Infeasible_Problem_Detected", 23, 0.0452]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 48, 0.7167]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5438]], "pid": 4174409}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.4795]], "pid": 4174415}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 35, 0.2363], [1, "Infeasible_Problem_Detected", 38, 0.2835], [2, "Infeasible_Problem_Detected", 40, 0.3643]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306267946818]], "R": [[0, "Solve_Succeeded", 31, 0.3021]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306303390348]], "R": [[0, "Solve_Succeeded", 20, 0.1961]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 45, 0.7394]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9414]], "pid": 4174413}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306340264017]], "R": [[0, "Solve_Succeeded", 20, 0.2068]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 23, 0.2227]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.2271]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718715352075]], "R": [[0, "Solve_Succeeded", 46, 0.7845]], "pid": 4174410}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.8349414627141116], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 52, 0.8068], [1, "Maximum_Iterations_Exceeded", 60, 1.0097], [2, "Solve_Succeeded", 57, 0.961]], "pid": 4174412}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.420241263033021]], "R": [[0, "Solve_Succeeded", 26, 0.2931]], "pid": 4174409}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3574]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0065]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.4824]], "pid": 4174415}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.4181988659401525]], "R": [[0, "Solve_Succeeded", 24, 0.2672]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.6052]], "pid": 4174410}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.4916427399958825]], "R": [[0, "Solve_Succeeded", 23, 0.2693]], "pid": 4174409}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.4027], [1, "Infeasible_Problem_Detected", 38, 0.2205], [2, "Maximum_Iterations_Exceeded", 60, 0.3911]], "pid": 4174411}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.34]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.3263]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0944]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 51, 0.9074]], "pid": 4174410}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 44, 0.2896], [1, "Maximum_Iterations_Exceeded", 60, 0.3505], [2, "Infeasible_Problem_Detected", 33, 0.1966]], "pid": 4174411}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3323]], "pid": 4174414}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.4025]], "pid": 4174409}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.833]], "pid": 4174415}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.3682]], "pid": 4174409}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306292957396]], "R": [[0, "Solve_Succeeded", 20, 0.193]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718655968874]], "R": [[0, "Solve_Succeeded", 45, 0.8641]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0445]], "pid": 4174413}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306329831829]], "R": [[0, "Solve_Succeeded", 22, 0.2063]], "pid": 4174409}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "worse"], [1, "fail"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 22, 0.3546], [1, "Maximum_Iterations_Exceeded", 60, 1.1249], [2, "Solve_Succeeded", 59, 1.1364]], "pid": 4174412}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0502], [1, "Infeasible_Problem_Detected", 22, 0.0541], [2, "Infeasible_Problem_Detected", 17, 0.0363]], "pid": 4174412}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 22, 0.2409]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.708629915433622], [1, "best", 3.6905666270870734], [2, "fail"]], "R": [[0, "Solve_Succeeded", 22, 0.335], [1, "Solve_Succeeded", 38, 0.5706], [2, "Maximum_Iterations_Exceeded", 60, 1.0169]], "pid": 4174416}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 17, 0.0368], [1, "Infeasible_Problem_Detected", 18, 0.0379], [2, "Infeasible_Problem_Detected", 17, 0.0365]], "pid": 4174412}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 18, 0.0412], [1, "Infeasible_Problem_Detected", 18, 0.0381], [2, "Infeasible_Problem_Detected", 18, 0.038]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.4454]], "pid": 4174414}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5649], [1, "Maximum_Iterations_Exceeded", 60, 0.4366], [2, "Maximum_Iterations_Exceeded", 60, 0.4972]], "pid": 4174411}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 23, 0.2671]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 44, 0.8213]], "pid": 4174410}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.318]], "pid": 4174409}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0215]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.6487]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.6498]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0334]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2086]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8132]], "pid": 4174413}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5846]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 4.400158425088995], [1, "fail"], [2, "best", 4.400158424566341]], "R": [[0, "Solve_Succeeded", 44, 0.5767], [1, "Maximum_Iterations_Exceeded", 60, 0.6434], [2, "Solve_Succeeded", 51, 0.5535]], "pid": 4174416}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 35, 0.0356], [1, "Infeasible_Problem_Detected", 30, 0.0306], [2, "Infeasible_Problem_Detected", 24, 0.0244]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8534]], "pid": 4174412}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 39, 0.071], [1, "Infeasible_Problem_Detected", 29, 0.0543], [2, "Infeasible_Problem_Detected", 35, 0.0661]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3085]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8165]], "pid": 4174413}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 32, 0.0586], [1, "Infeasible_Problem_Detected", 24, 0.045], [2, "Infeasible_Problem_Detected", 23, 0.0426]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0705]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.698297211279854]], "R": [[0, "Solve_Succeeded", 41, 0.5331]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.833]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8927]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566631874188]], "R": [[0, "Solve_Succeeded", 29, 0.3801]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0413]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2922]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8306]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566635388076]], "R": [[0, "Solve_Succeeded", 45, 0.5759]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8356]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.708629921197735]], "R": [[0, "Solve_Succeeded", 45, 0.611]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8293]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0857]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2984]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8638]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7927]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8355]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0646]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8494]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8103]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2885]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8759]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8831]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0197]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7931]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8567]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8471]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.406]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8145]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0716]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9029]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8342]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.789]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0687]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3407]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9359]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8679]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7904]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307512614582]], "R": [[0, "Solve_Succeeded", 31, 0.4587]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0582]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8902]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307502126545]], "R": [[0, "Solve_Succeeded", 30, 0.4261]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7839]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.264]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307537457212]], "R": [[0, "Solve_Succeeded", 32, 0.4448]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8318]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8228]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0655]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307484924963]], "R": [[0, "Solve_Succeeded", 41, 0.5677]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.3166]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8231]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.76]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0447]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8813]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8449]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7861]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030752077506]], "R": [[0, "Solve_Succeeded", 38, 0.5576]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2983]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.0667]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307510845486]], "R": [[0, "Solve_Succeeded", 34, 0.4672]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8361]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7814]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.5181]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128845949322]], "R": [[0, "Solve_Succeeded", 25, 0.358]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307456073792]], "R": [[0, "Solve_Succeeded", 40, 0.561]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 25, 0.3553]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.2614]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8019]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 30, 0.531]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 44, 0.6281]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128893150596]], "R": [[0, "Solve_Succeeded", 25, 0.3474]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 32, 0.5065]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.4505]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9087]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4797]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9165]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 32, 0.4683]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.4767]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566629450137]], "R": [[0, "Solve_Succeeded", 35, 0.5179]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465040375184]], "R": [[0, "Solve_Succeeded", 33, 0.5264]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128871781765]], "R": [[0, "Solve_Succeeded", 27, 0.4016]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030748094387]], "R": [[0, "Solve_Succeeded", 42, 0.6421]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566627277076]], "R": [[0, "Solve_Succeeded", 37, 0.5504]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012884297459]], "R": [[0, "Solve_Succeeded", 27, 0.3823]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391458652622]], "R": [[0, "Solve_Succeeded", 29, 0.6706]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465057053528]], "R": [[0, "Solve_Succeeded", 36, 0.5555]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4326]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.4936]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.4891]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 28, 0.4159]], "pid": 4174413}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8150839384939097]], "R": [[0, "Solve_Succeeded", 29, 0.6353]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9211]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 36, 0.5373]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030746365529]], "R": [[0, "Solve_Succeeded", 29, 0.424]], "pid": 4174413}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 29, 0.4676]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.82439145784619]], "R": [[0, "Solve_Succeeded", 33, 0.7098]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012889162737]], "R": [[0, "Solve_Succeeded", 33, 0.4745]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030745373153]], "R": [[0, "Solve_Succeeded", 31, 0.4577]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8824]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.309946503441303]], "R": [[0, "Solve_Succeeded", 41, 0.6778]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012886279297]], "R": [[0, "Solve_Succeeded", 30, 0.3923]], "pid": 4174412}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5116]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 27, 0.338]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914516785136]], "R": [[0, "Solve_Succeeded", 42, 0.8611]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566636836065]], "R": [[0, "Solve_Succeeded", 45, 0.6079]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465051092936]], "R": [[0, "Solve_Succeeded", 38, 0.6093]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.4524]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 39, 0.6147]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391454528569]], "R": [[0, "Solve_Succeeded", 37, 0.6873]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8264]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8302]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914508747547]], "R": [[0, "Solve_Succeeded", 32, 0.5654]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.672583040019623]], "R": [[0, "Solve_Succeeded", 42, 0.5427]], "pid": 4174416}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 50, 0.8038]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 28, 0.3746]], "pid": 4174412}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391453724614]], "R": [[0, "Solve_Succeeded", 32, 0.5886]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465107852217]], "R": [[0, "Solve_Succeeded", 27, 0.3981]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566632017983]], "R": [[0, "Solve_Succeeded", 41, 0.5265]], "pid": 4174416}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5308]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465037991815]], "R": [[0, "Solve_Succeeded", 27, 0.4176]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6703445902068057]], "R": [[0, "Solve_Succeeded", 44, 0.5635]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 37, 0.687]], "pid": 4174415}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.309946505467137]], "R": [[0, "Solve_Succeeded", 28, 0.4238]], "pid": 4174414}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.677042392582783]], "R": [[0, "Solve_Succeeded", 38, 0.4929]], "pid": 4174416}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5862]], "pid": 4174414}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391452353619]], "R": [[0, "Solve_Succeeded", 41, 0.802]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.707809643076906]], "R": [[0, "Solve_Succeeded", 57, 0.7389]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 40, 0.741]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6905666332332823]], "R": [[0, "Solve_Succeeded", 40, 0.5264]], "pid": 4174416}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6244700604824023]], "R": [[0, "Solve_Succeeded", 32, 0.414]], "pid": 4174416}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914515488733]], "R": [[0, "Solve_Succeeded", 43, 0.8278]], "pid": 4174415}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.4849]], "pid": 4174416}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.3630603061069695], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 38, 0.3994], [1, "Solve_Succeeded", 31, 0.3234], [2, "Solve_Succeeded", 59, 0.6356]], "pid": 4174410}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 33, 0.6257]], "pid": 4174415}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.644]], "pid": 4174415}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 35, 0.6371]], "pid": 4174415}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 55, 0.6132], [1, "Maximum_Iterations_Exceeded", 60, 0.6204], [2, "Maximum_Iterations_Exceeded", 60, 0.724]], "pid": 4174410}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 34, 0.6686]], "pid": 4174415}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7992]], "pid": 4174415}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0644], [1, "Infeasible_Problem_Detected", 27, 0.0895], [2, "Infeasible_Problem_Detected", 24, 0.079]], "pid": 4174409}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6959], [1, "Maximum_Iterations_Exceeded", 60, 0.6918], [2, "Maximum_Iterations_Exceeded", 60, 0.6763]], "pid": 4174410}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 18, 0.0608], [1, "Infeasible_Problem_Detected", 16, 0.054], [2, "Infeasible_Problem_Detected", 31, 0.097]], "pid": 4174409}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 24, 0.1518], [1, "Infeasible_Problem_Detected", 21, 0.1317], [2, "Infeasible_Problem_Detected", 46, 0.2911]], "pid": 4174409}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.541], [1, "Maximum_Iterations_Exceeded", 60, 0.6], [2, "Infeasible_Problem_Detected", 45, 0.3996]], "pid": 4174410}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0382], [1, "Infeasible_Problem_Detected", 19, 0.0357], [2, "Infeasible_Problem_Detected", 20, 0.0375]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603088954665]], "R": [[0, "Solve_Succeeded", 53, 0.7078]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362983322766339]], "R": [[0, "Solve_Succeeded", 56, 0.7003]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060309146584]], "R": [[0, "Solve_Succeeded", 55, 0.6899]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7647]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7673]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7272]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7691]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7835]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8096]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.756]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7601]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9334]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "worse"], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.1829], [1, "Solve_Succeeded", 22, 0.2193], [2, "Solve_Succeeded", 25, 0.2608]], "pid": 4174413}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.7796607962288338], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.1725], [1, "Solve_Succeeded", 33, 0.2745], [2, "Solve_Succeeded", 23, 0.1954]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.7962]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8708]], "pid": 4174410}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.554381169004473], [1, "best", 2.554381169004472], [2, "worse"]], "R": [[0, "Solve_Succeeded", 23, 0.2544], [1, "Solve_Succeeded", 36, 0.3861], [2, "Solve_Succeeded", 26, 0.2837]], "pid": 4174413}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 2.4599593040947254], [1, "worse"], [2, "best", 2.459959304094717]], "R": [[0, "Solve_Succeeded", 20, 0.1436], [1, "Solve_Succeeded", 26, 0.1815], [2, "Solve_Succeeded", 29, 0.189]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8945]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603049315515]], "R": [[0, "Solve_Succeeded", 16, 0.2209]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 21, 0.275]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603099561336]], "R": [[0, "Solve_Succeeded", 22, 0.2982]], "pid": 4174410}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.4823], [1, "Maximum_Iterations_Exceeded", 60, 0.4853], [2, "Maximum_Iterations_Exceeded", 60, 0.4054]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060306762293]], "R": [[0, "Solve_Succeeded", 22, 0.2928]], "pid": 4174410}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.3148560601537853], [1, "worse"], [2, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.1604], [1, "Solve_Succeeded", 20, 0.1742], [2, "Solve_Succeeded", 21, 0.1874]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060306654866]], "R": [[0, "Solve_Succeeded", 34, 0.436]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.314856062529149]], "R": [[0, "Solve_Succeeded", 30, 0.3206]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 31, 0.3708]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.212405321403271]], "R": [[0, "Solve_Succeeded", 35, 0.338]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630514071866333]], "R": [[0, "Solve_Succeeded", 31, 0.403]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 43, 0.4128]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060308396889]], "R": [[0, "Solve_Succeeded", 37, 0.4741]], "pid": 4174410}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 39, 0.1897], [1, "Maximum_Iterations_Exceeded", 60, 0.2786], [2, "Infeasible_Problem_Detected", 32, 0.1506]], "pid": 4174412}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.643]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.36306030554014]], "R": [[0, "Solve_Succeeded", 36, 0.4603]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.2261]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6288]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603134136905]], "R": [[0, "Solve_Succeeded", 42, 0.5683]], "pid": 4174410}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 55, 0.3905], [1, "Infeasible_Problem_Detected", 39, 0.2781], [2, "Maximum_Iterations_Exceeded", 60, 0.4186]], "pid": 4174412}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5936]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603075572165]], "R": [[0, "Solve_Succeeded", 38, 0.4754]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6118]], "pid": 4174413}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 28, 0.1919], [1, "Maximum_Iterations_Exceeded", 60, 0.3963], [2, "Maximum_Iterations_Exceeded", 60, 0.4277]], "pid": 4174412}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603074253385]], "R": [[0, "Solve_Succeeded", 49, 0.6446]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.617]], "pid": 4174413}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 38, 0.5176]], "pid": 4174410}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603094639886]], "R": [[0, "Solve_Succeeded", 28, 0.3702]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6234]], "pid": 4174413}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.5256]], "pid": 4174410}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6294]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6039]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6444]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6444]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.6473]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 23, 0.2418]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.1893]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.1731]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 20, 0.2109]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 18, 0.1869]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560640658493]], "R": [[0, "Solve_Succeeded", 26, 0.2691]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560656846864]], "R": [[0, "Solve_Succeeded", 23, 0.2288]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 22, 0.2104]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560593323033]], "R": [[0, "Solve_Succeeded", 22, 0.2285]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560605839803]], "R": [[0, "Solve_Succeeded", 20, 0.1984]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560621940475]], "R": [[0, "Solve_Succeeded", 24, 0.245]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 25, 0.2423]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 25, 0.261]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148559511029623]], "R": [[0, "Solve_Succeeded", 22, 0.226]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.314856061573876]], "R": [[0, "Solve_Succeeded", 17, 0.1638]], "pid": 4174413}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.31485606318119]], "R": [[0, "Solve_Succeeded", 19, 0.1926]], "pid": 4174413}
+{"tries0": 1, "n": 5, "ok": false, "L": [[0, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 34, 0.2324]], "pid": 4174413}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.4059], [1, "Maximum_Iterations_Exceeded", 60, 0.3715], [2, "Infeasible_Problem_Detected", 21, 0.1367]], "pid": 4174411}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.3973], [1, "Maximum_Iterations_Exceeded", 60, 0.3929], [2, "Maximum_Iterations_Exceeded", 60, 0.4099]], "pid": 4174411}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.3935], [1, "Infeasible_Problem_Detected", 36, 0.2443], [2, "Maximum_Iterations_Exceeded", 60, 0.371]], "pid": 4174411}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 57, 0.7563], [1, "Maximum_Iterations_Exceeded", 60, 0.7521], [2, "Maximum_Iterations_Exceeded", 60, 0.7555]], "pid": 4174409}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 20, 0.0594], [1, "Infeasible_Problem_Detected", 27, 0.0835], [2, "Infeasible_Problem_Detected", 24, 0.0721]], "pid": 4174409}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 18, 0.0553], [1, "Infeasible_Problem_Detected", 16, 0.0492], [2, "Infeasible_Problem_Detected", 31, 0.0904]], "pid": 4174409}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 24, 0.1453], [1, "Infeasible_Problem_Detected", 21, 0.1274], [2, "Infeasible_Problem_Detected", 46, 0.2771]], "pid": 4174409}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "rej"], [1, "fail"], [2, "rej"]], "R": [[0, "Solve_Succeeded", 28, 0.3071], [1, "Maximum_Iterations_Exceeded", 60, 0.7196], [2, "Solve_Succeeded", 40, 0.4769]], "pid": 4174412}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 5.4907050463114935], [1, "fail"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 37, 0.432], [1, "Maximum_Iterations_Exceeded", 60, 0.8011], [2, "Maximum_Iterations_Exceeded", 60, 0.74]], "pid": 4174412}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "worse"], [1, "fail"], [2, "fail"]], "R": [[0, "Solve_Succeeded", 32, 0.3711], [1, "Maximum_Iterations_Exceeded", 60, 0.7591], [2, "Maximum_Iterations_Exceeded", 60, 0.7188]], "pid": 4174412}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 39, 0.1785], [1, "Maximum_Iterations_Exceeded", 60, 0.259], [2, "Infeasible_Problem_Detected", 32, 0.1391]], "pid": 4174412}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 55, 0.3538], [1, "Infeasible_Problem_Detected", 39, 0.261], [2, "Maximum_Iterations_Exceeded", 60, 0.3911]], "pid": 4174412}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "R": [[0, "Infeasible_Problem_Detected", 28, 0.1798], [1, "Maximum_Iterations_Exceeded", 60, 0.3798], [2, "Maximum_Iterations_Exceeded", 60, 0.4107]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9439]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8854]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8784]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9228]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.8905]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9092]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9164]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9053]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9403]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 1.1692]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9028]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9331]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.906]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9238]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9251]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.922]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 5.542469982089605]], "R": [[0, "Solve_Succeeded", 43, 0.6476]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 50, 0.7572]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9409]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9152]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.961]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "R": [[0, "Solve_Succeeded", 54, 0.8311]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9314]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9516]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9824]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9536]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9592]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9099]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 5.4907050466465]], "R": [[0, "Solve_Succeeded", 45, 0.6884]], "pid": 4174412}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.9032]], "pid": 4174412}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "R": [[0, "Maximum_Iterations_Exceeded", 60, 0.575]], "pid": 4174412}
