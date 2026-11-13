@@ -1,6 +1,9 @@
-# Session Handoff — линия E (VIZ)
-АВТОНОМНЫЙ РЕЖИМ. Звено: hub-v5chain-worker-e1 (acc?, sonnet, 14:52–16:20 2026-10-13), причина: 5ч-лимит 90%, задач в очереди нет.
-Сделано: manip (5 стартов), manipf (6 стартов, T_ref = лучшее по table_manipf, старт 3 — OCP не дошёл, обрезан на 3·T_ref), dp1 (передан ноуту, не трогать), pend --present (present_pend.py + хук в play.py + блок в draw_arm2.py, до слова про код окон), finish_tail.py (LQR/OCP; dp1 хвост 5/11). Данные — viz/data/{manip,manipf}.json, экспорт — viz/export_arm2.py (aida ~/spore_v5/e1, venv-sb3 для споров, ~/venv-ompl для OCP).
-Стоп: новых задач нет; код окон (play.py, viz_core.py, viz_present.py, draw_*.py) — за ноутом, не править без строки research-27.
-Грабли: pgrep -f в ssh-обёртке ловит сам себя (бесконечное ожидание); manip-эталон приходит на границу окна — нужен допуск half+2e-3; T_ref manipf в Env.Tref — только OCP, брать из table_manipf.
-NEXT_LINK: нет (линия E закрыта, поднимать по слову research-27)
+# HANDOFF линии E — hub-v5chain-worker-e2 (машина olya — комп Оли), поднял research-39 13.11 ~15:00. АВТОНОМНЫЙ РЕЖИМ.
+**Слово пользователя (13.11):** комп Оли отдан spore ЦЕЛИКОМ на время (CPU 16 потоков + GPU RTX 3080 10 ГБ), «можешь поднять воркера для запуска там и GPU юзать». Расписание README: будни 09:00–21:00 (шум, жилая комната), выходные — без ограничений до уточнения пользователя; перед КАЖДЫМ запуском проверять время, длинные очереди в будни — до 21:00.
+**Доступ/особенности — прочитать ПЕРВЫМ:** `~/claude-work/system/infra/machines/olya/README.md` (ssh olya, Windows 11, шелл cmd.exe, сложное — PowerShell -EncodedCommand, кириллица; из ssh-сессии НЕЛЬЗЯ multiprocessing — только потоки ⇒ NPROC=1, параллель — numba prange / потоки; WSL ставить можно). Своё — только в `C:\claude-work\projects\spore\` (свой venv; Shared/venv и escher не трогать). Показ на экране Оли не использовать.
+## Очередь [E]
+1. **Окружение:** `C:\claude-work\projects\spore\venv` (Python 3.12: numpy, scipy, numba, + torch cu128 / cupy — что нужно атласу на GPU: проверь импорты `spores_2/v7/src/cells7/growN*.py`, `growNj.py` STGPU). Код — копия нужного из репо (git clone/архив через scp; bench/common, v6 adaptive_nd, r37 tvg_*.py, c12/tab, v7/src/cells7). Если Windows мешает (numba/fork/пути) — WSL Ubuntu, решение записать.
+2. **Контроль совпадения:** ДИ4D граф 100k з.0 (r37 fresh: RNDN KLP20 VCAP40 TAUS .075/.15/.3, 253 старта, SKIPBASE) — должно совпасть с aida (мед 1.019, p90 1.061). Строку research-39.
+3. **Боевое — то, что на aida не влезает или требует GPU (GPU aida — у журнала):** атлас на GPU для сред оси «размерность × динамика» — по запросам research-39 (кандидаты: атлас ДИ6D/ДИ8D, когда c13 сделает SYS di6 в своей копии growNa; атлас m3*/m8 главной строки prelim — сверить с d4). До запроса — граф ДИ6D 1M (пик ~60 ГБ? сначала оценка по 300k у c13; RAM olya 64 ГБ, запас 10).
+Метрики каждой строки: дошли, мед/p90/max, нарушения (common.verify), build/запрос, пик RAM, хранимое, зёрна. Результаты — `reports/research/e2/` + send_verified → hub-v5chain-research-39.
+NEXT_LINK: hub-v5chain-worker-e3
