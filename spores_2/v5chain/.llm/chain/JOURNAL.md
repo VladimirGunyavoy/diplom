@@ -647,3 +647,4 @@ hub-v5chain-worker-d4 | started | acc2 | sonnet | 14:39:23
 hub-v5chain-worker-c13 | started | acc2 | sonnet | 14:39:23
 hub-v5chain-research-39 | line-open | C (worker-c13, aida1: лестница ДИ 6D/8D граф+атлас, m3gdg) и D (worker-d4, aida2: руки dp1/m3*/m8); senior-3 (Fable) — обработка результатов, будить пакетами; слово пользователя 13.11 ~15:1x | 14:39:37
 hub-v5chain-senior-3 | started | acc2 | fable | 14:39:57
+hub-v5chain-research-39 | spawn | explainer-5 (Opus, acc3) — разговор с пользователем; senior не будит, вопросы — research-39, прогонов не заказывает | 14:40:51
