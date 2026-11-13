@@ -649,3 +649,4 @@ hub-v5chain-research-39 | line-open | C (worker-c13, aida1: лестница Д�
 hub-v5chain-senior-3 | started | acc2 | fable | 14:39:57
 hub-v5chain-research-39 | spawn | explainer-5 (Opus, acc3) — разговор с пользователем; senior не будит, вопросы — research-39, прогонов не заказывает | 14:40:51
 hub-v5chain-research-39 | line-open | E (worker-e2, машина olya — комп Оли целиком: 16 потоков + RTX 3080; слово пользователя 13.11) | 14:46:55
+hub-v5chain-worker-e2 | started | acc2 | sonnet | 14:47:33
