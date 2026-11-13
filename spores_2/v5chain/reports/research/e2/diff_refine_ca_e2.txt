@@ -1,0 +1,7 @@
+56c56,59
+<             if T >= best[0] or np.any(d < -1e-9): continue
+---
+>             if T >= best[0]: continue
+>             if np.any(d < -1e-9):   # e2: счётчик молчаливых отказов (dt<-1e-9); CADNEG — допуск (по умолчанию 1e-9 = как в оригинале)
+>                 s.stat['neg_seen'] = s.stat.get('neg_seen', 0) + 1
+>                 if np.any(d < -float(os.environ.get('CADNEG', 1e-9))): s.stat['neg_rej'] = s.stat.get('neg_rej', 0) + 1; continue
