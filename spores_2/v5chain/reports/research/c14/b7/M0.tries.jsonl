@@ -1,0 +1,672 @@
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.876962600023532], [1, "worse"], [2, "worse"]], "pid": 4142311}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.6780685529608332], [1, "worse"], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.990484882028702], [1, "worse"], [2, "worse"]], "pid": 4142305}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.858335605424666], [1, "fail"], [2, "best", 3.85833560542134]], "pid": 4142311}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.8857129086702478], [1, "worse"], [2, "best", 2.8857129086702447]], "pid": 4142310}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.887795467489268], [1, "best", 2.8877954674892474], [2, "worse"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.8007915556300826], [1, "worse"], [2, "best", 2.80079155563008]], "pid": 4142310}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.669619312447589], [1, "best", 3.6696193124475536], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.145226825922806], [1, "fail"], [2, "worse"]], "pid": 4142305}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.7088846256389636], [1, "best", 2.7088846256389605], [2, "worse"]], "pid": 4142309}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.692960158405082], [1, "worse"], [2, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.840692302719865]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.471475760395578], [1, "fail"], [2, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.876986724351234]], "pid": 4142305}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.995231635979331], [1, "best", 2.9952316359793305], [2, "worse"]], "pid": 4142309}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.941701303967883], [1, "worse"], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "fail"], [1, "fail"], [2, "best", 4.012115346792571]], "pid": 4142312}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.943156812454425], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.583910460784829], [1, "best", 2.5839104607848284], [2, "best", 2.583910460784826]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.7162790131252192], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 2, "ok": true, "L": [[0, "best", 1.22806819199686], [1, "best", 1.2280681919942547], [2, "worse"]], "pid": 4142306}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 3, "ok": true, "L": [[0, "best", 1.217478182070288], [1, "best", 1.2174781820525251], [2, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781836798332]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1654856559402635]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1741003302156572]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781874426404]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.217478187754966]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780632243378353]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685630496626]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781815193105]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6631287837675006]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781859932258]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1362188660225105]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2174781813713509]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.677090856743165]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2164880764592663]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6773833249051386]], "pid": 4142310}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.2135665531433464]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 4, "ok": true, "L": [[0, "best", 1.1885581919142876]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 2, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6752926068601446]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6760951747241846]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.678068554295232]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.887795468392248]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685539991085]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6780685544933425]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910460973546]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.67806855419719]], "pid": 4142310}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8583356105618396]], "pid": 4142311}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.85833560928755]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910462989375]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.887640393944821]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8847345088644483]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.5439180508656474]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601616498378]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.5673470036882593]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8800089697420437]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.887795503784511]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.7915275376080144]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.692960162664096]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.583910465030248]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8612924371607673]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6924333754414964]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.8877954716742162]], "pid": 4142305}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.707281713605192]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601611601437]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7056668086525146]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.710013078974777]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 2.6929601621735975]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757601367467]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7071511070858243]], "pid": 4142311}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8757537161942013]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757642697744]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.858335608083725]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475760806603]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757670131644]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.8506972789883998]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757635499893]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475766743108]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.471475763279939]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6882933632418666]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.4714757660233193]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.716279021221437]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7162790203132863]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7162790213081194]], "pid": 4142312}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 3.7162790128581933]], "pid": 4142312}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 1.8834583878668532], [1, "worse"], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.680456596858167], [1, "worse"], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.5453587065608616], [1, "worse"], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 1.6999806977216891], [1, "best", 1.6999806977216418], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 1.515030626419443], [1, "best", 1.5150306264194278], [2, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.3099465033725313], [1, "worse"], [2, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.5226789247683277], [1, "best", 3.5226789247683272], [2, "best", 3.5226789247683263]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.381464267417207], [1, "best", 3.381464267417158], [2, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 9, "ok": true, "L": [[0, "best", 3.8243914516062456], [1, "fail"], [2, "worse"]], "pid": 4142307}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306267946818]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306303390348]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306340264017]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.420241263033021]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.4181988659401525]], "pid": 4142310}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.4916427399958825]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306292957396]], "pid": 4142310}
+{"tries0": 1, "n": 6, "ok": true, "L": [[0, "best", 1.5150306329831829]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "worse"]], "pid": 4142310}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 4, "ok": false, "L": [[0, "fail"]], "pid": 4142310}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.8682534459298044], [1, "worse"], [2, "best", 3.8682534459298035]], "pid": 4142306}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.779012883106447], [1, "fail"], [2, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.7905718645566564], [1, "worse"], [2, "worse"]], "pid": 4142306}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.708629915433622], [1, "best", 3.6905666270870734], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 3.8349414627141116], [1, "fail"], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 4.16597906664225], [1, "worse"], [2, "fail"]], "pid": 4142306}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142306}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 4.400158425088995], [1, "fail"], [2, "best", 4.400158424566341]], "pid": 4142312}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "worse"], [1, "fail"], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142312}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.5393211875973973], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.698297211279854]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.362030745709106], [1, "best", 3.362030745708813], [2, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566631874188]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566635388076]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "fail"], [1, "fail"], [2, "best", 3.5435172534706547]], "pid": 4142309}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.708629921197735]], "pid": 4142312}
+{"tries0": 3, "n": 1, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465040375184]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465057053528]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 4.7316234116768365]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.309946503441303]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391458652622]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128845949322]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465051092936]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8150839384939097]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128893150596]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.82439145784619]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7790128871781765]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914516785136]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465107852217]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012884297459]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7858876098024354]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.3099465037991815]], "pid": 4142305}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391454528569]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.790571865080672]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307512614582]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 3.309946505467137]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307502126545]], "pid": 4142309}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914508747547]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012889162737]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718731313462]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307537457212]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.779012886279297]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391453724614]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566629450137]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307484924963]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566627277076]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.824391452353619]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030752077506]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.790571867193028]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307510845486]], "pid": 4142309}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.75920880109657]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3620307456073792]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 10, "ok": true, "L": [[0, "best", 3.8243914515488733]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566636836065]], "pid": 4142312}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030748094387]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718715352075]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.672583040019623]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 10, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.690566632017983]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030746365529]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362030745373153]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6703445902068057]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142309}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.677042392582783]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.7905718655968874]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.707809643076906]], "pid": 4142312}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6905666332332823]], "pid": 4142312}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142306}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.6244700604824023]], "pid": 4142312}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142312}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "worse"], [1, "worse"], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.7796607962288338], [1, "worse"], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 3.3630603061069695], [1, "worse"], [2, "worse"]], "pid": 4142305}
+{"tries0": 3, "n": 7, "ok": true, "L": [[0, "best", 2.554381169004473], [1, "best", 2.554381169004472], [2, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 5, "ok": true, "L": [[0, "best", 2.4599593040947254], [1, "worse"], [2, "best", 2.459959304094717]], "pid": 4142308}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 6, "ok": true, "L": [[0, "best", 2.3148560601537853], [1, "worse"], [2, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.314856062529149]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.212405321403271]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 3, "n": 7, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 6, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 2, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603088954665]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.362983322766339]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060309146584]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560640658493]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560656846864]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560593323033]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560605839803]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148560621940475]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "worse"]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.3148559511029623]], "pid": 4142308}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.314856061573876]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 7, "ok": true, "L": [[0, "best", 2.31485606318119]], "pid": 4142308}
+{"tries0": 1, "n": 5, "ok": false, "L": [[0, "fail"]], "pid": 4142308}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603049315515]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603099561336]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060306762293]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060306654866]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630514071866333]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.363060308396889]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.36306030554014]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603134136905]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603075572165]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603074253385]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": false, "L": [[0, "worse"]], "pid": 4142305}
+{"tries0": 1, "n": 8, "ok": true, "L": [[0, "best", 3.3630603094639886]], "pid": 4142305}
+{"tries0": 1, "n": 6, "ok": false, "L": [[0, "fail"]], "pid": 4142305}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142311}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 3, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142310}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "rej"], [1, "fail"], [2, "rej"]], "pid": 4142307}
+{"tries0": 3, "n": 8, "ok": true, "L": [[0, "best", 5.4907050463114935], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 8, "ok": false, "L": [[0, "worse"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 4, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 3, "n": 5, "ok": false, "L": [[0, "fail"], [1, "fail"], [2, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 5.542469982089605]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "worse"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": true, "L": [[0, "best", 5.4907050466465]], "pid": 4142307}
+{"tries0": 1, "n": 9, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
+{"tries0": 1, "n": 7, "ok": false, "L": [[0, "fail"]], "pid": 4142307}
