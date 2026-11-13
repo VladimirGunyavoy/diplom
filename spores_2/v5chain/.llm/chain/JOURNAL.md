@@ -645,3 +645,4 @@ hub-v5chain-research-39 | done | пауза по слову пользовате
 hub-v5chain-research-39 | resume | пауза снята словом пользователя (13.11 ~15:0x): CPU aida/aida2 пополам, ≤16 потоков на машину, GPU — журналу | 14:35:43
 hub-v5chain-worker-d4 | started | acc2 | sonnet | 14:39:23
 hub-v5chain-worker-c13 | started | acc2 | sonnet | 14:39:23
+hub-v5chain-research-39 | line-open | C (worker-c13, aida1: лестница ДИ 6D/8D граф+атлас, m3gdg) и D (worker-d4, aida2: руки dp1/m3*/m8); senior-3 (Fable) — обработка результатов, будить пакетами; слово пользователя 13.11 ~15:1x | 14:39:37
