@@ -17,6 +17,8 @@ def setup():
     if os.environ.get('STARTS'):
         a = np.load(os.path.expanduser(os.environ['STARTS'])); e.X0 = a[:, :4].copy(); e.Tref = a[:, 6].copy(); Q = e.X0
         e.keep = np.abs(np.c_[Q[:, 0] + Q[:, 2] * np.abs(Q[:, 2]) / 2, Q[:, 1] + Q[:, 3] * np.abs(Q[:, 3]) / 2]).max(1) <= 2.5
+    if os.environ.get('STARTSNPY') and name == 'dp1':   # e2: новые старты dp1 (npy: x(4) обычные координаты, T) — преобразование как в common.DP1
+        a = np.load(os.path.expanduser(os.environ['STARTSNPY'])); e.X0 = common.wrap(a[:, :4] - np.array([np.pi / 2, 0, 0, 0]), e.period); e.Tref = a[:, 4].copy(); e.keep = np.isfinite(e.Tref); e.Tref = np.where(e.keep, e.Tref, 8.)
     US = np.array([[a_, b_] for a_ in (-1., 1.) for b_ in (-1., 1.)]) * np.array(e.umax)
     hw = e.half - WIN; per = np.asarray(e.period, float)
     def flow(P, s, t, dt_max=None):
