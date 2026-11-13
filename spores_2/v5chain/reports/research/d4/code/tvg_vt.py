@@ -1,0 +1,233 @@
+"""w39: рецепт «обратное дерево + V (итерация ценностей по узлам) + жадный агент» на стендах bench/common (di4, pend, pend15).
+Образец — w38_car/car_val_w38.py. Запуск (aida, ~/spore_v5/d4/spores_2/w39n): python tvg.py ENV NB K TREESEED
+ENV: TAU (.2), RB (.3), KV (.05), SC ('1,1,1,1'), NIT (300), NU3 (di4: 1 — сетка {-1,0,1}², 0 — только углы), NSTART (все)."""
+import os, sys, time, json
+os.environ.setdefault('OMP_NUM_THREADS', '1')
+HERE = os.path.expanduser('~/spore_v5/d4/spores_2/w39n'); sys.path.insert(0, os.path.join(HERE, '..', 'bench')); sys.path.insert(0, os.path.join(HERE, '..', 'v6'))
+import numpy as np, numba as nb, common
+from src.atlas6.adaptive_nd import SysN, build_back, _images, _scaled
+from scipy.spatial import cKDTree
+ENV, NB, KN, TS = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+TAU = float(os.environ.get('TAU', .2)); RB = float(os.environ.get('RB', .3)); KV = float(os.environ.get('KV', .05)); HYST = float(os.environ.get('HYST', 0)); DEP = int(os.environ.get('DEP', 1)); TIEP = float(os.environ.get('TIEP', 0)); DEPB = int(os.environ.get('DEPB', 1)); TIE = float(os.environ.get('TIE', 0)); ESCN = int(os.environ.get('ESCN', 0)); ESCD = int(os.environ.get('ESCD', 5)); ESCB = int(os.environ.get('ESCB', 200)); ESCDISP = float(os.environ.get('ESCDISP', .05))
+def _mk_dix(dim):   # ДИ в 2k измерениях: k независимых осей (x_i, v_i), как DI4; dim=6 (ДИ6D), 8 (ДИ8D)
+    k = dim // 2
+    class DIX(common.DI4):
+        name = 'di%d' % dim; n = dim; m = k; period = np.zeros(dim); half = np.full(dim, .35); umin = -np.ones(k); umax = np.ones(k)
+        lo = np.array([-3.5] * k + [-4.] * k); hi = -lo; fl_lo = np.array([-2.5] * k + [-2.] * k); fl_hi = -fl_lo
+        def __init__(s):
+            s.X0 = np.zeros((1, dim)); s.Tref = np.ones(1); s.keep = np.ones(1, bool)
+        def f(s, Y, u): s.nf += 1; return np.concatenate([Y[..., k:], np.broadcast_to(u, Y[..., :k].shape)], -1)
+        def step(s, Y, u, h):
+            s.nf += 1; h = np.asarray(h, float)[..., None] if np.ndim(h) else h; a = np.broadcast_to(u, Y[..., :k].shape); return np.concatenate([Y[..., :k] + Y[..., k:] * h + a * h * h / 2, Y[..., k:] + a * h], -1)
+    e = DIX(); e.nf = 0; return e
+env = common.make(ENV) if ENV not in ('di6', 'di8') else _mk_dix(int(ENV[2:])); d = env.n
+DIS = ('di4', 'di6', 'di8')
+if os.environ.get('STARTS'):   # research-37: свежие старты (di4_ref_fresh.py), keep — как в DI4
+    _a = np.load(os.path.expanduser(os.environ['STARTS'])); env.X0 = _a[:, :d].copy(); env.Tref = _a[:, -1].copy(); _Q = env.X0; _m = d // 2
+    env.keep = np.abs(_Q[:, :_m] + _Q[:, _m:] * np.abs(_Q[:, _m:]) / 2).max(1) <= 2.5
+SC = tuple(float(v) for v in os.environ.get('SC', ','.join(['1'] * d)).split(','))
+if d == 4 and os.environ.get('NU3', '1') == '1': ACT = np.array([[a, b] for a in (-1., 0., 1.) for b in (-1., 0., 1.)])
+elif d == 4: ACT = np.array([[a, b] for a in (-1., 1.) for b in (-1., 1.)])
+elif d == 6: ACT = np.array([[a, b, c] for a in (-1., 0., 1.) for b in (-1., 0., 1.) for c in (-1., 0., 1.)])
+elif d == 8: import itertools; ACT = np.array(list(itertools.product((-1., 0., 1.), repeat=4)))
+else: ACT = np.array([[-env.umax[0]], [0.], [env.umax[0]]]) if os.environ.get('NU3', '1') == '1' else np.array([[-env.umax[0]], [env.umax[0]]])
+L = len(ACT); per = tuple(env.period)
+# research-35: переменный τ — расширенные действия (u, τ); SysN/дерево — по базовым L
+TAUS = np.array([float(v) for v in os.environ.get('TAUS', str(TAU)).split(',')]); SIDX = np.repeat(np.arange(L), len(TAUS)); TAUV = np.tile(TAUS, L); L2 = len(SIDX)
+
+def flow(P, s, t, dt_max=None):
+    P = np.asarray(P, float); n = max(1, int(np.ceil(abs(t) / (.02 if ENV not in DIS else 10.)))); h = t / n; Z = P
+    u = np.broadcast_to(ACT[s], Z.shape[:-1] + (env.m,))
+    for _ in range(n): Z = env.step(Z, u, h)
+    return Z
+GL_HALF = env.half - .02 if env.ball is None else None
+def in_goal(P):
+    P = np.asarray(P); return (np.abs(common.wrap(P, env.period)) <= env.half - .02).all(-1)
+LO, HI = env.lo.copy(), env.hi.copy()
+if d in (4, 6, 8) and os.environ.get('BOX') != 'full': LO, HI = env.fl_lo - .25, env.fl_hi + .25   # BOX=full: коробка атласа (manip/dp1 |ω| ≤ 3)
+WMARG = float(os.environ.get("WMARG", 0)); _MG = [0.]   # d4: запас к коробке скоростей только в агенте (включается в main после VI: _MG[0] = WMARG)
+def okv(P): P = np.asarray(P); m = _MG[0] * (env.period == 0); return ~(((P < LO + m) | (P > HI - m)) & (env.period == 0)).any(-1)
+def mkS(seed):
+    rng = np.random.default_rng(seed); n = 300; hw = env.half - .02
+    seeds = rng.uniform(-hw, hw, (n, d)); return SysN(flow, L, SC, in_goal, seeds, per=per, ok=okv, blocked=None)
+
+def edges(P, S):
+    n = len(P); E = np.zeros((n, L2, d)); OK = np.zeros((n, L2), bool); GL = np.zeros((n, L2)); NS = 5
+    for s in range(L2):
+        h = TAUV[s] / NS; Z = P.copy(); u = np.broadcast_to(ACT[SIDX[s]], Z.shape[:-1] + (env.m,)); ok = np.ones(n, bool); hit = np.zeros(n)
+        for k in range(NS):
+            Zs = Z
+            for _ in range(max(1, int(np.ceil(h / (.02 if ENV not in DIS else 10.))))): Zs = env.step(Zs, u, h / max(1, int(np.ceil(h / (.02 if ENV not in DIS else 10.)))))
+            Z = Zs; ok &= okv(Z); g = in_goal(Z) & (hit == 0); hit[g] = (k + 1) * h
+        E[:, s] = Z; OK[:, s] = ok; GL[:, s] = hit
+    return E, OK, GL
+
+@nb.njit(parallel=True)
+def vit(J, D, OK, GL, ING, nP, tau, kv, nit, big):
+    W = np.full(nP, big); K_ = J.shape[1]; L_ = OK.shape[1]
+    for i in range(nP):
+        if ING[i]: W[i] = 0.
+    for it in range(nit):
+        Wn = np.empty(nP)
+        for i in nb.prange(nP):
+            if ING[i]: Wn[i] = 0.; continue
+            best = big
+            for a in range(L_):
+                if not OK[i, a]: continue
+                if GL[i, a] > 0: c = GL[i, a]
+                else:
+                    m = 1e30
+                    for k in range(K_):
+                        v = W[J[i * L_ + a, k]] + kv * D[i * L_ + a, k]
+                        if v < m: m = v
+                    c = tau[a] + m
+                if c < best: best = c
+            Wn[i] = best
+        dd = np.max(np.abs(Wn - W)); W = Wn
+        if dd < 1e-4: break
+    return W, it, dd
+
+
+def kv_auto(S, tree, P, W, k=9, q=.9):
+    """квантиль q локальной Липшица V по рёбрам графа узлов (kNN в метрике S.scale): |W_i-W_j|/d_ij"""
+    dd, jj = tree.query(S.wrap(P) / S.scale, k=k, workers=int(os.environ.get('KDW', -1))); jj = jj % len(P); i = np.arange(len(P))[:, None]
+    m = (dd > 1e-9) & (W[:, None] < 1e2) & (W[jj] < 1e2); r = np.abs(W[:, None] - W[jj])[m] / dd[m]; return float(np.quantile(r, q))
+
+class Agent:
+    def __init__(self, S, back):
+        global KV
+        self.S, self.tree, self.P = S, back[5], np.asarray(back[0]); self.nP = len(self.P)
+        UNI = float(os.environ.get('UNI', 0))
+        if UNI > 0:   # равномерные узлы вне дерева: доля UNI от узлов дерева, случайно по полю; граф/VI общие
+            rng = np.random.default_rng(1000 + TS); n = int(UNI * self.nP); lo = np.where(env.period > 0, -env.period / 2, LO); hi = np.where(env.period > 0, env.period / 2, HI)
+            U = rng.uniform(lo, hi, (n, d)); U = U[okv(U)]; self.P = np.vstack([self.P, U]); self.nP = len(self.P); self.tree = cKDTree(_scaled(S, _images(S, self.P)))
+        t0 = time.perf_counter(); E, OK, GL = edges(self.P, S); t1 = time.perf_counter()
+        Ew = S.wrap(E.reshape(-1, d)); dd, j = self.tree.query(Ew / S.scale, k=min(KN * 3, len(self.tree.data)), workers=int(os.environ.get('KDW', -1)))
+        J = (j % self.nP).astype(np.int32); D = dd.astype(np.float64); t2 = time.perf_counter()
+        self.W, it, res = vit(J, D, OK, GL, in_goal(self.P), self.nP, TAUV, KV, int(os.environ.get('NIT', 300)), 1e3); t3 = time.perf_counter(); self.tvi = t3 - t0
+        if os.environ.get('KVAUTO') == '1':
+            for _ in range(10):
+                kn_ = kv_auto(S, self.tree, self.P, self.W); conv = abs(kn_ - KV) < .05 * kn_; KV = kn_
+                if conv: break
+                self.W, it, res = vit(J, D, OK, GL, in_goal(self.P), self.nP, TAUV, KV, int(os.environ.get('NIT', 300)), 1e3)
+            self.tvi = time.perf_counter() - t0
+        self.J, self.D, self.OK, self.GL = J, D, OK, GL; self.prep_grad()
+        fin = self.W < 1e2; self.kva = kv_auto(S, self.tree, self.P, self.W); print('  KV_auto (q.9 Липшица V по kNN-рёбрам) = %.3f при KV=%g' % (self.kva, KV), flush=True)
+        print('  узлов %d: edges %.1f, knn %.1f, vi %.1f с (it %d res %.1e); W конечных %.1f%%, мед %.2f макс %.2f' % (self.nP, t1 - t0, t2 - t1, t3 - t2, it, res, 100 * fin.mean(), np.median(self.W[fin]), self.W[fin].max()), flush=True)
+    def prep_grad(self):
+        # research-35 П2: градиент W в узле — МНК по P2K соседям (масштабированные координаты, периодика через wrap)
+        P2K = int(os.environ.get('P2K', 12)); d_, j_ = self.tree.query(_scaled(self.S, self.P), k=P2K + 1); j_ = j_[:, 1:] % self.nP
+        D = self.S.wrap(self.P[j_] - self.P[:, None, :]) / self.S.scale; dW = self.W[j_] - self.W[:, None]
+        A = np.einsum('nki,nkj->nij', D, D) + 1e-9 * np.eye(d); bb = np.einsum('nki,nk->ni', D, dW); self.G = np.linalg.solve(A, bb[..., None])[..., 0]
+        self.G[~np.isfinite(self.G).all(1) | (self.W >= 1e2)] = 0.
+    def vh(self, Q):
+        Q = np.asarray(Q, float); dd, j = self.tree.query(self.S.wrap(Q) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
+        up = (self.W[j] + KV * dd).min(1); r = float(os.environ.get('P2R', 0))
+        if r <= 0: return up
+        delta = self.S.wrap(Q[:, None, :] - self.P[j]) / self.S.scale; lin = self.W[j] + np.einsum('nki,nki->nk', self.G[j], delta)
+        w = np.where(dd <= r, 1. / (dd + 1e-6), 0.); ws = w.sum(1); m = ws > 0
+        out = up.copy(); out[m] = np.minimum(up[m], (w[m] * lin[m]).sum(1) / ws[m]); return out
+    def _beam(self, E, OK):
+        """луч ESCB до глубины ESCD: состояния (x, первое действие, g=накопл. время); f = g + W^(x); попадание в цель: g + GL"""
+        first = np.flatnonzero(OK); cur = E[first]; g = TAUV[first].copy(); out = np.full(L2, 1e9)
+        for lev in range(ESCD - 1):
+            E2, OK2, GL2 = edges(cur, self.S); n = len(cur); f_ = np.repeat(first, L2); tv_ = np.tile(TAUV, n); g_ = np.repeat(g, L2) + tv_; ok = OK2.reshape(-1); gl = GL2.reshape(-1)
+            hit = ok & (gl > 0)
+            if hit.any(): np.minimum.at(out, f_[hit], (g_ - tv_ + gl)[hit])
+            keep = ok & ~hit; cur = E2.reshape(-1, d)[keep]; first = f_[keep]; g = g_[keep]
+            if len(cur) == 0: return out
+            dd_, jj = self.tree.query(self.S.wrap(cur) / self.S.scale, k=min(KN * 3, len(self.tree.data))); Wl = g + self.vh(cur)
+            if len(Wl) > ESCB and lev < ESCD - 2:
+                kp = np.argpartition(Wl, ESCB)[:ESCB]; cur, first, g, Wl = cur[kp], first[kp], g[kp], Wl[kp]
+        np.minimum.at(out, first, Wl); return out
+    def _w(self, x):
+        d_, j_ = self.tree.query(self.S.wrap(np.asarray(x, float)[None]) / self.S.scale, k=min(KN * 3, self.nP)); return float(self.vh(np.asarray(x, float)[None])[0])
+    def _cost(self, X, dep):
+        """X (n,d) -> (n,): min_a [GL>0 ? GL : TAU + (dep==1 ? W^(E_a) : cost(E_a,dep-1))]"""
+        E2, OK2, GL2 = edges(X, self.S); n = len(X)
+        if dep == 1:
+            d2, j2 = self.tree.query(self.S.wrap(E2.reshape(-1, d)) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j2 = j2 % self.nP
+            sub = self.vh(E2.reshape(-1, d)).reshape(n, L2)
+        else:
+            sub = np.full((n, L2), 1e9); m = OK2 & (GL2 <= 0)
+            if m.any(): sub[m] = self._cost(E2[m], dep - 1)
+        leaf = np.where(GL2 > 0, GL2, TAUV[None, :] + sub); return np.where(OK2, leaf, 1e9).min(1)
+    def act(self, x0):
+        E, OK, GL = edges(np.asarray(x0, float)[None], self.S); E, OK, GL = E[0], OK[0], GL[0]
+        sc = np.full(L2, 1e9)
+        for s in range(L2):
+            if OK[s] and GL[s] > 0: sc[s] = GL[s]
+        if (sc < 1e9).any(): return int(np.argmin(sc)), True
+        if not OK.any(): return 0, False
+        dd, j = self.tree.query(self.S.wrap(E) / self.S.scale, k=min(KN * 3, len(self.tree.data))); j = j % self.nP
+        Wq = TAUV + self.vh(E); c = np.where(OK, Wq, 1e9)
+        dep = DEP; esc = False
+        if TIEP > 0 or TIE > 0:   # правило c9/b25: тай (разброс V^ по действиям < TIE | нет спада V^ на TIEP*tau) -> lookahead DEP; застревание ESCN шагов со смещением < ESCDISP -> луч ESCB x ESCD
+            wx = self._w(x0); w_ = np.where(OK, Wq, 1e9); wend = w_.min() - TAUV[int(np.argmin(w_))]; self.nst = getattr(self, 'nst', 0) + 1
+            spread = w_[OK].max() - w_[OK].min()
+            tie = (TIE > 0 and spread < TIE) or (TIEP > 0 and wend >= wx - TIEP * TAU)
+            if tie:
+                self.ntie = getattr(self, 'ntie', 0) + 1; self.streak = getattr(self, 'streak', 0) + 1; self.hist = (getattr(self, 'hist', []) + [np.asarray(x0, float)[:2].copy()])[-ESCN:] if ESCN > 0 else []
+                if ESCN > 0 and self.streak >= ESCN and len(self.hist) >= ESCN and np.hypot(*(self.hist[-1] - self.hist[0])) < ESCDISP: esc = True; self.nesc = getattr(self, 'nesc', 0) + 1
+            else: dep = DEPB; self.streak = 0; self.hist = []
+        if esc: c = self._beam(E, OK)
+        elif dep >= 2:   # поиск вперёд на dep шагов: c[a] = TAU + cost(E_a, dep-1)
+            idx = np.flatnonzero(OK); c = np.full(L2, 1e9); c[idx] = TAUV[idx] + self._cost(E[idx], dep - 1)
+            c[idx] = np.minimum(c[idx], Wq[idx] + (TAU if os.environ.get("DEPPEN") == "1" else 0.))
+        k = int(np.argmin(c)); pv = getattr(self, 'prev', None)
+        if HYST > 0 and pv is not None and OK[pv] and c[pv] <= c[k] + HYST: k = pv
+        self.prev = k; return k, False
+
+def episode(ag, x0, tmax=40.):
+    ag.prev = None; ag.streak = 0; ag.hist = []; ag.nt0 = getattr(ag, 'ntie', 0); ag.ne0 = getattr(ag, 'nesc', 0); x = np.array(x0, float); us = []; dts = []; tms = []; t = 0.
+    while t < tmax:
+        t1 = time.perf_counter(); s, fin = ag.act(x); tms.append(time.perf_counter() - t1); te_ = TAUV[s] if fin else min(TAUV[s], TAU); us.append(ACT[SIDX[s]]); dts.append(te_)
+        x = env.step(x[None], ACT[SIDX[s]][None], te_)[0] if ENV in DIS else flow(x, SIDX[s], te_)
+        t += te_
+        if fin or in_goal(x): break
+    Tv, why = common.verify(env, x0, us, dts)
+    ag.info = dict(x0=np.round(np.asarray(x0, float), 3).tolist(), xend=np.round(x, 3).tolist(), steps=len(us), ties=getattr(ag, 'ntie', 0) - ag.nt0, esc=getattr(ag, 'nesc', 0) - ag.ne0, why=str(why), T=Tv)
+    return Tv, why, float(np.mean(tms))
+
+if __name__ == '__main__':
+    ns = int(os.environ.get('NSTART', len(env.X0))); out = {}
+    for ts in range(TS, int(sys.argv[5]) if len(sys.argv) > 5 else TS + 1):
+        S = mkS(ts); t0 = time.perf_counter(); back = build_back(S, TAU, NB, RB) if os.environ.get('RNDN') != '1' else None
+        if back is None:   # research-35: случайные равномерные узлы вместо дерева
+            rng_ = np.random.default_rng(1000 + ts); lo_ = np.where(env.period > 0, -env.period / 2, LO); hi_ = np.where(env.period > 0, env.period / 2, HI); P_ = rng_.uniform(lo_, hi_, (2 * NB, d)); P_ = P_[okv(P_)][:NB]
+            back = (P_, np.zeros(len(P_)), None, None, None, cKDTree(_scaled(S, _images(S, P_))))
+        tb = time.perf_counter() - t0; print('ts %d: build %.1f с, узлов %d' % (ts, tb, len(back[0])), flush=True)
+        ag = Agent(S, back); Ts = []; ms = []; te = time.perf_counter()
+        for i in range(ns):
+            if not env.keep[i]: Ts.append(None); ms.append(0); continue
+            T, why, m = episode(ag, env.X0[i]); Ts.append(T); ms.append(m)
+            if T is None or T > 3 * env.Tref[i]: print('   НЕ ДОШЁЛ/хвост: старт %d %s' % (i, ag.info), 'Tref', round(float(env.Tref[i]), 2), flush=True)
+        tq = (time.perf_counter() - te) / max(1, env.keep[:ns].sum())
+        sm = common.summarize(env, Ts + [None] * (len(env.X0) - ns)) if ns == len(env.X0) else None
+        k = env.keep[:ns]; T = np.array([np.nan if t is None else t for t in Ts]); ok = np.isfinite(T) & (T <= 3 * env.Tref[:ns]) & k; r = T[ok] / env.Tref[:ns][ok]
+        print('%s NB=%d K=%d TAU=%g RB=%g KV=%g SC=%s ts=%d: дошли %d/%d, T/T_ref мед %.3f mean %.3f p90 %.3f max %.3f, мс/шаг %.2f, с/старт %.2f, build %.1f vi %.1f с' % (
+            ENV, NB, KN, TAU, RB, KV, SC, ts, ok.sum(), k.sum(), np.median(r), r.mean(), np.percentile(r, 90), r.max(), 1e3 * np.mean(ms), tq, tb, ag.tvi), flush=True)
+        dn, _j = ag.tree.query(S.wrap(env.X0[:ns]) / S.scale, k=1); wi = np.argsort(-(T / env.Tref[:ns]))[:4] if False else np.argsort(-np.nan_to_num(T / env.Tref[:ns], nan=9))[:4]
+        print('   d_near: мед %.4f, у 4 худших стартов %s (T/Tref %s)' % (np.median(dn[k]), np.round(dn[wi], 3), np.round((T / env.Tref[:ns])[wi], 2)), flush=True)
+        print('   TIEP=%g DEP=%d DEPB=%d: доля шагов с lookahead %.3f (%d/%d)' % (TIEP, DEP, DEPB, getattr(ag, 'ntie', 0) / max(1, getattr(ag, 'nst', 0)), getattr(ag, 'ntie', 0), getattr(ag, 'nst', 0)), flush=True)
+        # research-35: диагностика пути графа от x0 (узел-argmin V̂, затем argmin рёбер как в VI): рёбер, Σd прыжков, W(x0)
+        diag = []
+        for i in range(ns):
+            x0 = env.X0[i]; dq, jq = ag.tree.query(S.wrap(x0[None]) / S.scale, k=min(KN * 3, ag.nP)); jq = jq[0] % ag.nP; vq = ag.W[jq] + KV * dq[0]; b = int(jq[np.argmin(vq)]); w0 = float(vq.min())
+            ne = 0; sd = float(dq[0][np.argmin(vq)]); cur = b
+            for _ in range(2000):
+                if in_goal(ag.P[cur][None])[0]: break
+                bc, bn, bd = 1e30, -1, 0.
+                for a in range(L2):
+                    if not ag.OK[cur, a]: continue
+                    if ag.GL[cur, a] > 0:
+                        if ag.GL[cur, a] < bc: bc, bn, bd = ag.GL[cur, a], -2, 0.
+                        continue
+                    row = cur * L2 + a; vv = ag.W[ag.J[row]] + KV * ag.D[row]; kk = int(np.argmin(vv))
+                    if TAUV[a] + vv[kk] < bc: bc, bn, bd = TAUV[a] + vv[kk], int(ag.J[row, kk]), float(ag.D[row, kk])
+                ne += 1; sd += bd
+                if bn < 0: break
+                cur = bn
+            diag.append(dict(i=i, W0=w0, edges=ne, sumd=sd, T=Ts[i], Tref=float(env.Tref[i])))
+        out[ts] = dict(T=Ts, build=tb, nodes=len(back[0]), diag=diag)
+    json.dump(out, open(os.path.expanduser('~/spore_v5/d4/out/vt_%s_%d_%s_%s_%d.json' % (ENV, NB, os.environ.get('TAUS', str(TAU)), 'rnd' if os.environ.get('RNDN') == '1' else 'tree', TS)), 'w'), default=float)

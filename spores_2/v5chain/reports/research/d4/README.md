@@ -1,0 +1,3 @@
+# d4 (линия D): граф vs атлас, среды с инерцией. Код — code/ (diff к базе — code/DIFF.md), строки атласа — atlas_rows.md, логи IPOPT-теста — refine*_m3d_0.log
+Контрольные известные строки (правило research-39 №1): dp1 100k з.3 на aida2 = прежний прогон (20/20, 1.0946/1.2345/1.632 побитно), m3d 100k з.0 на aida2 = aida1 (19/20 1.264/1.970/2.829 побитно).
+Эталоны: m3d_ref/refm3d_m3d_q1..20 md5(cat) 64ef85d93451828a09ae6e36a572d6fb, m3g_ref.json cf9693042796dacd8e3141ba6ba8f271, m8_ref.json 4f5a0942ae85fbfe8e197c84d5e5b375; старты — common.make(env).X0 (rng(0)); проверяльщик common.verify h .01, допуск |w|≤3+1e-2 (dp1: hi 3.01), окно цели ±(.3 q, .6 w) (dp1 ±(.3,.3,.5,.5)+2e-3), коробка BOX=full.
