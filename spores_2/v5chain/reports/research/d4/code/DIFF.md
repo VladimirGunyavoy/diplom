@@ -37,3 +37,5 @@
 ## ../../../bench/refine_ca.py -> d4/code/refine_ca_d4.py
 <             if T >= best[0] or np.any(d < -1e-9): continue
 >             if T >= best[0] or np.any(d < -float(os.environ.get("CADNEG", 1e-9))): continue
+
+## новые файлы d4 (не копии базы): refine_graph3.py, astar_g6d.py (g6d.Graph + A*), refine_sl.py (tvg_lp агент + corridor_nd.refine SLSQP как e2/corridor_env.py), q8/q9/q10.sh
