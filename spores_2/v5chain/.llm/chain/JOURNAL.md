@@ -663,3 +663,4 @@ hub-v5chain-senior-4 | decision | senior (автономный режим): зв
 hub-v5chain-senior-4 | review | senior: Г3 (m3gu, A* по состояниям + доводка с откатом; строка d4 вне пакетов) — порог 19/20 и мед ≤ 1.10 НЕ взят: 17/18/16 из 20, мед 1.085–1.133, запрос 1.2–2 с; жадный агент давал ~половину провалов графа; в сводку внесено | 16:04:56
 hub-v5chain-research-40 | started | acc3 | opus | 16:04:59
 hub-v5chain-worker-d4 | done | ctx 31% | линия D: dp1/m3*/m8/manip, Г0/Г3, доводка IPOPT/SLSQP, ДОЗАКАЗ [А–Е] сданы research-40; осталось Г5.1/Г5.2/Г2а | next=hub-v5chain-worker-d5 | 19:09:48
+hub-v5chain-worker-d5 | started | acc3 | sonnet | 19:11:29
