@@ -1,6 +1,11 @@
-# HANDOFF линии C — ПАУЗА по слову пользователя ~07:0x (hub-v5chain-worker-c12, acc3, Sonnet, 12.11), преемника НЕТ
-АВТОНОМНЫЙ РЕЖИМ. Машины целиком journal-2026; процессов c12 нет. Всё посчитанное — `knowledge/research/vi_seam_interp.md` (низ): manip/dp1 (узкая и полная коробка), причина 1.26 (коробка |ω|), память граф/атлас ДИ4D, LP-порции (6.0→2.1 ГБ), старт 3 ДИ6D (float32 λ ⇒ теперь float64).
-Готово к запуску (код в git, reports/research/c12/): `tab/` (tvg_vt с ДИ6D/8D и BOX=full, tvg_dl с колонками viol_box/nogoal/slow, tvg_lp с LP-порциями, dix_ref_exact.py NK SEED NH, run_row.sh ENV NB SEED TAG; на aida1 разложено в ~/spore_v5/tab, PY=~/spore_v5/r31/venv/bin/python NT=<потоки> NPROC=<проц> STARTS=~/spore_v5/tab/out/di6_ref_200_rho35_s8.npy), `fb/fb.py` (вперёд-сбор/назад-раздача ДИ4D, не запускался, тест на малом n сначала), `mem/` (замеры RSS).
-Следующее по PLAN (блок ★★★ 06:45): ДИ6D 300k ×3 по одному (≤10 потоков, ≤20 ГБ, nice 10, free -g, запас 10 ГБ) → атлас ДИ6D: в growNa нет SYS di6 (нужна копия c12/atlas с блоком как di4, 27 управлений) → 1M по пику 300k → fb (AUC ≥ .8) → ДИ8D.
-Грабли: tvg_lp `TAG` в run_row.sh перекрывает имя (логи `_<tag>.log`); fork+numba OpenMP падает — NUMBA_THREADING_LAYER=workqueue; не `pkill -f`; граф-файлы с TAG; задачи [D]-строки manip/dp1 теперь у d3.
-NEXT_LINK: нет (пауза)
+# HANDOFF линии C — hub-v5chain-worker-c13 (aida 1), поднял research-39 13.11. АВТОНОМНЫЙ РЕЖИМ.
+Прошлое звено c12 (на паузе 12.11) — его код готов: `reports/research/c12/{tab,fb,mem}` (run_row.sh, колонка нарушений, ДИ8D _mk_dix, fb.py), `r37/tvg_lp.py` (LP-порции, λ float64). Своя папка aida1 `~/spore_v5/c13/` (копия c12/tab), r37 — только читать.
+**Ресурсы (слово пользователя 13.11 ~15:0x):** CPU пополам с journal-2026 — spore ≤ 16 потоков на машину (сумма твоих процессов), GPU НЕ трогать, чужие процессы не трогать; все запуски `nice -n 10`; `free -g` + `uptime` перед КАЖДЫМ запуском, запас RAM ≥ 10 ГБ. Снимать только свои PID. Python на aida1 — обёртка `bash ~/spore_v5/a38/spores_2/bench/b22/runpc.sh`, на aida2 — `~/spore_v5/venv/bin/python`.
+**Цель (слово пользователя 13.11):** понять, ГДЕ текущий граф побеждает текущий атлас и где проигрывает (ожидание: высокая размерность + динамика — атлас). Метрики КАЖДОЙ строки: дошли, мед/p90/max T/T_ref, НАРУШЕНИЯ (common.verify: box/касания, не дошёл, >3·T_ref), build с, запрос мс/шаг, пик RSS (/usr/bin/time -v), хранимое МБ, зёрна. Граф и атлас — на ОДНИХ стартах и эталонах. Без подбора под среду.
+**Сводная таблица** — `.llm/chain/knowledge/research/summary_graph_vs_atlas.md` (что уже есть). Результаты — свой отчёт + строка `send_verified` → hub-v5chain-research-39 по КАЖДОЙ готовой строке (число, файл). Финиш/смена — по WORKER_ROUTINE.
+## Очередь [C] — ЛЕСТНИЦА ДИ по размерности (aida 1)
+1. ДИ6D 300k ×3 (з.0–2) граф — по одному процессу ≤ 10 потоков (пик ~20 ГБ).
+2. **Атлас ДИ6D** — SYS di6 в СВОЮ копию growNa (`reports/research/c13/atlas/`, общий growNa не трогать; как di4, 27 управлений, коробка/цель как у графа, 200 стартов di6_ref_200_rho35_s8). Сначала смоук на малом бюджете клеток на CPU: клетки, пик RSS, время → строку research до полного прогона.
+3. ДИ8D граф 100k/300k (эталон dix_ref_exact) + атлас ДИ8D, если ДИ6D влез.
+4. Свободные потоки — m3gdg перепрогон w43 с полем stop (`reports/research/w43/`, `queue_aida1.sh` в ~/spore_v5/w43): равн. 200k → VIAB → dense з.0–4.
+NEXT_LINK: hub-v5chain-worker-c14
