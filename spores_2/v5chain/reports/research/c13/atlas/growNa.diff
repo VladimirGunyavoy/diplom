@@ -1,0 +1,26 @@
+11c11
+< DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'dp1', 'race', 'race4') else 41))
+---
+> DTN = float(E('DTN', .1)); RMAX = float(E('RMAX', .3)); TMAX = float(E('TMAX', 3.)); DELTA = float(E('DELTA', .03)); KF = int(E('KF', 21 if SYS == 'dd' else 11 if SYS in ('manip', 'di4', 'di6', 'dp1', 'race', 'race4') else 41))
+40a41,44
+> elif SYS == 'di6':                                                                                          # c13: ДИ 6D (3 независимые оси), коробка/цель как у графа (tvg_vt._mk_dix): поле |x|≤2.5, |v|≤2, цель ±RHO(.35); 27 управлений {-1,0,1}³
+>     N = 6; PERIOD = np.zeros(6); RHO = float(E('RHO', .35)); RHOV = np.full(6, RHO); XLV = np.array([2.5] * 3 + [2.] * 3); US = tuple(itertools.product((-1., 0., 1.), repeat=3))
+>     def f(y, u): return np.concatenate([y[..., 3:], np.broadcast_to(np.asarray(u, float), y[..., :3].shape)], -1)
+>     def Bq(y): return np.diag([0., 0., 0., 1., 1., 1.])
+235c239
+<         with get_context('fork').Pool(len(layers)) as pool: res = pool.map(_pix_work, range(len(layers)))
+---
+>         with get_context('fork').Pool(min(len(layers), NPOOL)) as pool: res = pool.map(_pix_work, range(len(layers)))
+471a476
+> NPOOL = int(E('NPOOL', 10 ** 6))   # c13: лимит процессов пулов (бюджет потоков)
+602c607
+<                 with Pool(len(US)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
+---
+>                 with Pool(min(len(US), NPOOL)) as pool: s.layers = pool.map(_layer, [(u, seed + k) for k, u in enumerate(US)])
+660c665
+<                 with get_context('fork').Pool(len(US)) as pool: res = pool.map(_spu_work, list(range(len(US))))
+---
+>                 with get_context('fork').Pool(min(len(US), NPOOL)) as pool: res = pool.map(_spu_work, list(range(len(US))))
+782a788,789
+>     if SYS == 'di6':   # c13: 200 стартов графа (r37/di6_ref_200_rho35_s8.npy: x(6), ..., T_ref в последнем столбце)
+>         d_ = np.load(E('DI6REF', os.path.expanduser('~/spore_v5/c13/out/di6_ref_200_rho35_s8.npy'))); return d_[:, :6].copy(), d_[:, -1].copy()
