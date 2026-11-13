@@ -1,6 +1,6 @@
-# HANDOFF линии D — d5 (aida2) ПАУЗА ПО СЛОВУ ПОЛЬЗОВАТЕЛЯ 13.11 ~20:10: aida2 нужна, наши прогоны погашены; продолжить можно с 9:00 14.11, если машина включена (ssh -p 2223 aida@127.0.0.1)
-Сделано d5: Г5.1/Г5.2/Г2а/Г2б (reports/research/d5/README.md, код g51/g52/g2a/g2b.py; отправлено research-40, принято; Г5.1/Г5.2 не взяты, Г2б не взят — досев хуже, Г2а дальше не домерять).
-Коридор + стыковка (б) c13/b4 K=20 как запасной ход на no_path (aida2 ~/spore_v5/d4/spores_2/bench/spores_6d_s.py, spores_8d_s.py + stitch.py, bs.py; запуск d4/d5_6d.sh, d4/d5_8d.sh; логи d4/out/d5_*.log, json reports/bench/data/*_d5ctl|_d5stitch.json):
- m3gu ctl 19/20 1.038/1.256/1.477 (= e2), +(б) то же, ст.18 no_path остался (запрос 21→40 с); m3gd 20/20 1.020/1.091/1.152, no_path нет. m8: контроль (NB60000 NF15000 K3 wlim, TREEFAST BATCHFAST CAREF CAMS20 CAFB NFRETRY40000) был убит на ~10-й минуте; +(б) с cKDTree(boxsize) c13/b5 (включается при STITCH=1) не запускался.
-ОСТАЛОСЬ: m8 ctl (ждать 17/20, 1.178) → m8 STITCH=1; затем отчёт research-40 одним сообщением (таблица: дошли, мед/p90/max, запрос, МБ, нарушения) по m3gu/m3gd/m8. Перед запуском free -g/uptime (aida2 load ~30), nice, PROCS≤4, снимать только свои PID.
-NEXT_LINK: hub-v5chain-worker-d5 (продолжает тот же при возобновлении)   NEXT_MODEL: sonnet
+# HANDOFF линии D — ПАУЗА ДО СЛОВА ПОЛЬЗОВАТЕЛЯ (решение senior-4 через research-40, 13.11; кампания «где граф / где атлас» закрыта). Преемника нет, 14.11 в 9:00 НЕ продолжать.
+Звено: hub-v5chain-worker-d5 (acc3, sonnet, 19:11–22:0x 13.11), причина смены: решение senior-4 (нет работ).
+Сделано: Г5.1/Г5.2/Г2а/Г2б (reports/research/d5/README.md; код g51/g52/g2a/g2b.py; Г5.1, Г5.2, Г2б не взяты, Г2а дальше не домерять); коридор+стыковка (б) c13/b4: m3gu ctl 19/20 1.038/1.256/1.477 (= e2), +(б) то же, ст.18 no_path остался; m3gd 20/20 1.020/1.091/1.152 без no_path; m8 закрыт c14 (NEIGH=0 23.7 с), мой m8 не досчитан (ctl убит по слову пользователя).
+Ресурсы: расчётов нет; код на aida2 ~/spore_v5/d4/spores_2/{w39n,bench} (spores_6d_s.py, spores_8d_s.py, stitch.py, bs.py), скрипты d4/d5_6d.sh, d4/d5_8d.sh, логи d4/out/d5_*.
+Грабли: aida2 по ssh -p 2223 aida@127.0.0.1, общая машина (load ~30), снимать только свои PID; fixer-1 сделал меню канала для Оли (machines/olya/kanal.bat/.ps1, не тестировано).
+NEXT_LINK: нет (пауза до слова пользователя)   NEXT_MODEL: sonnet
