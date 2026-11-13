@@ -1,0 +1,1225 @@
+{
+ "arm": "nof",
+ "env": "di8",
+ "NB": "100000",
+ "NF": 3000,
+ "K": 3,
+ "n": 100,
+ "reach": 23,
+ "why": {
+  "ok": 23,
+  "no_path": 77
+ },
+ "slow3": 0,
+ "med": 1.0021281292780553,
+ "p90": 1.087217653079731,
+ "max": 1.1825720978097358,
+ "t_build": 16.59192101401277,
+ "t_query_med": 0.2421400339808315,
+ "t_query_p90": 0.3518810301553458,
+ "wall": 6.201040324056521,
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": null,
+   "t_query": 0.21364987781271338,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.41693455090436277
+   }
+  },
+  {
+   "i": 1,
+   "T_agent": null,
+   "t_query": 0.2463103230111301,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.32035859395809385
+   }
+  },
+  {
+   "i": 2,
+   "T_agent": 3.078062449943116,
+   "t_query": 0.020188539056107402,
+   "T_verify": 3.0780624499431366,
+   "why": "ok",
+   "info": {
+    "pairs": 1,
+    "local_ok": 1,
+    "dmin": 0.3349215343732447
+   }
+  },
+  {
+   "i": 3,
+   "T_agent": null,
+   "t_query": 0.24991722800768912,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.37269466852840166
+   }
+  },
+  {
+   "i": 4,
+   "T_agent": null,
+   "t_query": 0.35187994106672704,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2650018903379852
+   }
+  },
+  {
+   "i": 5,
+   "T_agent": null,
+   "t_query": 0.2928980190772563,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.1975728509760419
+   }
+  },
+  {
+   "i": 6,
+   "T_agent": 3.715717677185096,
+   "t_query": 0.038554560858756304,
+   "T_verify": 3.7157176771850664,
+   "why": "ok",
+   "info": {
+    "pairs": 1,
+    "local_ok": 1,
+    "dmin": 0.48063949798615935
+   }
+  },
+  {
+   "i": 7,
+   "T_agent": null,
+   "t_query": 0.4594518181402236,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.18729342620007033
+   }
+  },
+  {
+   "i": 8,
+   "T_agent": 2.6517871465972305,
+   "t_query": 0.24586458085104823,
+   "T_verify": 2.651787146597231,
+   "why": "ok",
+   "info": {
+    "pairs": 15,
+    "local_ok": 2,
+    "dmin": 0.17590305178655083
+   }
+  },
+  {
+   "i": 9,
+   "T_agent": 3.5480814110530825,
+   "t_query": 0.3502732238266617,
+   "T_verify": 3.5480814110531007,
+   "why": "ok",
+   "info": {
+    "pairs": 13,
+    "local_ok": 1,
+    "dmin": 0.33145701739385536
+   }
+  },
+  {
+   "i": 10,
+   "T_agent": 3.6126624286020492,
+   "t_query": 0.10173591203056276,
+   "T_verify": 3.6126624286020546,
+   "why": "ok",
+   "info": {
+    "pairs": 7,
+    "local_ok": 1,
+    "dmin": 0.4394225953550453
+   }
+  },
+  {
+   "i": 11,
+   "T_agent": null,
+   "t_query": 0.23873099917545915,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.4401118112863896
+   }
+  },
+  {
+   "i": 12,
+   "T_agent": null,
+   "t_query": 0.2428102169651538,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.45336719025955086
+   }
+  },
+  {
+   "i": 13,
+   "T_agent": null,
+   "t_query": 0.32814258500002325,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.40181270482628384
+   }
+  },
+  {
+   "i": 14,
+   "T_agent": null,
+   "t_query": 0.26051299506798387,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.26233334601568137
+   }
+  },
+  {
+   "i": 15,
+   "T_agent": 2.4804030234185106,
+   "t_query": 0.14794627693481743,
+   "T_verify": 2.480403023418512,
+   "why": "ok",
+   "info": {
+    "pairs": 9,
+    "local_ok": 1,
+    "dmin": 0.3011987781789902
+   }
+  },
+  {
+   "i": 16,
+   "T_agent": null,
+   "t_query": 0.2534073540009558,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.15315511857508454
+   }
+  },
+  {
+   "i": 17,
+   "T_agent": null,
+   "t_query": 0.3100457249674946,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.36448583792553096
+   }
+  },
+  {
+   "i": 18,
+   "T_agent": null,
+   "t_query": 0.2533368938602507,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.12803897217032373
+   }
+  },
+  {
+   "i": 19,
+   "T_agent": null,
+   "t_query": 0.27853853604756296,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.19643298259194833
+   }
+  },
+  {
+   "i": 20,
+   "T_agent": null,
+   "t_query": 0.268777031917125,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3251709142512745
+   }
+  },
+  {
+   "i": 21,
+   "T_agent": null,
+   "t_query": 0.21698427200317383,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.38098147421205497
+   }
+  },
+  {
+   "i": 22,
+   "T_agent": 3.8790687913744235,
+   "t_query": 0.08337808004580438,
+   "T_verify": 3.879068791374427,
+   "why": "ok",
+   "info": {
+    "pairs": 5,
+    "local_ok": 1,
+    "dmin": 0.36102923413307864
+   }
+  },
+  {
+   "i": 23,
+   "T_agent": null,
+   "t_query": 0.20912836794741452,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2804240533969525
+   }
+  },
+  {
+   "i": 24,
+   "T_agent": null,
+   "t_query": 0.26047013606876135,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.36224002303993114
+   }
+  },
+  {
+   "i": 25,
+   "T_agent": null,
+   "t_query": 0.19334800820797682,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3304084865568276
+   }
+  },
+  {
+   "i": 26,
+   "T_agent": null,
+   "t_query": 0.210944265127182,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.37701740379703924
+   }
+  },
+  {
+   "i": 27,
+   "T_agent": null,
+   "t_query": 0.22573321196250618,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2629147512421296
+   }
+  },
+  {
+   "i": 28,
+   "T_agent": 1.5549736409340957,
+   "t_query": 0.14424257003702223,
+   "T_verify": 1.554973640934093,
+   "why": "ok",
+   "info": {
+    "pairs": 13,
+    "local_ok": 1,
+    "dmin": 0.14039365829406938
+   }
+  },
+  {
+   "i": 29,
+   "T_agent": null,
+   "t_query": 0.3780416981317103,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3266033852491354
+   }
+  },
+  {
+   "i": 30,
+   "T_agent": 3.3718918023624003,
+   "t_query": 0.07818364701233804,
+   "T_verify": 3.3718918023623927,
+   "why": "ok",
+   "info": {
+    "pairs": 7,
+    "local_ok": 1,
+    "dmin": 0.34673664983239033
+   }
+  },
+  {
+   "i": 31,
+   "T_agent": 3.2057840555710375,
+   "t_query": 0.24926971597597003,
+   "T_verify": 3.205784055571046,
+   "why": "ok",
+   "info": {
+    "pairs": 11,
+    "local_ok": 1,
+    "dmin": 0.38190841325833397
+   }
+  },
+  {
+   "i": 32,
+   "T_agent": null,
+   "t_query": 0.16823226609267294,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.4422089083616866
+   }
+  },
+  {
+   "i": 33,
+   "T_agent": null,
+   "t_query": 0.1955639768857509,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2275380830776018
+   }
+  },
+  {
+   "i": 34,
+   "T_agent": null,
+   "t_query": 0.21755699487403035,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.33574106854122276
+   }
+  },
+  {
+   "i": 35,
+   "T_agent": null,
+   "t_query": 0.24133749981410801,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3339754085560017
+   }
+  },
+  {
+   "i": 36,
+   "T_agent": 3.4961894138322314,
+   "t_query": 0.07696356088854373,
+   "T_verify": 3.496189413832241,
+   "why": "ok",
+   "info": {
+    "pairs": 4,
+    "local_ok": 1,
+    "dmin": 0.41710587253481196
+   }
+  },
+  {
+   "i": 37,
+   "T_agent": 2.4941776447031185,
+   "t_query": 0.19210842181928456,
+   "T_verify": 2.4941776447031088,
+   "why": "ok",
+   "info": {
+    "pairs": 13,
+    "local_ok": 1,
+    "dmin": 0.39537100746978177
+   }
+  },
+  {
+   "i": 38,
+   "T_agent": null,
+   "t_query": 0.2940862651448697,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.16596005370526548
+   }
+  },
+  {
+   "i": 39,
+   "T_agent": 2.772468000776678,
+   "t_query": 0.3108721289318055,
+   "T_verify": 2.7724680007766715,
+   "why": "ok",
+   "info": {
+    "pairs": 18,
+    "local_ok": 1,
+    "dmin": 0.2603520472012211
+   }
+  },
+  {
+   "i": 40,
+   "T_agent": 2.769168942214965,
+   "t_query": 0.10036882502026856,
+   "T_verify": 2.7691689422149546,
+   "why": "ok",
+   "info": {
+    "pairs": 9,
+    "local_ok": 1,
+    "dmin": 0.3210019289137198
+   }
+  },
+  {
+   "i": 41,
+   "T_agent": null,
+   "t_query": 0.264641844201833,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.19482202692014364
+   }
+  },
+  {
+   "i": 42,
+   "T_agent": null,
+   "t_query": 0.27526431204751134,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.34080243653942704
+   }
+  },
+  {
+   "i": 43,
+   "T_agent": null,
+   "t_query": 0.41529249190352857,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.26939060086791344
+   }
+  },
+  {
+   "i": 44,
+   "T_agent": null,
+   "t_query": 0.313381401123479,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.21031517215922146
+   }
+  },
+  {
+   "i": 45,
+   "T_agent": null,
+   "t_query": 0.23805397609248757,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3572487680209681
+   }
+  },
+  {
+   "i": 46,
+   "T_agent": null,
+   "t_query": 0.27813444403000176,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.30851684844239674
+   }
+  },
+  {
+   "i": 47,
+   "T_agent": null,
+   "t_query": 0.20158987399190664,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.4321037625475835
+   }
+  },
+  {
+   "i": 48,
+   "T_agent": null,
+   "t_query": 0.23553395504131913,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.41461725298606356
+   }
+  },
+  {
+   "i": 49,
+   "T_agent": null,
+   "t_query": 0.3889785159844905,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.26805473501229093
+   }
+  },
+  {
+   "i": 50,
+   "T_agent": null,
+   "t_query": 0.25463992985896766,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3990041452702654
+   }
+  },
+  {
+   "i": 51,
+   "T_agent": null,
+   "t_query": 0.230512083042413,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.17149358599705483
+   }
+  },
+  {
+   "i": 52,
+   "T_agent": null,
+   "t_query": 0.18294295109808445,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.324681523314583
+   }
+  },
+  {
+   "i": 53,
+   "T_agent": null,
+   "t_query": 0.2705333500634879,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.32231724695667924
+   }
+  },
+  {
+   "i": 54,
+   "T_agent": null,
+   "t_query": 0.1850057311821729,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.22879198193623876
+   }
+  },
+  {
+   "i": 55,
+   "T_agent": null,
+   "t_query": 0.32712750090286136,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.33162048336471633
+   }
+  },
+  {
+   "i": 56,
+   "T_agent": null,
+   "t_query": 0.23250520206056535,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.29544723919835814
+   }
+  },
+  {
+   "i": 57,
+   "T_agent": 3.5743274594778542,
+   "t_query": 0.2995604600291699,
+   "T_verify": 3.574327459477871,
+   "why": "ok",
+   "info": {
+    "pairs": 11,
+    "local_ok": 1,
+    "dmin": 0.3544091265601216
+   }
+  },
+  {
+   "i": 58,
+   "T_agent": 3.6029131815530264,
+   "t_query": 0.022338248789310455,
+   "T_verify": 3.6029131815530397,
+   "why": "ok",
+   "info": {
+    "pairs": 1,
+    "local_ok": 1,
+    "dmin": 0.4051984070908334
+   }
+  },
+  {
+   "i": 59,
+   "T_agent": null,
+   "t_query": 0.3330203478690237,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.22247426667553316
+   }
+  },
+  {
+   "i": 60,
+   "T_agent": null,
+   "t_query": 0.2888819819781929,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.386923187402683
+   }
+  },
+  {
+   "i": 61,
+   "T_agent": null,
+   "t_query": 0.496019781101495,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.32430988424474466
+   }
+  },
+  {
+   "i": 62,
+   "T_agent": null,
+   "t_query": 0.2591901801060885,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.17610521191204132
+   }
+  },
+  {
+   "i": 63,
+   "T_agent": 2.951531161810092,
+   "t_query": 0.23843398806639016,
+   "T_verify": 2.9515311618101014,
+   "why": "ok",
+   "info": {
+    "pairs": 20,
+    "local_ok": 1,
+    "dmin": 0.3105179163360214
+   }
+  },
+  {
+   "i": 64,
+   "T_agent": null,
+   "t_query": 0.33150097099132836,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.29308958443688254
+   }
+  },
+  {
+   "i": 65,
+   "T_agent": 1.4673710599209053,
+   "t_query": 0.06057103886269033,
+   "T_verify": 1.4673710599209078,
+   "why": "ok",
+   "info": {
+    "pairs": 7,
+    "local_ok": 1,
+    "dmin": 0.2043594900628724
+   }
+  },
+  {
+   "i": 66,
+   "T_agent": 1.1254561067407607,
+   "t_query": 0.2045503279659897,
+   "T_verify": 1.1254561067407594,
+   "why": "ok",
+   "info": {
+    "pairs": 16,
+    "local_ok": 1,
+    "dmin": 0.1577344238261238
+   }
+  },
+  {
+   "i": 67,
+   "T_agent": 3.5721576556456376,
+   "t_query": 0.3685859760735184,
+   "T_verify": 3.572157655645623,
+   "why": "ok",
+   "info": {
+    "pairs": 16,
+    "local_ok": 1,
+    "dmin": 0.31097294723560637
+   }
+  },
+  {
+   "i": 68,
+   "T_agent": null,
+   "t_query": 0.3124673259444535,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.27138351386224674
+   }
+  },
+  {
+   "i": 69,
+   "T_agent": null,
+   "t_query": 0.21219044202007353,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.4083611180473237
+   }
+  },
+  {
+   "i": 70,
+   "T_agent": null,
+   "t_query": 0.1751298769377172,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.32058641058071335
+   }
+  },
+  {
+   "i": 71,
+   "T_agent": null,
+   "t_query": 0.23547357507050037,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.288755315731138
+   }
+  },
+  {
+   "i": 72,
+   "T_agent": null,
+   "t_query": 0.17556106904521585,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3609753169637974
+   }
+  },
+  {
+   "i": 73,
+   "T_agent": null,
+   "t_query": 0.21649085101671517,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3922420497994247
+   }
+  },
+  {
+   "i": 74,
+   "T_agent": null,
+   "t_query": 0.3873990089632571,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3457227243868015
+   }
+  },
+  {
+   "i": 75,
+   "T_agent": 4.168192978545763,
+   "t_query": 0.1940058209002018,
+   "T_verify": 4.168192978545758,
+   "why": "ok",
+   "info": {
+    "pairs": 5,
+    "local_ok": 1,
+    "dmin": 0.37386899390558587
+   }
+  },
+  {
+   "i": 76,
+   "T_agent": null,
+   "t_query": 0.21587198809720576,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.29093169478154957
+   }
+  },
+  {
+   "i": 77,
+   "T_agent": null,
+   "t_query": 0.20271515008062124,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3682212623888237
+   }
+  },
+  {
+   "i": 78,
+   "T_agent": null,
+   "t_query": 0.20552695193327963,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3815997204252412
+   }
+  },
+  {
+   "i": 79,
+   "T_agent": null,
+   "t_query": 0.3518908319529146,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3255758781221768
+   }
+  },
+  {
+   "i": 80,
+   "T_agent": 2.4194677331129375,
+   "t_query": 0.28990866616368294,
+   "T_verify": 2.419467733112927,
+   "why": "ok",
+   "info": {
+    "pairs": 10,
+    "local_ok": 1,
+    "dmin": 0.2088031211328566
+   }
+  },
+  {
+   "i": 81,
+   "T_agent": null,
+   "t_query": 0.19342204788699746,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.39799807889150546
+   }
+  },
+  {
+   "i": 82,
+   "T_agent": null,
+   "t_query": 0.2414698509965092,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.19161205942830015
+   }
+  },
+  {
+   "i": 83,
+   "T_agent": 2.0319080989294744,
+   "t_query": 0.01959324604831636,
+   "T_verify": 2.031908098929479,
+   "why": "ok",
+   "info": {
+    "pairs": 1,
+    "local_ok": 1,
+    "dmin": 0.1812171015819411
+   }
+  },
+  {
+   "i": 84,
+   "T_agent": null,
+   "t_query": 0.22153281304053962,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.19807968428582426
+   }
+  },
+  {
+   "i": 85,
+   "T_agent": null,
+   "t_query": 0.3076094959396869,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.37349119448366
+   }
+  },
+  {
+   "i": 86,
+   "T_agent": null,
+   "t_query": 0.3458124250173569,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3620954576406544
+   }
+  },
+  {
+   "i": 87,
+   "T_agent": null,
+   "t_query": 0.30097863590344787,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.14075639315010544
+   }
+  },
+  {
+   "i": 88,
+   "T_agent": null,
+   "t_query": 0.3568793940357864,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3871350574481096
+   }
+  },
+  {
+   "i": 89,
+   "T_agent": null,
+   "t_query": 0.29071436007507145,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2853739036965109
+   }
+  },
+  {
+   "i": 90,
+   "T_agent": null,
+   "t_query": 0.4642154600005597,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.2610380497554197
+   }
+  },
+  {
+   "i": 91,
+   "T_agent": null,
+   "t_query": 0.2576940341386944,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3941959298356608
+   }
+  },
+  {
+   "i": 92,
+   "T_agent": null,
+   "t_query": 0.19355514901690185,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.30370014163562487
+   }
+  },
+  {
+   "i": 93,
+   "T_agent": null,
+   "t_query": 0.24079931899905205,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.43580163434356634
+   }
+  },
+  {
+   "i": 94,
+   "T_agent": null,
+   "t_query": 0.22475248691625893,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.29044186420346974
+   }
+  },
+  {
+   "i": 95,
+   "T_agent": null,
+   "t_query": 0.24674243503250182,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3275116459635101
+   }
+  },
+  {
+   "i": 96,
+   "T_agent": null,
+   "t_query": 0.2913086630869657,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.27586878376920554
+   }
+  },
+  {
+   "i": 97,
+   "T_agent": null,
+   "t_query": 0.2078412629198283,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.20667402465679816
+   }
+  },
+  {
+   "i": 98,
+   "T_agent": null,
+   "t_query": 0.25603739614598453,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.37248459929702754
+   }
+  },
+  {
+   "i": 99,
+   "T_agent": null,
+   "t_query": 0.1825054888613522,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {
+    "pairs": 20,
+    "local_ok": 0,
+    "dmin": 0.3259536200633794
+   }
+  }
+ ],
+ "pairs_med": 20.0,
+ "local_ok_frac": 0.23
+}

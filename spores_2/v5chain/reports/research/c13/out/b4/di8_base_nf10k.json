@@ -1,0 +1,823 @@
+{
+ "arm": "base",
+ "env": "di8",
+ "NB": "100000",
+ "NF": 10000,
+ "K": 3,
+ "n": 100,
+ "reach": 39,
+ "why": {
+  "no_path": 61,
+  "ok": 39
+ },
+ "slow3": 0,
+ "med": 1.0038553605401388,
+ "p90": 1.0947305705084578,
+ "max": 1.75504238722293,
+ "t_build": 16.327016247203574,
+ "t_query_med": 3.1656964294379577,
+ "t_query_p90": 3.82596109956503,
+ "wall": 82.83189384406433,
+ "per_start": [
+  {
+   "i": 0,
+   "T_agent": null,
+   "t_query": 3.107510912930593,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 1,
+   "T_agent": null,
+   "t_query": 3.1383799999020994,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 2,
+   "T_agent": null,
+   "t_query": 3.4764650228898972,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 3,
+   "T_agent": null,
+   "t_query": 3.209809968015179,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 4,
+   "T_agent": null,
+   "t_query": 3.1778110570739955,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 5,
+   "T_agent": null,
+   "t_query": 3.1236027569975704,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 6,
+   "T_agent": 3.715717677147823,
+   "t_query": 2.819222184130922,
+   "T_verify": 3.715717677147824,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 7,
+   "T_agent": null,
+   "t_query": 3.132452185964212,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 8,
+   "T_agent": 2.416811952204163,
+   "t_query": 3.1030095969326794,
+   "T_verify": 2.416811952204165,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 9,
+   "T_agent": null,
+   "t_query": 2.9743544950615615,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 10,
+   "T_agent": 3.612662428574483,
+   "t_query": 3.0139937608037144,
+   "T_verify": 3.612662428574494,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 11,
+   "T_agent": null,
+   "t_query": 2.989182930905372,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 12,
+   "T_agent": null,
+   "t_query": 2.999412107979879,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 13,
+   "T_agent": null,
+   "t_query": 2.8856294830329716,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 14,
+   "T_agent": 3.0325838431134957,
+   "t_query": 3.069751370931044,
+   "T_verify": 3.03258384311349,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 15,
+   "T_agent": null,
+   "t_query": 3.1683681798167527,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 16,
+   "T_agent": 2.1833539297006848,
+   "t_query": 3.27945978497155,
+   "T_verify": 2.183353929700685,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 17,
+   "T_agent": null,
+   "t_query": 2.861058584880084,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 18,
+   "T_agent": 1.2905176099847098,
+   "t_query": 3.529200527118519,
+   "T_verify": 1.2905176099847127,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 19,
+   "T_agent": 2.017722027513712,
+   "t_query": 3.095132916001603,
+   "T_verify": 2.0176983456192747,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 20,
+   "T_agent": null,
+   "t_query": 2.588793345959857,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 21,
+   "T_agent": 3.69517031203776,
+   "t_query": 2.8956793611869216,
+   "T_verify": 3.695170312037781,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 22,
+   "T_agent": null,
+   "t_query": 2.869006693130359,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 23,
+   "T_agent": null,
+   "t_query": 3.193433854961768,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 24,
+   "T_agent": null,
+   "t_query": 2.7895899498835206,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 25,
+   "T_agent": 2.9443480774039426,
+   "t_query": 3.4495800870936364,
+   "T_verify": 2.944348077403928,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 26,
+   "T_agent": null,
+   "t_query": 2.8614659998565912,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 27,
+   "T_agent": null,
+   "t_query": 2.990063932025805,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 28,
+   "T_agent": 1.5549736409024262,
+   "t_query": 3.154087263857946,
+   "T_verify": 1.5549736409024197,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 29,
+   "T_agent": 3.819304662317511,
+   "t_query": 2.8203894791658968,
+   "T_verify": 3.819304662317484,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 30,
+   "T_agent": null,
+   "t_query": 2.965910327155143,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 31,
+   "T_agent": null,
+   "t_query": 3.040680249920115,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 32,
+   "T_agent": null,
+   "t_query": 3.492594711948186,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 33,
+   "T_agent": 2.011629778937528,
+   "t_query": 3.4936440880410373,
+   "T_verify": 2.011629778937531,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 34,
+   "T_agent": null,
+   "t_query": 3.2737290989607573,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 35,
+   "T_agent": null,
+   "t_query": 2.6662035258486867,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 36,
+   "T_agent": null,
+   "t_query": 3.263797316001728,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 37,
+   "T_agent": 2.397435924382265,
+   "t_query": 3.5268294669222087,
+   "T_verify": 2.397435924382266,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 38,
+   "T_agent": 1.5301406122708472,
+   "t_query": 3.8183294250629842,
+   "T_verify": 1.5301406122708472,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 39,
+   "T_agent": 2.772468000776669,
+   "t_query": 3.1630246790591627,
+   "T_verify": 2.7724680007766676,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 40,
+   "T_agent": null,
+   "t_query": 3.301905679050833,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 41,
+   "T_agent": 2.634313349887394,
+   "t_query": 3.3230117531493306,
+   "T_verify": 2.6343133498873934,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 42,
+   "T_agent": null,
+   "t_query": 3.4170792219229043,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 43,
+   "T_agent": 3.100513700252751,
+   "t_query": 3.1865729060955346,
+   "T_verify": 3.1005137002527503,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 44,
+   "T_agent": 1.6306767436834058,
+   "t_query": 3.4374819740187377,
+   "T_verify": 1.6306767436834022,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 45,
+   "T_agent": null,
+   "t_query": 3.3742959739174694,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 46,
+   "T_agent": null,
+   "t_query": 3.4009059318341315,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 47,
+   "T_agent": null,
+   "t_query": 3.1138015831820667,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 48,
+   "T_agent": null,
+   "t_query": 2.977690469007939,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 49,
+   "T_agent": 1.6300573355822667,
+   "t_query": 3.3081826011184603,
+   "T_verify": 1.6300573355822634,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 50,
+   "T_agent": null,
+   "t_query": 2.7611270451452583,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 51,
+   "T_agent": null,
+   "t_query": 2.91797508392483,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 52,
+   "T_agent": 5.815257829336247,
+   "t_query": 3.054871204076335,
+   "T_verify": 5.815257829336267,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 53,
+   "T_agent": null,
+   "t_query": 2.9667694130912423,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 54,
+   "T_agent": 1.4978633152804677,
+   "t_query": 3.3780035050585866,
+   "T_verify": 1.4978633152804721,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 55,
+   "T_agent": null,
+   "t_query": 2.9076914188917726,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 56,
+   "T_agent": null,
+   "t_query": 2.6823544970247895,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 57,
+   "T_agent": null,
+   "t_query": 2.8960425488185138,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 58,
+   "T_agent": null,
+   "t_query": 3.129735089838505,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 59,
+   "T_agent": null,
+   "t_query": 3.0383683829568326,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 60,
+   "T_agent": null,
+   "t_query": 3.148245824035257,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 61,
+   "T_agent": null,
+   "t_query": 2.860125619918108,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 62,
+   "T_agent": 1.8030090414089348,
+   "t_query": 3.384554386837408,
+   "T_verify": 1.803009041408931,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 63,
+   "T_agent": null,
+   "t_query": 3.270154397934675,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 64,
+   "T_agent": null,
+   "t_query": 3.1110092201270163,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 65,
+   "T_agent": 1.469727336371215,
+   "t_query": 3.51999225304462,
+   "T_verify": 1.4697273363712144,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 66,
+   "T_agent": 1.125456106739911,
+   "t_query": 3.3105576511006802,
+   "T_verify": 1.1254561067399116,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 67,
+   "T_agent": 3.7440395511245526,
+   "t_query": 3.019619134021923,
+   "T_verify": 3.744039551124547,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 68,
+   "T_agent": null,
+   "t_query": 2.731967022875324,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 69,
+   "T_agent": null,
+   "t_query": 2.978893824154511,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 70,
+   "T_agent": null,
+   "t_query": 3.214823005022481,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 71,
+   "T_agent": null,
+   "t_query": 2.658689596923068,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 72,
+   "T_agent": null,
+   "t_query": 3.3006693879142404,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 73,
+   "T_agent": null,
+   "t_query": 3.191868735011667,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 74,
+   "T_agent": 5.6775879466863515,
+   "t_query": 2.8017023459542543,
+   "T_verify": 5.677587946686357,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 75,
+   "T_agent": null,
+   "t_query": 3.4092029239982367,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 76,
+   "T_agent": 2.4029199550556406,
+   "t_query": 3.9651880331803113,
+   "T_verify": 2.4029199550556335,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 77,
+   "T_agent": 2.4236934583084477,
+   "t_query": 3.4372949509415776,
+   "T_verify": 2.4236934583084495,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 78,
+   "T_agent": null,
+   "t_query": 3.8946461700834334,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 79,
+   "T_agent": 3.325229970808609,
+   "t_query": 4.22610783809796,
+   "T_verify": 3.3252299708086097,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 80,
+   "T_agent": 2.051934381637331,
+   "t_query": 3.5390096260234714,
+   "T_verify": 2.051934381637328,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 81,
+   "T_agent": 2.9026369212168306,
+   "t_query": 3.189932420151308,
+   "T_verify": 2.902636921216824,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 82,
+   "T_agent": null,
+   "t_query": 3.128679068060592,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 83,
+   "T_agent": 1.914892746717711,
+   "t_query": 4.724873554892838,
+   "T_verify": 1.9148927467177128,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 84,
+   "T_agent": 4.039282765321788,
+   "t_query": 2.7764180779922754,
+   "T_verify": 4.0392827653218,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 85,
+   "T_agent": null,
+   "t_query": 3.088164378888905,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 86,
+   "T_agent": null,
+   "t_query": 3.1931412171106786,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 87,
+   "T_agent": 0.9659386817423814,
+   "t_query": 3.530713591957465,
+   "T_verify": 0.965938681742383,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 88,
+   "T_agent": null,
+   "t_query": 3.3163588969036937,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 89,
+   "T_agent": 1.7260157798260387,
+   "t_query": 4.902979599079117,
+   "T_verify": 1.726015779826042,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 90,
+   "T_agent": 2.114186185008869,
+   "t_query": 3.652972900075838,
+   "T_verify": 2.1141861850088683,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 91,
+   "T_agent": null,
+   "t_query": 3.1508058172184974,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 92,
+   "T_agent": 3.8227070805012353,
+   "t_query": 2.817939314059913,
+   "T_verify": 3.8227070805012064,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 93,
+   "T_agent": null,
+   "t_query": 4.614289985969663,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 94,
+   "T_agent": null,
+   "t_query": 4.585637612966821,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 95,
+   "T_agent": 3.1206237398554215,
+   "t_query": 3.5916253100149333,
+   "T_verify": 3.12062373985541,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 96,
+   "T_agent": null,
+   "t_query": 4.244506522081792,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 97,
+   "T_agent": 2.003618435534044,
+   "t_query": 3.4574603920336813,
+   "T_verify": 2.003618435534044,
+   "why": "ok",
+   "info": {}
+  },
+  {
+   "i": 98,
+   "T_agent": null,
+   "t_query": 3.9715803670696914,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  },
+  {
+   "i": 99,
+   "T_agent": null,
+   "t_query": 3.9213174029719085,
+   "T_verify": null,
+   "why": "no_path",
+   "info": {}
+  }
+ ]
+}
