@@ -32,7 +32,12 @@ def setup():
     WM = float(np.min(e.hi[per == 0])) / BOXF if (per == 0).any() else 3.   # BOXF>1: запас коробки (предел |v| = hi/BOXF и в узлах дерева, и вдоль пути)
     ok = lambda p: (not bool(e.out_of_box(np.asarray(p, float)[None])[0])) and (BOXF == 1.0 or bool((np.abs(np.asarray(p, float)[vi_]) <= WM).all()))
     S = SysN(flow, len(US), tuple(np.where(per > 0, np.pi, np.maximum(np.abs(e.hi), 1.))), ing, seeds, per=tuple(per), ok=ok)
-    wl = (tuple(int(i) for i in np.nonzero(per == 0)[0]), WM) if WL else None
+    NSW = int(os.environ.get('NSW', 16)); WMARG = float(os.environ.get('WMARG', 0.))   # правка (ii) d4: NSW точек |w| на отрезок вместо 16, АБСОЛЮТНЫЙ запас WMARG на предел (3.01-.05)
+    if NSW != 16:
+        from src.atlas6 import corridor_nd as _C
+        if not getattr(_C, '_ns_patched', False):
+            _ref0 = _C.refine; _C.refine = lambda flow, x0, path, g, tries=3, seed=0, clear=None, ns=16, wlim=None, _r=_ref0: _r(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=NSW, wlim=wlim); _C._ns_patched = True
+    wl = (tuple(int(i) for i in np.nonzero(per == 0)[0]), WM - WMARG) if WL else None
     return e, S, US, flow, g, miss, wl
 
 def init_w(pk):
