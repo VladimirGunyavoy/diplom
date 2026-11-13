@@ -28,8 +28,9 @@ def setup():
     g = lambda x: hw ** 2 - wr(x) ** 2
     miss = lambda X: np.maximum(np.abs(wr(X)) - hw, 0).max(-1)
     rng = np.random.default_rng(0); seeds = rng.uniform(-hw, hw, (32, d))
-    WM = float(np.min(e.hi[per == 0])) if (per == 0).any() else 3.
-    ok = lambda p: not bool(e.out_of_box(np.asarray(p, float)[None])[0])
+    BOXF = float(os.environ.get('BOXF', 1.0)); vi_ = np.nonzero(per == 0)[0]
+    WM = float(np.min(e.hi[per == 0])) / BOXF if (per == 0).any() else 3.   # BOXF>1: запас коробки (предел |v| = hi/BOXF и в узлах дерева, и вдоль пути)
+    ok = lambda p: (not bool(e.out_of_box(np.asarray(p, float)[None])[0])) and (BOXF == 1.0 or bool((np.abs(np.asarray(p, float)[vi_]) <= WM).all()))
     S = SysN(flow, len(US), tuple(np.where(per > 0, np.pi, np.maximum(np.abs(e.hi), 1.))), ing, seeds, per=tuple(per), ok=ok)
     wl = (tuple(int(i) for i in np.nonzero(per == 0)[0]), WM) if WL else None
     return e, S, US, flow, g, miss, wl
