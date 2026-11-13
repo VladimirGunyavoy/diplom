@@ -12,6 +12,7 @@ import multiprocessing as mp
 name = sys.argv[1]; tag = sys.argv[2] if len(sys.argv) > 2 else ''
 NB, NF, K = int(os.environ.get('NB', 12000)), int(os.environ.get('NF', 3000)), int(os.environ.get('KK', 3)); tau = .4; rho = .15; WIN = float(os.environ.get('WIN', .01)); WL = os.environ.get('WL') == '1'
 
+CAR = None
 def setup():
     e = common.make(name); d = e.n
     if os.environ.get('STARTS'):
@@ -19,6 +20,10 @@ def setup():
         e.keep = np.abs(np.c_[Q[:, 0] + Q[:, 2] * np.abs(Q[:, 2]) / 2, Q[:, 1] + Q[:, 3] * np.abs(Q[:, 3]) / 2]).max(1) <= 2.5
     if os.environ.get('STARTSNPY') and name == 'dp1':   # e2: новые старты dp1 (npy: x(4) обычные координаты, T) — преобразование как в common.DP1
         a = np.load(os.path.expanduser(os.environ['STARTSNPY'])); e.X0 = common.wrap(a[:, :4] - np.array([np.pi / 2, 0, 0, 0]), e.period); e.Tref = a[:, 4].copy(); e.keep = np.isfinite(e.Tref); e.Tref = np.where(e.keep, e.Tref, 8.)
+        if os.environ.get('SEEDN') or 'new20' in os.environ['STARTSNPY']:  # new20 ⇒ SEEDN по умолчанию 777   # точные старты (в npy округлены до 1e-4 — на границе неустойчивой системы важно): повтор ref_e2.starts()
+            rng = np.random.default_rng(int(os.environ.get('SEEDN', 777)))
+            for _ in range(32): rng.uniform(-1, 1, 4)
+            Xe = np.array([np.array([*rng.uniform(-np.pi, np.pi, 2), *rng.uniform(-1, 1, 2)]) for _ in range(len(a))]); assert np.abs(Xe - a[:, :4]).max() < 1e-3; e.X0 = common.wrap(Xe - np.array([np.pi / 2, 0, 0, 0]), e.period)
     US = np.array([[a_, b_] for a_ in (-1., 1.) for b_ in (-1., 1.)]) * np.array(e.umax)
     hw = e.half - WIN; per = np.asarray(e.period, float)
     def flow(P, s, t, dt_max=None):
@@ -39,7 +44,14 @@ def setup():
         from src.atlas6 import corridor_nd as _C
         if not getattr(_C, '_ns_patched', False):
             _ref0 = _C.refine; _C.refine = lambda flow, x0, path, g, tries=3, seed=0, clear=None, ns=16, wlim=None, _r=_ref0: _r(flow, x0, path, g, tries=tries, seed=seed, clear=clear, ns=NSW, wlim=wlim); _C._ns_patched = True
+    if os.environ.get('VEC'):   # c14 tree_vec: векторизованное прямое дерево (порядок раскрытия прежний); ok_batch — та же коробка, что ok
+        import tree_vec, sys as _s
+        S.ok_batch = lambda E_: ~(((np.asarray(E_) < e.lo) | (np.asarray(E_) > e.hi)) & (per == 0)).any(-1)
+        tree_vec.install(_s.modules['src.atlas6.adaptive_nd'], _s.modules['src.atlas6.corridor_nd'])
     wl = (tuple(int(i) for i in np.nonzero(per == 0)[0]), WM - WMARG) if WL else None
+    global CAR
+    if os.environ.get('CA4'):   # IPOPT-доводчик (refine_ca4.py) вместо SLSQP: плотная проверка |w| в MS точках, предел WM-WMARG
+        import refine_ca4; CAR = refine_ca4.install(name, ms=int(os.environ.get('CAMS', 64)), maxit=int(os.environ.get('CAIT', 60)), wmc=WM - WMARG)
     return e, S, US, flow, g, miss, wl
 
 def init_w(pk):
@@ -47,9 +59,10 @@ def init_w(pk):
     E, S, US, FL, G, MISS, WLIM = setup(); BACK = pickle.load(open(pk, 'rb'))
 def work(i):
     E.nf = 0; t1 = time.perf_counter()
+    if CAR is not None: CAR.stat.clear(); CAR.stat.update(n=0, t=0., it=0)
     b = corridor_query(S, FL, E.X0[i], BACK, tau, NF, rho, G, MISS, K=K, tries=3, kn=8, neigh=2, nbest=1, wlim=WLIM); dt = time.perf_counter() - t1
     if b is None: return dict(i=i, T_agent=None, t_query=dt, T_verify=None, why='no_path')
-    us = [US[s] for s in b[1]]; Tv, why = common.verify(E, E.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us))
+    us = [US[s] for s in b[1]]; Tv, why = common.verify(E, E.X0[i], us, list(b[2])); return dict(i=i, T_agent=float(b[0]), t_query=dt, T_verify=Tv, why=why, nseg=len(us), cstat=(dict(CAR.stat) if CAR is not None else None))
 
 if __name__ == '__main__':
     e, S, US, FL, G, MISS, WLIM = setup(); t0 = time.perf_counter(); back = build_back(S, tau, NB, rho); t_build = time.perf_counter() - t0; print('build_back NB %d: %.1f с, узлов %d' % (NB, t_build, len(back[0])), flush=True)
