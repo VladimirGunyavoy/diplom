@@ -1,0 +1,49 @@
+start 17 T_verify 3.9970343503303005 why ok wall 107.2 с
+== sort cumulative
+         170868303 function calls (170868159 primitive calls) in 107.229 seconds
+
+   Ordered by: cumulative time
+   List reduced from 230 to 14 due to restriction <14>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.025    0.025  107.230  107.230 /home/random/spore_v5/e2/corridor_env.py:56(work)
+        1    0.001    0.001  107.175  107.175 /home/random/spore_v5/e2/spores_2/v6/src/atlas6/corridor_nd.py:78(corridor_query)
+  1657432    2.685    0.000  105.255    0.000 /home/random/spore_v5/e2/corridor_env.py:28(flow)
+  2701700   16.231    0.000   97.464    0.000 /home/random/spore_v5/e2/spores_2/bench/common.py:18(step)
+       20    0.000    0.000   93.517    4.676 /home/random/spore_v5/e2/corridor_env.py:45(<lambda>)
+       20    0.002    0.000   93.517    4.676 /home/random/spore_v5/e2/spores_2/v6/src/atlas6/corridor_nd.py:23(refine)
+     4626    0.535    0.000   93.171    0.020 /home/random/spore_v5/e2/spores_2/v6/src/atlas6/corridor_nd.py:27(gg)
+       32    0.001    0.000   92.979    2.906 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_minimize.py:54(minimize)
+       32    0.007    0.000   92.976    2.905 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_slsqp_py.py:220(_minimize_slsqp)
+ 10806800   45.415    0.000   70.657    0.000 /home/random/spore_v5/e2/spores_2/bench/common.py:189(f)
+      434    0.002    0.000   56.667    0.131 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_slsqp_py.py:599(_eval_con_normals)
+      434    0.002    0.000   56.664    0.131 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_slsqp_py.py:354(cjac)
+      434    0.015    0.000   56.661    0.131 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_numdiff.py:288(approx_derivative)
+     2766    0.027    0.000   56.591    0.020 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/scipy/optimize/_numdiff.py:904(__call__)
+
+
+
+== sort tottime
+         170868303 function calls (170868159 primitive calls) in 107.229 seconds
+
+   Ordered by: internal time
+   List reduced from 230 to 14 due to restriction <14>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 10806800   45.415    0.000   70.657    0.000 /home/random/spore_v5/e2/spores_2/bench/common.py:189(f)
+  2701700   16.231    0.000   97.464    0.000 /home/random/spore_v5/e2/spores_2/bench/common.py:18(step)
+ 10806800   15.985    0.000   21.076    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/shape_base.py:378(stack)
+  2709852   10.322    0.000   10.599    0.000 /home/random/spore_v5/e2/spores_2/bench/common.py:7(wrap)
+ 43256295    3.205    0.000    3.205    0.000 {built-in method numpy.asanyarray}
+  1657432    2.685    0.000  105.255    0.000 /home/random/spore_v5/e2/corridor_env.py:28(flow)
+  1657589    2.625    0.000    4.171    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/lib/_stride_tricks_impl.py:447(_broadcast_to)
+ 10806800    1.664    0.000    2.626    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/shape_base.py:206(_arrays_for_stack_dispatcher)
+ 10806800    1.540    0.000    4.166    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/shape_base.py:368(_stack_dispatcher)
+ 10806800    0.962    0.000    0.962    0.000 {built-in method builtins.hasattr}
+ 10806800    0.776    0.000    0.776    0.000 {built-in method numpy.lib.array_utils.normalize_axis_index}
+ 10871563    0.594    0.000    0.594    0.000 {built-in method builtins.len}
+     4626    0.535    0.000   93.171    0.020 /home/random/spore_v5/e2/spores_2/v6/src/atlas6/corridor_nd.py:27(gg)
+ 10811446    0.523    0.000    0.523    0.000 /home/random/spore_v5/r31/venv/lib/python3.12/site-packages/numpy/_core/multiarray.py:197(concatenate)
+
+
+
