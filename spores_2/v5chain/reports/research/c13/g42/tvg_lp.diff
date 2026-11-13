@@ -1,0 +1,8 @@
+96a97,103
+>         self._cache = (J, LAM, OK, ins); self.S_ = S; self.t_prep = time.perf_counter() - t0   # c13/Г4.2: LP-веса не зависят от цели — хранятся для regoal
+>     def regoal(self, inG):
+>         """c13/Г4.2: новая цель — пересчёт ТОЛЬКО попаданий дуг в цель (T.in_goal уже подменён) + VI; LP-веса/рёбра из кэша."""
+>         J, LAM, OK, ins = self._cache; n = len(self.P); L2 = len(T.TAUV); GL = np.empty((n, L2)); t0 = time.perf_counter(); nch = 5000
+>         for a in range(0, n, nch): b = min(n, a + nch); _, _, GL[a:b] = T.edges(self.P[a:b], self.S_)
+>         OKd = (OK & ins) | (OK & (GL > 0)); self.W, it, res = vit_dl(J, LAM, OKd, GL, inG(self.P), self.nP, T.TAUV, NIT, 1e3, float(os.environ.get("VCAP", 0)))
+>         T.KV = T.kv_auto(self.S_, self.tree, self.P, self.W); self.mode = 'ip'; self.t_goal = time.perf_counter() - t0; return self.t_goal, it
