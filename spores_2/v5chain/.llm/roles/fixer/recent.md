@@ -29,3 +29,5 @@
 ## fixer-2 (2026-10-12 ~17:00, acc gun.vladimir26)
 - A: pulse.py печатает «АВТОНОМНЫЙ РЕЖИМ…» при journals/_sentinel/AUTONOMOUS; account_watchdog — argparse (--help безопасен); pick_account.role_rate: конфиг → пересчёт из логов (медиана $/ч роли × %5ч/$ аккаунта) → таблица, + dispatcher/explainer (по логу сейчас worker≈12, research≈24 %/ч — проверить адекватность).
 - B: yoga_usage_sync (fixer-1) уже в git; move_session сам добавляет неизвестные hop-* в agents.json. Дубль папки: .claude и .claude-vladimirgun26 — один email, но РАЗНЫЕ копии .credentials.json (риск рассинхрона refresh-токенов) — предложено пользователю оставить одну; не удалял.
+
+- 2026-11-17 fixer-1: Olya kanal.bat/ps1 (infra/machines/olya, не проверено). Дека->laptop: WB-lectures упал без причины (симлинк /root/claude-work → /mnt/c; trust по realpath); ноутбучный фиксер — адрес `laptop-v5chain-fixer-2` (не yoga-1: watch-yoga слушает только его). Проект WB-lectures на ноуте пуст — нужен git-url.
